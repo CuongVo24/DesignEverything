@@ -13,6 +13,16 @@ Dự án này dễ "demo 1 tuần nhưng mài phương pháp phình vô hạn". 
 | **v1 dùng được** | Thêm nhánh mobile, template chau chuốt, phần "tại sao", + adapter `AGENTS.md` | ~1 tháng |
 | **Đáng chia sẻ** | Test trên 3–4 dự án thật, lặp nội dung, README/phân phối | ~2–3 tháng |
 
+## Kế hoạch chi tiết 16 tuần (4 tháng)
+Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md` đang ở dạng **scaffold** — agent fill nội dung chi tiết từng file sau.
+
+| Tháng | Chủ đề | Mốc |
+|---|---|---|
+| [Month 1](Month1/README.md) | Reference: Claude Code + Web chạy được | Bản chạy được |
+| [Month 2](Month2/README.md) | Mobile + AGENTS.md + chau chuốt | v1 dùng được |
+| [Month 3](Month3/README.md) | Dogfood + kiểm chứng dự án thật | Đáng chia sẻ |
+| [Month 4](Month4/README.md) | Phân phối + đặt nền maintain | Đáng chia sẻ + tầm xa |
+
 ## Điền nội dung
 Kế hoạch điền toàn bộ nội dung `Design/` chia theo batch (giao cho agent khác): [ContentFillPlan.md](ContentFillPlan.md) — B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example → B8 adapter → B9 QA.
 
