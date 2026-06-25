@@ -7,6 +7,7 @@ Người mới (kể cả chính mình sau 3 tháng) mở thư mục `Design/` s
 
 ## Thứ tự đọc
 
+0. [VibeCode.md](VibeCode.md) — **Khung Kim Cô**: đọc TRƯỚC TIÊN, luật bắt buộc cho mọi AI Agent.
 1. [ProductPRD.md](ProductPRD.md) — sản phẩm là gì, cho ai, thắng bằng cái gì.
 2. [Core/Contract.md](Core/Contract.md) — hợp đồng Lõi↔Adapter (xương sống kiến trúc).
 3. [Core/Schemas/](Core/Schemas/) — các định dạng dữ liệu trung tính (interview-script, state, gate).
