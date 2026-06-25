@@ -13,6 +13,9 @@ Dự án này dễ "demo 1 tuần nhưng mài phương pháp phình vô hạn". 
 | **v1 dùng được** | Thêm nhánh mobile, template chau chuốt, phần "tại sao", + adapter `AGENTS.md` | ~1 tháng |
 | **Đáng chia sẻ** | Test trên 3–4 dự án thật, lặp nội dung, README/phân phối | ~2–3 tháng |
 
+## Điền nội dung
+Kế hoạch điền toàn bộ nội dung `Design/` chia theo batch (giao cho agent khác): [ContentFillPlan.md](ContentFillPlan.md) — B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example → B8 adapter → B9 QA.
+
 ## Việc cần quyết / nghiên cứu (open questions)
 - [ ] **Quyết NGAY:** format anchor truy vết → [../Core/AnchorFormat.md](../Core/AnchorFormat.md).
 - [ ] Chốt schema `interview-script` trung tính → [../Core/Schemas/interview-script.md](../Core/Schemas/interview-script.md).
