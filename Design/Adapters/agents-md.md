@@ -1,23 +1,120 @@
 # Adapter — AGENTS.md (bậc B, mềm)
 
-> Một adapter phủ mềm **nhiều harness cùng lúc** (Codex CLI, Cursor, Cline... nhiều cái hội tụ về `AGENTS.md`). Ra mắt **thứ hai**.
+> Đây là adapter phủ rộng nhiều harness nhất với chi phí thấp nhất, nhưng chỉ là enforcement mềm. File này phải nói rõ cách dùng, cách inject, và giới hạn của nó để không bán quá lời.
 
 ## Tại sao cần file này
-Sau Claude Code, đây là bước rẻ nhất để đạt "chạy mọi agent" ở mức dùng được — chỉ viết 1 adapter mà phủ một nắm harness (kèm DeepSeek/GLM chạy trong chúng).
+Sau bản tham chiếu Claude Code, `AGENTS.md` là đường ngắn nhất để phủ Codex, Cursor, Cline và các harness đọc rules dạng markdown. Nó không ép cứng được, nhưng lại rất phù hợp để dogfood rộng và giữ thói quen “thiết kế trước, code sau” trên nhiều môi trường.
 
-## INJECT
-- Ghi kịch bản phỏng vấn + 4 quy tắc vàng vào `AGENTS.md` (hoặc `.cursorrules`).
+## Mục tiêu và ranh giới
+- Mục tiêu:
+  - inject đúng tinh thần phỏng vấn từ lõi;
+  - truyền gate message sang dạng chỉ dẫn dễ hiểu;
+  - giữ output doc thống nhất với taxonomy;
+  - nói thật giới hạn enforcement.
+- Không làm:
+  - không giả vờ rằng `AGENTS.md` chặn được như hook;
+  - không hardcode chi tiết từng dự án ngay trong file mẫu;
+  - không thay lõi bằng một đống prose khó bảo trì.
 
-## GATE (mềm — không bảo đảm)
-- Viết câu lệnh trong rules: "Không sinh code khi `02-scope.md` chưa tồn tại" theo [../Core/Schemas/gate-policy.md](../Core/Schemas/gate-policy.md).
-- ⚠️ Harness có thể bỏ qua → đây là **khuyến nghị mạnh**, không xác định.
+## INJECT — nội dung phải sinh vào `AGENTS.md`
 
-## EMIT
-- Giống mọi nơi: cây [../Content/taxonomy.md](../Content/taxonomy.md) + mỏ neo.
+### Khối mở đầu tối thiểu
+File `AGENTS.md` sinh ra phải chứa:
+- mục tiêu của hệ thống;
+- 4 quy tắc vàng;
+- thứ tự ưu tiên: hỏi -> dịch ngược -> rót vào doc -> chỉ code khi gate mở;
+- nhắc rằng `Design/Core/` là nguồn sự thật.
 
-## Giới hạn cần ghi rõ cho người dùng
-"Trên harness này, việc cấm nhảy vào code là khuyến nghị, không chặn cứng. Muốn ép cứng → dùng Claude Code."
+### Mẫu nội dung bắt buộc
+`AGENTS.md` sinh ra nên có 5 phần theo thứ tự:
+1. `Tại sao repo này dùng chế độ phỏng vấn trước`
+2. `Nguồn sự thật phải đọc`
+3. `Cách hỏi từng bước`
+4. `Gate mềm trước khi code`
+5. `Cách emit docs`
 
-## TODO
-- [ ] Mẫu `AGENTS.md` sinh ra từ lõi.
-- [ ] Test trên ≥2 harness đọc `AGENTS.md`.
+### Mẫu chỉ dẫn inject
+Nội dung mẫu nên gần với cấu trúc sau:
+
+```md
+# AGENTS
+
+## Tại sao cần file này
+Repo này buộc agent đi theo hướng phỏng vấn trước khi code để tránh nhảy cóc vào triển khai khi scope và tài liệu còn mơ hồ.
+
+## Nguồn sự thật phải đọc
+- Design/VibeCode.md
+- Design/Core/Contract.md
+- Design/Content/interview-script/script.yaml
+- Design/Content/taxonomy.md
+
+## Cách làm việc
+1. Hỏi đúng một câu tại một thời điểm theo `script.yaml`.
+2. Nếu người dùng không rõ, dùng `default` như một đề xuất để xác nhận, không coi đó là sự thật tuyệt đối.
+3. Luôn dịch ngược câu trả lời sang ngôn ngữ chuẩn rồi hỏi xác nhận.
+4. Mỗi câu phải rót vào đúng file đích trong taxonomy.
+
+## Gate mềm trước khi code
+Không được chủ động sinh code khi các file tài liệu bắt buộc cho gate hiện tại chưa tồn tại.
+
+## Emit
+Khi viết doc, phải bám đúng taxonomy và gắn anchor `status=planned` theo chuẩn lõi.
+```
+
+Adapter thực tế có thể thay đổi câu chữ nhẹ theo harness, nhưng không được đổi nghĩa.
+
+## GATE — enforcement mềm
+
+### Cách map gate-policy sang rules text
+Mỗi gate lõi phải được chuyển thành một chỉ dẫn rõ ràng, ví dụ:
+
+- Gate `scope-locked`:
+  - “Không bắt đầu tạo hoặc sửa mã nguồn ứng dụng khi chưa có `00-vision.md`, `01-personas.md`, và `02-scope.md`.”
+  - “Nếu người dùng xin code sớm, hãy chuyển về hoàn tất tài liệu trước.”
+
+### Câu lệnh mềm bắt buộc có
+- “Trước khi viết code, tự kiểm tra các doc bắt buộc của gate hiện tại đã tồn tại chưa.”
+- “Nếu chưa đủ doc, tiếp tục phỏng vấn hoặc hoàn thiện docs thay vì tạo source code.”
+- “Không được tự bỏ qua gate chỉ vì đoán rằng scope đã rõ.”
+
+### Cách nói đúng về giới hạn
+Phải ghi rõ một câu theo tinh thần này:
+
+> Trên harness chỉ đọc `AGENTS.md`, gate là chỉ dẫn mạnh chứ không phải chặn cứng bằng cơ chế. Nếu cần enforcement deterministic, dùng Claude Code adapter.
+
+Không được viết mập mờ kiểu “bị cấm tuyệt đối” khi harness thực tế không có hook.
+
+## EMIT — output thống nhất
+- Viết tài liệu đúng cây taxonomy.
+- Mỗi file đều có `## Tại sao cần file này`.
+- Cuối mỗi mục có anchor `status=planned`.
+- Không tự tạo thêm file ngoài taxonomy trừ khi lõi đã cập nhật.
+
+## Cách sinh mẫu `AGENTS.md` từ lõi
+- Phần bất biến lấy từ:
+  - [../Core/Contract.md](../Core/Contract.md)
+  - [../Content/interview-script/script.yaml](../Content/interview-script/script.yaml)
+  - [../Content/taxonomy.md](../Content/taxonomy.md)
+  - [../Core/Schemas/gate-policy.md](../Core/Schemas/gate-policy.md)
+- Phần thay đổi theo dự án chỉ nên là:
+  - đường dẫn repo thực tế nếu cần;
+  - tên command hoặc workflow cụ thể của harness;
+  - nhắc nhở đặc thù nếu harness có file rules khác như `.cursorrules`.
+
+## Mapping sang các harness cùng họ
+- Codex / Codex desktop: ưu tiên `AGENTS.md`
+- Cursor: có thể mirror cùng nội dung sang `.cursorrules` hoặc `.mdc`
+- Cline / Continue / các harness đọc repo rules: dùng cùng lõi văn bản, chỉ đổi lớp vỏ
+
+Một adapter mềm nên được sinh từ cùng một nguồn template, không copy-paste rồi drift.
+
+## Tiêu chí nghiệm thu cho adapter mềm
+- Agent khi vào repo sẽ đọc được lý do phải phỏng vấn trước.
+- Agent được hướng dẫn hỏi từng câu một thay vì bắn cả checklist.
+- Agent được nhắc gate trước khi code.
+- Output doc rơi đúng taxonomy.
+- File rules có nói thật giới hạn enforcement.
+
+## Trạng thái
+- Đặc tả `AGENTS.md` đã đủ để sinh template và test trên nhiều harness.
+- Chưa triển khai code sinh file trong batch này.
