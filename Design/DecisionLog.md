@@ -17,6 +17,9 @@ Quyết định nằm rải rác trong nhiều file → quên mất *vì sao* đ
 | D8 | 2026-06-25 | Anchor `rev` = **git blame SHA** | Cho biết commit nào chạm symbol → so SHA biết có drift + nối thẳng vào diff; checksum chỉ trả lời có/không | Active |
 | D9 | 2026-06-25 | Scaffolding chưa có code → anchor **trỏ file dự kiến** + `status=planned` | Mỏ neo liền mạch doc→ý định→code, không quãng đứt | Active |
 | D10 | 2026-06-25 | TechStack = **Node.js + TypeScript** | Cùng hệ ReportSupporter, type-safe, parse YAML dễ, hợp khi lên CLI/bot | Active |
+| D11 | 2026-06-25 | `progress.json` lưu `last_user_turn_id` và chỉ cho advance tối đa 1 bước mỗi lượt người thật | Chốt enforcement "UserPromptSubmit mới được tiến bước", ngăn AI hoặc hook lặp đẩy state nhảy cóc | Active |
+| D12 | 2026-06-25 | `interview-script.gate` là field **singular** trỏ 1 gate id; `Stop` không phải block action hợp lệ của `gate-policy` 0.1.0 | Giữ schema đơn giản cho MVP, tránh adapter hiểu gate khác nhau và tránh lạm dụng `Stop` thay `PreToolUse` | Active |
+| D13 | 2026-06-25 | Taxonomy đầu ra gộp các quyết định auth, permissions và monetization vào `05-architecture.md` và `07-release.md` thay vì tách file riêng | Giữ bộ docs tối giản cho người mới, giảm số file phải đọc, nhưng vẫn đủ chỗ để neo các quyết định kỹ thuật và phát hành quan trọng | Active |
 
 ## Quy ước thêm dòng
 - ID tăng dần, không tái dùng.
