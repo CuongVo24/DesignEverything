@@ -1,0 +1,138 @@
+version: 0.1.0
+questions:
+  - id: S0
+    ask: "Nếu kể cho một người bạn trong 10 giây, dự án này là cái gì?"
+    default: null
+    target_doc: 00-vision.md
+    branch: core
+    gate: null
+    translate_back: "Để mình tóm lại thành 1 câu ngắn kiểu elevator pitch: `<bản tóm lại>`. Mình hiểu vậy đúng chưa?"
+    depends_on: []
+  - id: S1
+    ask: "Hiện giờ mọi người đang khổ vì chuyện gì, và đang xoay xở kiểu nào khi chưa có sản phẩm này?"
+    default: "Suy từ câu S0 rồi đề xuất 1 cách hiểu cụ thể nhất để người dùng xác nhận hoặc sửa."
+    target_doc: 00-vision.md
+    branch: core
+    gate: null
+    translate_back: "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`. Hiện tại họ giải quyết tạm bằng: `<cách xoay xở hiện nay>`. Đúng ý bạn chứ?"
+    depends_on: [S0]
+  - id: S2
+    ask: "Kể cho mình 1-2 người sẽ dùng nó đầu tiên. Họ là ai, và họ muốn xong việc gì khi mở sản phẩm ra?"
+    default: "Người dùng phổ thông trực tiếp thao tác + 1 vai trò admin hoặc người quản lý nếu dự án có phối hợp nhóm."
+    target_doc: 01-personas.md
+    branch: core
+    gate: null
+    translate_back: "Mình tóm lại có các nhóm người dùng chính sau: `<persona 1>` muốn `<job-to-be-done 1>`; `<persona 2>` muốn `<job-to-be-done 2>`. Ổn chưa?"
+    depends_on: [S0, S1]
+  - id: S3
+    ask: "Cứ kể lộn xộn những việc bạn muốn người dùng làm được trong phiên bản đầu. Không cần tự sắp ưu tiên, mình sẽ giúp nhóm lại."
+    default: "Agent đề xuất bộ MVP tối thiểu dựa trên nỗi đau, persona và một luồng hoàn thành việc đầu tiên."
+    target_doc: 02-scope.md
+    branch: core
+    gate: scope-locked
+    translate_back: "Mình đã nhóm lại thành 4 tầng: Must / Should / Could / Won't. Bản MVP nhỏ nhất mình đề xuất là: `<danh sách Must>`. Phần này để sau là: `<danh sách còn lại>`. Bạn xác nhận giúp mình nhé."
+    depends_on: [S0, S1, S2]
+  - id: S4
+    ask: "Để làm được những việc ở trên, sản phẩm cần nhớ những gì? Cứ kể kiểu đời thường như người dùng, nhóm, khoản chi, ảnh, lịch sử..."
+    default: "Suy entity trực tiếp từ nhóm Must; chỉ giữ những thứ có ít nhất một tính năng dùng tới."
+    target_doc: 03-data-model.md
+    branch: core
+    gate: null
+    translate_back: "Mình tóm lại các dữ liệu lõi là: `<danh sách entity>` cùng quan hệ chính giữa chúng. Mỗi loại dữ liệu này phục vụ trực tiếp cho các tính năng Must. Đúng chứ?"
+    depends_on: [S0, S1, S2, S3]
+  - id: S5
+    ask: "Kể thử một lần dùng điển hình từ lúc mở app đến lúc xong việc. Mình chỉ cần một luồng thật nhất thôi."
+    default: "Dựng luồng từ tính năng Must quan trọng nhất đã chốt ở S3."
+    target_doc: 04-flows.md
+    branch: core
+    gate: null
+    translate_back: "Mình viết lại luồng chuẩn như sau: `<các bước mở đến xong việc>`. Luồng này sẽ là ví dụ chính để kiểm tra MVP có thật sự dùng được hay không."
+    depends_on: [S0, S1, S2, S3, S4]
+  - id: S6
+    ask: "Bạn làm một mình hay có nhóm, deadline thế nào, ngân sách đến đâu, và hiện tại mình đang nên nghĩ theo hướng web hay app?"
+    default: "Solo, không deadline cứng, ưu tiên free-tier, rồi chọn nhánh web hoặc mobile theo cách người dùng dự định dùng hằng ngày."
+    target_doc: 06-constraints.md
+    branch: core
+    gate: null
+    translate_back: "Mình tóm lại ràng buộc hiện tại là: `<nguồn lực>`, `<deadline>`, `<ngân sách>`, và hướng triển khai ưu tiên là `<web/mobile>`. Mình sẽ dùng phần này để giới hạn scope và rẽ sang nhánh phù hợp."
+    depends_on: [S0, S1, S2, S3, S4, S5]
+  - id: W1
+    ask: "Người chưa đăng nhập, thậm chí chưa biết sản phẩm, có cần tìm thấy nội dung này trên Google không? Hay đây gần như là chỗ chỉ dùng sau khi vào tài khoản?"
+    default: "Nếu cần người lạ tìm thấy nội dung hoặc trang công khai, ưu tiên SSR/SSG với Next.js. Nếu gần như chỉ dùng sau đăng nhập, ưu tiên SPA để đơn giản hóa."
+    target_doc: 05-architecture.md
+    branch: web
+    gate: null
+    translate_back: "Mình tóm lại nhu cầu hiển thị là: `<cần SEO / không cần SEO>`, nên hướng rendering phù hợp là `<SSR/SSG hoặc SPA>` vì `<lý do gắn với cách người dùng tìm và dùng sản phẩm>`."
+    depends_on: [S6]
+  - id: W2
+    ask: "Người dùng của bạn chủ yếu mở sản phẩm trên máy tính, điện thoại, hay lúc nào cũng lẫn cả hai?"
+    default: "Cả hai, nên thiết kế responsive và ưu tiên mobile-first ngay từ đầu."
+    target_doc: 05-architecture.md
+    branch: web
+    gate: null
+    translate_back: "Mình hiểu thiết bị sử dụng chính là `<máy tính / điện thoại / cả hai>`. Vì vậy giao diện nên được thiết kế theo hướng `<responsive mobile-first / desktop-first có lý do cụ thể>`."
+    depends_on: [S6, W1]
+  - id: W3
+    ask: "Bạn muốn người khác có thể mở sản phẩm bằng link ở giai đoạn nào? Có cần tên miền riêng ngay không, hay chỉ cần một bản chạy được để chia sẻ thử trước?"
+    default: "Triển khai sớm trên Vercel hoặc Netlify với subdomain miễn phí; chưa cần tên miền riêng ở MVP nếu chưa có nhu cầu thương hiệu hoặc vận hành chính thức."
+    target_doc: 07-deployment.md
+    branch: web
+    gate: null
+    translate_back: "Mình tóm lại nhu cầu triển khai là: `<chia sẻ bản thử sớm / cần miền riêng ngay / chỉ nội bộ>`. Vì vậy phương án phù hợp trước mắt là `<Vercel hoặc Netlify free + subdomain / phương án khác có lý do>`."
+    depends_on: [S6, W1, W2]
+  - id: W4
+    ask: "Người dùng có cần vào bằng tài khoản không? Nếu có thì kiểu nào sẽ đỡ rào cản nhất: email, Google, hay một cách đăng nhập khác?"
+    default: "Nếu cần tài khoản, ưu tiên Google OAuth kèm email/password để vừa dễ vào nhanh vừa có đường fallback."
+    target_doc: 05-architecture.md
+    branch: web
+    gate: null
+    translate_back: "Mình hiểu bài toán truy cập là: `<cần / không cần tài khoản>`. Nếu cần, phương án đăng nhập phù hợp hiện tại là `<Google OAuth + email/password / phương án khác>` vì `<lý do gắn với độ tiện và đối tượng người dùng>`."
+    depends_on: [S6, W1, W2, W3]
+  - id: W5
+    ask: "Có chỗ nào cần cập nhật ngay lúc đó không, kiểu chat, thông báo live, hay nhiều người cùng thấy thay đổi tức thì? Và bạn có cần một khu vực admin riêng để quản lý không?"
+    default: "Mặc định chưa cần realtime ở MVP; chỉ thêm trang admin nếu từ S2 đã có vai trò admin hoặc người vận hành rõ ràng."
+    target_doc: 05-architecture.md
+    branch: web
+    gate: null
+    translate_back: "Mình tóm lại mức tương tác thời gian thực là `<không cần / cần ở chỗ nào>`, và nhu cầu quản trị là `<có / chưa cần admin riêng>`. Vì vậy kiến trúc nên `<giữ đơn giản không realtime / bổ sung realtime có phạm vi rõ>`."
+    depends_on: [S6, W1, W2, W3, W4]
+  - id: M1
+    ask: "Bạn muốn app chạy trên iPhone, Android, hay ngay từ đầu phải phủ cả hai?"
+    default: "Cả hai, nên ưu tiên hướng cross-platform như React Native hoặc Flutter để giữ MVP gọn hơn."
+    target_doc: 05-architecture.md
+    branch: mobile
+    gate: null
+    translate_back: "Mình tóm lại phạm vi nền tảng là `<iPhone / Android / cả hai>`. Vì vậy hướng phù hợp hiện tại là `<cross-platform / native một nền tảng>` vì `<lý do gắn với phạm vi người dùng và nguồn lực>`."
+    depends_on: [S6]
+  - id: M2
+    ask: "Nếu điện thoại mất mạng hoặc mạng chập chờn, người dùng còn phải làm được phần nào không? Hay chỉ cần có mạng là đủ?"
+    default: "Online-first. Chỉ chọn offline-first khi người dùng thật sự có tình huống mất mạng thường xuyên và vẫn phải hoàn thành việc ngay lúc đó."
+    target_doc: 05-architecture.md
+    branch: mobile
+    gate: null
+    translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. Nếu cần offline, điều đó kéo theo lưu cục bộ, đồng bộ lại khi có mạng, và tăng độ phức tạp đáng kể. Bạn muốn chấp nhận đổi chi phí đó để lấy trải nghiệm này chứ?"
+    depends_on: [S6, M1]
+  - id: M3
+    ask: "App có cần đụng tới phần cứng hay dữ liệu trong máy như camera, vị trí, danh bạ, micro, hay thư viện ảnh không?"
+    default: "Chỉ xin đúng những quyền thật sự phục vụ tính năng Must; không xin 'để dành'."
+    target_doc: 05-architecture.md
+    branch: mobile
+    gate: null
+    translate_back: "Mình tóm lại app cần các quyền sau: `<danh sách quyền cần thiết>`, mỗi quyền gắn với `<tính năng Must tương ứng>`. Những quyền chưa phục vụ trực tiếp cho MVP sẽ để sau để tránh tăng rào cản review và niềm tin người dùng."
+    depends_on: [S6, M1, M2]
+  - id: M4
+    ask: "Bạn có cần app chủ động kéo người dùng quay lại bằng thông báo đẩy không? Nếu có thì muốn nhắc họ chuyện gì?"
+    default: "Có thể dùng FCM nếu push thực sự phục vụ luồng giá trị, nhưng mặc định chưa bật nếu không có lý do rõ ràng từ hành vi người dùng."
+    target_doc: 05-architecture.md
+    branch: mobile
+    gate: null
+    translate_back: "Mình hiểu nhu cầu push là: `<có / chưa cần>`, dùng để `<nhắc việc gì>`. Nếu triển khai, phương án thực dụng hiện tại là FCM cho thông báo đẩy; nếu chưa có tình huống buộc phải kéo người dùng quay lại, có thể để sau MVP."
+    depends_on: [S6, M1, M2, M3]
+  - id: M5
+    ask: "Bạn đang nghĩ app này kiếm tiền kiểu gì, và ở giai đoạn đầu muốn lên store thật luôn hay chỉ cần bản thử để test với người dùng trước?"
+    default: "Mặc định phát hành bản thử trước qua TestFlight hoặc kênh internal test. Nếu có bán trong app, dùng in-app purchase và chấp nhận phí nền tảng."
+    target_doc: 07-release.md
+    branch: mobile
+    gate: null
+    translate_back: "Mình tóm lại chiến lược phát hành là: `<bản thử / lên store thật ngay>`, và kiếm tiền theo hướng `<free trước / in-app purchase / cách khác>`. Mình lưu ý trước rằng mobile không phải code xong là phát hành được ngay: còn review, ký app, cấu hình phân phối và vòng test trước khi public."
+    depends_on: [S6, M1, M2, M3, M4]

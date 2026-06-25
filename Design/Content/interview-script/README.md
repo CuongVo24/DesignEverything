@@ -5,6 +5,12 @@
 ## Tại sao cần file này
 Toàn bộ giá trị dồn vào chất lượng phương pháp gốc (người mới không phân biệt được doc tốt/tệ để tự cứu). Đây là nơi mài từng câu hỏi.
 
+## File trong thư mục này
+- [S0-S6-core.md](S0-S6-core.md) — bản đầy đủ cho khung lõi dùng chung trước khi rẽ nhánh.
+- [W-web.md](W-web.md) — bản đầy đủ cho nhánh web W1-W5.
+- [M-mobile.md](M-mobile.md) — bản đầy đủ cho nhánh mobile M1-M5.
+- [script.yaml](script.yaml) — bản máy đọc đã khóa ở Batch 6, dùng cho adapter và validator.
+
 ## KHUNG LÕI — S0 → S6 (dùng chung)
 
 | # | Câu hỏi đời thường | Nếu "không biết" → mặc định | Điền vào doc |
@@ -41,7 +47,9 @@ Toàn bộ giá trị dồn vào chất lượng phương pháp gốc (người 
 
 > **2 bẫy mobile người mới luôn dính** — bới ra sớm: (a) offline/sync M2 đội chi phí gấp đôi; (b) quy trình lên store M5.
 
-## TODO mài nội dung
-- [ ] Viết bản đầy đủ từng câu (gồm `translate_back` cụ thể).
-- [ ] Soi sâu logic S3 (cách quyết Must/Should/Could).
-- [ ] Xuất bản máy-đọc-được theo schema → `script.yaml`.
+## Trạng thái hiện tại
+- Batch 2 đã mở rộng khung lõi thành bản chi tiết trong [S0-S6-core.md](S0-S6-core.md).
+- Batch 3 đã điền nhánh web trong [W-web.md](W-web.md).
+- Batch 4 đã điền nhánh mobile trong [M-mobile.md](M-mobile.md).
+- Batch 6 đã khóa bản máy đọc trong [script.yaml](script.yaml).
+- Batch 7 đã dùng bộ này để dựng golden example hoàn chỉnh cho một dự án mobile mẫu.
