@@ -2,6 +2,9 @@
 
 > Mục đích: chia việc "điền hết nội dung vào `Design/`" thành các **batch độc lập**, mỗi batch có prompt copy-paste để giao cho một agent khác. Mỗi agent khởi động lạnh → batch phải tự đứng được.
 
+## Tại sao cần file này
+Khi nội dung còn nhiều mà giao một cục, agent rất dễ làm lẫn thứ tự phụ thuộc hoặc bỏ sót tiêu chí nghiệm thu. File này chia nhỏ công việc thành từng batch độc lập để cả người lẫn AI có thể tiến từng chặng mà không nợ ngữ cảnh.
+
 ## Cách dùng file này
 1. Làm **đúng thứ tự batch** (có phụ thuộc). Đừng nhảy cóc — vi phạm chính cái gate sản phẩm này bán ra.
 2. Mỗi batch: copy nguyên khối **"📋 PROMPT"** dán cho agent mới.
@@ -29,7 +32,7 @@ Thứ tự chạy: **B1 → B2 → B3 → B4 → B5 → B6 → B7 → B8 → B9*
 
 ## BATCH 1 — Khoá Schemas Lõi
 
-**Mục tiêu:** biến 3 schema từ DRAFT thành bản khoá (mọi field định nghĩa rõ, không còn "cần chốt").
+**Mục tiêu:** biến 3 schema từ trạng thái nháp thành bản khoá (mọi field định nghĩa rõ, không còn "cần chốt").
 **Phụ thuộc:** không (làm đầu tiên).
 **Đọc trước:** `VibeCode.md`, `Glossary.md`, `Core/Contract.md`, `Core/Versioning.md`, `Core/Schemas/*`, `Core/AnchorFormat.md`.
 **File sửa:** `Core/Schemas/interview-script.md`, `Core/Schemas/state-schema.md`, `Core/Schemas/gate-policy.md`.
@@ -40,14 +43,14 @@ Thứ tự chạy: **B1 → B2 → B3 → B4 → B5 → B6 → B7 → B8 → B9*
 - `gate-policy`: chốt cấu trúc gate (id, requires_docs, blocks, message), cách map sang bậc A/B, và cạm bẫy `Stop` hook.
 - Đánh dấu `version: 0.1.0` ổn định; thêm dòng vào changelog mỗi file. Ghi quyết định vào `DecisionLog.md` nếu phát sinh.
 
-**Nghiệm thu:** không còn chữ "DRAFT/cần chốt"; 3 file đủ để vừa viết `script.yaml` vừa viết validator mà không phải đoán.
+**Nghiệm thu:** không còn chữ "nháp/cần chốt"; 3 file đủ để vừa viết `script.yaml` vừa viết validator mà không phải đoán.
 
 **📋 PROMPT:**
 ```text
 Bạn làm việc trên dự án DesignEverything. ĐỌC THEO THỨ TỰ rồi tóm tắt lại cho tôi TRƯỚC KHI sửa:
 Design/VibeCode.md → Design/Glossary.md → Design/Core/Contract.md →
 Design/Core/Versioning.md → Design/Core/Schemas/* → Design/Core/AnchorFormat.md.
-NHIỆM VỤ (Batch 1 — Khoá Schemas Lõi): biến 3 file Core/Schemas/* từ DRAFT thành bản khoá:
+NHIỆM VỤ (Batch 1 — Khoá Schemas Lõi): biến 3 file Core/Schemas/* từ trạng thái nháp thành bản khoá:
 định nghĩa rõ mọi field (kiểu, bắt buộc/optional, ràng buộc), thêm "luật validate", giữ
 version 0.1.0 + changelog. interview-script field: id, ask, default, target_doc, branch,
 gate, translate_back, depends_on (id vĩnh viễn; default=null = bắt buộc). state-schema: chốt
@@ -271,7 +274,7 @@ KHÔNG viết code thật. Liệt kê file đã sửa.
 - Gate: mọi `gate` trong script trỏ gate có thật trong gate-policy.
 - Anchor: mọi output mẫu (golden) mang anchor đúng format.
 - Reading order trong `VibeCode.md` & `Guideline.md` khớp danh sách file thực tế.
-- Không còn TODO/DRAFT sót; mỗi file có "Tại sao cần file này".
+- Không còn placeholder kiểu nháp sót; mỗi file có "Tại sao cần file này".
 - Chấm lại golden example theo QualityRubric, ghi điểm.
 
 **Nghiệm thu:** một báo cáo "đã nhất quán" liệt kê các lệch đã sửa; `Design/` sẵn sàng cho giai đoạn viết code.
@@ -282,7 +285,7 @@ Dự án DesignEverything. ĐỌC toàn bộ thư mục Design/ + FirstIdea.md. 
 NHIỆM VỤ (Batch 9 — QA pass): rà nhất quán toàn bộ Design/ và SỬA chỗ lệch:
 (1) từ vựng khớp Glossary; (2) chuỗi truy vết target_doc ↔ template ↔ taxonomy ↔ golden
 example đầy đủ; (3) mọi gate trong script trỏ gate có thật; (4) anchor đúng format ở mọi output
-mẫu; (5) reading order trong VibeCode & Guideline khớp file thực tế; (6) không còn TODO/DRAFT
+mẫu; (5) reading order trong VibeCode & Guideline khớp file thực tế; (6) không còn placeholder kiểu nháp
 sót, mỗi file có "## Tại sao cần file này"; (7) chấm lại golden example theo QualityRubric.
 Ghi quyết định/đổi version vào DecisionLog + Versioning changelog nếu cần. Xuất BÁO CÁO liệt kê
 mọi lệch đã sửa. KHÔNG viết code.
