@@ -9,14 +9,16 @@ Người mới (kể cả chính mình sau 3 tháng) mở thư mục `Design/` s
 
 0. [VibeCode.md](VibeCode.md) — **Khung Kim Cô**: đọc TRƯỚC TIÊN, luật bắt buộc cho mọi AI Agent.
 1. [ProductPRD.md](ProductPRD.md) — sản phẩm là gì, cho ai, thắng bằng cái gì.
-2. [Core/Contract.md](Core/Contract.md) — hợp đồng Lõi↔Adapter (xương sống kiến trúc).
-3. [Core/Schemas/](Core/Schemas/) — các định dạng dữ liệu trung tính (interview-script, state, gate).
-4. [Core/AnchorFormat.md](Core/AnchorFormat.md) — format mỏ neo truy vết (quyết sớm).
-5. [Core/Versioning.md](Core/Versioning.md) — chính sách version để không vỡ adapter.
-6. [Content/](Content/) — **sản phẩm thật**: kịch bản phỏng vấn + template doc + taxonomy.
-7. [Adapters/](Adapters/) — cách phủ từng harness + ma trận conformance.
-8. [Conventions/](Conventions/) — chuẩn code/git + chiến lược test.
-9. [RoadMap/MasterRoadMap.md](RoadMap/MasterRoadMap.md) — mốc thời gian & phạm vi.
+2. [Glossary.md](Glossary.md) — từ vựng chuẩn (đọc để gọi tên mọi thứ giống nhau).
+3. [Core/Contract.md](Core/Contract.md) — hợp đồng Lõi↔Adapter (xương sống kiến trúc).
+4. [Core/Schemas/](Core/Schemas/) — các định dạng dữ liệu trung tính (interview-script, state, gate).
+5. [Core/AnchorFormat.md](Core/AnchorFormat.md) — format mỏ neo truy vết (đã chốt).
+6. [Core/Versioning.md](Core/Versioning.md) — chính sách version để không vỡ adapter.
+7. [Content/](Content/) — **sản phẩm thật**: kịch bản phỏng vấn + template + taxonomy + [QualityRubric](Content/QualityRubric.md).
+8. [Adapters/](Adapters/) — cách phủ từng harness + ma trận conformance.
+9. [Conventions/](Conventions/) — [TechStack](Conventions/TechStack.md) + chuẩn code/git + chiến lược test.
+10. [RoadMap/MasterRoadMap.md](RoadMap/MasterRoadMap.md) — mốc thời gian & phạm vi.
+11. [DecisionLog.md](DecisionLog.md) — nhật ký quyết định + lý do (tra khi phân vân).
 
 ## Bản đồ nhanh
 
