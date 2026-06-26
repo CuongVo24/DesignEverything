@@ -16,9 +16,9 @@ Lõi (`Core/`) là public API mà adapter phụ thuộc. Sửa hợp đồng *sa
 
 ## Thứ tự chạy (có phụ thuộc)
 ```
-FB1 (Determinism boundary) ──► FB2 (gate-policy.yaml) ──► FB3 (RoadMap sync) ──► FB4 (QA sweep)
+FB1 (Determinism boundary) ──► FB2 (gate-policy.yaml) ──► FB3 (RoadMap sync) ──► FB4 (QA sweep) ──► FB5 (ContractForAI Month 1)
 ```
-Chạy tuần tự. FB1 và FB2 cùng đụng `Adapters/claude-code.md` nhưng **khác mục**: FB1 sở hữu mục `UserPromptSubmit` + chọn nhánh; FB2 chỉ sửa mục "Input lõi" (dòng ~37) + module loader. Làm FB1 trước, FB2 sau để tránh xung đột.
+Chạy tuần tự. FB1 và FB2 cùng đụng `Adapters/claude-code.md` nhưng **khác mục**: FB1 sở hữu mục `UserPromptSubmit` + chọn nhánh; FB2 chỉ sửa mục "Input lõi" (dòng ~37) + module loader. Làm FB1 trước, FB2 sau để tránh xung đột. **FB5 phải sau FB4** vì contract tham chiếu schema/spec đã khoá — viết sớm sẽ phải viết lại.
 
 ## Lưu ý môi trường (đọc trước khi sửa)
 Trong lúc rà, một proxy đã từng trả về **ảnh chụp cây thư mục cũ** (hiện `golden-example/` đã là `golden-example-mobile/`). Vì vậy mỗi agent: nếu thấy đường dẫn/đặt tên nghi ngờ, **đối chiếu bằng `git ls-files` hoặc `git show HEAD:<file>`** thay vì tin tuyệt đối tool đọc file. Working tree là chân lý.
@@ -165,6 +165,43 @@ Glossary; reading order VibeCode + Guideline khớp file thực tế (kể cả 
 naming nhất quán: thư mục golden-example-mobile/, refs trỏ -mobile/-web (KHÔNG tạo golden web — để Week-01);
 (6) DecisionLog có D14+D15, Versioning changelog đúng; (7) không liên kết treo, mỗi file còn "## Tại sao cần
 file này". XUẤT BÁO CÁO liệt kê mọi lệch đã sửa. KHÔNG viết code.
+```
+
+---
+
+## FB5 — Dựng lane ContractForAI + viết contract Month 1
+
+**Vì sao:** Agent code chính của dự án là model yếu (Gemini Flash, harness yếu hơn Claude/Codex). Một "Week" là đơn vị quá to cho nó — sẽ trôi scope, bịa interface, bỏ ràng buộc. Cần lớp **ContractForAI**: mỗi micro-task có kết quả mong đợi rõ, danh sách file, lệnh verify, status gate. Manager (model mạnh) viết contract; executor làm theo. Đây là cơ chế chất lượng — và là dogfooding (DesignEverything là sản phẩm ép spec-trước-code).
+
+**Quyết định phạm vi (đã chốt):** **chỉ Month 1**, **một lớp** (ContractForAI thôi — Week file đã đóng vai TaskBrief, không tạo `TaskBrief/` riêng).
+
+**Phụ thuộc:** FB1–FB4 (design phải khoá; contract tham chiếu schema/spec đã chốt).
+
+**Đọc trước:** `Design/ContractForAI/CONTRACT_STRUCTURE_RULE.md` (đã có), `VibeCode.md`, `RoadMap/Month1/README.md` + `Week-01..04.md`, `Conventions/TechStack.md`, `Conventions/TestStrategy.md`, `Adapters/claude-code.md`, `Core/Schemas/*`, `Content/interview-script/script.yaml`, `Content/taxonomy.md`.
+
+**Việc chi tiết:**
+- Dựng skeleton `Design/ContractForAI/Core/month1/{W1,W2,W3,W4}/` + `break_task/` (folder rỗng để sẵn, đừng tạo break contract trước khi có output để review).
+- Phân rã **mỗi tuần Week-01..04** thành **~4-6 micro-task contract** (nhóm a/b/c...), mỗi contract = một đơn vị ≤ ~200 dòng. Nguồn phân rã = "Việc chi tiết" của Week file + mapping module trong `claude-code.md` ("Cấu trúc module khuyến nghị") + nghiệm thu Week.
+- Mỗi contract đủ **7 mục** theo structure rule, đặc biệt nặng tay ở: **kết quả mong đợi cụ thể** (tên file/hàm/shape), **danh sách file `[NEW]/[MODIFY]`**, **lệnh verification thật** (`npx vitest run`, `npm run typecheck`, `npm run build`). Executor yếu KHÔNG được tự chế interface — signature phải nằm trong contract.
+- Mỗi contract ghi rõ **tầng** (Lõi/Nội dung/Adapter) và để `Status: WAITING_FOR_APPROVAL`.
+- Gợi ý phân rã (manager tinh chỉnh): W1 = (a) scaffold repo+tooling, (b) golden-example-web fixture, (c) ghi chú chốt phạm vi MVP; W2 = (a) zod mirror 3 schema, (b) loadScript/loadProgress, (c) advanceState, (d) evaluateGate + emit gate-policy data, (e) unit test web+mobile; W3 = (a) SessionStart, (b) UserPromptSubmit theo mô hình 2 lớp FB1, (c) PreToolUse + heuristic Bash, (d) skill INJECT; W4 = (a) EMIT cây docs + anchor, (b) chạy thử web end-to-end, (c) ca biên + runbook.
+
+**Nghiệm thu:** có structure rule + skeleton; mỗi tuần Month 1 có bộ contract đủ 7 mục, sized cho executor yếu, signature/file/verify rõ tới mức Gemini làm theo không phải đoán; mọi contract `WAITING_FOR_APPROVAL`; không tạo break_task contract khống.
+
+**📋 PROMPT:**
+```text
+Dự án DesignEverything. ĐỌC: Design/ContractForAI/CONTRACT_STRUCTURE_RULE.md → Design/VibeCode.md →
+Design/RoadMap/Month1/README.md + Week-01.md..Week-04.md → Design/Conventions/TechStack.md +
+TestStrategy.md → Design/Adapters/claude-code.md → Design/Core/Schemas/* →
+Design/Content/interview-script/script.yaml → Design/Content/taxonomy.md. Tóm tắt trước.
+NHIỆM VỤ (FB5 — ContractForAI Month 1, CHỈ Month 1, MỘT lớp): (1) dựng skeleton
+Design/ContractForAI/Core/month1/{W1,W2,W3,W4}/ + break_task/ (để rỗng). (2) Phân rã mỗi tuần
+Week-01..04 thành ~4-6 micro-task contract (nhóm a/b/c...), mỗi cái = một đơn vị ≤~200 dòng, đủ 7 mục
+theo structure rule. NẶNG TAY ở: kết quả mong đợi cụ thể (tên file/hàm/shape), danh sách [NEW]/[MODIFY],
+lệnh verification thật. Executor là MODEL YẾU → signature interface phải nằm trong contract, không để nó
+tự chế. Mỗi contract ghi rõ tầng (Lõi/Nội dung/Adapter), Status: WAITING_FOR_APPROVAL.
+RÀNG BUỘC: bám đúng schema/spec ĐÃ KHOÁ sau FB1–FB4 (đặc biệt UserPromptSubmit theo mô hình 2 lớp của
+FB1); KHÔNG tạo TaskBrief riêng; KHÔNG viết break_task contract khống; KHÔNG viết code. Liệt kê file đã tạo.
 ```
 
 ---
