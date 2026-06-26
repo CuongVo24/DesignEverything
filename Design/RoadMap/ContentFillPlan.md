@@ -211,7 +211,7 @@ lệch thay vì tự quyết. KHÔNG viết code đọc YAML (để Batch 8). Li
 **Mục tiêu:** chạy tay trọn kịch bản cho 1 dự án giả → ra **trọn cây `docs/`** mẫu. Vừa demo, vừa fixture regression, vừa kiểm rubric.
 **Phụ thuộc:** B5 (templates) + B6 (script).
 **Đọc trước:** `VibeCode.md`, `script.yaml`, toàn bộ `doc-templates/`, `taxonomy.md`, `QualityRubric.md`.
-**File tạo:** `Content/golden-example/` — gồm `_interview-transcript.md` (hỏi–đáp giả lập) + cây `docs/` đầy đủ.
+**File tạo:** `Content/golden-example-mobile/` — gồm `_interview-transcript.md` (hỏi–đáp giả lập) + cây `docs/` đầy đủ cho nhánh mobile.
 
 **Việc chi tiết:** chọn 1 dự án giả cụ thể (gợi ý: "app chia tiền nhóm bạn ở trọ" — đủ nhỏ, có cả user/data/flow, hợp nhánh mobile). Viết transcript hỏi–đáp **theo đúng 4 quy tắc vàng** (từng câu một, có default, dịch ngược, neo doc). Rồi sinh trọn `docs/` bằng cách rót transcript qua templates. Mỗi file có anchor `status=planned` trỏ file dự kiến. Chấm cả cây theo QualityRubric.
 
@@ -221,7 +221,7 @@ lệch thay vì tự quyết. KHÔNG viết code đọc YAML (để Batch 8). Li
 ```text
 Dự án DesignEverything. ĐỌC: Design/VibeCode.md → Content/interview-script/script.yaml →
 toàn bộ Content/doc-templates/ → Content/taxonomy.md → Content/QualityRubric.md. Tóm tắt trước.
-NHIỆM VỤ (Batch 7 — Golden Example): trong Design/Content/golden-example/ tạo:
+NHIỆM VỤ (Batch 7 — Golden Example): trong Design/Content/golden-example-mobile/ tạo:
 (1) _interview-transcript.md — hỏi–đáp giả lập cho 1 dự án giả cụ thể (gợi ý "app chia tiền
 nhóm ở trọ"), tuân 4 quy tắc vàng: từng câu một, có default, DỊCH NGƯỢC, neo doc;
 (2) cây docs/ đầy đủ, sinh bằng cách rót transcript qua doc-templates, mỗi file có "## Tại sao

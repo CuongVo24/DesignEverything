@@ -13,8 +13,10 @@ Dự án này dễ "demo 1 tuần nhưng mài phương pháp phình vô hạn". 
 | **v1 dùng được** | Thêm nhánh mobile, template chau chuốt, phần "tại sao", + adapter `AGENTS.md` | ~1 tháng |
 | **Đáng chia sẻ** | Test trên 3–4 dự án thật, lặp nội dung, README/phân phối | ~2–3 tháng |
 
+> Ba mốc thời gian ở bảng trên là ước lượng **lý tưởng/optimistic** rút từ FirstIdea: giả định nội dung lõi đã khoá, người làm có thể tập trung sâu, và chỉ tính phần "làm cho chạy được". Kế hoạch 16 tuần bên dưới là **lịch calendar bán thời gian** đã cộng thêm thời gian đệm cho dogfood, đo lường, hardening, onboarding và phân phối.
+
 ## Kế hoạch chi tiết 16 tuần (4 tháng)
-Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md` đang ở dạng **scaffold** — agent fill nội dung chi tiết từng file sau.
+Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md` bên dưới đã được điền thành kế hoạch hành động chi tiết, đủ để bám theo khi bắt đầu triển khai code, dogfood và phân phối.
 
 | Tháng | Chủ đề | Mốc |
 |---|---|---|
@@ -23,17 +25,20 @@ Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md`
 | [Month 3](Month3/README.md) | Dogfood + kiểm chứng dự án thật | Đáng chia sẻ |
 | [Month 4](Month4/README.md) | Phân phối + đặt nền maintain | Đáng chia sẻ + tầm xa |
 
+## Phân pha
+- **Phase 0 — Khoá nội dung trong `Design/`**: đã hoàn tất qua [ContentFillPlan.md](ContentFillPlan.md), từ B1 đến B9.
+- **Phase 1–4 — 16 tuần triển khai**: bắt đầu từ lúc nội dung lõi, template, golden và adapter spec đã đủ sạch để chuyển sang code, dogfood và phân phối.
+
 ## Điền nội dung
-Kế hoạch điền toàn bộ nội dung `Design/` chia theo batch (giao cho agent khác): [ContentFillPlan.md](ContentFillPlan.md) — B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example → B8 adapter → B9 QA.
+[ContentFillPlan.md](ContentFillPlan.md) là kế hoạch điền toàn bộ nội dung `Design/` theo batch: B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example mobile → B8 adapter → B9 QA. Ở trạng thái hiện tại, phase này được coi là completed và là tiền đề cho toàn bộ kế hoạch 16 tuần bên dưới.
 
 ## Việc cần quyết / nghiên cứu (open questions)
-- [ ] **Quyết NGAY:** format anchor truy vết → [../Core/AnchorFormat.md](../Core/AnchorFormat.md).
-- [ ] Chốt schema `interview-script` trung tính → [../Core/Schemas/interview-script.md](../Core/Schemas/interview-script.md).
-- [ ] Soi sâu logic S3 (Must/Should/Could).
-- [ ] Viết bộ hook Claude Code reference → [../Adapters/claude-code.md](../Adapters/claude-code.md).
-- [ ] Chốt phạm vi MVP 1 tuần thật cụ thể (file nào, hook làm gì, web rút mấy câu).
-- [ ] Nghiên cứu kỹ Spec Kit & Kiro (chỗ "giả định người dùng đã biết mình muốn gì").
-- [ ] Mở rộng taxonomy bản tối giản → bản "giống công ty".
+- [ ] Chốt cấu trúc repo code reference tối thiểu: một package hay nhiều package, và đường biên giữa `core/` với `adapters/`. Xử lý ở [Month1/Week-01.md](Month1/Week-01.md).
+- [ ] Quyết định dạng `gate-policy` máy-đọc-được đi kèm repo code để runtime không phải parse markdown. Xử lý ở [Month1/Week-02.md](Month1/Week-02.md).
+- [ ] Chọn 1 golden web project đủ nhỏ nhưng vẫn chạm đủ W1–W5 để làm fixture chính. Xử lý ở [Month1/Week-01.md](Month1/Week-01.md).
+- [ ] Xác định baseline "soạn doc mất gần 1 tuần" bằng số đo nào để Month 3 so sánh được công bằng. Xử lý ở [Month3/Week-10.md](Month3/Week-10.md).
+- [ ] Định nghĩa điều kiện rõ để mở rộng taxonomy sang bản "giống công ty" thay vì thêm file theo cảm hứng. Xử lý ở [Month3/Week-12.md](Month3/Week-12.md).
+- [ ] Chọn trigger phù hợp cho Drift Flagging v0: chạy thủ công, trong CLI, hay gắn vào CI sau này. Xử lý ở [Month4/Week-15.md](Month4/Week-15.md).
 
 ## Kỷ luật phạm vi
 Chốt MVP (Claude Code + web), thả lên dự án thật, **đo** rút "1 tuần soạn doc" còn bao lâu — *rồi mới* mở rộng.
