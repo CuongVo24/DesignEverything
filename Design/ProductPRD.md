@@ -22,7 +22,7 @@ Người vibe code nhảy thẳng vào code, bỏ qua tài liệu nền móng. S
 
 ## 5. Định lý ràng buộc: Portable ⟷ Enforce
 - Chạy mọi agent → chỉ ép được mức **mềm**.
-- Ép **cứng** (chặn nhảy vào code) → chỉ harness có hook (Claude Code).
+- Ép **cứng** (chặn nhảy vào code) → chỉ harness có hook (Claude Code). Phạm vi đảm bảo cứng nói thật: **gate dựa artifact** + **giới hạn nhịp một-bước-mỗi-lượt**, KHÔNG phải hook chấm từng câu trả lời (việc diễn giải ý nghĩa là của lớp skill — xem [Core/Contract.md](Core/Contract.md) §3).
 - Lối thoát: **nội dung như nhau mọi nơi**, ép tốt nhất nền tảng cho phép (graceful degradation).
 
 ## 6. Lợi thế cạnh tranh

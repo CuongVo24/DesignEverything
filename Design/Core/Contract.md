@@ -22,8 +22,8 @@ Trong kiến trúc core+adapter, thứ giết dự án là adapter phình ra và
 → INJECT/EMIT gần như giống nhau khắp nơi. **Chỉ GATE khác** và xuống bậc theo năng lực harness. Đó là toàn bộ độ phức tạp phải nuôi.
 
 ## 3. Bậc enforcement
-- **Bậc A — ép cứng:** harness có hook (Claude Code). "Không xong doc, không cho code" là thật.
-- **Bậc B — ép mềm:** harness chỉ đọc rules (Cursor, Codex, Antigravity...). Khuyến nghị mạnh, không bảo đảm.
+- **Bậc A — ép cứng:** harness có hook (Claude Code). "Không xong doc, không cho code" là thật. Đảm bảo cứng gồm đúng hai thứ: (1) **gate dựa artifact** (`PreToolUse` chặn khi doc bắt buộc chưa có) và (2) **giới hạn nhịp** (mỗi lượt người thật chỉ tiến tối đa một bước). Hook **không** validate ngữ nghĩa câu trả lời hay tự chọn nhánh — đó là việc của lớp skill/LLM (mô hình hai lớp, xem [Schemas/state-schema.md](Schemas/state-schema.md) §3).
+- **Bậc B — ép mềm:** harness chỉ đọc rules (Cursor, Codex, Antigravity...). Khuyến nghị mạnh, không bảo đảm — kể cả giới hạn nhịp cũng chỉ là chỉ dẫn best-effort.
 
 Chi tiết từng harness: [../Adapters/ConformanceMatrix.md](../Adapters/ConformanceMatrix.md).
 

@@ -84,6 +84,8 @@ Phải ghi rõ một câu theo tinh thần này:
 
 Không được viết mập mờ kiểu “bị cấm tuyệt đối” khi harness thực tế không có hook.
 
+> **Lưu ý mô hình hai lớp ở bậc B.** Ở Claude Code, "mỗi lượt người thật chỉ tiến 1 bước" được hook `UserPromptSubmit` ép cứng (xem [../Core/Schemas/state-schema.md](../Core/Schemas/state-schema.md) §3). Trên harness mềm KHÔNG có bộ giới hạn nhịp đó — nhịp một-bước-mỗi-lượt chỉ là *chỉ dẫn best-effort* cho agent. Vẫn yêu cầu agent: hỏi một câu, chờ người dùng xác nhận dịch ngược, rồi mới rót vào doc và đi câu kế; nhưng nói thật rằng đây là kỷ luật khuyến nghị, không phải đảm bảo deterministic.
+
 ## EMIT — output thống nhất
 - Viết tài liệu đúng cây taxonomy.
 - Mỗi file đều có `## Tại sao cần file này`.
