@@ -8,7 +8,9 @@ Cái "ăn" thời gian của dự án này là **test thật trên từng harnes
 ### 1. Schema/Content (lõi)
 - `interview-script` hợp lệ theo [../Core/Schemas/interview-script.md](../Core/Schemas/interview-script.md): mọi câu có `id`, `target_doc`; `id` không trùng.
 - Mọi `target_doc` tồn tại trong [../Content/taxonomy.md](../Content/taxonomy.md).
-- Mọi `gate` trỏ tới gate có thật trong [../Core/Schemas/gate-policy.md](../Core/Schemas/gate-policy.md).
+- Mọi `gate` trỏ tới gate có thật trong [../Content/interview-script/gate-policy.yaml](../Content/interview-script/gate-policy.yaml).
+- `gate-policy.yaml` hợp lệ theo [../Core/Schemas/gate-policy.md](../Core/Schemas/gate-policy.md) (đủ field, `requires_docs` đều có trong taxonomy) và **khớp** ví dụ trong file schema.
+- `progress.json` hợp lệ theo [../Core/Schemas/state-schema.md](../Core/Schemas/state-schema.md), gồm `answered_len_at_last_turn` và bất biến một-bước-mỗi-lượt.
 
 ### 2. GATE (ca biên — quan trọng nhất)
 - Doc chưa xong → thử sinh code → **phải** bị chặn (A) / cảnh báo (B).

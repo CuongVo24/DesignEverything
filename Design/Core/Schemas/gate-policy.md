@@ -19,6 +19,8 @@ gates:
     message: "Phỏng vấn chưa xong tới S3 (scope). Hoàn tất doc trước khi sinh code."
 ```
 
+> **File này (`.md`) là hợp đồng/định nghĩa field cho dev.** Bản DỮ LIỆU runtime đã khoá ở [`../../Content/interview-script/gate-policy.yaml`](../../Content/interview-script/gate-policy.yaml) — adapter đọc file `.yaml` đó, không parse markdown này. Hai bản phải khớp; lệch thì dừng và báo.
+
 Top-level bắt buộc có:
 
 | Field | Kiểu | Bắt buộc | Ý nghĩa |

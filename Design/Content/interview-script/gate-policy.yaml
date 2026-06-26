@@ -1,0 +1,10 @@
+# gate-policy — bản DỮ LIỆU máy-đọc-được (runtime).
+# Hợp đồng/định nghĩa field nằm ở Design/Core/Schemas/gate-policy.md; file này là dữ liệu runtime
+# để adapter KHÔNG phải parse markdown. Hai file phải khớp nhau; lệch thì dừng và báo.
+# Đặt cạnh script.yaml để loader đọc cùng chỗ.
+version: 0.1.0
+gates:
+  - id: scope-locked
+    requires_docs: ["00-vision.md", "01-personas.md", "02-scope.md"]
+    blocks: ["Write", "Edit", "Bash"]
+    message: "Phỏng vấn chưa xong tới S3 (scope). Hoàn tất doc trước khi sinh code."
