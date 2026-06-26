@@ -37,4 +37,9 @@ Viết một văn bản chốt phạm vi MVP Month 1 để tuần 2–4 chỉ vi
 - Một người đọc file là biết tuần 2–4 phải/không phải làm gì.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã tạo tài liệu [MVP-Scope-Lock.md](../../../../RoadMap/Month1/MVP-Scope-Lock.md) chốt cứng phạm vi của Month 1.
+- Tài liệu đã liệt kê chi tiết: Claude Code (bậc A), chỉ nhánh web (S0-S6, W1-W5), 1 gate `scope-locked`, 3 hook, và chỉ ra rõ các phần out of scope (mobile, AGENTS.md, chau chuốt, phân phối, maintain).
+- Nội dung đã được rà soát và nhất quán hoàn toàn với `ProductPRD.md` và `gate-policy.yaml`.
