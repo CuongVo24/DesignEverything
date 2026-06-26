@@ -53,4 +53,9 @@ Dựng một repo Node.js + TypeScript `strict` chạy được (lint/typecheck/
 - `npx vitest run` xanh (smoke test xác nhận runner + alias).
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Repo Node.js + TypeScript strict đã được dựng thành công và tích hợp ESLint flat config & Prettier.
+- Đã cài và ghim chính xác các dependency: `yaml`, `zod`, `typescript`, `@types/node`, `eslint`, `eslint-config-prettier`, `prettier`, `typescript-eslint`, `vitest`.
+- Đã kiểm tra tính năng typecheck, lint, build và vitest chạy xanh với test runner resolve path alias `@/` qua `src/smoke.test.ts`.
