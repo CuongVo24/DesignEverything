@@ -1,0 +1,12 @@
+{
+  "version": "0.1.0",
+  "phase": "ready-to-build",
+  "branch": "web",
+  "current_step": null,
+  "answered": ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "W1", "W2", "W3", "W4", "W5"],
+  "emitted_docs": ["00-vision.md", "01-personas.md", "02-scope.md", "03-data-model.md", "04-flows.md", "06-constraints.md", "05-architecture.md", "07-deployment.md"],
+  "gates_passed": ["scope-locked"],
+  "last_user_turn_id": "turn-0012",
+  "answered_len_at_last_turn": 12,
+  "updated_at": "2026-06-26T13:00:00.000Z"
+}

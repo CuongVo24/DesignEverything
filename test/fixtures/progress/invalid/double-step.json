@@ -1,0 +1,12 @@
+{
+  "version": "0.1.0",
+  "phase": "interview",
+  "branch": null,
+  "current_step": "S2",
+  "answered": ["S0", "S1"],
+  "emitted_docs": [],
+  "gates_passed": [],
+  "last_user_turn_id": "turn-0002",
+  "answered_len_at_last_turn": 0,
+  "updated_at": "2026-06-26T12:00:00.000Z"
+}

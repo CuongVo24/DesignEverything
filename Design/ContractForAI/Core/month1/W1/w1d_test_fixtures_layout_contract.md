@@ -39,4 +39,10 @@ Chuẩn bị sẵn bộ dữ liệu fixture dưới `test/fixtures/` để W2 ch
 - Ca `docs-complete/` chứa đúng `00-vision.md`, `01-personas.md`, `02-scope.md`.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã bố trí đầy đủ dữ liệu test fixture tại thư mục [test/fixtures/](../../../../test/fixtures/).
+- Tạo 3 file state hợp lệ (`init-s0.json`, `mid-web.json`, `ready-to-build.json`) và 4 file state không hợp lệ (`missing-field.json`, `invalid-branch.json`, `invalid-answered-len.json`, `double-step.json`) minh họa chính xác các ca vi phạm bất biến.
+- Dựng 2 thư mục trạng thái tài liệu để test gate: `docs-missing/` (thiếu `02-scope.md`) và `docs-complete/` (chứa đủ 3 doc yêu cầu).
+- Viết tài liệu hướng dẫn [README.md](../../../../test/fixtures/README.md) giải thích rõ ràng vai trò của từng fixture và map chúng vào các ca kiểm thử tương ứng.
