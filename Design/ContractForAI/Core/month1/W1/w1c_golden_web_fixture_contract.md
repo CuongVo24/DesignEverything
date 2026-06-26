@@ -42,4 +42,10 @@ Dựng tay trọn bộ golden example cho **một dự án web giả** (transcri
 - Chấm `_quality-score.md` theo rubric, ghi điểm từng file.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã dựng tay trọn bộ golden example cho dự án Web mẫu **RecipeShare** tại thư mục [golden-example-web/](../../../../Content/golden-example-web/).
+- Thiết lập thành công file [_interview-transcript.md](../../../../Content/golden-example-web/_interview-transcript.md) mô phỏng chính xác quá trình phỏng vấn S0-S6 và W1-W5 theo đúng 4 quy tắc vàng và dữ liệu `script.yaml`.
+- Tạo đầy đủ 9 file tài liệu trong thư mục [docs/](../../../../Content/golden-example-web/docs/) với đầy đủ phần "Tại sao cần file này" và các mỏ neo truy vết ẩn (`status=planned`).
+- Tiến hành tự đánh giá và cho điểm chất lượng đạt chuẩn tại [_quality-score.md](../../../../Content/golden-example-web/_quality-score.md). Cấu trúc cây thư mục khớp 100% với đặc tả web của `taxonomy.md`.
