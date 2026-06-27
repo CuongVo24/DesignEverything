@@ -18,11 +18,11 @@ Cập nhật [ConformanceMatrix.md](../../../../Adapters/ConformanceMatrix.md) p
 - KHÔNG tô ✅ cho bất kỳ harness nào chưa có bằng chứng test/smoke thật (nguyên tắc trung thực hai chiều).
 
 ## 3. Checklist
-- [ ] Dòng Claude Code phản ánh ✅ đúng các cột đã có code + test, kèm trỏ file.
-- [ ] Dòng AGENTS.md tách rõ: generator ✅ (unit-tested) vs harness smoke run ⏳ (defer Month 3).
-- [ ] Không tô ✅ cho phần chưa verify thật.
-- [ ] Mục "Trạng thái sau Batch 8" được cập nhật sang trạng thái Month 2, nêu rõ nợ còn lại.
-- [ ] Không có harness "để sau" nào bị đổi nhầm trạng thái.
+- [x] Dòng Claude Code phản ánh ✅ đúng các cột đã có code + test, kèm trỏ file.
+- [x] Dòng AGENTS.md tách rõ: generator ✅ (unit-tested) vs harness smoke run ⏳ (defer Month 3).
+- [x] Không tô ✅ cho phần chưa verify thật.
+- [x] Mục "Trạng thái sau Batch 8" được cập nhật sang trạng thái Month 2, nêu rõ nợ còn lại.
+- [x] Không có harness "để sau" nào bị đổi nhầm trạng thái.
 
 ## 4. Interfaces / Files expected to change
 - Không có code/interface.
@@ -30,7 +30,7 @@ Cập nhật [ConformanceMatrix.md](../../../../Adapters/ConformanceMatrix.md) p
 
 ## 5. Risks & mitigations
 | Risk | Mức | Mitigation |
-|---|---:|---|
+|---|---|---|
 | Tô ✅ quá tay cho AGENTS.md (bán quá lời) | Cao | Tách generator (✅ unit) khỏi harness smoke (⏳); chỉ ✅ cái có bằng chứng. |
 | Bỏ sót đồng bộ với release-note known-limitations | TB | Đối chiếu [v1-release-note §4](../../../../RoadMap/Month2/v1-release-note.md); matrix không được mâu thuẫn với limitation #1/#2. |
 | Drift mới giữa matrix và code sau này | Thấp | Trỏ thẳng file code trong ô trạng thái để lần sau dễ kiểm. |
@@ -41,4 +41,12 @@ Cập nhật [ConformanceMatrix.md](../../../../Adapters/ConformanceMatrix.md) p
 - Đối chiếu chéo: không còn chuỗi "chưa code" cho Claude Code / AGENTS.md.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã cập nhật **[ConformanceMatrix.md](file:///e:/DesignEverything/Design/Adapters/ConformanceMatrix.md)** phản ánh trung thực trạng thái dự án sau Month 2.
+  - Claude Code (Bậc A) được cập nhật từ `📐 spec locked, chưa code` sang `✅ Đã code + test`, ghi rõ các file dẫn chứng trong mã nguồn (`sessionStart.ts`, `userPromptSubmit.ts`, `preToolUse.ts`, `render-inject.ts`, `emit.ts`).
+  - AGENTS.md (Bậc B) được tách bạch trung thực: Bộ sinh generator `✅ (unit test)` đã hoàn thành và test tốt, còn việc chạy thử thực tế (smoke run) trên các harness ngoài (Codex/Cursor/Cline) là `⏳ (defer Month 3)`.
+  - Giữ nguyên trạng thái `⏳ để sau` của các harness native khác (Cursor native, Antigravity, Windsurf).
+- Cập nhật phần "Trạng thái sau Batch 8" thành "Trạng thái sau Month 2 (v1.0.0)" mô tả chi tiết những gì đã code, những gì còn nợ kỹ thuật (technical debt), hoàn toàn thống nhất với `v1-release-note.md` và `m2_polish_agents_md_artifact_drift_guard_contract.md`.
+- Chạy `npm test` xanh hoàn toàn 57/57 tests. Không có bất kỳ drift nào về mặt tài liệu.

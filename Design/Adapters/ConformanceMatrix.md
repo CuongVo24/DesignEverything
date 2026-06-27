@@ -9,8 +9,8 @@
 
 | Harness | Bậc | INJECT | GATE | EMIT | Trạng thái | File |
 |---|---|---|---|---|---|---|
-| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | 📐 spec locked, chưa code | [claude-code.md](claude-code.md) |
-| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | 📐 spec locked, chưa code | [agents-md.md](agents-md.md) |
+| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
+| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
 | Cursor (native `.mdc`) | B | `.cursorrules`/`.mdc` | rules text | cây taxonomy | ⏳ để sau | — |
 | Antigravity | B | rules | rules text | cây taxonomy | ⏳ để sau | — |
 | Windsurf / Continue | B | rules | rules text | cây taxonomy | ⏳ để sau | — |
@@ -30,7 +30,6 @@ DeepSeek/GLM là model chạy trong harness → **không có dòng riêng**. Dù
 - GATE: thử sinh code khi doc chưa xong → có bị chặn (A) / cảnh báo (B) không?
 - EMIT: output có rơi đúng cây taxonomy không?
 
-## Trạng thái sau Batch 8
-- Claude Code: đã có đặc tả hook đủ-để-code cho `SessionStart`, `UserPromptSubmit`, `PreToolUse`, cùng ranh giới rõ giữa hook cứng và `Stop` nhắc mềm.
-- AGENTS.md: đã có đặc tả template sinh file và cách map gate-policy sang rules text, kèm câu tuyên bố giới hạn enforcement.
-- Chưa harness nào được đánh dấu ✅ vì batch này chỉ khoá đặc tả, chưa có code và chưa có test adapter thực thi.
+## Trạng thái sau Month 2 (v1.0.0)
+- Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.
+- AGENTS.md: Đã code bộ sinh rules `generateAgentsMd` và viết unit test xác thực. Tuy nhiên, việc chạy kiểm thử thực tế (smoke run) trên các harness mềm (Codex/Cursor/Cline) tạm hoãn (⏳ defer) sang Month 3 (xem thêm [v1-release-note.md](../RoadMap/Month2/v1-release-note.md) limitation #1 & #2 và [m2_polish_agents_md_artifact_drift_guard_contract.md](../ContractForAI/Core/break_task/Month2/m2_polish_agents_md_artifact_drift_guard_contract.md)).
