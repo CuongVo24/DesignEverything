@@ -110,7 +110,7 @@ questions:
     target_doc: 05-architecture.md
     branch: mobile
     gate: null
-    translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. Nếu cần offline, điều đó kéo theo lưu cục bộ, đồng bộ lại khi có mạng, và tăng độ phức tạp đáng kể. Bạn muốn chấp nhận đổi chi phí đó để lấy trải nghiệm này chứ?"
+    translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn vẫn chấp nhận đánh đổi chi phí này để lấy trải nghiệm offline chứ?"
     depends_on: [S6, M1]
   - id: M3
     ask: "App có cần đụng tới phần cứng hay dữ liệu trong máy như camera, vị trí, danh bạ, micro, hay thư viện ảnh không?"
@@ -134,5 +134,5 @@ questions:
     target_doc: 07-release.md
     branch: mobile
     gate: null
-    translate_back: "Mình tóm lại chiến lược phát hành là: `<bản thử / lên store thật ngay>`, và kiếm tiền theo hướng `<free trước / in-app purchase / cách khác>`. Mình lưu ý trước rằng mobile không phải code xong là phát hành được ngay: còn review, ký app, cấu hình phân phối và vòng test trước khi public."
+    translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer hàng năm của Apple/Google, và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn đồng ý chuẩn bị các thủ tục này chứ?"
     depends_on: [S6, M1, M2, M3, M4]

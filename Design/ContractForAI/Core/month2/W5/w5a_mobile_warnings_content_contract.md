@@ -17,11 +17,11 @@ Bổ sung wording cảnh báo bắt buộc vào `translate_back` của hai câu 
 - KHÔNG sửa template `05-architecture.md`/`07-release.md`.
 
 ## 3. Checklist
-- [ ] M2 có cảnh báo offline/sync rõ chi phí, đặt ở `translate_back`/`warning`.
-- [ ] M5 có cảnh báo review + signing + phí developer.
-- [ ] `loadScript` vẫn validate xanh (zod không vỡ vì field mới đúng schema).
-- [ ] Wording khớp tinh thần QualityRubric §D (thực tế, không bán quá lời).
-- [ ] Đối chiếu golden-example-mobile để giọng nhất quán.
+- [x] M2 có cảnh báo offline/sync rõ chi phí, đặt ở `translate_back`/`warning`.
+- [x] M5 có cảnh báo review + signing + phí developer.
+- [x] `loadScript` vẫn validate xanh (zod không vỡ vì field mới đúng schema).
+- [x] Wording khớp tinh thần QualityRubric §D (thực tế, không bán quá lời).
+- [x] Đối chiếu golden-example-mobile để giọng nhất quán.
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Content/interview-script/script.yaml` (2 câu M2, M5 — chỉ field text)
@@ -40,4 +40,12 @@ Bổ sung wording cảnh báo bắt buộc vào `translate_back` của hai câu 
 - `npm test` — không vỡ test cũ.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã chỉnh sửa trực tiếp nội dung `translate_back` của 2 câu hỏi Mobile trong **[script.yaml](file:///e:/DesignEverything/Design/Content/interview-script/script.yaml)**:
+  - **M2 (offline/sync)**: Tích hợp cảnh báo trực quan bằng tiếng Việt về việc độ phức tạp và chi phí phát triển tăng đáng kể (gấp đôi do phải viết thêm các cơ chế lưu trữ nội bộ, đồng bộ hàng đợi, đồng bộ dữ liệu chéo và phân giải xung đột).
+  - **M5 (store)**: Tích hợp cảnh báo thực tế rõ ràng "Code xong ≠ Có app trên Store" — bắt buộc chuẩn bị các khâu ký ứng dụng (App Signing), phí tài khoản Apple/Google Developer hàng năm và tuân thủ quy trình xét duyệt (review) kiểm duyệt chặt chẽ của các hãng.
+- Đảm bảo định dạng text thô của tệp YAML chuẩn xác, không tạo thêm field mới nằm ngoài Zod schema của `interviewScript`.
+- Chạy `npx vitest run loadScript` và toàn bộ suite `npm test` xanh sạch 100% (47 tests).
+- Ngữ điệu các cảnh báo mang tính quyết định sản phẩm chân thực, bám sát Rubric chất lượng §D và mẫu golden-example-mobile.
