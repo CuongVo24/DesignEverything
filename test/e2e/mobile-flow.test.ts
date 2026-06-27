@@ -136,6 +136,15 @@ describe('E2E Mobile Interview & Gating Flow', () => {
       expect(promptResult.decision).toBe('allow');
       expect(promptResult.injectedContext).toContain(`ID câu hỏi: ${step}`);
 
+      if (step === 'M2') {
+        expect(promptResult.injectedContext).toContain('[CẢNH BÁO]');
+        expect(promptResult.injectedContext).toContain('offline');
+      }
+      if (step === 'M5') {
+        expect(promptResult.injectedContext).toContain('[CẢNH BÁO]');
+        expect(promptResult.injectedContext).toContain('store');
+      }
+
       progress = loadProgress(progressPath);
       progress = commitStep(progress, script, { userTurnId: turnId });
       saveProgress(progressPath, progress);

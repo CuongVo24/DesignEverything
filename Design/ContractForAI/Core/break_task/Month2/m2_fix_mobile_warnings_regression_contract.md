@@ -19,11 +19,11 @@ Thêm assertion vào e2e mobile để **khóa** việc hai cảnh báo cốt lõ
 - KHÔNG thêm file test mới nếu chèn được vào mobile-flow hiện có; chỉ tách ra `mobile-edge-cases` nếu vòng lặp trở nên khó đọc.
 
 ## 3. Checklist
-- [ ] Tại `step === 'M2'`: assert `injectedContext` chứa `[CẢNH BÁO]` và từ khóa offline/đồng bộ.
-- [ ] Tại `step === 'M5'`: assert `injectedContext` chứa `[CẢNH BÁO]` và từ khóa store/ký ứng dụng.
-- [ ] Thử nghịch đảo (manual sanity, không commit): tạm xóa `[CẢNH BÁO]` khỏi `script.yaml` → test **đỏ**; khôi phục → xanh.
-- [ ] Web path không bị ảnh hưởng (web-flow vẫn xanh).
-- [ ] Toàn bộ ≥ 57 test xanh.
+- [x] Tại `step === 'M2'`: assert `injectedContext` chứa `[CẢNH BÁO]` và từ khóa offline/đồng bộ.
+- [x] Tại `step === 'M5'`: assert `injectedContext` chứa `[CẢNH BÁO]` và từ khóa store/ký ứng dụng.
+- [x] Thử nghịch đảo (manual sanity, không commit): tạm xóa `[CẢNH BÁO]` khỏi `script.yaml` → test **đỏ**; khôi phục → xanh.
+- [x] Web path không bị ảnh hưởng (web-flow vẫn xanh).
+- [x] Toàn bộ ≥ 57 test xanh.
 
 ## 4. Interfaces / Files expected to change
 - Không có interface mới.
@@ -31,7 +31,7 @@ Thêm assertion vào e2e mobile để **khóa** việc hai cảnh báo cốt lõ
 
 ## 5. Risks & mitigations
 | Risk | Mức | Mitigation |
-|---|---:|---|
+|---|---|---|
 | Assert toàn văn → giòn, vỡ khi chau chuốt W7 | Cao | Chỉ assert marker `[CẢNH BÁO]` + 1 từ khóa ngắn, không khóa cả câu. |
 | Từ khóa quá chung (vd "app") → assert vô nghĩa | TB | Chọn từ khóa đặc trưng cảnh báo: `offline`/`đồng bộ`, `store`/`ký ứng dụng`. |
 | Đặt assert sai chỗ (sau commit, step đã trôi) | TB | Assert trên `promptResult` của đúng lượt `turn-mobile-${step}` trước `commitStep`. |
@@ -42,4 +42,14 @@ Thêm assertion vào e2e mobile để **khóa** việc hai cảnh báo cốt lõ
 - `npm run typecheck && npm run lint && npm test` — toàn bộ ≥ 57 test xanh.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã bổ sung các assertion hồi quy cho hai cảnh báo di động cốt lõi vào **[mobile-flow.test.ts](file:///e:/DesignEverything/test/e2e/mobile-flow.test.ts)**:
+  - Khi `step === 'M2'`: Kiểm tra `promptResult.injectedContext` chứa từ khóa `[CẢNH BÁO]` và `offline` (chi phí offline sync).
+  - Khi `step === 'M5'`: Kiểm tra `promptResult.injectedContext` chứa từ khóa `[CẢNH BÁO]` và `store` (quy trình ký ứng dụng và phí developer của app store).
+  - Tránh kiểm thử cứng nhắc toàn văn để tăng tính dẻo dai (resilience) cho kiểm thử khi văn bản được cải thiện sau này.
+- Đã chạy thử nghiệm nghịch đảo (manual sanity testing):
+  - Tạm thời sửa `[CẢNH BÁO]` thành `[NOTE]` ở tệp `script.yaml` $\rightarrow$ Chạy `npm test` báo lỗi đỏ chính xác tại dòng assertion của `step === 'M2'`.
+  - Khôi phục lại trạng thái cũ $\rightarrow$ Toàn bộ 57 tests của dự án xanh sạch 100%.
+- Các test luồng Web không bị ảnh hưởng, lint và compile hoàn toàn không có lỗi.
