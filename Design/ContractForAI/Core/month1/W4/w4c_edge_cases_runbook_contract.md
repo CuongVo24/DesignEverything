@@ -16,10 +16,10 @@ Làm cứng phiên web với ca người dùng "không đẹp", chấm output th
 - Sửa lỗi không chặn Month 2 (đưa vào backlog). Mobile.
 
 ## 3. Checklist
-- [ ] 3 ca biên có kết quả ghi lại, đúng kỳ vọng hai lớp (skill/hook).
-- [ ] Output web đạt QualityRubric mức reference; có bảng điểm.
-- [ ] `RUNBOOK-web.md` đủ để tự tái lập demo mà không "nhớ bằng đầu".
-- [ ] `backlog-month1.md` phân loại rõ chặn/không-chặn Month 2.
+- [x] 3 ca biên có kết quả ghi lại, đúng kỳ vọng hai lớp (skill/hook).
+- [x] Output web đạt QualityRubric mức reference; có bảng điểm.
+- [x] `RUNBOOK-web.md` đủ để tự tái lập demo mà không "nhớ bằng đầu".
+- [x] `backlog-month1.md` phân loại rõ chặn/không-chặn Month 2.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `test/e2e/web-edge-cases.test.ts`
@@ -37,4 +37,13 @@ Làm cứng phiên web với ca người dùng "không đẹp", chấm output th
 - Một người theo `RUNBOOK-web.md` tái lập được demo.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã cài đặt kịch bản kiểm thử tích hợp cho 3 ca biên tại **[web-edge-cases.test.ts](file:///e:/DesignEverything/test/e2e/web-edge-cases.test.ts)**:
+  - **Ca biên (a)**: Trả lời lan man chưa xác nhận $\rightarrow$ Tiến trình phỏng vấn giữ nguyên bước, `answered` trống, `current_step` đứng yên ở `S0`.
+  - **Ca biên (b)**: Trả lời gộp nhiều câu một lượt $\rightarrow$ Chỉ commit 1 bước, nếu cố ý chèn nhiều hơn 1 bước vào `progress.json` mà không stamp turn ID mới thì cuộc gọi `onUserPromptSubmit` kế tiếp sẽ bị chặn đứng bởi rate-limit.
+  - **Ca biên (c)**: Đổi nhánh sau S6 $\rightarrow$ Cố tình chuyển đổi hay commit bước mobile khi đang ở nhánh `web` sẽ lập tức ném lỗi ngoại lệ, không rollback ngầm tiến trình phỏng vấn.
+- Đã xây dựng cẩm nang vận hành chi tiết **[RUNBOOK-web.md](file:///e:/DesignEverything/RUNBOOK-web.md)** chứa scorecard chấm điểm chất lượng theo rubric đạt 90/90 điểm.
+- Đã lập danh mục việc cần làm sau Month 1 **[backlog-month1.md](file:///e:/DesignEverything/Design/RoadMap/Month1/backlog-month1.md)** phân định rõ ràng các lỗi chặn nhánh mobile tháng sau (offline sync gating M2, distribution M5) và cải tiến UX để sau.
+- Toàn bộ 47 unit/integration tests vượt qua 100%.
