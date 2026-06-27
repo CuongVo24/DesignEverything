@@ -1,7 +1,7 @@
 ## Tại sao cần file này
 Tài liệu này đặc tả cấu trúc dữ liệu mà ứng dụng cần lưu trữ để vận hành các tính năng. Định nghĩa rõ các thực thể (entities) và mối quan hệ giúp AI và lập trình viên thiết kế database chuẩn xác ngay từ đầu, tránh việc sửa schema database giữa chừng làm lỗi hệ thống.
 
-## Thực Thể Dữ Liệu Lõi
+## Thực Thể Chính
 Các thực thể chính cần quản lý trong hệ thống bao gồm:
 
 ### 1. User (Người dùng)
@@ -44,6 +44,6 @@ Các thực thể chính cần quản lý trong hệ thống bao gồm:
 *   Một `ShoppingList` gom nhiều `ShoppingItem` từ nhiều `Recipe` khác nhau (Quan hệ Nhiều - Nhiều ẩn qua `recipeId`).
 <!-- anchor: id=03-data-model/entity-relationships  src=src/features/data-model/dataModel.ts::entityRelationships  rev=  status=planned -->
 
-## Dữ Liệu Để Lại Sau (Deferred)
+## Ghi Chú Về Phần Chưa Đưa Vào MVP
 *   Dữ liệu đánh giá (Ratings) và bình luận (Comments/Reviews) của công thức sẽ được hoãn lại, chưa thiết kế schema cho phiên bản MVP.
 <!-- anchor: id=03-data-model/deferred-data  src=src/features/data-model/dataModel.ts::deferredDataNotes  rev=  status=planned -->

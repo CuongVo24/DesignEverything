@@ -7,23 +7,23 @@ Dự án này dễ "demo 1 tuần nhưng mài phương pháp phình vô hạn". 
 
 ## Mốc
 
-| Mốc | Phạm vi | Thời gian |
-|---|---|---|
-| **Bản chạy được** | Claude Code: skill + hook gate + kịch bản lõi **1 hướng (web)**, sinh cây doc end-to-end | ~1 tuần |
-| **v1 dùng được** | Thêm nhánh mobile, template chau chuốt, phần "tại sao", + adapter `AGENTS.md` | ~1 tháng |
-| **Đáng chia sẻ** | Test trên 3–4 dự án thật, lặp nội dung, README/phân phối | ~2–3 tháng |
+| Mốc | Phạm vi | Thời gian | Trạng thái |
+|---|---|---|---|
+| **Bản chạy được** | Claude Code: skill + hook gate + kịch bản lõi **1 hướng (web)**, sinh cây doc end-to-end | ~1 tuần | **ĐÃ HOÀN THÀNH** |
+| **v1 dùng được** | Thêm nhánh mobile, template chau chuốt, phần "tại sao", + adapter `AGENTS.md` | ~1 tháng | **ĐÃ HOÀN THÀNH (v1.0.0)** |
+| **Đáng chia sẻ** | Test trên 3–4 dự án thật, lặp nội dung, README/phân phối | ~2–3 tháng | Chưa bắt đầu |
 
 > Ba mốc thời gian ở bảng trên là ước lượng **lý tưởng/optimistic** rút từ FirstIdea: giả định nội dung lõi đã khoá, người làm có thể tập trung sâu, và chỉ tính phần "làm cho chạy được". Kế hoạch 16 tuần bên dưới là **lịch calendar bán thời gian** đã cộng thêm thời gian đệm cho dogfood, đo lường, hardening, onboarding và phân phối.
 
 ## Kế hoạch chi tiết 16 tuần (4 tháng)
 Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md` bên dưới đã được điền thành kế hoạch hành động chi tiết, đủ để bám theo khi bắt đầu triển khai code, dogfood và phân phối.
 
-| Tháng | Chủ đề | Mốc |
-|---|---|---|
-| [Month 1](Month1/README.md) | Reference: Claude Code + Web chạy được | Bản chạy được |
-| [Month 2](Month2/README.md) | Mobile + AGENTS.md + chau chuốt | v1 dùng được |
-| [Month 3](Month3/README.md) | Dogfood + kiểm chứng dự án thật | Đáng chia sẻ |
-| [Month 4](Month4/README.md) | Phân phối + đặt nền maintain | Đáng chia sẻ + tầm xa |
+| Tháng | Chủ đề | Mốc | Trạng thái |
+|---|---|---|---|
+| [Month 1](Month1/README.md) | Reference: Claude Code + Web chạy được | Bản chạy được | **HOÀN THÀNH** |
+| [Month 2](Month2/README.md) | Mobile + AGENTS.md + chau chuốt | v1 dùng được | **HOÀN THÀNH (v1.0.0)** |
+| [Month 3](Month3/README.md) | Dogfood + kiểm chứng dự án thật | Đáng chia sẻ | Kế hoạch |
+| [Month 4](Month4/README.md) | Phân phối + đặt nền maintain | Đáng chia sẻ + tầm xa | Kế hoạch |
 
 ## Phân pha
 - **Phase 0 — Khoá nội dung trong `Design/`**: đã hoàn tất qua [ContentFillPlan.md](ContentFillPlan.md), từ B1 đến B9.
