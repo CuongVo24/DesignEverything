@@ -16,11 +16,11 @@ Ba hàm lõi đọc + validate file nguồn ở ranh giới I/O: `script.yaml`, 
 - Ràng buộc `target_doc ∈ taxonomy` / `gate ∈ gate-policy` (test W2E đối chiếu chéo).
 
 ## 3. Checklist
-- [ ] `loadScript` validate + 3 kiểm liên-câu (unique id, depends_on hợp lệ, thứ tự nhánh).
-- [ ] `loadGatePolicy` validate + unique gate id.
-- [ ] `loadProgress` tự khởi tạo khi thiếu file; `saveProgress` ghi JSON hợp lệ.
-- [ ] Mọi hàm validate ở ranh giới; sai schema → throw có thông tin field.
-- [ ] `npm run typecheck` + unit test loader xanh.
+- [x] `loadScript` validate + 3 kiểm liên-câu (unique id, depends_on hợp lệ, thứ tự nhánh).
+- [x] `loadGatePolicy` validate + unique gate id.
+- [x] `loadProgress` tự khởi tạo khi thiếu file; `saveProgress` ghi JSON hợp lệ.
+- [x] Mọi hàm validate ở ranh giới; sai schema → throw có thông tin field.
+- [x] `npm run typecheck` + unit test loader xanh.
 
 ## 4. Interfaces / Files expected to change
 ```ts
@@ -43,4 +43,13 @@ export function saveProgress(path: string, p: Progress): void;
 - `loadProgress` file thiếu → state S0 mặc định; fixture `invalid/*` → throw.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã phát triển 3 Loader đọc và ghi dữ liệu tại ranh giới I/O:
+  - `loadScript.ts`: Đọc YAML, parse bằng `scriptSchema`. Đã tích hợp kiểm tra duy nhất ID, kiểm tra thứ tự `depends_on` chỉ trỏ tới câu hỏi trước đó, và kiểm tra thứ tự nhánh (câu `web`/`mobile` phải xuất hiện sau `S6`).
+  - `loadGatePolicy.ts`: Đọc YAML, parse bằng `gatePolicySchema`, kiểm tra duy nhất ID của gate.
+  - `loadProgress.ts`: Đọc và ghi JSON trạng thái phỏng vấn. Tự khởi tạo đối tượng progress mặc định S0 nếu thiếu file. Ném lỗi tường minh kèm chi tiết trường lỗi nếu file tồn tại nhưng sai schema.
+  - `index.ts` ở thư mục core được tạo để làm entrypoint xuất khẩu các loaders và schemas dùng chung.
+- Cập nhật `src/smoke.test.ts` để kiểm chứng tất cả 3 Loader chống lại các file tài liệu cấu hình thật của dự án (`script.yaml`, `gate-policy.yaml`) và các progress fixtures.
+- Toàn bộ bài test chạy thành công và typecheck/lint đều xanh.
