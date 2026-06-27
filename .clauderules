@@ -1,0 +1,23 @@
+# Claude Code Rules & Skills
+
+## Slash Command: /design
+
+When the user types `/design` or requests to proceed with the system design interview:
+1. **Load Progress & Script**: Read `progress.json` and `Design/Content/interview-script/script.yaml` from the workspace root.
+2. **Handle Completed Phase**: If `current_step` in `progress.json` is `null` (or phase is `ready-to-build` / `completed`), respond to the user that the interview phase is completed, explain the chosen branch, and guide them to proceed with building the app or generating code.
+3. **Handle Active Phase**: If `current_step` is not `null`, find the matching question in `script.yaml`.
+4. **Enforce 4 Golden Rules**:
+   - **Ask one question at a time**: Do not ask multiple questions. Focus solely on the active `current_step`.
+   - **Smart Defaults**: Propose the default response option (`default`) from the script.
+   - **Reverse Translation**: Render the system's reverse translation representation (`translate_back`).
+   - **Output Anchors**: Explicitly state that this question serves to detail target document (`target_doc`).
+5. **Interview Interaction Workflow**:
+   - Present the question, default option, target document, and the reverse translation format clearly to the user.
+   - Wait for the user's response.
+   - If the user responds:
+     - Formulate the reverse translation based on their answer.
+     - Present the reverse translation to the user and ask for their explicit confirmation.
+     - **Only after the user confirms**, perform the state transition (commit the step):
+       - Call the `commitStep` engine logic (appends the question to `answered`, stamps `last_user_turn_id` with the current user turn ID, determines the `branch` if S6 is answered, and moves `current_step` to the next step according to dependency logic).
+       - Save the updated state to `progress.json`.
+       - Inform the user that the step is committed, and tell them to invoke `/design` again to see the next question.

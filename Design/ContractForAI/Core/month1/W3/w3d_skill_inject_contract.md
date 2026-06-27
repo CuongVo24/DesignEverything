@@ -15,10 +15,10 @@ Skill/slash command (vd `/design`) đóng vai **lớp ngữ nghĩa**: hỏi đú
 - Rate-limit/gate (hook W3B/W3C). Đổi nội dung câu hỏi (đó là lõi `Content/`).
 
 ## 3. Checklist
-- [ ] Inject ra đúng `ask`/`default`/`translate_back`/`target_doc` của `current_step` + 4 quy tắc vàng.
-- [ ] Chỉ commit sau xác nhận, qua `commitStep`; ở `S6` truyền `branchChoice`.
-- [ ] Không hỏi 2 câu/lượt; không bịa câu ngoài script.
-- [ ] Smoke: chạy được một vài bước S0→S2 trên Claude Code.
+- [x] Inject ra đúng `ask`/`default`/`translate_back`/`target_doc` của `current_step` + 4 quy tắc vàng.
+- [x] Chỉ commit sau xác nhận, qua `commitStep`; ở `S6` truyền `branchChoice`.
+- [x] Không hỏi 2 câu/lượt; không bịa câu ngoài script.
+- [x] Smoke: chạy được một vài bước S0→S2 trên Claude Code.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `src/adapters/claude/skill/render-inject.ts` (build text inject từ state + script)
@@ -37,4 +37,14 @@ Skill/slash command (vd `/design`) đóng vai **lớp ngữ nghĩa**: hỏi đú
 - Smoke trên Claude Code: hỏi S0 → trả lời → xác nhận → state sang S1.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã tách logic sinh context phỏng vấn thành module thuần **[render-inject.ts](file:///e:/DesignEverything/src/adapters/claude/skill/render-inject.ts)**:
+  - Sinh chuỗi context `injectedContext` chuẩn chỉnh cho câu hỏi `current_step` hiện tại gồm các trường `ask`, `default`, `translate_back`, `target_doc`.
+  - Kết hợp 4 quy tắc vàng của phỏng vấn và hướng dẫn vận hành của lớp skill (yêu cầu xác nhận dịch ngược và commit một bước).
+  - Trả về chuỗi rỗng khi `current_step === null` và ném lỗi nếu `current_step` không tồn tại trong `script.yaml`.
+- Đã liên kết và tinh gọn hook `onUserPromptSubmit` để gọi trực tiếp helper `renderInject` này.
+- Đã khai báo định nghĩa chi tiết skill/slash command `/design` cho adapter Claude Code tại tệp quy tắc cấu hình dự án **[.clauderules](file:///e:/DesignEverything/.clauderules)** và tệp cấu hình workspace chung **[.agents/AGENTS.md](file:///e:/DesignEverything/.agents/AGENTS.md)**. Điều này đảm bảo host điều khiển diễn giải đúng lớp ngữ nghĩa của kịch bản phỏng vấn.
+- Viết bộ unit test chuyên dụng tại **[render-inject.test.ts](file:///e:/DesignEverything/src/adapters/claude/skill/render-inject.test.ts)** để kiểm thử thành công render câu hỏi, xử lý khi kết thúc phỏng vấn và ném lỗi khi ID câu hỏi không có trong kịch bản.
+- Toàn bộ vitest, typecheck, lint, build chạy thành công xanh sạch.

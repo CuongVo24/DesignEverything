@@ -3,7 +3,7 @@ import { onUserPromptSubmit } from './userPromptSubmit.js';
 import { loadProgress } from '../../core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, unlinkSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs';
+import { existsSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
