@@ -16,12 +16,12 @@ Hàm thuần tính bước kế tiếp (lớp **skill** = commit ngữ nghĩa) v
 - KHÔNG nhồi logic Must/Should/Could hay wording phỏng vấn vào đây (đó là nội dung lõi, không phải engine).
 
 ## 3. Checklist
-- [ ] `commitStep` đi đúng `S0→S1→...→S6→(W1|M1)→...` theo `branch`.
-- [ ] Commit `S6` bắt buộc `branchChoice`; thiếu → throw; set `branch` một chiều (throw nếu `branch` đã khác null mà cố đổi).
-- [ ] `commitStep` throw khi `userTurnId === last_user_turn_id`.
-- [ ] `checkRate` trả `ok=false` khi answered tăng > 1.
-- [ ] Chuyển `phase` sang `ready-to-build` + `current_step=null` đúng điều kiện §4.5.
-- [ ] Hàm thuần (không I/O); test xanh.
+- [x] `commitStep` đi đúng `S0→S1→...→S6→(W1|M1)→...` theo `branch`.
+- [x] Commit `S6` bắt buộc `branchChoice`; thiếu → throw; set `branch` một chiều (throw nếu `branch` đã khác null mà cố đổi).
+- [x] `commitStep` throw khi `userTurnId === last_user_turn_id`.
+- [x] `checkRate` trả `ok=false` khi answered tăng > 1.
+- [x] Chuyển `phase` sang `ready-to-build` + `current_step=null` đúng điều kiện §4.5.
+- [x] Hàm thuần (không I/O); test xanh.
 
 ## 4. Interfaces / Files expected to change
 ```ts
@@ -48,4 +48,12 @@ export function stampTurn(progress: Progress, answeredLen: number): Progress;
 - Nhánh mobile: S6 + branchChoice='mobile' → 'M1' → ... → 'M5'.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã tách bạch rõ 3 hàm thuần trong lớp skill (ngữ nghĩa) và hook (giới hạn nhịp):
+  - `commitStep.ts`: Tính toán thuần trạng thái mới của phiên phỏng vấn. Tự động tìm câu hỏi tiếp theo trong kịch bản bằng thuật toán duyệt thứ tự khai báo (với các điều kiện: chưa trả lời, tương thích nhánh và tất cả `depends_on` đã được đáp ứng). Hỗ trợ rẽ nhánh tại S6 và chuyển pha sang `ready-to-build` động không hardcode bằng cách kiểm tra các doc/gate đã emit và mở.
+  - `checkRate.ts`: Hàm hook xác thực nhịp tiến triển của lượt trả lời, đảm bảo chiều dài `answered` tăng tối đa 1 bước trong cùng lượt người thật.
+  - `stampTurn.ts`: Hàm hook đóng dấu lượt người dùng thực tế bằng cách cập nhật `answered_len_at_last_turn`.
+- Tích hợp kiểm thử hoàn tất chuỗi chuyển trạng thái cho cả hai nhánh Web và Mobile, kiểm thử chống duplicate commit, và kiểm thử rate limit trong `smoke.test.ts`.
+- Mọi kiểm thử vitest, build, typecheck, lint đều xanh.
