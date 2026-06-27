@@ -21,11 +21,11 @@ Hàm thuần sinh nội dung `AGENTS.md` từ lõi (script + gate-policy + taxon
 - KHÔNG tự chế rule ngoài Contract lõi (bất biến §5).
 
 ## 3. Checklist
-- [ ] Output có đủ 5 phần đúng thứ tự agents-md.md.
-- [ ] Phần "Gate mềm" liệt kê đúng `requires_docs` của `scope-locked` đọc từ `policy` (không hardcode).
-- [ ] Có câu tuyên bố giới hạn enforcement mềm + lưu ý nhịp best-effort.
-- [ ] Mỗi câu hỏi/section bám `script`/`taxonomy`, không bịa file ngoài taxonomy.
-- [ ] Hàm thuần (string in → string out), không I/O.
+- [x] Output có đủ 5 phần đúng thứ tự agents-md.md.
+- [x] Phần "Gate mềm" liệt kê đúng `requires_docs` của `scope-locked` đọc từ `policy` (không hardcode).
+- [x] Có câu tuyên bố giới hạn enforcement mềm + lưu ý nhịp best-effort.
+- [x] Mỗi câu hỏi/section bám `script`/`taxonomy`, không bịa file ngoài taxonomy.
+- [x] Hàm thuần (string in → string out), không I/O.
 
 ## 4. Interfaces / Files expected to change
 ```ts
@@ -47,4 +47,13 @@ export function generateAgentsMd(opts: { script: Script; policy: GatePolicy }): 
 - `npm run typecheck && npm run lint && npm test` — xanh.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã cài đặt bộ generator sinh nội dung `AGENTS.md` tại **[generateAgentsMd.ts](file:///e:/DesignEverything/src/adapters/agents/generateAgentsMd.ts)**:
+  - Sinh đầy đủ và chính xác 5 phần theo chuẩn `agents-md.md` cấu trúc: 1. Tại sao dùng phỏng vấn trước; 2. Nguồn sự thật phải đọc; 3. Cách hỏi từng bước; 4. Gate mềm trước khi code; 5. Cách emit docs.
+  - Phần "Gate mềm" hoàn toàn động, tự động đọc và kết xuất danh sách `requires_docs` của từng cổng chặn (ví dụ: `scope-locked` yêu cầu `00-vision.md`, `01-personas.md`, `02-scope.md`) từ tệp cấu hình `policy` tại thời điểm chạy (runtime) thay vì hardcode tĩnh.
+  - Tích hợp chặt chẽ tuyên bố giới hạn "enforcement mềm" đúng tinh thần Rubric: gate trên các harness đọc rule chỉ mang tính chỉ dẫn mạnh thay vì chặn cứng, hướng dẫn dùng Claude Code adapter nếu cần cơ chế chặn deterministic. Ghi nhận nhịp 1-bước/lượt trên harness mềm chỉ là best-effort khuyến nghị.
+  - Xuất bản hàm thuần `generateAgentsMd` qua **[src/core/index.ts](file:///e:/DesignEverything/src/core/index.ts)**.
+- Viết bộ unit test chuyên dụng tại **[generateAgentsMd.test.ts](file:///e:/DesignEverything/src/adapters/agents/generateAgentsMd.test.ts)** để kiểm thử sự hiện diện của 5 phần, tuyên bố giới hạn và các tài liệu của gate `scope-locked`.
+- Toàn bộ 49 unit và integration tests đều hoàn thành xanh sạch 100%. Lint và Typecheck hoàn tất không có lỗi.
