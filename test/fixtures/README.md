@@ -65,5 +65,5 @@ Dùng để kiểm thử hook `PreToolUse` nhằm thực thi cứng nguyên tắ
 
 ## Nguồn tài liệu mẫu đầu ra đầy đủ (Golden Examples)
 Để tham chiếu toàn bộ nội dung tài liệu đầu ra đầy đủ (bao gồm cả mỏ neo truy vết ẩn), vui lòng xem tại các thư mục chuẩn vàng:
-*   [golden-example-web/](../Design/Content/golden-example-web/)
-*   [golden-example-mobile/](../Design/Content/golden-example-mobile/)
+*   [golden-example-web/](../../Design/Content/golden-example-web/)
+*   [golden-example-mobile/](../../Design/Content/golden-example-mobile/)

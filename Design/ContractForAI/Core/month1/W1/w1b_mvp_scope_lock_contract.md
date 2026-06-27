@@ -18,10 +18,10 @@ Viết một văn bản chốt phạm vi MVP Month 1 để tuần 2–4 chỉ vi
 - Viết code.
 
 ## 3. Checklist
-- [ ] File `MVP-Scope-Lock.md` có đủ 5 mục trên.
-- [ ] Mọi tuyên bố khớp `ProductPRD.md` §9 (Non-goals) và `gate-policy.yaml`.
-- [ ] Mở đầu có `## Tại sao cần file này`.
-- [ ] Liệt kê rõ "web only / 1 gate / Claude Code only / chưa mobile / chưa AGENTS.md".
+- [x] File `MVP-Scope-Lock.md` có đủ 5 mục trên.
+- [x] Mọi tuyên bố khớp `ProductPRD.md` §9 (Non-goals) và `gate-policy.yaml`.
+- [x] Mở đầu có `## Tại sao cần file này`.
+- [x] Liệt kê rõ "web only / 1 gate / Claude Code only / chưa mobile / chưa AGENTS.md".
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/RoadMap/Month1/MVP-Scope-Lock.md`

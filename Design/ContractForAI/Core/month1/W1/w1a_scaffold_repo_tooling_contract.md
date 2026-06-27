@@ -21,13 +21,13 @@ Dựng một repo Node.js + TypeScript `strict` chạy được (lint/typecheck/
 - Nội dung golden web → W1C. Bố trí fixture test → W1D.
 
 ## 3. Checklist
-- [ ] `package.json` deps pin chính xác + 4 scripts; lockfile committed.
-- [ ] `tsconfig.json` `strict`, alias `@/*`.
-- [ ] `vitest.config.ts` env `node` + alias.
-- [ ] `eslint.config.mjs` flat, `no-explicit-any` error; `.prettierrc`.
-- [ ] `src/core/.gitkeep`, `src/adapters/claude/.gitkeep`, `test/fixtures/.gitkeep`.
-- [ ] `src/smoke.test.ts` import qua `@/` và pass.
-- [ ] `npm run typecheck` / `lint` / `build` / `npx vitest run` đều xanh.
+- [x] `package.json` deps pin chính xác + 4 scripts; lockfile committed.
+- [x] `tsconfig.json` `strict`, alias `@/*`.
+- [x] `vitest.config.ts` env `node` + alias.
+- [x] `eslint.config.mjs` flat, `no-explicit-any` error; `.prettierrc`.
+- [x] `src/core/.gitkeep`, `src/adapters/claude/.gitkeep`, `test/fixtures/.gitkeep`.
+- [x] `src/smoke.test.ts` import qua `@/` và pass.
+- [x] `npm run typecheck` / `lint` / `build` / `npx vitest run` đều xanh.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `package.json`, `package-lock.json`

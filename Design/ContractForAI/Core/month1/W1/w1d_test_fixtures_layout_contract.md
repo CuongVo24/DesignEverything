@@ -3,7 +3,7 @@
 > **Tầng:** Adapter/test (dữ liệu test, chưa viết test logic). Nguồn: [Week-01](../../../../RoadMap/Month1/Week-01.md) + [state-schema.md](../../../../Core/Schemas/state-schema.md) + [gate-policy.yaml](../../../../Content/interview-script/gate-policy.yaml).
 
 ## 1. Micro-task target
-Chuẩn bị sẵn bộ dữ liệu fixture dưới `test/fixtures/` để W2 chỉ việc viết test, không phải bịa input. Bao trùm cả nhánh web và mobile, các state mẫu, và các ca gate.
+Chuẩn bị sẵn bộ dữ liệu fixture dưới `test/fixtures/` để W2 chỉ việc viết test, không phải bịa input. Bao trùm nhánh web (chỉ làm web cho Month 1), các state mẫu, và các ca gate.
 
 ## 2. Scope
 **In scope**
@@ -17,10 +17,10 @@ Chuẩn bị sẵn bộ dữ liệu fixture dưới `test/fixtures/` để W2 ch
 - Sửa schema/golden.
 
 ## 3. Checklist
-- [ ] 3 `progress.json` hợp lệ + ≥3 invalid, mỗi cái minh hoạ đúng một bất biến.
-- [ ] 2 thư mục gate (đóng/mở) với đúng/đủ doc theo `requires_docs` của `scope-locked`.
-- [ ] `test/fixtures/README.md` map fixture → ca test, trỏ golden web/mobile.
-- [ ] Mọi `progress.json` mẫu validate được bằng tay theo state-schema §6.
+- [x] 3 `progress.json` hợp lệ + ≥3 invalid, mỗi cái minh hoạ đúng một bất biến.
+- [x] 2 thư mục gate (đóng/mở) với đúng/đủ doc theo `requires_docs` của `scope-locked`.
+- [x] `test/fixtures/README.md` map fixture → ca test, trỏ golden web/mobile.
+- [x] Mọi `progress.json` mẫu validate được bằng tay theo state-schema §6.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `test/fixtures/progress/{init-s0,mid-web,ready-to-build}.json`

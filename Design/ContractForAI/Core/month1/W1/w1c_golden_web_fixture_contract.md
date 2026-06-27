@@ -18,11 +18,11 @@ Dựng tay trọn bộ golden example cho **một dự án web giả** (transcri
 - Code; bố trí test fixture (W1D).
 
 ## 3. Checklist
-- [ ] Transcript thể hiện rõ default + dịch ngược + xác nhận cho từng câu.
-- [ ] `docs/` đủ 9 file, dùng `07-deployment.md` (không phải release).
-- [ ] Mỗi quyết định kiến trúc (W1–W5) nối ngược về nhu cầu người dùng, không "vì hot".
-- [ ] Mỗi file có "## Tại sao cần file này" + anchor `status=planned`.
-- [ ] `_quality-score.md` chấm rubric, đạt mức tương đương golden-mobile.
+- [x] Transcript thể hiện rõ default + dịch ngược + xác nhận cho từng câu.
+- [x] `docs/` đủ 9 file, dùng `07-deployment.md` (không phải release).
+- [x] Mỗi quyết định kiến trúc (W1–W5) nối ngược về nhu cầu người dùng, không "vì hot".
+- [x] Mỗi file có "## Tại sao cần file này" + anchor `status=planned`.
+- [x] `_quality-score.md` chấm rubric, đạt mức tương đương golden-mobile.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/Content/golden-example-web/_interview-transcript.md`
