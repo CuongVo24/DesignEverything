@@ -18,11 +18,11 @@ Chạy được một phiên Claude Code trọn tuyến **S0→S6→M1–M5** tr
 - KHÔNG đụng wording M2/M5 (W5A). KHÔNG đụng AGENTS.md (W6).
 
 ## 3. Checklist
-- [ ] Phiên mobile chạy trọn S0→M5, `current_step` kết `null`.
-- [ ] `emitTree('mobile')` ra `07-release.md`, không `07-deployment.md`, đúng 9 file.
-- [ ] Anchor planned mobile dùng `apps/mobile/src/`.
-- [ ] Gate chặn→mở đồng nhất với web.
-- [ ] web-flow.test.ts cũ vẫn xanh (không phá web Month 1).
+- [x] Phiên mobile chạy trọn S0→M5, `current_step` kết `null`.
+- [x] `emitTree('mobile')` ra `07-release.md`, không `07-deployment.md`, đúng 9 file.
+- [x] Anchor planned mobile dùng `apps/mobile/src/`.
+- [x] Gate chặn→mở đồng nhất với web.
+- [x] web-flow.test.ts cũ vẫn xanh (không phá web Month 1).
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `test/e2e/mobile-flow.test.ts` (~150 dòng, mirror web-flow)
@@ -42,4 +42,16 @@ Chạy được một phiên Claude Code trọn tuyến **S0→S6→M1–M5** tr
 - `npm run typecheck && npm test` — toàn bộ xanh.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã cài đặt kịch bản kiểm thử tích hợp E2E cho nhánh Mobile tại **[mobile-flow.test.ts](file:///e:/DesignEverything/test/e2e/mobile-flow.test.ts)**:
+  - Giả lập trọn vẹn chu kỳ phỏng vấn Mobile (12 lượt tương tác S0->S6->M1->M5) kết hợp `onSessionStart`, `onUserPromptSubmit` và lệnh lõi `commitStep`.
+  - Xác thực việc chọn nhánh `branchChoice='mobile'` tại S6 khóa chặt nhánh hoạt động và chuyển hướng bước tiếp theo sang `M1`.
+  - Kiểm thử cơ chế chặn cứng gating: chặn ghi code ngoài docs `apps/mobile/src/index.ts` khi chưa sinh tài liệu (bị chặn bởi gate `scope-locked`).
+  - Sinh cây 9 file tài liệu bằng `emitTree` sau khi hoàn thành phỏng vấn ở M5 và lưu xuống đĩa.
+  - Xác thực sinh đúng file `07-release.md` và không tạo ra `07-deployment.md`.
+  - Xác thực tất cả các mỏ neo planned tự động mang tiền tố source path của nhánh mobile `apps/mobile/src/` (ví dụ: `src=apps/mobile/src/features/vision/vision.ts::projectVision`).
+  - Kiểm tra mở cổng chặn thành công sau khi đã lưu tài liệu.
+- Đã chạy kiểm chứng độc lập đảm bảo kịch bản `web-flow.test.ts` cũ vẫn xanh 100%, bảo vệ tuyệt đối thành quả Web của Month 1.
+- Chạy `npm test` thành công toàn bộ 48 tests. Lint và Typecheck hoàn toàn sạch lỗi.
