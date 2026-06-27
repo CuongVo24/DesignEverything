@@ -93,6 +93,7 @@ Không được viết mập mờ kiểu “bị cấm tuyệt đối” khi har
 - Không tự tạo thêm file ngoài taxonomy trừ khi lõi đã cập nhật.
 
 ## Cách sinh mẫu `AGENTS.md` từ lõi
+- Output mẫu sinh tự động được lưu trữ tại [Design/Adapters/generated/AGENTS.sample.md](generated/AGENTS.sample.md) (Cấm chỉnh sửa thủ công tệp này).
 - Phần bất biến lấy từ:
   - [../Core/Contract.md](../Core/Contract.md)
   - [../Content/interview-script/script.yaml](../Content/interview-script/script.yaml)
@@ -118,5 +119,5 @@ Một adapter mềm nên được sinh từ cùng một nguồn template, không
 - File rules có nói thật giới hạn enforcement.
 
 ## Trạng thái
-- Đặc tả `AGENTS.md` đã đủ để sinh template và test trên nhiều harness.
-- Chưa triển khai code sinh file trong batch này.
+- Bộ sinh generator `generateAgentsMd` đã hoàn thành và được bảo vệ drift tự động bằng bài test artifact drift guard.
+- Việc chạy kiểm thử thực tế (smoke run) trên các harness ngoài (Codex/Cursor) tạm hoãn (⏳ defer) sang Month 3.
