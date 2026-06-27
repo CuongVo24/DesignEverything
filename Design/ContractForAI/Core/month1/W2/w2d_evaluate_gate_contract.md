@@ -17,10 +17,10 @@ Hàm thuần quyết định một gate đang đóng hay mở **chỉ dựa trê
 - Mutate progress (adapter append `gates_passed`).
 
 ## 3. Checklist
-- [ ] `evaluateGate` trả `open=false` + `missing` đúng khi thiếu doc.
-- [ ] `evaluateGate` `open=true` khi đủ `00-vision/01-personas/02-scope`.
-- [ ] `isBlocked` đúng cho `Write/Edit/Bash` khi gate đóng; `false` khi gate mở.
-- [ ] Hàm thuần; test xanh.
+- [x] `evaluateGate` trả `open=false` + `missing` đúng khi thiếu doc.
+- [x] `evaluateGate` `open=true` khi đủ `00-vision/01-personas/02-scope`.
+- [x] `isBlocked` đúng cho `Write/Edit/Bash` khi gate đóng; `false` khi gate mở.
+- [x] Hàm thuần; test xanh.
 
 ## 4. Interfaces / Files expected to change
 ```ts
@@ -42,4 +42,12 @@ export function passedGates(policy: GatePolicy, existingDocs: string[]): string[
 - `isBlocked(scope-locked,'Write',[])` → `true`; với đủ doc → `false`.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã cài đặt 3 hàm thuần trong **[evaluateGate.ts](file:///e:/DesignEverything/src/core/evaluateGate.ts)**:
+  - `evaluateGate`: So khớp tập tài liệu yêu cầu của cổng chặn (`requires_docs`) với tập các tài liệu đã có (`existingDocs`). Tích hợp hàm chuẩn hóa đường dẫn để khử mọi sai biệt giữa các hệ điều hành và định dạng tương đối/tuyệt đối (`getBasename`).
+  - `isBlocked`: Quyết định hành động gọi công cụ (`Write`, `Edit`, `Bash`) có bị cổng chặn cấm thực thi hay không.
+  - `passedGates`: Duyệt qua danh sách cổng chặn của chính sách để thu thập các cổng đã mở.
+- Tích hợp kiểm thử hoàn tất cho cả 3 hàm trong `smoke.test.ts` (kiểm thử ca thiếu doc, ca đủ doc, chuẩn hóa đường dẫn Windows và Linux, kiểm thử isBlocked chặn Write/Edit/Bash, và kiểm thử passedGates).
+- Mọi kiểm thử, typecheck, lint, build đều thành công.

@@ -7,7 +7,10 @@ import {
   saveProgress,
   commitStep,
   checkRate,
-  stampTurn
+  stampTurn,
+  evaluateGate,
+  isBlocked,
+  passedGates
 } from '@/core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -117,7 +120,6 @@ test('engine - advanceState web branch', () => {
   }
 
   // Fake docs and gates emission
-  // Web branch required docs: 00-vision.md, 01-personas.md, 02-scope.md, 03-data-model.md, 04-flows.md, 05-architecture.md, 06-constraints.md, 07-deployment.md, README.md (derived dynamically from script questions)
   const webQuestions = script.questions.filter(q => q.branch === 'core' || q.branch === 'web');
   progressFull.emitted_docs = webQuestions.map(q => q.target_doc);
   progressFull.gates_passed = ['scope-locked'];
@@ -168,4 +170,46 @@ test('engine - checkRate & stampTurn & duplicate turn validation', () => {
   expect(checkRate(progress, 1).ok).toBe(true); // answered didn't grow
   expect(checkRate(progress, 2).ok).toBe(true); // answered grew by 1
   expect(checkRate(progress, 3).ok).toBe(false); // answered grew by 2
+});
+
+test('engine - evaluateGate & isBlocked & passedGates', () => {
+  const policyPath = join(__dirname, '../Design/Content/interview-script/gate-policy.yaml');
+  const policy = loadGatePolicy(policyPath);
+  const scopeLockedGate = policy.gates[0];
+
+  // 1. evaluateGate
+  // Missing 2 docs
+  let result = evaluateGate(scopeLockedGate, ['00-vision.md']);
+  expect(result.open).toBe(false);
+  expect(result.missing).toContain('01-personas.md');
+  expect(result.missing).toContain('02-scope.md');
+
+  // Normalization check with absolute and relative paths
+  result = evaluateGate(scopeLockedGate, [
+    'E:\\project\\00-vision.md',
+    '/usr/local/01-personas.md',
+    'Design/RoadMap/02-scope.md'
+  ]);
+  expect(result.open).toBe(true);
+  expect(result.missing.length).toBe(0);
+
+  // 2. isBlocked
+  // Blocked when open = false
+  expect(isBlocked(scopeLockedGate, 'Write', ['00-vision.md'])).toBe(true);
+  expect(isBlocked(scopeLockedGate, 'Edit', ['00-vision.md'])).toBe(true);
+  expect(isBlocked(scopeLockedGate, 'Bash', ['00-vision.md'])).toBe(true);
+
+  // Not blocked when open = true
+  expect(isBlocked(scopeLockedGate, 'Write', [
+    '00-vision.md',
+    '01-personas.md',
+    '02-scope.md'
+  ])).toBe(false);
+
+  // 3. passedGates
+  const passed = passedGates(policy, ['00-vision.md', '01-personas.md', '02-scope.md']);
+  expect(passed).toContain('scope-locked');
+
+  const nonePassed = passedGates(policy, ['00-vision.md']);
+  expect(nonePassed.length).toBe(0);
 });
