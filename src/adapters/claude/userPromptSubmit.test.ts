@@ -3,39 +3,42 @@ import { onUserPromptSubmit } from './userPromptSubmit.js';
 import { loadProgress } from '../../core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// We also need to make sure Design/Content/interview-script/script.yaml exists relative to workspaceRoot.
-// Since vitest runs in e:\DesignEverything, the workspace root contains Design/Content/interview-script/script.yaml.
-// We can use the project root e:\DesignEverything as ctx.workspaceRoot for loader testing, or we can copy/mock if needed.
-// Wait, the project root e:\DesignEverything already contains:
-// - Design/Content/interview-script/script.yaml
-// - Design/Content/interview-script/gate-policy.yaml
-// So if we setctx.workspaceRoot to e:\DesignEverything, we can use a temporary progress.json at e:\DesignEverything\progress.json
-// and clean it up. That is very robust and uses actual script files!
-// Let's do that:
 const projectRoot = join(__dirname, '../../..');
-const projectProgressPath = join(projectRoot, 'progress.json');
+const testWorkspaceRoot = join(__dirname, '../../../test/fixtures/progress/user-prompt-submit-workspace');
+const projectProgressPath = join(testWorkspaceRoot, 'progress.json');
 
 describe('onUserPromptSubmit hook', () => {
   beforeEach(() => {
-    // Ensure no progress.json in projectRoot
+    // 1. Recreate clean workspace directory
     try {
-      if (existsSync(projectProgressPath)) {
-        unlinkSync(projectProgressPath);
+      if (existsSync(testWorkspaceRoot)) {
+        rmSync(testWorkspaceRoot, { recursive: true, force: true });
       }
     } catch {
       // Ignore
     }
+
+    mkdirSync(join(testWorkspaceRoot, 'Design/Content/interview-script'), { recursive: true });
+
+    // 2. Copy script and policy files
+    copyFileSync(
+      join(projectRoot, 'Design/Content/interview-script/script.yaml'),
+      join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml')
+    );
+    copyFileSync(
+      join(projectRoot, 'Design/Content/interview-script/gate-policy.yaml'),
+      join(testWorkspaceRoot, 'Design/Content/interview-script/gate-policy.yaml')
+    );
   });
 
   afterEach(() => {
     try {
-      if (existsSync(projectProgressPath)) {
-        unlinkSync(projectProgressPath);
+      if (existsSync(testWorkspaceRoot)) {
+        rmSync(testWorkspaceRoot, { recursive: true, force: true });
       }
     } catch {
       // Ignore
@@ -52,12 +55,12 @@ describe('onUserPromptSubmit hook', () => {
       emitted_docs: [],
       gates_passed: [],
       last_user_turn_id: 'turn-2',
-      answered_len_at_last_turn: 2, // grew by 1 in previous turn, which is allowed
+      answered_len_at_last_turn: 2,
       updated_at: new Date().toISOString(),
     };
     writeFileSync(projectProgressPath, JSON.stringify(mockState, null, 2), 'utf8');
 
-    const result = onUserPromptSubmit({ workspaceRoot: projectRoot, userTurnId: 'turn-3' });
+    const result = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-3' });
 
     expect(result.decision).toBe('allow');
     expect(result.injectedContext).toBeDefined();
@@ -88,7 +91,7 @@ describe('onUserPromptSubmit hook', () => {
     };
     writeFileSync(projectProgressPath, JSON.stringify(mockState, null, 2), 'utf8');
 
-    const result = onUserPromptSubmit({ workspaceRoot: projectRoot, userTurnId: 'turn-3' });
+    const result = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-3' });
 
     expect(result.decision).toBe('block');
     expect(result.message).toContain('Rate limit violation');
@@ -122,7 +125,7 @@ describe('onUserPromptSubmit hook', () => {
     };
     writeFileSync(projectProgressPath, JSON.stringify(mockState, null, 2), 'utf8');
 
-    const result = onUserPromptSubmit({ workspaceRoot: projectRoot, userTurnId: 'turn-web-6' });
+    const result = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-web-6' });
 
     expect(result.decision).toBe('allow');
     expect(result.injectedContext).toBeUndefined();
@@ -134,13 +137,13 @@ describe('onUserPromptSubmit hook', () => {
 
   test('should return block when progress.json is missing or invalid', () => {
     // Missing file
-    const resultMissing = onUserPromptSubmit({ workspaceRoot: projectRoot, userTurnId: 'turn-1' });
+    const resultMissing = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-1' });
     expect(resultMissing.decision).toBe('block');
     expect(resultMissing.message).toContain('Failed to load progress state');
 
     // Invalid schema
     writeFileSync(projectProgressPath, JSON.stringify({ version: 'invalid' }), 'utf8');
-    const resultInvalid = onUserPromptSubmit({ workspaceRoot: projectRoot, userTurnId: 'turn-1' });
+    const resultInvalid = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-1' });
     expect(resultInvalid.decision).toBe('block');
     expect(resultInvalid.message).toContain('Failed to load progress state');
   });

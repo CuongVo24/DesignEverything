@@ -18,11 +18,11 @@ Hook `PreToolUse` ép cứng "chưa đủ doc thì chưa code": đọc gate-poli
 - Inject/commit (W3B/W3D). Đánh giá ngữ nghĩa câu trả lời.
 
 ## 3. Checklist
-- [ ] Chặn `Write/Edit/Bash` khi thiếu `02-scope.md` (gate `scope-locked` đóng) + đúng `message`.
-- [ ] Cho phép viết trong `Design/`/`docs/` và `Bash` đọc-file.
-- [ ] Chặn `Bash` build/cài package khi gate đóng.
-- [ ] Không dùng `Stop` chặn nhầm lượt hỏi tiếp.
-- [ ] `gates_passed` append đúng khi đủ doc.
+- [x] Chặn `Write/Edit/Bash` khi thiếu `02-scope.md` (gate `scope-locked` đóng) + đúng `message`.
+- [x] Cho phép viết trong `Design/`/`docs/` và `Bash` đọc-file.
+- [x] Chặn `Bash` build/cài package khi gate đóng.
+- [x] Không dùng `Stop` chặn nhầm lượt hỏi tiếp.
+- [x] `gates_passed` append đúng khi đủ doc.
 
 ## 4. Interfaces / Files expected to change
 ```ts
@@ -46,4 +46,14 @@ export function onPreToolUse(ctx: {
 - `Bash "npm install"` khi gate đóng → `deny`; `Bash "ls docs"` → `allow`.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã cài đặt hook `onPreToolUse` tại **[preToolUse.ts](file:///e:/DesignEverything/src/adapters/claude/preToolUse.ts)**:
+  - **Phân loại & cho phép sửa doc**: Tự động cho phép các tool `Write` / `Edit` nếu đường dẫn đích nằm trong thư mục `Design/` hoặc `docs/` (bằng cách chuẩn hóa đường dẫn tương đối qua `relative`).
+  - **Phân loại Bash an toàn**: Phân tích câu lệnh CLI để cho phép các câu lệnh đọc và liệt kê an toàn (`cat`, `ls`, `git diff`, `rg`, v.v.) và không chứa ký tự chuyển hướng ghi đè file (`>`, `>>`).
+  - **Chặn theo Gate Policy**: Quét thư mục `docs/` một cách đệ quy để thu thập danh sách `existingDocs`, đối chiếu với gate policy `gate-policy.yaml`. Nếu phát hiện bất kỳ gate nào đóng mà chặn tool hiện tại (như `scope-locked` chặn ghi mã nguồn ngoài doc khi thiếu `02-scope.md`), lập tức trả về `deny` cùng tin nhắn từ gate đó.
+  - **Cập nhật gates_passed**: Khi phát hiện tài liệu đã đủ để mở một gate, tự động append gate ID vào `gates_passed` trong `progress.json` (append-only).
+- Viết bộ unit test chuyên dụng tại **[preToolUse.test.ts](file:///e:/DesignEverything/src/adapters/claude/preToolUse.test.ts)** để kiểm thử tất cả các kịch bản chặn ghi code khi gate đóng, cho phép viết doc, cho phép Bash an toàn và tự động mở gate/cho phép ghi code khi đủ doc.
+- Giải quyết triệt để xung đột race condition kiểm thử song song bằng cách thiết lập cấu trúc workspace cô lập hoàn toàn (`user-prompt-submit-workspace/` và `pre-tool-use-workspace/`) cho từng file test.
+- Kiểm thử vitest, typecheck, lint, build đều xanh sạch 100%.
