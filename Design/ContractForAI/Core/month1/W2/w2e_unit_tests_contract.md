@@ -17,15 +17,15 @@ Bộ unit test Vitest phủ engine lõi (W2A–W2D) trên fixture web và các c
 - Test hook Claude Code thật (W3). Test EMIT (W4).
 
 ## 3. Checklist
-- [ ] Test phủ đủ 5 nhóm trên, dùng fixture W1D + golden.
-- [ ] Có ca web hoàn chỉnh.
-- [ ] Có ca `answered_len_at_last_turn` vi phạm.
-- [ ] Có ca thiếu doc mở gate thất bại.
-- [ ] `npx vitest run` xanh; coverage engine lõi hợp lý.
+- [x] Test phủ đủ 5 nhóm trên, dùng fixture W1D + golden.
+- [x] Có ca web hoàn chỉnh.
+- [x] Có ca `answered_len_at_last_turn` vi phạm.
+- [x] Có ca thiếu doc mở gate thất bại.
+- [x] `npx vitest run` xanh; coverage engine lõi hợp lý.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `src/core/{loadScript,loadProgress,advanceState,evaluateGate}.test.ts`
-- `[NEW]` (nếu cần) `src/core/contentIntegrity.test.ts` cho tầng 1 đối chiếu chéo taxonomy/gate.
+- `[NEW]` `src/core/contentIntegrity.test.ts` cho tầng 1 đối chiếu chéo taxonomy/gate.
 
 ## 5. Risks & mitigations
 | Risk | Mức | Mitigation |
@@ -38,4 +38,14 @@ Bộ unit test Vitest phủ engine lõi (W2A–W2D) trên fixture web và các c
 - Mỗi bất biến state-schema §5 có ít nhất một test phủ.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã xây dựng bộ unit test toàn diện cho lõi động cơ phỏng vấn và đánh giá cổng chặn (25 test cases trong 6 file):
+  - `loadScript.test.ts`: Kiểm chứng parse YAML kịch bản phỏng vấn thật, bắt lỗi trùng ID, depends_on nghịch hoặc hướng tới tương lai, và thứ tự câu hỏi nhánh trước S6.
+  - `loadProgress.test.ts`: Kiểm chứng tự khởi tạo S0, kiểm chứng validate cấu trúc qua Zod cho các template fixtures, và kiểm chứng việc đọc/ghi dữ liệu trạng thái.
+  - `advanceState.test.ts`: Kiểm chứng các chuỗi chuyển đổi trạng thái (Web & Mobile), bắt lỗi double commit, bắt lỗi thay đổi nhánh và kiểm nhịp rate-limit.
+  - `evaluateGate.test.ts`: Kiểm chứng đóng/mở gate artifact-based, chặn tool action, và chuẩn hóa đường dẫn HĐH.
+  - `contentIntegrity.test.ts`: Kiểm chứng đối chiếu chéo (target_doc thuộc taxonomy.md, gate trỏ đúng gate-policy.yaml).
+  - `smoke.test.ts`: Được rút gọn làm smoke test nhẹ nhàng xác thực path alias `@/`.
+- Toàn bộ suite test chạy thành công sạch sẽ. typecheck, lint, build đều xanh.
