@@ -48,9 +48,11 @@ describe('loadProgress & saveProgress', () => {
     const invalidDir = join(__dirname, '../../test/fixtures/progress/invalid');
     const missingFieldPath = join(invalidDir, 'missing-field.json');
     const invalidBranchPath = join(invalidDir, 'invalid-branch.json');
+    const invalidVersionPath = join(invalidDir, 'invalid-version-format.json');
 
     expect(() => loadProgress(missingFieldPath)).toThrow(/Invalid progress schema/);
     expect(() => loadProgress(invalidBranchPath)).toThrow(/Invalid progress schema/);
+    expect(() => loadProgress(invalidVersionPath)).toThrow(/Invalid progress schema/);
   });
 
   test('should successfully save valid progress and fail saving invalid progress', () => {
