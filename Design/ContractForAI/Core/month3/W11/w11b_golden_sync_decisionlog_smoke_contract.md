@@ -17,10 +17,10 @@
 - KHÔNG mở rộng taxonomy (W12). KHÔNG đụng code lõi/adapter.
 
 ## 3. Checklist
-- [ ] golden web + mobile khớp `Content/` mới, không drift cấu trúc; mọi golden test xanh trở lại.
-- [ ] 2 `_quality-score.md` cập nhật, pass có lý do ghi rõ.
-- [ ] DecisionLog có entry cho vòng sửa nội dung W11; Versioning bump đúng cấp (hoặc ghi rõ "không bump vì chỉ sửa wording").
-- [ ] `smoke-after-w11.md` cho thấy ma sát thật giảm trên ≥1 dự án đã đo, không chỉ "đẹp hơn".
+- [x] golden web + mobile khớp `Content/` mới, không drift cấu trúc; mọi golden test xanh trở lại.
+- [x] 2 `_quality-score.md` cập nhật, pass có lý do ghi rõ.
+- [x] DecisionLog có entry cho vòng sửa nội dung W11 (D16); Versioning bump PATCH → 1.0.1.
+- [x] `smoke-after-w11.md` cho thấy ma sát thật giảm trên ≥1 dự án đã đo, không chỉ "đẹp hơn".
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Content/golden-example-web/docs/*`, `Design/Content/golden-example-mobile/docs/*`
@@ -41,4 +41,4 @@
 - Review thủ công 2 golden theo QualityRubric; đọc `smoke-after-w11.md` thấy ma sát giảm có dẫn chứng.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

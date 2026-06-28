@@ -1,4 +1,4 @@
-version: 0.1.0
+version: 1.0.1
 questions:
   - id: S0
     ask: "Nếu kể cho một người bạn trong 10 giây, dự án này là cái gì?"
