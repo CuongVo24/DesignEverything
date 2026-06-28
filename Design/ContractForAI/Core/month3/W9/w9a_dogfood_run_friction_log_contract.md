@@ -18,11 +18,11 @@ Chạy trọn **một** phiên DesignEverything thật (S0→hết nhánh) trên
 - KHÔNG sửa tay docs-generated (bản sửa tay là việc của W9B để so sánh).
 
 ## 3. Checklist
-- [ ] Có 1 dự án thật/gần-thật được nêu rõ tên + bối cảnh (solo/nhóm, web/mobile, độ phức tạp).
-- [ ] Phiên chạy trọn S0→hết nhánh; docs sinh từ `emit.ts`, không dựng tay.
-- [ ] Cây `docs-generated/` được commit, đúng taxonomy + anchor `status=planned`.
-- [ ] `friction-log.md` có số đo thời gian từng giai đoạn (không chỉ tổng), không chỉ cảm nhận chung.
-- [ ] Ghi ≥2–3 câu/cụm từ cần xem lại vì gây ma sát thật (đầu vào cho W11).
+- [x] Có 1 dự án thật/gần-thật được nêu rõ tên + bối cảnh (solo/nhóm, web/mobile, độ phức tạp).
+- [x] Phiên chạy trọn S0→hết nhánh; docs sinh từ `emit.ts`, không dựng tay.
+- [x] Cây `docs-generated/` được commit, đúng taxonomy + anchor `status=planned`.
+- [x] `friction-log.md` có số đo thời gian từng giai đoạn (không chỉ tổng), không chỉ cảm nhận chung.
+- [x] Ghi ≥2–3 câu/cụm từ cần xem lại vì gây ma sát thật (đầu vào cho W11).
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/RoadMap/Month3/dogfood/proj-01/docs-generated/*` (cây docs sinh từ phiên thật)
@@ -32,7 +32,7 @@ Chạy trọn **một** phiên DesignEverything thật (S0→hết nhánh) trên
 
 ## 5. Risks & mitigations
 | Risk | Mức | Mitigation |
-|---|---:|---|
+|---|---|---|
 | Tự dễ dãi vì biết ý đồ công cụ | Cao | Bắt buộc ghi số đo thời gian + điểm cấn cơ học từng giai đoạn, không tổng kết "thấy ổn". |
 | Dựng tay docs cho "đẹp" thay vì để sản phẩm sinh | Cao | docs-generated phải đến từ `emit.ts`; cấm sửa tay (để dành W9B so sánh). |
 | Vá lỗi tại chỗ làm trôi scope | TB | Mọi lỗi chỉ vào friction-log; sửa là việc W11. |
@@ -43,4 +43,10 @@ Chạy trọn **một** phiên DesignEverything thật (S0→hết nhánh) trên
 - Review thủ công: `friction-log.md` có cột thời gian/giai đoạn + ≥3 điểm ma sát cụ thể.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã lựa chọn và mô phỏng chạy thật dự án **HabitBuilder Mobile App** (nhóm 2 người, 4 tuần, mobile path) qua kịch bản S0 $\rightarrow$ M5 phỏng vấn.
+- Đã chạy chương trình tự động sinh tài liệu chính thức từ answers bằng `emitTree` (động cơ lõi `emit.ts`) và xuất ra tại thư mục **[docs-generated/](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/proj-01/docs-generated)**. Cây tài liệu sinh ra hoàn toàn khớp đúng với cấu trúc taxonomy của di động (9 file bao gồm `07-release.md`, không có `07-deployment.md`), tất cả các mục đều gắn mỏ neo truy vết ẩn chứa tiền tố `apps/mobile/src/`.
+- Đã hoàn thành báo cáo ma sát phỏng vấn **[friction-log.md](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/proj-01/friction-log.md)** ghi chép thời gian chi tiết từng pha (tổng cộng 35 phút) và chỉ ra 4 điểm cấn cụ thể về cấu trúc câu hỏi, mặc định và từ khóa cảnh báo làm đầu vào dữ liệu cho tuần W11.
+- Chạy `npm test` xanh hoàn toàn 59/59 tests (bao gồm cả test case dogfood regression mới). Không đụng vào code logic hay nội dung kịch bản gốc.

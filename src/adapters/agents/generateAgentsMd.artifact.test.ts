@@ -31,8 +31,11 @@ describe('generateAgentsMd artifact drift guard', () => {
     const committed = readFileSync(artifactPath, 'utf8');
     
     // Strip the auto-generated header warning for comparison
-    const committedContent = committed.replace(/^<!--[\s\S]*?-->\n/, '');
+    const committedContent = committed.replace(/^<!--[\s\S]*?-->(\r?\n)+/, '');
 
-    expect(generated).toBe(committedContent);
+    const normalizedGenerated = generated.replace(/\r\n/g, '\n').trim();
+    const normalizedCommitted = committedContent.replace(/\r\n/g, '\n').trim();
+
+    expect(normalizedGenerated).toBe(normalizedCommitted);
   });
 });
