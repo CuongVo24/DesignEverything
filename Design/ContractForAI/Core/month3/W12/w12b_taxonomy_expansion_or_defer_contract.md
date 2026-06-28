@@ -19,10 +19,10 @@ Thực thi **đúng một nhánh** quyết định ở W12A. Nếu mở rộng: 
 - KHÔNG sửa logic script S0–S6 lõi (đó là W11). KHÔNG đụng schema engine trừ khi taxonomy MAJOR buộc (ghi rõ ở DecisionLog).
 
 ## 3. Checklist
-- [ ] Chỉ một nhánh (A hoặc B) được thực thi, đúng quyết định W12A.
+- [x] Chỉ một nhánh (A hoặc B) được thực thi, đúng quyết định W12A.
 - [ ] **Nhánh A:** template mới + taxonomy + golden + adapter/validator + Versioning MAJOR **đồng bộ**, không nơi nào lệch.
-- [ ] **Nhánh B:** DecisionLog ghi hoãn + điều kiện kích hoạt lại đủ cụ thể để Month 4 không tranh lại mơ hồ.
-- [ ] Không thêm file chỉ vì "giống công ty"; mọi file thêm thắng được chi phí nhận thức người mới.
+- [x] **Nhánh B:** DecisionLog ghi hoãn + điều kiện kích hoạt lại đủ cụ thể để Month 4 không tranh lại mơ hồ.
+- [x] Không thêm file chỉ vì "giống công ty"; mọi file thêm thắng được chi phí nhận thức người mới.
 
 ## 4. Interfaces / Files expected to change
 **Nhánh A:**
@@ -47,4 +47,4 @@ Thực thi **đúng một nhánh** quyết định ở W12A. Nếu mở rộng: 
 - Cả hai: Month 3 đóng với một quyết định taxonomy không treo.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
