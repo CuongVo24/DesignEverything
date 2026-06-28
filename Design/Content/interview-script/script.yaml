@@ -26,7 +26,17 @@ questions:
     depends_on: [S0, S1]
   - id: S3
     ask: "Cứ kể lộn xộn những việc bạn muốn người dùng làm được trong phiên bản đầu. Không cần tự sắp ưu tiên, mình sẽ giúp nhóm lại."
-    default: "Agent đề xuất bộ MVP tối thiểu dựa trên nỗi đau, persona và một luồng hoàn thành việc đầu tiên."
+    # vì phản hồi từ proj-01, proj-02, proj-03: gợi ý mặc định S3 thiếu cấu trúc định dạng
+    default: |
+      Must:
+      - [Tính năng cốt lõi giải quyết trực tiếp nỗi đau ở S1]
+      - [Màn hình xem kết quả/Thống kê đơn giản]
+      Should:
+      - [Tính năng nâng cao trải nghiệm, thông báo]
+      Could:
+      - [Tính năng bổ sung khi có thời gian]
+      Won't (MVP):
+      - [Báo cáo phức tạp, mạng xã hội, automation]
     target_doc: 02-scope.md
     branch: core
     gate: scope-locked
@@ -110,7 +120,8 @@ questions:
     target_doc: 05-architecture.md
     branch: mobile
     gate: null
-    translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn vẫn chấp nhận đánh đổi chi phí này để lấy trải nghiệm offline chứ?"
+    # vì phản hồi từ proj-01, proj-03: cảnh báo M2 thiếu chỉ dẫn xác nhận của người dùng
+    translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn có đồng ý đánh đổi chi phí này để lấy trải nghiệm offline không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [S6, M1]
   - id: M3
     ask: "App có cần đụng tới phần cứng hay dữ liệu trong máy như camera, vị trí, danh bạ, micro, hay thư viện ảnh không?"
@@ -134,5 +145,6 @@ questions:
     target_doc: 07-release.md
     branch: mobile
     gate: null
-    translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer hàng năm của Apple/Google, và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn đồng ý chuẩn bị các thủ tục này chứ?"
+    # vì phản hồi từ proj-01, proj-03: cảnh báo M5 thiếu số tiền đăng ký store thực tế
+    translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer (Apple App Store: $99/năm, Google Play Store: $25 một lần), và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn có đồng ý chuẩn bị các thủ tục và chi phí này không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [S6, M1, M2, M3, M4]

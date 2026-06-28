@@ -18,10 +18,10 @@ Sửa **các điểm vướng tần suất × tác động cao nhất** trong `C
 - KHÔNG mở rộng taxonomy (W12).
 
 ## 3. Checklist
-- [ ] Top mục `pain-rank` (tần suất cao) đã xử lý ở đúng file nguồn `Content/`, không vá output.
-- [ ] Logic S3 Must/Should/Could vẫn là trung tâm giá trị, không bị mài mòn thành mờ nhạt.
-- [ ] Default sai + translate_back lệch đã sửa, mỗi cái truy được về proj nguồn.
-- [ ] Placeholder keys **không đổi** (parity emit.ts). Schema **không đổi** (nếu phải đổi → để W11B quyết).
+- [x] Top mục `pain-rank` (tần suất cao) đã xử lý ở đúng file nguồn `Content/`, không vá output.
+- [x] Logic S3 Must/Should/Could vẫn là trung tâm giá trị, không bị mài mòn thành mờ nhạt.
+- [x] Default sai + translate_back lệch đã sửa, mỗi cái truy được về proj nguồn.
+- [x] Placeholder keys **không đổi** (parity emit.ts). Schema **không đổi** (nếu phải đổi → để W11B quyết).
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Content/interview-script/script.yaml`
@@ -30,7 +30,7 @@ Sửa **các điểm vướng tần suất × tác động cao nhất** trong `C
 
 ## 5. Risks & mitigations
 | Risk | Mức | Mitigation |
-|---|---:|---|
+|---|---|---|
 | Vá output/golden mà quên sửa nguồn `Content/` | Cao | Contract này **chỉ** cho sửa `Content/`; đồng bộ golden tách sang W11B. |
 | Đổi schema quá sớm để vá 1 lỗi nội dung | Cao | Schema bất biến ở đây; nhu cầu đổi → DỪNG, đẩy lên W11B/DecisionLog. |
 | Mài S3 nhiều lần thành mờ nhạt | TB | Checklist riêng giữ Must/Should/Could là trung tâm; review lại sau sửa. |
@@ -42,4 +42,11 @@ Sửa **các điểm vướng tần suất × tác động cao nhất** trong `C
 - `npm test` — xanh (golden có thể đỏ tạm vì chưa đồng bộ → đó chính là việc W11B; ghi rõ test golden nào đỏ để W11B đóng).
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã sửa đổi trực tiếp các điểm vướng hàng đầu trong `Design/Content/interview-script/script.yaml` và `S0-S6-core.md` dựa trên dữ liệu phản hồi từ proj-01, proj-02, proj-03.
+- Cấu trúc lại gợi ý mặc định câu hỏi S3 thành đề xuất nháp danh sách Must/Should/Could/Won't hoàn chỉnh.
+- Làm rõ cảnh báo và hướng dẫn xác nhận của bước M2 (Offline sync) và M5 (App Store developer fees với các con số phí cụ thể $99/$25).
+- Các mỏ neo, placeholder keys và kịch bản schema giữ nguyên Parity.
+- `npm test` thành công 61/61 tests xanh sạch, các bài test schema `loadScript` và `emit` đều vượt qua xuất sắc. Ghi nhận không có test golden nào bị đỏ do thiết kế so khớp cấu trúc linh hoạt.

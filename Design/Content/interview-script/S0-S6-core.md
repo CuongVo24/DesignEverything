@@ -95,7 +95,16 @@ Người mới hay trả lời "ai cũng dùng được". Agent phải ép cụ 
 "Cứ kể lộn xộn những việc bạn muốn người dùng làm được trong phiên bản đầu. Không cần tự sắp ưu tiên, mình sẽ giúp nhóm lại."
 
 **default**  
-"Agent đề xuất bộ MVP tối thiểu dựa trên nỗi đau, persona và một luồng hoàn thành việc đầu tiên."
+<!-- vì phản hồi từ proj-01, proj-02, proj-03: gợi ý mặc định S3 thiếu cấu trúc định dạng -->
+Must:
+- [Tính năng cốt lõi giải quyết trực tiếp nỗi đau ở S1]
+- [Màn hình xem kết quả/Thống kê đơn giản]
+Should:
+- [Tính năng nâng cao trải nghiệm, thông báo]
+Could:
+- [Tính năng bổ sung khi có thời gian]
+Won't (MVP):
+- [Báo cáo phức tạp, mạng xã hội, automation]
 
 **translate_back**  
 "Mình đã nhóm lại thành 4 tầng: Must / Should / Could / Won't. Bản MVP nhỏ nhất mình đề xuất là: `<danh sách Must>`. Phần này để sau là: `<danh sách còn lại>`. Bạn xác nhận giúp mình nhé."
