@@ -17,10 +17,10 @@ Dựa trên dữ liệu thật của W9–W11, **ra một quyết định taxono
 - KHÔNG quyết theo "trông giống công ty hơn"; mọi mở rộng phải thắng được chi phí nhận thức cho người mới.
 
 ## 3. Checklist
-- [ ] Quyết định rõ ràng: giữ tối giản / mở một phần / mở đủ — không treo lơ lửng.
-- [ ] Mỗi đề xuất mở rộng có bằng chứng tần suất (≥N dự án vấp cùng chỗ), không chỉ trực giác.
-- [ ] Tách rõ "buộc mở" vs "chưa cần"; ghi điều kiện kích hoạt lại nếu hoãn.
-- [ ] Có sơ bộ tác động lên adapter/validator/golden/versioning nếu chọn mở rộng.
+- [x] Quyết định rõ ràng: giữ tối giản / mở một phần / mở đủ — không treo lơ lửng.
+- [x] Mỗi đề xuất mở rộng có bằng chứng tần suất (≥N dự án vấp cùng chỗ), không chỉ trực giác.
+- [x] Tách rõ "buộc mở" vs "chưa cần"; ghi điều kiện kích hoạt lại nếu hoãn.
+- [x] Có sơ bộ tác động lên adapter/validator/golden/versioning nếu chọn mở rộng.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/RoadMap/Month3/taxonomy-decision.md` (~60–120 dòng)
@@ -39,4 +39,4 @@ Dựa trên dữ liệu thật của W9–W11, **ra một quyết định taxono
 - Quyết định đủ rõ để W12B chọn đúng một nhánh thực thi mà không phải đoán.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
