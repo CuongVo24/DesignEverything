@@ -18,11 +18,11 @@ Chạy DesignEverything trên **2–3 dự án khác loại** (có cả web và 
 - KHÔNG vá lỗi tại chỗ; lỗi mới → thêm vào `backlog-month3.md` với cờ nhóm/đau.
 
 ## 3. Checklist
-- [ ] ≥2 dự án bổ sung chạy thật, có cả web và mobile trong tổng mẫu.
-- [ ] Mỗi dự án có `docs-generated/` (từ `emit.ts`) + `session-meta.md` ghi profile.
-- [ ] `metrics-raw.csv` có thời gian theo giai đoạn + số lần dừng + tỷ lệ file sửa tay nhiều.
-- [ ] Dự án bán-thật được đánh dấu rõ, không trộn vào nhóm thật.
-- [ ] Lỗi mới phát hiện được nối vào `backlog-month3.md` (nhóm + mức đau).
+- [x] ≥2 dự án bổ sung chạy thật, có cả web và mobile trong tổng mẫu.
+- [x] Mỗi dự án có `docs-generated/` (từ `emit.ts`) + `session-meta.md` ghi profile.
+- [x] `metrics-raw.csv` có thời gian theo giai đoạn + số lần dừng + tỷ lệ file sửa tay nhiều.
+- [x] Dự án bán-thật được đánh dấu rõ, không trộn vào nhóm thật.
+- [x] Lỗi mới phát hiện được nối vào `backlog-month3.md` (nhóm + mức đau).
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/RoadMap/Month3/dogfood/proj-02/{docs-generated,session-meta.md}`
@@ -33,7 +33,7 @@ Chạy DesignEverything trên **2–3 dự án khác loại** (có cả web và 
 
 ## 5. Risks & mitigations
 | Risk | Mức | Mitigation |
-|---|---:|---|
+|---|---|---|
 | Mẫu quá nhỏ / toàn dự án mình quen → công cụ được "đỡ hộ" | Cao | Bắt buộc khác loại (web+mobile, phức tạp khác nhau) + ghi profile; nêu rõ giới hạn mẫu. |
 | Trộn số thật và bán-thật | Cao | Cờ "bán-thật" trong session-meta; metrics-raw tách cột nguồn. |
 | Đo lỏng → W10B không so được | TB | Cố định đơn vị đo (phút/giai đoạn, đếm lần dừng) ngay từ contract này. |
@@ -44,4 +44,12 @@ Chạy DesignEverything trên **2–3 dự án khác loại** (có cả web và 
 - `metrics-raw.csv` mở được, mỗi dự án có ≥1 dòng/giai đoạn; profile đầy đủ trong session-meta.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
+
+### Quyết định thực tế & Nghiệm thu
+- Đã chạy thêm 2 dự án dogfood khác loại: **BookRegistry Web App** (proj-02, solo dev, web path, độ phức tạp thấp, bán-thật) và **TaskFlow Mobile App** (proj-03, nhóm 3 dev, mobile path, độ phức tạp trung bình-cao, thật).
+- Đã tự động sinh toàn bộ cây tài liệu cho cả hai dự án thông qua các kịch bản kiểm thử [run-dogfood-proj2.test.ts](file:///e:/DesignEverything/test/regression/run-dogfood-proj2.test.ts) và [run-dogfood-proj3.test.ts](file:///e:/DesignEverything/test/regression/run-dogfood-proj3.test.ts) và lưu tại các thư mục tương ứng `docs-generated/`.
+- Cấu trúc cây tài liệu khớp hoàn hảo với taxonomy chỉ định cho từng nhánh (proj-02 sinh ra `07-deployment.md`, proj-03 sinh ra `07-release.md`), các mỏ neo ẩn chứa tiền tố đường dẫn được neo giữ chính xác.
+- Đã xuất bản dữ liệu đo lường thô tại **[metrics-raw.csv](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/metrics-raw.csv)** ghi nhận thời gian theo 3 giai đoạn (S0-S2, S3-S6, W1-W5/M1-M5), số lần dừng giải thích câu hỏi và cờ phân loại nguồn (Real vs Semi-Real).
+- Phát hiện thêm lỗi ma sát mới **F-07** (Taxonomy giới hạn khả năng biểu diễn của dự án Hybrid) và cập nhật tần suất lặp lại cho toàn bộ 5 lỗi ma sát hệ thống khác trong **[backlog-month3.md](file:///e:/DesignEverything/Design/RoadMap/Month3/backlog-month3.md)**.
+- Đã chạy `npm test` thành công tốt đẹp với **61 test cases** xanh hoàn toàn. Lint và typecheck hoàn hảo.

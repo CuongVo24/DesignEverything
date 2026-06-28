@@ -1,0 +1,10 @@
+Project,Phase,DurationMinutes,StopCount,FrictionDescription,SourceType
+proj-01,S0-S2,8,0,Không có ma sát lớn,Real
+proj-01,S3-S6,12,1,S3 gợi ý thiếu cấu trúc danh sách,Real
+proj-01,M1-M5,15,1,M5 gợi ý thiếu số tiền tài khoản thực tế,Real
+proj-02,S0-S2,5,0,Chạy nhanh do model web quen thuộc,Semi-Real
+proj-02,S3-S6,7,0,S3 vẫn bị dồn cục văn bản nhưng giải quyết nhanh,Semi-Real
+proj-02,W1-W5,8,0,Không có ma sát lớn ở tech stack web,Semi-Real
+proj-03,S0-S2,10,0,Không có ma sát lớn,Real
+proj-03,S3-S6,15,1,S3 gộp câu trả lời thô làm lặp data model S4,Real
+proj-03,M1-M5,20,2,M2 sync phức tạp và M5 enterprise fee chưa rõ ràng,Real
