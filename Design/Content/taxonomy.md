@@ -20,7 +20,7 @@ docs/
   README.md             ← mục lục + "đọc theo thứ tự này"
 ```
 
-> Mỗi phiên chỉ emit **một** trong hai file `07-*`, tuỳ nhánh đã chốt sau S6. Validator và adapter phải hiểu đây là hai tên file hợp lệ riêng biệt, không phải một chuỗi bracket.
+> Mỗi phiên chỉ emit **một** trong hai file `07-*` đối với nhánh `web` hoặc `mobile` (tuỳ nhánh đã chốt sau S6). Riêng nhánh `hybrid` (opt-in cho dự án tích hợp cả Web & Mobile) sẽ emit **cả hai** file `07-deployment.md` và `07-release.md`. Validator và adapter phải hiểu đây là hai tên file hợp lệ riêng biệt, không phải một chuỗi bracket.
 
 ## Quy tắc
 - Mỗi file kèm đoạn **"Tại sao cần file này"** (insight HCMUS: vừa có sản phẩm vừa học nghề).

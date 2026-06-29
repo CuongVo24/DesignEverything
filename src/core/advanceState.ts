@@ -1,9 +1,15 @@
 import type { Progress, Script } from './schemas/index.js';
 
+function isQuestionCompatible(qBranch: 'core' | 'web' | 'mobile', progressBranch: string | null): boolean {
+  if (qBranch === 'core') return true;
+  if (progressBranch === 'hybrid') return qBranch === 'web' || qBranch === 'mobile';
+  return qBranch === progressBranch;
+}
+
 export function commitStep(
   progress: Progress,
   script: Script,
-  args: { userTurnId: string; branchChoice?: 'web' | 'mobile' }
+  args: { userTurnId: string; branchChoice?: 'web' | 'mobile' | 'hybrid' }
 ): Progress {
   const currentStepId = progress.current_step;
   if (currentStepId === null) {
@@ -33,8 +39,8 @@ export function commitStep(
     if (!args.branchChoice) {
       throw new Error('branchChoice must be provided when committing step S6');
     }
-    if (args.branchChoice !== 'web' && args.branchChoice !== 'mobile') {
-      throw new Error(`Invalid branch choice: ${args.branchChoice}. Must be 'web' or 'mobile'`);
+    if (args.branchChoice !== 'web' && args.branchChoice !== 'mobile' && args.branchChoice !== 'hybrid') {
+      throw new Error(`Invalid branch choice: ${args.branchChoice}. Must be 'web', 'mobile' or 'hybrid'`);
     }
     if (progress.branch !== null && progress.branch !== args.branchChoice) {
       throw new Error(`Cannot change branch once set. Current: ${progress.branch}, New: ${args.branchChoice}`);
@@ -55,10 +61,7 @@ export function commitStep(
       continue;
     }
     // Check branch compatibility
-    if (q.branch === 'web' && nextProgress.branch !== 'web') {
-      continue;
-    }
-    if (q.branch === 'mobile' && nextProgress.branch !== 'mobile') {
+    if (!isQuestionCompatible(q.branch, nextProgress.branch)) {
       continue;
     }
     // Check depends_on
@@ -78,13 +81,13 @@ export function commitStep(
     // Interview complete, determine phase based on emitted docs and gates passed
     const requiredDocs = new Set(
       script.questions
-        .filter((q) => q.branch === 'core' || q.branch === nextProgress.branch)
+        .filter((q) => isQuestionCompatible(q.branch, nextProgress.branch))
         .map((q) => q.target_doc)
     );
     const requiredGates = new Set(
       script.questions
         .filter(
-          (q) => (q.branch === 'core' || q.branch === nextProgress.branch) && q.gate !== null
+          (q) => isQuestionCompatible(q.branch, nextProgress.branch) && q.gate !== null
         )
         .map((q) => q.gate as string)
     );

@@ -19,12 +19,12 @@ Thêm nhánh thứ ba `hybrid` cho `emitTree`: dự án web+mobile emit **cả h
 - KHÔNG đụng `srcPrefix` (W13A đã sở hữu).
 
 ## 3. Checklist
-- [ ] `branch` chấp nhận thêm `'hybrid'`; web/mobile hành vi y nguyên.
-- [ ] `hybrid` emit cả `07-deployment.md` + `07-release.md`, không trùng/thiếu slot.
-- [ ] `docs_readme_file_map` của `hybrid` liệt kê cả hai file `07-*`.
-- [ ] [taxonomy.md](../../../../Content/taxonomy.md) ghi `hybrid` + làm rõ ghi chú "mỗi phiên emit một `07-*`" áp dụng cho web/mobile, hybrid là ngoại lệ opt-in.
-- [ ] Versioning MINOR + changelog; D19 ghi lý do + **đánh dấu giải quyết lệch taxonomy-decision §5**.
-- [ ] Test hybrid xanh; golden web/mobile vẫn xanh (không đổi).
+- [x] `branch` chấp nhận thêm `'hybrid'`; web/mobile hành vi y nguyên.
+- [x] `hybrid` emit cả `07-deployment.md` + `07-release.md`, không trùng/thiếu slot.
+- [x] `docs_readme_file_map` của `hybrid` liệt kê cả hai file `07-*`.
+- [x] [taxonomy.md](../../../../Content/taxonomy.md) ghi `hybrid` + làm rõ ghi chú "mỗi phiên emit một `07-*`" áp dụng cho web/mobile, hybrid là ngoại lệ opt-in.
+- [x] Versioning MINOR + changelog; D19 ghi lý do + **đánh dấu giải quyết lệch taxonomy-decision §5**.
+- [x] Test hybrid xanh; golden web/mobile vẫn xanh (không đổi).
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `src/core/emit.ts` (~+20 dòng): mở rộng type `branch`; nhánh `hybrid` cho danh sách `files` (chèn cả hai `07-*`) + gộp populate slot web & mobile + `docs_readme_file_map` biến thể hybrid. Cẩn thận thứ tự file: `...06-constraints.md, 07-deployment.md, 07-release.md, README.md`.
@@ -47,4 +47,4 @@ Thêm nhánh thứ ba `hybrid` cho `emitTree`: dự án web+mobile emit **cả h
 - Review thủ công: [taxonomy.md](../../../../Content/taxonomy.md) + D19 đọc xong không còn thấy lệch với [taxonomy-decision §5](../../../../RoadMap/Month3/taxonomy-decision.md).
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

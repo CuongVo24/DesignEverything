@@ -120,4 +120,34 @@ describe('emitTree function', () => {
     const visionMobile = emittedMobile.find((d) => d.file === '00-vision.md');
     expect(visionMobile!.content).toContain('src=app/features/vision/vision.ts::projectVision');
   });
+
+  test('should emit correct 10 files for hybrid branch, including both 07-deployment.md and 07-release.md', () => {
+    const hybridAnswers: InterviewAnswers = {
+      ...mockAnswers,
+      M1: 'Expo Standalone',
+      M2: 'Offline first client',
+      M3: 'CH Play free-tier',
+      M4: 'OAuth integration mobile',
+      M5: 'Firebase push notifications',
+    };
+    const emitted = emitTree(hybridAnswers, 'hybrid', realTemplatesDir);
+
+    expect(emitted).toHaveLength(10);
+
+    const fileNames = emitted.map((d) => d.file);
+    expect(fileNames).toContain('07-deployment.md');
+    expect(fileNames).toContain('07-release.md');
+
+    // Verify architecture document contains combined slots
+    const archDoc = emitted.find((d) => d.file === '05-architecture.md');
+    expect(archDoc).toBeDefined();
+    expect(archDoc!.content).toContain('[Web] Cần SEO, Next.js SSR');
+    expect(archDoc!.content).toContain('[Mobile] Offline first client');
+
+    // Verify readme file map contains both deployment and release
+    const readmeDoc = emitted.find((d) => d.file === 'README.md');
+    expect(readmeDoc).toBeDefined();
+    expect(readmeDoc!.content).toContain('07-deployment.md');
+    expect(readmeDoc!.content).toContain('07-release.md');
+  });
 });

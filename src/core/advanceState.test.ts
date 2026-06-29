@@ -112,6 +112,30 @@ describe('advanceState engine', () => {
     expect(progressReady.phase).toBe('ready-to-build');
   });
 
+  test('should support hybrid branch flow committing S6 and routing all core, web, and mobile questions', () => {
+    let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    for (let i = 0; i <= 5; i++) {
+      progress = commitStep(progress, script, { userTurnId: `turn-${i}` });
+    }
+
+    // Commit S6 with hybrid branch
+    progress = commitStep(progress, script, { userTurnId: 'turn-6', branchChoice: 'hybrid' });
+    expect(progress.branch).toBe('hybrid');
+
+    // The next questions must include both Web and Mobile questions.
+    const expectedQuestions = [
+      'W1', 'W2', 'W3', 'W4', 'W5',
+      'M1', 'M2', 'M3', 'M4', 'M5'
+    ];
+
+    for (const qId of expectedQuestions) {
+      expect(progress.current_step).toBe(qId);
+      progress = commitStep(progress, script, { userTurnId: `turn-${qId}` });
+    }
+
+    expect(progress.current_step).toBeNull();
+  });
+
   test('should ensure purity by not mutating original progress state', () => {
     const progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
     const originalAnsweredLength = progress.answered.length;

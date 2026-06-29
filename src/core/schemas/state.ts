@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const progressSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
   phase: z.enum(['interview', 'docs-emitted', 'ready-to-build']),
-  branch: z.enum(['web', 'mobile']).nullable(),
+  branch: z.enum(['web', 'mobile', 'hybrid']).nullable(),
   current_step: z.string().nullable(),
   answered: z.array(z.string()),
   emitted_docs: z.array(z.string()),

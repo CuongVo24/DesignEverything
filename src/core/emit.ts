@@ -46,7 +46,7 @@ export function emitDoc(
  */
 export function emitTree(
   answers: InterviewAnswers,
-  branch: 'web' | 'mobile',
+  branch: 'web' | 'mobile' | 'hybrid',
   templatesDir: string,
   options?: { srcPrefix?: string }
 ): EmittedDoc[] {
@@ -59,7 +59,9 @@ export function emitTree(
     '04-flows.md',
     '05-architecture.md',
     '06-constraints.md',
-    branch === 'web' ? '07-deployment.md' : '07-release.md',
+    ...(branch === 'hybrid'
+      ? ['07-deployment.md', '07-release.md']
+      : [branch === 'web' ? '07-deployment.md' : '07-release.md']),
     'README.md',
   ];
 
@@ -104,7 +106,7 @@ export function emitTree(
     filledSlots['initial_ops_notes'] = answers['initial_ops_notes'] || answers['W5'] || '';
     filledSlots['domain_and_access_strategy'] = answers['domain_and_access_strategy'] || answers['W3'] || '';
     filledSlots['device_capabilities_and_permissions'] = answers['device_capabilities_and_permissions'] || 'Không áp dụng đối với Web.';
-  } else {
+  } else if (branch === 'mobile') {
     filledSlots['client_and_rendering_strategy'] = answers['client_and_rendering_strategy'] || answers['M1'] || answers['M2'] || '';
     filledSlots['architecture_overview'] = answers['architecture_overview'] || answers['M2'] || '';
     filledSlots['distribution_strategy'] = answers['distribution_strategy'] || answers['M3'] || '';
@@ -113,6 +115,37 @@ export function emitTree(
     filledSlots['realtime_push_or_sync_strategy'] = answers['realtime_push_or_sync_strategy'] || answers['M5'] || '';
     filledSlots['store_readiness_notes'] = answers['store_readiness_notes'] || answers['M5'] || '';
     filledSlots['device_capabilities_and_permissions'] = answers['device_capabilities_and_permissions'] || answers['M1'] || '';
+    filledSlots['monetization_strategy'] = answers['monetization_strategy'] || answers['M3'] || '';
+  } else {
+    // hybrid
+    const webStrategy = answers['client_and_rendering_strategy'] || answers['W1'] || answers['W2'] || '';
+    const mobileStrategy = answers['client_and_rendering_strategy'] || answers['M1'] || answers['M2'] || '';
+    filledSlots['client_and_rendering_strategy'] = `[Web] ${webStrategy}\n\n[Mobile] ${mobileStrategy}`;
+
+    const webOverview = answers['architecture_overview'] || answers['W2'] || '';
+    const mobileOverview = answers['architecture_overview'] || answers['M2'] || '';
+    filledSlots['architecture_overview'] = `[Web] ${webOverview}\n\n[Mobile] ${mobileOverview}`;
+
+    const webAuth = answers['auth_and_access_strategy'] || answers['W4'] || '';
+    const mobileAuth = answers['auth_and_access_strategy'] || answers['M4'] || '';
+    filledSlots['auth_and_access_strategy'] = `[Web] ${webAuth}\n\n[Mobile] ${mobileAuth}`;
+
+    const webSync = answers['realtime_push_or_sync_strategy'] || answers['W5'] || '';
+    const mobileSync = answers['realtime_push_or_sync_strategy'] || answers['M5'] || '';
+    filledSlots['realtime_push_or_sync_strategy'] = `[Web] ${webSync}\n\n[Mobile] ${mobileSync}`;
+
+    filledSlots['device_capabilities_and_permissions'] = answers['device_capabilities_and_permissions'] || answers['M1'] || '';
+
+    // Web deployment slots
+    filledSlots['hosting_strategy'] = answers['hosting_strategy'] || answers['W3'] || '';
+    filledSlots['deployment_goal'] = answers['deployment_goal'] || answers['W3'] || '';
+    filledSlots['initial_ops_notes'] = answers['initial_ops_notes'] || answers['W5'] || '';
+    filledSlots['domain_and_access_strategy'] = answers['domain_and_access_strategy'] || answers['W3'] || '';
+
+    // Mobile release slots
+    filledSlots['distribution_strategy'] = answers['distribution_strategy'] || answers['M3'] || '';
+    filledSlots['release_goal'] = answers['release_goal'] || answers['M3'] || '';
+    filledSlots['store_readiness_notes'] = answers['store_readiness_notes'] || answers['M5'] || '';
     filledSlots['monetization_strategy'] = answers['monetization_strategy'] || answers['M3'] || '';
   }
 
@@ -124,7 +157,7 @@ export function emitTree(
 
   filledSlots['docs_readme_file_map'] =
     answers['docs_readme_file_map'] ||
-    (branch === 'web'
+    (branch === 'hybrid'
       ? `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
 ├── 01-personas.md        # Đối tượng người dùng mục tiêu
@@ -134,8 +167,20 @@ export function emitTree(
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
+├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 └── README.md             # Mục lục tài liệu (File này)`
-      : `docs/
+      : (branch === 'web'
+        ? `docs/
+├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
+├── 01-personas.md        # Đối tượng người dùng mục tiêu
+├── 02-scope.md           # Phạm vi tính năng MVP (MoSCoW)
+├── 03-data-model.md      # Thiết kế thực thế dữ liệu (Database Schema)
+├── 04-flows.md           # Luồng trải nghiệm người dùng điển hình
+├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
+├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
+├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
+└── README.md             # Mục lục tài liệu (File này)`
+        : `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
 ├── 01-personas.md        # Đối tượng người dùng mục tiêu
 ├── 02-scope.md           # Phạm vi tính năng MVP (MoSCoW)
@@ -144,19 +189,25 @@ export function emitTree(
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
-└── README.md             # Mục lục tài liệu (File này)`);
+└── README.md             # Mục lục tài liệu (File này)`
+      )
+    );
 
   filledSlots['docs_readme_branch_note'] =
     answers['docs_readme_branch_note'] ||
-    (branch === 'web'
-      ? 'Dự án phát triển trên nền tảng Web. Cấu hình triển khai Next.js/Vercel chi tiết ở 07-deployment.md.'
-      : 'Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.');
+    (branch === 'hybrid'
+      ? 'Dự án Hybrid (Web & Mobile). Chi tiết triển khai Web ở 07-deployment.md, quy trình phân phối Mobile ở 07-release.md.'
+      : branch === 'web'
+        ? 'Dự án phát triển trên nền tảng Web. Cấu hình triển khai Next.js/Vercel chi tiết ở 07-deployment.md.'
+        : 'Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.');
 
   filledSlots['docs_readme_build_notes'] =
     answers['docs_readme_build_notes'] ||
-    (branch === 'web'
-      ? 'Chạy local: `npm run dev`. Chạy tests: `npm test`.'
-      : 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.');
+    (branch === 'hybrid'
+      ? 'Chạy Web local: `npm run dev`. Chạy Mobile Android: `npm run android`, iOS: `npm run ios`. Chạy tests: `npm test`.'
+      : branch === 'web'
+        ? 'Chạy local: `npm run dev`. Chạy tests: `npm test`.'
+        : 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.');
 
   // Compute planned anchor source/symbol placeholders based on branch
   const srcPrefix = options?.srcPrefix ?? (branch === 'web' ? 'src/' : 'apps/mobile/src/');
