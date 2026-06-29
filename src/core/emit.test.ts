@@ -110,4 +110,14 @@ describe('emitTree function', () => {
     expect(readmeDoc).toBeDefined();
     expect(readmeDoc!.content).toContain('CH Play/App Store chi tiết ở 07-release.md');
   });
+
+  test('should override srcPrefix when options.srcPrefix is provided', () => {
+    const emittedWeb = emitTree(mockAnswers, 'web', realTemplatesDir, { srcPrefix: 'web-app/' });
+    const visionWeb = emittedWeb.find((d) => d.file === '00-vision.md');
+    expect(visionWeb!.content).toContain('src=web-app/features/vision/vision.ts::projectVision');
+
+    const emittedMobile = emitTree(mockAnswers, 'mobile', realTemplatesDir, { srcPrefix: 'app/' });
+    const visionMobile = emittedMobile.find((d) => d.file === '00-vision.md');
+    expect(visionMobile!.content).toContain('src=app/features/vision/vision.ts::projectVision');
+  });
 });

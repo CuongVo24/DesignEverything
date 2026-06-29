@@ -19,11 +19,11 @@ Cho `emitTree` nhận **tiền tố `src` cấu hình được** cho mỏ neo `s
 - KHÔNG sửa skill/adapter để *gọi* options ở đây (chỉ mở API; nối dây để Month sau nếu cần).
 
 ## 3. Checklist
-- [ ] `emitTree(answers, branch, templatesDir, options?)` — thêm param tuỳ chọn cuối, không phá chữ ký cũ.
-- [ ] `srcPrefix` lấy từ `options.srcPrefix` nếu có; nếu không → mặc định theo nhánh như cũ.
-- [ ] Mọi `planned_src_*` dùng đúng prefix đã chọn.
-- [ ] Golden web + mobile regression vẫn xanh (mặc định không đổi).
-- [ ] Có test override (vd `srcPrefix: 'app/'`) + test mặc định mobile vẫn ra `apps/mobile/src/...`.
+- [x] `emitTree(answers, branch, templatesDir, options?)` — thêm param tuỳ chọn cuối, không phá chữ ký cũ.
+- [x] `srcPrefix` lấy từ `options.srcPrefix` nếu có; nếu không → mặc định theo nhánh như cũ.
+- [x] Mọi `planned_src_*` dùng đúng prefix đã chọn.
+- [x] Golden web + mobile regression vẫn xanh (mặc định không đổi).
+- [x] Có test override (vd `srcPrefix: 'app/'`) + test mặc định mobile vẫn ra `apps/mobile/src/...`.
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `src/core/emit.ts` (~+6 dòng): chữ ký `emitTree(answers: InterviewAnswers, branch: 'web' | 'mobile', templatesDir: string, options?: { srcPrefix?: string }): EmittedDoc[]`; thay dòng 161 thành `const srcPrefix = options?.srcPrefix ?? (branch === 'web' ? 'src/' : 'apps/mobile/src/');`
@@ -44,4 +44,4 @@ Cho `emitTree` nhận **tiền tố `src` cấu hình được** cho mỏ neo `s
 - `npm run typecheck` — chữ ký mới hợp lệ.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

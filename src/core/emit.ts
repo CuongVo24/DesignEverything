@@ -47,7 +47,8 @@ export function emitDoc(
 export function emitTree(
   answers: InterviewAnswers,
   branch: 'web' | 'mobile',
-  templatesDir: string
+  templatesDir: string,
+  options?: { srcPrefix?: string }
 ): EmittedDoc[] {
   // 1. Determine files list
   const files = [
@@ -158,7 +159,7 @@ export function emitTree(
       : 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.');
 
   // Compute planned anchor source/symbol placeholders based on branch
-  const srcPrefix = branch === 'web' ? 'src/' : 'apps/mobile/src/';
+  const srcPrefix = options?.srcPrefix ?? (branch === 'web' ? 'src/' : 'apps/mobile/src/');
 
   const plannedMapping: Record<string, { file: string; symbol: string }> = {
     elevator_pitch: { file: 'features/vision/vision.ts', symbol: 'projectVision' },
