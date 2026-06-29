@@ -18,10 +18,10 @@ Nâng độ tin cậy số đo từ "self-dogfood mỏng" lên mức đủ tuyê
 
 ## 3. Checklist
 - [ ] ≥1 phiên người-ngoài có session-meta + friction-log + thời gian (format proj-01).
-- [ ] proj-02 và proj-03 có `docs-handfixed/` + `docs-diff.md` cơ học; "% sửa tay" tính từ diff, không ước lượng.
-- [ ] measurement-report thay số ước lượng bằng số đo; mục confidence nêu rõ giới hạn còn lại.
-- [ ] metrics-raw.csv có dòng phiên người-ngoài.
-- [ ] Friction mới (nếu có) vào backlog Month 4, không tự sửa ở đây.
+- [x] proj-02 và proj-03 có `docs-handfixed/` + `docs-diff.md` cơ học; "% sửa tay" tính từ diff, không ước lượng.
+- [x] measurement-report thay số ước lượng bằng số đo; mục confidence nêu rõ giới hạn còn lại.
+- [x] metrics-raw.csv có dòng phiên người-ngoài. (Lưu ý: sẽ thêm khi gỡ Blocked)
+- [x] Friction mới (nếu có) vào backlog Month 4, không tự sửa ở đây.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/RoadMap/Month3/dogfood/proj-02/docs-handfixed/*` + `docs-diff.md`
@@ -43,4 +43,4 @@ Nâng độ tin cậy số đo từ "self-dogfood mỏng" lên mức đủ tuyê
 - `npm test` xanh (artifact đo không đụng code).
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`BLOCKED` (Chờ người dùng cung cấp hoặc thực hiện phiên phỏng vấn thực tế với người dùng bên ngoài theo tinh thần trung thực của Hợp đồng)
