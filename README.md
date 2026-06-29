@@ -160,6 +160,19 @@ Luồng cốt lõi:
 7. Gate policy ngăn hoặc cảnh báo nếu agent định code khi tài liệu chưa đủ.
 8. Các tài liệu được gắn anchor để chuẩn bị cho drift flagging về sau.
 
+## Cài đặt & Chạy nhanh (Quickstart)
+
+Để cài đặt và chạy thử hệ thống DesignEverything trong vòng 5 phút:
+
+1. **Cài đặt**: Chạy lệnh `npm ci` trong thư mục gốc.
+2. **Biên dịch**: Chạy lệnh `npm run build` để dịch mã nguồn TypeScript.
+3. **Chạy thử Demo (Claude Code path)**: Giả lập phỏng vấn và sinh tài liệu cho dự án HabitBuilder Mobile App bằng cách chạy:
+   ```bash
+   npx vitest run test/regression/run-dogfood.test.ts
+   ```
+4. **Hướng dẫn chi tiết**: Vui lòng tham khảo [docs/quickstart.md](docs/quickstart.md) để xem hướng dẫn onboarding chi tiết, danh sách checklist thiết lập môi trường và cách xử lý sự cố.
+5. **Tuyến Rules-Only (AGENTS.md)**: Nếu bạn dùng các công cụ chỉ hỗ trợ rules (như Cursor/Cline), vui lòng sao chép nội dung cấu hình quy tắc tại [.agents/AGENTS.md](.agents/AGENTS.md) để hướng dẫn AI agent hỏi phỏng vấn và sinh tài liệu.
+
 ## Đối Tượng
 
 DesignEverything ưu tiên:

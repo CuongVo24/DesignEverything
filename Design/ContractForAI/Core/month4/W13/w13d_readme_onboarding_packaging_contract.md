@@ -18,11 +18,11 @@ Biến bản hiện tại thành thứ **người lạ cài và chạy được 
 - KHÔNG sửa code trừ lỗi setup chặn cài (nếu gặp → DỪNG, mở break_task).
 
 ## 3. Checklist
-- [ ] README có: cài, chạy, ví dụ chạy thật, link đọc thêm trỏ đúng file repo.
-- [ ] Quickstart đi từ zero tới một cây `docs/` demo, mong đợi rõ.
-- [ ] Có hướng dẫn cả reference path lẫn rules-only ở mức đủ dùng.
-- [ ] Cài lại trên máy sạch chạy được không cần tác giả kèm.
-- [ ] README không mâu thuẫn RoadMap/ConformanceMatrix/tài liệu lõi.
+- [x] README có: cài, chạy, ví dụ chạy thật, link đọc thêm trỏ đúng file repo.
+- [x] Quickstart đi từ zero tới một cây `docs/` demo, mong đợi rõ.
+- [x] Có hướng dẫn cả reference path lẫn rules-only ở mức đủ dùng.
+- [x] Cài lại trên máy sạch chạy được không cần tác giả kèm.
+- [x] README không mâu thuẫn RoadMap/ConformanceMatrix/tài liệu lõi.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` hoặc `[MODIFY]` README phân phối (gốc repo hoặc `docs/`); ghi rõ chọn chỗ nào.
@@ -42,4 +42,4 @@ Biến bản hiện tại thành thứ **người lạ cài và chạy được 
 - Rà mọi link trong README/quickstart trỏ file tồn tại.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
