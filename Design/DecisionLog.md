@@ -26,6 +26,7 @@ Quyết định nằm rải rác trong nhiều file → quên mất *vì sao* đ
 | D17 | 2026-06-28 | Hoãn mở rộng taxonomy nâng cao (ADR/Test-Plan/ContractForAI) | Dữ liệu dogfood 3 dự án chứng minh bản tối giản hiện tại là đủ; mở rộng sẽ gây gánh nặng nhận thức. Xem chi tiết căn cứ và điều kiện kích hoạt lại tại [taxonomy-decision.md](file:///e:/DesignEverything/Design/RoadMap/Month3/taxonomy-decision.md) | Active |
 | D18 | 2026-06-29 | Hỗ trợ cấu hình tùy chọn tiền tố mỏ neo (`srcPrefix`) trong `emitTree` | Sửa lỗi F-04 khi tiền tố `apps/mobile/src/` bị ép cứng cho nhánh mobile, tạo điều kiện cấu hình cho các dự án Expo standalone mà không làm vỡ các adapter cũ | Active |
 | D19 | 2026-06-29 | Bổ sung nhánh `'hybrid'` tích hợp Web & Mobile đồng thời | Giải quyết lỗi ma sát F-07 (lệch so với taxonomy-decision §5), sinh ra cả `07-deployment.md` và `07-release.md` cho dự án Hybrid mà không làm phình to taxonomy mặc định | Active |
+| D20 | 2026-06-29 | Quy chuẩn quy trình vá lỗi: pain-rank Action Plan trong tương lai bắt buộc gắn nhãn Tầng | Rút kinh nghiệm từ lỗi F-04/F-07 bị trượt do phân nhầm tuần (phân vá lỗi ở tuần chỉ cho phép sửa Content). Việc gắn nhãn Tầng (Content/Taxonomy/Lõi/Adapter) giúp phân bổ công việc đúng tuần, đúng năng lực thực thi | Active |
 
 ## Quy ước thêm dòng
 - ID tăng dần, không tái dùng.

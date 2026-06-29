@@ -30,7 +30,10 @@ $$Điểm = Tần suất \times Mức độ đau$$
 ---
 
 ## 3. Định hướng xử lý (Action Plan for W11)
+*(Lưu ý lịch sử: Bản kế hoạch gốc đề xuất vá F-04 ở W11 và nghiên cứu F-07 ở các tuần sau)*
 
 *   **Đầu việc ưu tiên 1 (Điểm ≥ 4)**: Cần vá ngay các lỗi **F-01, F-02, F-04** ở W11. Đây là những điểm gây vướng nặng nề nhất cho lập trình viên khi sử dụng hệ thống, đặc biệt là ở nhánh di động.
+    > *Đính chính*: Lỗi **F-04** (Thực chất ở tầng Taxonomy/Lõi) đã bị trượt khỏi W11 (chỉ cho phép sửa tầng Content) và đã được chuyển sang vá tại **W13A (Month 4)**.
 *   **Đầu việc ưu tiên 2 (Điểm = 2)**: Cân nhắc nâng cấp cảnh báo store **F-03** và nghiên cứu cơ chế cấu hình linh hoạt cho dự án Hybrid **F-07** ở các tuần tiếp theo.
+    > *Đính chính*: Lỗi **F-07** (Thực chất ở tầng Taxonomy/Lõi) đã bị hoãn ở W12 (do hoãn mở rộng taxonomy để giữ tối giản) và đã được vá tại **W13B (Month 4)**.
 *   **Đầu việc ưu tiên 3 (Điểm = 1)**: Hoãn lại hoặc để người dùng chạy thủ công cho **F-05**.

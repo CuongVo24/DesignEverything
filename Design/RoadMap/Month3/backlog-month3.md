@@ -11,10 +11,10 @@ Tài liệu này tổng hợp danh sách các vấn đề ma sát phát hiện t
 | **F-01** | Content | Câu hỏi S3 (MoSCoW) trả về text dồn cục do gợi ý mặc định (`default`) thiếu cấu trúc định dạng sẵn. | Trung bình | Content (`script.yaml` và gợi ý) | **XÁC NHẬN HỆ THỐNG** (Tần suất: 3/3 dự án) |
 | **F-02** | Content | Cảnh báo M2 (Offline sync) tốt nhưng thiếu câu hỏi chốt hướng dẫn người dùng cách trả lời đồng ý. | Trung bình | Content (`script.yaml`) | **XÁC NHẬN HỆ THỐNG** (Tần suất: 2/2 dự án mobile) |
 | **F-03** | Content | Cảnh báo M5 (App Store) ghi chung chung "phí developer" thay vì ghi rõ con số cụ thể ($99/năm Apple, $25 Google). | Thấp | Content (`script.yaml` warnings) | **XÁC NHẬN HỆ THỐNG** (Tần suất: 2/2 dự án mobile) |
-| **F-04** | Taxonomy | Ép cứng tiền tố mỏ neo `apps/mobile/src/` cho nhánh mobile gây lỗi đường dẫn đối với dự án Expo standalone thuần túy. | Trung bình | Taxonomy / Lõi (`emit.ts`) | **XÁC NHẬN HỆ THỐNG** (Tần suất: 2/2 dự án mobile) |
+| **F-04** | Taxonomy | Ép cứng tiền tố mỏ neo `apps/mobile/src/` cho nhánh mobile gây lỗi đường dẫn đối với dự án Expo standalone thuần túy. | Trung bình | Taxonomy / Lõi (`emit.ts`) | **TRƯỢT KHỎI MONTH 3** (Lệch tầng Content W11, đã vá ở W13A Month 4) |
 | **F-05** | Adapter | Bộ sinh rule `AGENTS.md` chưa tự động chạy (trigger) đồng bộ khi người dùng cập nhật tiến trình `progress.json`. | Thấp | Adapter / CLI wrapper | Đã xác định hệ thống (defer Month 4) |
 | **F-06** | Onboarding | Thiếu cẩm nang chạy thử và các lệnh vận hành cụ thể cho nhánh Mobile. | Cao | Onboarding (Tài liệu) | Đã giải quyết ở W8B (RUNBOOK-mobile.md) |
-| **F-07** | Taxonomy | Ép cứng cấu trúc file 07-release (mobile) và 07-deployment (web) làm hạn chế khả năng biểu diễn của dự án Hybrid (web + mobile). | Trung bình | Taxonomy / Lõi (`emit.ts`) | **XÁC NHẬN HỆ THỐNG** (Tần suất: 1/3 dự án - proj-03) |
+| **F-07** | Taxonomy | Ép cứng cấu trúc file 07-release (mobile) và 07-deployment (web) làm hạn chế khả năng biểu diễn của dự án Hybrid (web + mobile). | Trung bình | Taxonomy / Lõi (`emit.ts`) | **TRƯỢT KHỎI MONTH 3** (Hoãn taxonomy W12, đã vá ở W13B Month 4) |
 
 ---
 
