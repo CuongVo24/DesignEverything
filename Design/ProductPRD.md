@@ -26,7 +26,7 @@ Người vibe code nhảy thẳng vào code, bỏ qua tài liệu nền móng. S
 - Lối thoát: **nội dung như nhau mọi nơi**, ép tốt nhất nền tảng cho phép (graceful degradation).
 
 ## 6. Lợi thế cạnh tranh
-Không nằm ở công cụ mà ở **phương pháp đã thực chiến, opinionated** (ContractForAI / TaskBrief mài qua 2 dự án). Mỗi file sinh ra kèm "tại sao cần file này" → người dùng vừa có sản phẩm vừa học nghề.
+Không nằm ở công cụ mà ở **phương pháp đã thực chiến, opinionated** (ContractForAI / TaskBrief mài qua 2 dự án). Mỗi file sinh ra kèm "tại sao cần file này" → người dùng vừa có sản phẩm vừa học nghề. Từ **v2 (đang triển khai)**, lợi thế được khoét sâu: **phủ nhiều hình-hài dự án** (web/mobile/hybrid/cli…), **calibrate theo trình độ**, và **critic phản biện** chủ động thách thức scope creep + phức tạp ẩn — đối thủ generic không có. Xem [RoadMap/V2-ExpansionPlan.md](RoadMap/V2-ExpansionPlan.md).
 
 ## 7. Đối thủ
 GitHub Spec Kit · Kiro (AWS) · BMAD-METHOD · Taskmaster AI · cookiecutter/Yeoman.
