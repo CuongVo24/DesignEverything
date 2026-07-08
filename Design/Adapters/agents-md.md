@@ -86,6 +86,11 @@ Không được viết mập mờ kiểu “bị cấm tuyệt đối” khi har
 
 > **Lưu ý mô hình hai lớp ở bậc B.** Ở Claude Code, "mỗi lượt người thật chỉ tiến 1 bước" được hook `UserPromptSubmit` ép cứng (xem [../Core/Schemas/state-schema.md](../Core/Schemas/state-schema.md) §3). Trên harness mềm KHÔNG có bộ giới hạn nhịp đó — nhịp một-bước-mỗi-lượt chỉ là *chỉ dẫn best-effort* cho agent. Vẫn yêu cầu agent: hỏi một câu, chờ người dùng xác nhận dịch ngược, rồi mới rót vào doc và đi câu kế; nhưng nói thật rằng đây là kỷ luật khuyến nghị, không phải đảm bảo deterministic.
 
+## CRITIC & CALIBRATE (mềm, từ v2)
+Cùng nội dung như bậc A nhưng **chỉ là chỉ dẫn**, không đảm bảo cứng:
+- **Calibrate:** đầu phiên hỏi người dùng muốn giải thích kỹ (người mới) hay đi nhanh (có kinh nghiệm), chỉnh độ chi tiết + độ gắt phản biện.
+- **Critic:** sau khi chốt scope (S3) và sau câu kiến trúc của hình-hài, agent phải đóng vai phản biện — chỉ ra scope đang phình / phức tạp ẩn, rồi yêu cầu người dùng xác nhận ('Tôi đồng ý') hoặc điều chỉnh trước khi đi tiếp. Trên harness mềm đây là kỷ luật khuyến nghị, KHÔNG phải chặn cứng.
+
 ## EMIT — output thống nhất
 - Viết tài liệu đúng cây taxonomy.
 - Mỗi file đều có `## Tại sao cần file này`.

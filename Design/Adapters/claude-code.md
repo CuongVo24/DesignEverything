@@ -76,6 +76,7 @@ Tách như vậy để logic chung nằm ở lõi dùng chung, còn Claude Code 
 - `current_step.ask`
 - `current_step.default`
 - `current_step.translate_back`
+- `current_step.kind` (`anchored`|`meta`)
 - `current_step.target_doc`
 - `phase`
 - `branch`
@@ -84,6 +85,20 @@ Tách như vậy để logic chung nằm ở lõi dùng chung, còn Claude Code 
 - Không nhúng cứng toàn bộ transcript vào prompt system.
 - Không nhét riêng logic web/mobile ngoài những gì `script.yaml` đã có.
 - Không skip câu hỏi chỉ vì model “đoán được”.
+
+## CRITIC & CALIBRATE — lớp skill (KHÔNG phải hook)
+> Critic và calibrate là **lớp ngữ nghĩa (skill/LLM)**, KHÔNG phải hook deterministic — giữ mô hình hai lớp ([../Core/Schemas/state-schema.md](../Core/Schemas/state-schema.md) §3, DecisionLog D14) và ranh giới multi-agent (DecisionLog D24: không swarm, critic chỉ là một role/pass trong agent sẵn có). Hook vẫn chỉ rate-limit + artifact-gate.
+
+### Calibrate (câu `kind=meta`, đầu phiên)
+- Skill hỏi một câu `meta` set chế độ: giải thích kỹ (người mới) vs đi nhanh (có kinh nghiệm) + độ gắt critic.
+- KHÔNG neo doc, KHÔNG vào `emitted_docs`; vẫn là một bước trong `answered` (chịu rate-limit như mọi bước).
+- Skill set `progress.calibrate_mode = deep|fast` khi commit `CAL0`; critic đọc field này để chỉnh độ gắt.
+
+### Critic (phản biện) — 2 điểm fire, cảnh báo + bắt xác nhận
+1. **Sau khi commit S3 (scope):** skill thách thức scope creep — chỉ ra Must đang phình, hỏi "X có thật sự cần cho MVP?", đề xuất cắt.
+2. **Sau bộ câu kiến trúc của shape:** skill bới phức tạp ẩn (tổng quát hoá cảnh báo M2 sync / M5 store ra mọi shape — vd `cli`: phụ thuộc OS, đóng gói nhị phân, phân phối qua registry).
+- **Cơ chế:** cảnh báo rủi ro → **bắt người dùng xác nhận** ('Tôi đồng ý' hoặc đưa điều chỉnh) giống `translate_back` của M2/M5. KHÔNG chặn cứng qua hook — critic là devil's advocate, người dùng vẫn quyết.
+- Nội dung câu thách thức cụ thể nằm ở `Content/interview-script/*` (định nghĩa ở B4); adapter KHÔNG hardcode.
 
 ## GATE — chặn sinh code (cứng)
 
@@ -107,6 +122,7 @@ Khởi tạo state tối thiểu để mọi hook sau có điểm tựa thống 
      - `version = "0.1.0"`
      - `phase = "interview"`
      - `branch = null`
+     - `calibrate_mode = null`
      - `current_step = "S0"`
      - `answered = []`
      - `emitted_docs = []`
@@ -147,13 +163,13 @@ Giới hạn nhịp: mỗi lượt người thật, state chỉ được tiến 
 6. Hook DỪNG: không append `answered`, không set `branch`, không tính bước kế.
 
 #### Việc của skill (KHÔNG phải hook — ghi ở đây để khỏi nhầm ranh giới)
-Sau khi user xác nhận `translate_back` cho `current_step`, và chỉ khi `user_turn_id != last_user_turn_id` (chưa commit cho lượt này), skill commit: append `current_step` vào `answered`; set `last_user_turn_id = user_turn_id`; nếu là `S6` thì set `branch = web|mobile` từ câu trả lời đã chốt; tính `current_step` kế theo `script.yaml`; cập nhật `updated_at`. Đây là lớp ngữ nghĩa — deterministic-hook không thay được.
+Sau khi user xác nhận `translate_back` cho `current_step`, và chỉ khi `user_turn_id != last_user_turn_id` (chưa commit cho lượt này), skill commit: append `current_step` vào `answered`; set `last_user_turn_id = user_turn_id`; nếu là câu chọn hình-hài `S7` thì set `branch = <shape-id>` từ câu trả lời đã chốt; tính `current_step` kế theo `script.yaml`; cập nhật `updated_at`. Đây là lớp ngữ nghĩa — deterministic-hook không thay được.
 
 #### Ca biên bắt buộc xử lý
 - **User nhắn lan man, chưa xác nhận:** skill không đủ điều kiện commit; hook chỉ inject lại câu hiện tại; state đứng yên.
 - **User cố trả lời nhiều câu trong một lượt:** skill chỉ commit một bước; nếu skill/model cố commit > 1, hook bắt ở bước kiểm nhịp của lượt kế và chặn.
-- **User đổi ý về nhánh sau `S6`:** không tự rollback; `branch` là một chiều — yêu cầu sửa doc có chủ đích rồi chỉnh state tường minh.
-- **`S6` đã ở `answered` nhưng `branch` chưa hợp lệ:** state lỗi → báo rõ, không tự đoán nhánh.
+- **User đổi ý về nhánh sau `S7`:** không tự rollback; `branch` là một chiều — yêu cầu sửa doc có chủ đích rồi chỉnh state tường minh.
+- **`S7` đã ở `answered` nhưng `branch` chưa hợp lệ:** state lỗi → báo rõ, không tự đoán hình-hài.
 
 ### 3. `PreToolUse`
 
@@ -222,9 +238,9 @@ Sau mỗi lần kiểm tra gate:
 2. `UserPromptSubmit` (hook) kiểm nhịp + skill inject câu `S0`.
 3. Người dùng trả lời; skill dịch ngược, user xác nhận.
 4. Skill commit `S0` → `current_step = S1` (hook không advance, chỉ rate-limit ở lượt kế).
-5. Lặp đến `S6`.
-6. Skill set `branch = web | mobile` khi commit `S6`; hook validate `branch` hợp lệ.
-7. Lặp câu nhánh đến hết.
+5. Lặp đến `S6`, rồi `S7` (chọn hình-hài). Critic fire sau S3 (scope) — cảnh báo + chờ xác nhận.
+6. Skill set `branch = <shape-id>` khi commit `S7`; hook validate `branch` thuộc registry hình-hài.
+7. Lặp câu nhánh của shape đến hết; critic fire sau bộ câu kiến trúc — cảnh báo + chờ xác nhận.
 8. Emit các doc bắt buộc.
 9. `PreToolUse` (hook) mở gate khi `requires_docs` đã đủ.
 10. Chỉ lúc đó mới cho thao tác code/build tiếp diễn.
@@ -233,7 +249,7 @@ Sau mỗi lần kiểm tra gate:
 - `SessionStart` tạo đúng state mới.
 - `SessionStart` fail rõ khi `progress.json` hỏng.
 - `UserPromptSubmit` chặn khi `answered` tăng > 1 trong một lượt người thật (vi phạm nhịp).
-- Skill commit set `branch` đúng sau `S6`; hook validate `branch ∈ {web,mobile}` và state lỗi nếu `S6` đã answered mà `branch` vẫn `null`.
+- Skill commit set `branch` đúng sau `S7`; hook validate `branch` thuộc registry hình-hài và state lỗi nếu `S7` đã answered mà `branch` vẫn `null`.
 - `PreToolUse` chặn `Write/Edit/Bash` khi thiếu `02-scope.md`.
 - `PreToolUse` không chặn việc tiếp tục viết tài liệu trong `Design/` hoặc `docs/`.
 - `PreToolUse` không dùng `Stop` để chặn nhầm lượt hỏi tiếp.

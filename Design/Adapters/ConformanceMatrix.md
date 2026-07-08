@@ -30,6 +30,12 @@ DeepSeek/GLM là model chạy trong harness → **không có dòng riêng**. Dù
 - GATE: thử sinh code khi doc chưa xong → có bị chặn (A) / cảnh báo (B) không?
 - EMIT: output có rơi đúng cây taxonomy không?
 
+## Trạng thái v2 (đang khoá spec — [V2-ExpansionPlan](../RoadMap/V2-ExpansionPlan.md))
+v2.0.0 mở **đa hình-hài dự án** (registry ở [taxonomy.md](../Content/taxonomy.md): `web`/`mobile`/`hybrid` ✅ code; `cli` 📐 spec khoá B2, chưa code) và thêm **critic role** (pass phản biện) + **meta-calibrate**. Cả hai adapter phải đồng bộ khi code B5–B6:
+- **Claude Code (A):** inject thêm câu chọn hình-hài `S7` + câu `meta`; critic ép mạnh (chặn/cảnh báo scope creep qua kênh hook/skill).
+- **AGENTS.md (B):** critic + calibrate ở dạng rule mềm (không đảm bảo cứng).
+MAJOR → bảng ma trận trên phải cập nhật cùng commit khi B5–B6 land (DecisionLog D21–D26).
+
 ## Trạng thái sau Month 2 (v1.0.0)
 - Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.
 - AGENTS.md: Đã code bộ sinh rules `generateAgentsMd` và viết unit test xác thực. Tuy nhiên, việc chạy kiểm thử thực tế (smoke run) trên các harness mềm (Codex/Cursor/Cline) tạm hoãn (⏳ defer) sang Month 3 (xem thêm [v1-release-note.md](../RoadMap/Month2/v1-release-note.md) limitation #1 & #2 và [m2_polish_agents_md_artifact_drift_guard_contract.md](../ContractForAI/Core/break_task/Month2/m2_polish_agents_md_artifact_drift_guard_contract.md)).
