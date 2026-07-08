@@ -6,7 +6,7 @@
 Trong kiến trúc core+adapter, thứ giết dự án là adapter phình ra và lõi đổi lung tung làm vỡ adapter. File này khoá ranh giới: lõi hứa gì, adapter chỉ được làm gì. Giữ "lõi béo, adapter gầy".
 
 ## 1. LÕI cung cấp (portable, viết một lần)
-- `interview-script` — S0–S6 + nhánh W/M, định dạng trung tính. Xem [Schemas/interview-script.md](Schemas/interview-script.md).
+- `interview-script` — khung lõi S0–S6 + câu chọn hình-hài **S7** + bộ câu theo hình-hài (web/mobile/hybrid/cli…) + câu `meta` calibrate + **nội dung critic** (điểm phản biện + câu thách thức), định dạng trung tính. Xem [Schemas/interview-script.md](Schemas/interview-script.md).
 - `doc-templates` + `taxonomy` — cây thư mục đầu ra + phần "tại sao cần file này". Xem [../Content/taxonomy.md](../Content/taxonomy.md).
 - `state-schema` (`progress.json`) + `gate-policy`. Xem [Schemas/state-schema.md](Schemas/state-schema.md), [Schemas/gate-policy.md](Schemas/gate-policy.md).
 - `anchor-format` — mỏ neo truy vết. Xem [AnchorFormat.md](AnchorFormat.md).
@@ -15,7 +15,7 @@ Trong kiến trúc core+adapter, thứ giết dự án là adapter phình ra và
 
 | Việc | Ý nghĩa | Claude Code (bậc A) | Harness chỉ-đọc-rules (bậc B) |
 |---|---|---|---|
-| **INJECT** | Đưa kịch bản vào kênh chỉ thị của host | skill / slash command | viết vào `AGENTS.md` / `.cursorrules` |
+| **INJECT** | Đưa kịch bản (+ critic pass + calibrate) vào kênh chỉ thị của host | skill / slash command | viết vào `AGENTS.md` / `.cursorrules` |
 | **GATE** | Chặn sinh code khi doc chưa xong | hook `PreToolUse` (cứng) | câu lệnh trong rules (mềm) |
 | **EMIT** | Output rơi đúng cây doc chuẩn | giống nhau mọi nơi | giống nhau mọi nơi |
 
@@ -26,6 +26,11 @@ Trong kiến trúc core+adapter, thứ giết dự án là adapter phình ra và
 - **Bậc B — ép mềm:** harness chỉ đọc rules (Cursor, Codex, Antigravity...). Khuyến nghị mạnh, không bảo đảm — kể cả giới hạn nhịp cũng chỉ là chỉ dẫn best-effort.
 
 Chi tiết từng harness: [../Adapters/ConformanceMatrix.md](../Adapters/ConformanceMatrix.md).
+
+### Critic & calibrate (lớp skill/ngữ nghĩa, từ v2)
+- **Critic (agent phản biện)** chạy ở **lớp skill/LLM**, KHÔNG phải hook (giữ [DecisionLog D14] hook không đọc ý định + [D24] không dùng multi-agent generation — critic chỉ là một role/pass trong agent sẵn có). Fire ở **2 điểm đòn bẩy**: (1) sau khi chốt **S3** (thách thức scope creep / MVP phình), (2) sau bộ câu **kiến trúc của shape** (bới phức tạp ẩn — tổng quát hoá cảnh báo kiểu M2/M5). Cơ chế: **cảnh báo + bắt người dùng xác nhận** ('Tôi đồng ý' hoặc điều chỉnh) giống `translate_back` M2/M5 — devil's advocate, KHÔNG chặn cứng, người dùng vẫn là người quyết.
+- **Calibrate** là câu `kind=meta` đầu phiên, set chế độ giải thích (kỹ vs nhanh) + độ gắt critic; không neo doc.
+- Bậc A: critic + calibrate inject qua skill, cảnh báo mạnh. Bậc B: cùng nội dung nhưng mềm (chỉ chỉ dẫn, không đảm bảo).
 
 ## 4. Adapter theo HARNESS, không theo MODEL
 DeepSeek/GLM là **model**, chạy trong harness. Hook/rules nằm ở harness → không viết "adapter DeepSeek". Trục cần phủ:
