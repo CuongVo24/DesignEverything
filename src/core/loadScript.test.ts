@@ -21,7 +21,7 @@ describe('loadScript', () => {
     const realScriptPath = join(__dirname, '../../Design/Content/interview-script/script.yaml');
     const script = loadScript(realScriptPath);
     expect(script.version).toBe('2.0.0');
-    expect(script.questions.length).toBe(19);
+    expect(script.questions.length).toBe(24);
     expect(script.questions[0].id).toBe('CAL0');
   });
 

@@ -180,3 +180,48 @@ questions:
     gate: null
     translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer (Apple App Store: $99/năm, Google Play Store: $25 một lần), và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn có đồng ý chuẩn bị các thủ tục và chi phí này không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [S7, M1, M2, M3, M4]
+  - id: C1
+    ask: "Bạn muốn viết công cụ dòng lệnh này bằng ngôn ngữ hay môi trường nào (ví dụ Node.js, Python, Go, Rust, hay Bash script)?"
+    default: "Node.js (TypeScript) để tận dụng hệ sinh thái phong phú và dễ đóng gói."
+    kind: anchored
+    target_doc: 05-architecture.md
+    branch: cli
+    gate: null
+    translate_back: "Mình ghi nhận ngôn ngữ và môi trường chạy là: `<Node.js / Python / Go / Rust / Bash>`, sử dụng các thư viện chính: `<danh sách thư viện>`."
+    depends_on: [S7]
+  - id: C2
+    ask: "Giao diện lệnh của app sẽ thế nào? Người dùng truyền flags/arguments (ví dụ --verbose -f file.txt), tương tác qua menu (interactive prompt), hay truyền dữ liệu qua stdin/stdout pipeline?"
+    default: "Kết hợp truyền flags/arguments cho các lệnh tự động và menu tương tác (interactive prompts) khi cần nhập liệu trực quan."
+    kind: anchored
+    target_doc: 05-architecture.md
+    branch: cli
+    gate: null
+    translate_back: "Mình tóm tắt phương thức giao tiếp CLI là: `<truyền tham số flags/args / menu tương tác / stdin/stdout pipeline>`. Thư viện xử lý giao diện CLI đề xuất là `<Commander.js / Inquirer.js / Clack / các thư viện tương ứng>`."
+    depends_on: [S7, C1]
+  - id: C3
+    ask: "Ứng dụng lưu cấu hình, khóa bảo mật (API keys), và dữ liệu ở đâu? (ví dụ file config JSON ở thư mục home, biến môi trường ENV, hay keychain của hệ điều hành)?"
+    default: "Lưu file config JSON tại thư mục home người dùng (ví dụ ~/.config/myapp.json) và hỗ trợ ghi đè bằng biến môi trường (ENV)."
+    kind: anchored
+    target_doc: 05-architecture.md
+    branch: cli
+    gate: null
+    translate_back: "Mình ghi nhận giải pháp quản lý cấu hình và bảo mật là: `<lưu file config JSON cục bộ / biến môi trường / keychain>` tại đường dẫn `<đường dẫn>`."
+    depends_on: [S7, C1, C2]
+  - id: C4
+    ask: "Bạn cần ứng dụng chạy trên hệ điều hành nào? Chỉ macOS/Linux, chỉ Windows, hay phải hỗ trợ cả ba (cross-platform)?"
+    default: "Hỗ trợ cả ba hệ điều hành lớn (macOS, Linux, Windows) bằng cách sử dụng các module chuẩn hóa tránh phụ thuộc OS cụ thể."
+    kind: anchored
+    target_doc: 05-architecture.md
+    branch: cli
+    gate: null
+    translate_back: "Mình ghi nhận phạm vi tương thích hệ điều hành là: `<macOS/Linux / Windows / cả ba>`, hướng xử lý tương thích là `<sử dụng module đa nền tảng / cross-compile / native script>`."
+    depends_on: [S7, C1, C2, C3]
+  - id: C5
+    ask: "Bạn định phân phối công cụ này tới người dùng bằng cách nào? (ví dụ xuất bản lên NPM/Pip/Cargo, tải file binary biên dịch sẵn từ GitHub Releases, hay dùng homebrew/scoop)?"
+    default: "Xuất bản lên NPM registry dưới dạng package cài đặt toàn cục (npm install -g myapp)."
+    kind: anchored
+    target_doc: 07-distribution.md
+    branch: cli
+    gate: null
+    translate_back: "Mình xác nhận phương án đóng gói và phát hành là: `<NPM registry / Pip / GitHub Releases binary / Homebrew>`, cùng cơ chế quản lý phiên bản (versioning): `<Semantic Versioning (SemVer)>`."
+    depends_on: [S7, C1, C2, C3, C4]

@@ -22,11 +22,11 @@
 - KHÔNG viết critic content (B4c).
 
 ## 3. Checklist
-- [ ] C1–C5 `branch: cli`, neo đúng doc, có default + translate_back đời thường.
-- [ ] `07-distribution.md` template có placeholder + "Tại sao cần file này" + anchor.
-- [ ] Placeholder keys của template khớp key mà C1–C5 sẽ điền (chuẩn bị cho emit B5b).
-- [ ] `C-cli.md` (người đọc) khớp `script.yaml`.
-- [ ] script.yaml vẫn validate (branch `cli` ∈ registry từ B5a).
+- [x] C1–C5 `branch: cli`, neo đúng doc, có default + translate_back đời thường.
+- [x] `07-distribution.md` template có placeholder + "Tại sao cần file này" + anchor.
+- [x] Placeholder keys của template khớp key mà C1–C5 sẽ điền (chuẩn bị cho emit B5b).
+- [x] `C-cli.md` (người đọc) khớp `script.yaml`.
+- [x] script.yaml vẫn validate (branch `cli` ∈ registry từ B5a).
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Content/interview-script/script.yaml` (C1–C5)
@@ -46,4 +46,4 @@
 - `npm test` — không phá web/mobile; cli golden để B5c.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
