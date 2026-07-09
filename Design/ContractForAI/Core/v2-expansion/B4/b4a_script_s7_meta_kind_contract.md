@@ -19,12 +19,12 @@ Sửa khung lõi trong `script.yaml` + `S0-S6-core.md`: (a) thêm field `kind` c
 - KHÔNG viết nội dung critic (B4c).
 
 ## 3. Checklist
-- [ ] Mọi câu có `kind`; câu cũ = `anchored`, nghĩa không đổi.
-- [ ] `CAL0` meta đứng đầu, `target_doc: null`, không gate.
-- [ ] `S7` set branch, `depends_on: [S6]`; câu nhánh web/mobile `depends_on: [S7]`.
-- [ ] S6 đã bỏ vế chọn nhánh; `translate_back` S6 không còn web/mobile.
-- [ ] `version: 2.0.0`; placeholder keys **không đổi**.
-- [ ] `Content/interview-script/README.md` cập nhật CAL0/S7/đa-shape; bảng S6 bỏ "web hay app".
+- [x] Mọi câu có `kind`; câu cũ = `anchored`, nghĩa không đổi.
+- [x] `CAL0` meta đứng đầu, `target_doc: null`, không gate.
+- [x] `S7` set branch, `depends_on: [S6]`; câu nhánh web/mobile `depends_on: [S7]`.
+- [x] S6 đã bỏ vế chọn nhánh; `translate_back` S6 không còn web/mobile.
+- [x] `version: 2.0.0`; placeholder keys **không đổi**.
+- [x] `Content/interview-script/README.md` cập nhật CAL0/S7/đa-shape; bảng S6 bỏ "web hay app".
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Content/interview-script/script.yaml` (thêm CAL0, S7; field kind; sửa S6; depends_on)
@@ -44,4 +44,4 @@ Sửa khung lõi trong `script.yaml` + `S0-S6-core.md`: (a) thêm field `kind` c
 - `npm test` — golden có thể đỏ tạm ở `06-constraints` (nếu S6 đổi) → chuyển B5c xử lý; ghi rõ test nào đỏ.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

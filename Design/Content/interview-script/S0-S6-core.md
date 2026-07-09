@@ -9,7 +9,33 @@ Người mới không biết phải nghĩ theo thứ tự nào khi bắt đầu 
 - Hỏi **từng câu một**, không gom nhiều câu.
 - Mỗi câu đều có **mặc định thông minh** để người dùng "không biết" vẫn đi tiếp được.
 - Agent phải **dịch ngược** câu trả lời đời thường rồi hỏi xác nhận.
-- Mỗi câu phải nối vào đúng **một ô tài liệu** trong taxonomy.
+- Mỗi câu phải nối vào đúng **một ô tài liệu** trong taxonomy. (Ngoại lệ duy nhất: câu meta-calibrate).
+
+## CAL0 — Cài đặt độ sâu giải thích (Meta-calibrate)
+
+**ask**  
+"Chào mừng! Bạn muốn mình giải thích thật kỹ từng bước và lý do (dành cho người mới học thiết kế), hay muốn đi nhanh thẳng vào việc (dành cho người đã quen)?"
+
+**default**  
+`Đi nhanh thẳng vào việc, giải thích tối giản.`
+
+**translate_back**  
+"Mình ghi nhận mức độ giải thích: `<giải thích kỹ / đi nhanh>`."
+
+**target_doc**  
+`null`
+
+**gate**  
+`null`
+
+**Ví dụ trả lời đời thường**  
+"Em mới học nên anh giải thích kỹ chút giúp em nhé."
+
+**Ví dụ dịch ngược**  
+"Mức độ giải thích được thiết lập là giải thích kỹ từng bước."
+
+**Bẫy thường gặp + cách gỡ**  
+Không sa đà vào các câu hỏi khảo sát thông tin ngoài lề không phục vụ thiết kế sản phẩm.
 
 ## S0 — Mô tả dự án trong 1 câu
 
@@ -204,16 +230,16 @@ Người mới hay bịa thêm dữ liệu vì "sau này có thể cần". Agent
 **Bẫy thường gặp + cách gỡ**  
 Người mới hay kể 3-4 flow cùng lúc. Agent phải chặn lại và chọn **một luồng tiêu biểu nhất** bám tính năng Must #1, vì đây là xương sống để kiểm tra scope có thực dụng không.
 
-## S6 — Ràng buộc thực tế và chọn nhánh
+## S6 — Ràng buộc thực tế
 
 **ask**  
-"Bạn làm một mình hay có nhóm, deadline thế nào, ngân sách đến đâu, và hiện tại mình đang nên nghĩ theo hướng web hay app?"
+"Bạn làm một mình hay có nhóm, deadline thế nào, ngân sách đến đâu?"
 
 **default**  
-"Solo, không deadline cứng, ưu tiên free-tier, rồi chọn nhánh web hoặc mobile theo cách người dùng dự định dùng hằng ngày."
+`Solo, không deadline cứng, ưu tiên free-tier.`
 
 **translate_back**  
-"Mình tóm lại ràng buộc hiện tại là: `<nguồn lực>`, `<deadline>`, `<ngân sách>`, và hướng triển khai ưu tiên là `<web/mobile>`. Mình sẽ dùng phần này để giới hạn scope và rẽ sang nhánh phù hợp."
+"Mình tóm lại ràng buộc hiện tại là: `<nguồn lực>`, `<deadline>`, `<ngân sách>`. Mình sẽ dùng phần này để giới hạn scope."
 
 **target_doc**  
 `06-constraints.md`
@@ -222,13 +248,39 @@ Người mới hay kể 3-4 flow cùng lúc. Agent phải chặn lại và chọ
 `null`
 
 **Ví dụ trả lời đời thường**  
-"Em làm một mình ngoài giờ, muốn có bản dùng thử trong khoảng một tháng, gần như không có ngân sách, và thấy mọi người dùng điện thoại nhiều hơn."
+"Em làm một mình ngoài giờ, muốn có bản dùng thử trong khoảng một tháng, gần như không có ngân sách."
 
 **Ví dụ dịch ngược**  
-"Dự án được thực hiện solo, thời gian triển khai ngắn, ngân sách gần mức free-tier, và ưu tiên trải nghiệm di động; vì vậy scope MVP cần rất gọn và nên rẽ sang nhánh mobile."
+"Dự án được thực hiện solo, thời gian triển khai ngắn, ngân sách giới hạn trong mức free-tier; vì vậy scope MVP cần rất gọn."
 
 **Bẫy thường gặp + cách gỡ**  
 Người mới hay nói tham vọng kỹ thuật lớn nhưng bỏ qua giới hạn thật. Agent phải dùng S6 như phanh phạm vi: ít người, ít tiền, ít thời gian thì scope phải co lại ngay.
+
+## S7 — Chọn hình-hài dự án
+
+**ask**  
+"Hệ thống hỗ trợ các hình-hài dự án sau: Ứng dụng web (web), App di động (mobile), Web + Mobile (hybrid), Công cụ dòng lệnh (cli). Bạn chọn hình-hài nào?"
+
+**default**  
+`web`
+
+**translate_back**  
+"Mình xác nhận hình-hài dự án là: `<web / mobile / hybrid / cli>`."
+
+**target_doc**  
+`06-constraints.md`
+
+**gate**  
+`null`
+
+**Ví dụ trả lời đời thường**  
+"Em muốn người dùng có app trên Android và iOS dùng cho tiện."
+
+**Ví dụ dịch ngược**  
+"Hình-hài dự án được lựa chọn là app di động (mobile)."
+
+**Bẫy thường gặp + cách gỡ**  
+Người mới có thể chọn bừa hoặc muốn làm đa nền tảng (hybrid) ngay từ đầu khi chưa có nguồn lực. Agent cần khuyến khích chọn web/mobile đơn lẻ làm MVP trừ khi thực sự cần thiết.
 
 ## Checklist nghiệm thu cho S0-S6
 - Mỗi câu có đủ `ask`, `default`, `translate_back`, `target_doc`, `gate`.

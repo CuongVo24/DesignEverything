@@ -48,10 +48,10 @@ export function commitStep(
   // 3. Append current_step to answered
   nextProgress.answered.push(currentStepId);
 
-  // 4. Branch logic at S6
-  if (currentStepId === 'S6') {
+  // 4. Branch logic at S7
+  if (currentStepId === 'S7') {
     if (!args.branchChoice) {
-      throw new Error('branchChoice must be provided when committing step S6');
+      throw new Error('branchChoice must be provided when committing step S7');
     }
     const validBranches = getRegistryBranchIds();
     if (!validBranches.includes(args.branchChoice)) {
@@ -62,7 +62,7 @@ export function commitStep(
     }
     nextProgress.branch = args.branchChoice;
   } else {
-    // If not S6, but branch is already set, ensure branchChoice doesn't try to change it
+    // If not S7, but branch is already set, ensure branchChoice doesn't try to change it
     if (progress.branch !== null && args.branchChoice && progress.branch !== args.branchChoice) {
       throw new Error(`Cannot change branch once set. Current: ${progress.branch}, New: ${args.branchChoice}`);
     }

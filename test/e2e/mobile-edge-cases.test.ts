@@ -48,30 +48,30 @@ describe('E2E Mobile Edge Cases Flow', () => {
   test('Case (a): Trả lời lan man chưa xác nhận ở Mobile -> state đứng yên', () => {
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S0');
+    expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
 
     const result1 = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-verbose-m-1' });
     expect(result1.decision).toBe('allow');
 
     progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S0');
+    expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
   });
 
-  test('Case (b): Cố đổi nhánh sang web sau S6 -> bị chặn throw error', () => {
+  test('Case (b): Cố đổi nhánh sang web sau S7 -> bị chặn throw error', () => {
     const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
 
-    const steps = ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (const step of steps) {
       const turnId = `turn-m-edge-${step}`;
       onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: turnId });
       progress = loadProgress(progressPath);
 
-      const opts: { userTurnId: string; branchChoice?: 'web' | 'mobile' } = { userTurnId: turnId };
-      if (step === 'S6') {
+      const opts: { userTurnId: string; branchChoice?: string } = { userTurnId: turnId };
+      if (step === 'S7') {
         opts.branchChoice = 'mobile';
       }
       progress = commitStep(progress, script, opts);
@@ -100,7 +100,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
     progress.phase = 'docs-emitted';
     progress.branch = 'mobile';
     progress.current_step = null;
-    progress.answered = ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'M1', 'M2', 'M3', 'M4', 'M5'];
+    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'M1', 'M2', 'M3', 'M4', 'M5'];
     saveProgress(progressPath, progress);
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)
@@ -136,7 +136,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
 
     // 4. Emit tree checks for Mobile
     const answers: Record<string, string> = {
-      S0: 'A', S1: 'B', S2: 'C', S3: 'D', S4: 'E', S5: 'F', S6: 'mobile',
+      CAL0: 'Fast', S0: 'A', S1: 'B', S2: 'C', S3: 'D', S4: 'E', S5: 'F', S6: 'Solo', S7: 'mobile',
       M1: 'RN', M2: 'Offline', M3: 'Camera', M4: 'FCM', M5: 'Store'
     };
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
@@ -160,14 +160,14 @@ describe('E2E Mobile Edge Cases Flow', () => {
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
 
-    // Answer S0
+    // Answer CAL0
     onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-dup-1' });
     progress = loadProgress(progressPath);
     progress = commitStep(progress, script, { userTurnId: 'turn-dup-1' });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S1');
+    expect(progress.current_step).toBe('S0');
 
     expect(() => {
       commitStep(progress, script, { userTurnId: 'turn-dup-1' });

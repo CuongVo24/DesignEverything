@@ -57,18 +57,20 @@ describe('E2E Mobile Interview & Gating Flow', () => {
     expect(existsSync(progressPath)).toBe(true);
 
     let progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S0');
+    expect(progress.current_step).toBe('CAL0');
     expect(progress.phase).toBe('interview');
 
-    // --- PHASE 2: S0 -> S6 phỏng vấn ---
+    // --- PHASE 2: CAL0 -> S7 phỏng vấn ---
     const answers: Record<string, string> = {
+      CAL0: 'Giải thích tối giản',
       S0: 'RecipeShare mobile app giúp chia sẻ công thức nấu ăn',
       S1: 'Nỗi đau là khó tìm công thức cũ trong chat; giải quyết tạm bằng notepad.',
       S2: 'My (Recipe Contributor) muốn đăng món; Huy (Shopper) muốn xem danh sách đi chợ.',
       S3: 'Must: Đăng nhập, Xem công thức, Tạo công thức, Tìm kiếm. Should: Shopping List.',
       S4: 'User, Recipe, ShoppingList',
       S5: 'Mở app -> xem công thức -> chọn món -> tích nguyên liệu',
-      S6: 'Solo, 3 tuần, mobile',
+      S6: 'Solo, 3 tuần',
+      S7: 'mobile',
       M1: 'React Native cross-platform',
       M2: 'Offline-first với SQLite sync',
       M3: 'Camera và Photo Library access',
@@ -76,7 +78,7 @@ describe('E2E Mobile Interview & Gating Flow', () => {
       M5: 'TestFlight beta trước, thu phí IAP',
     };
 
-    const coreSteps = ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    const coreSteps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (let i = 0; i < coreSteps.length; i++) {
       const step = coreSteps[i];
       const turnId = `turn-core-${step}`;
@@ -88,8 +90,8 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
       // Skill commits the step
       progress = loadProgress(progressPath);
-      const commitOpts: { userTurnId: string; branchChoice?: 'web' | 'mobile' } = { userTurnId: turnId };
-      if (step === 'S6') {
+      const commitOpts: { userTurnId: string; branchChoice?: string } = { userTurnId: turnId };
+      if (step === 'S7') {
         commitOpts.branchChoice = 'mobile';
       }
       progress = commitStep(progress, script, commitOpts);

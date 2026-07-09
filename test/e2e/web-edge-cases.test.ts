@@ -47,7 +47,7 @@ describe('E2E Web Edge Cases Flow', () => {
     // 1. Initialize session
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S0');
+    expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
 
     // 2. User replies with a verbose message
@@ -56,7 +56,7 @@ describe('E2E Web Edge Cases Flow', () => {
 
     // State DOES NOT advance because commitStep is not called (user has not confirmed the translate-back)
     progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S0');
+    expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
 
     // 3. User replies with another verbose message in the next turn
@@ -64,7 +64,7 @@ describe('E2E Web Edge Cases Flow', () => {
     expect(result2.decision).toBe('allow');
 
     progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S0');
+    expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
   });
 
@@ -74,19 +74,19 @@ describe('E2E Web Edge Cases Flow', () => {
     // 1. Initialize session
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
 
-    // 2. User answers S0
+    // 2. User answers CAL0
     onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-1' });
     let progress = loadProgress(progressPath);
     progress = commitStep(progress, script, { userTurnId: 'turn-1' });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S1');
-    expect(progress.answered).toEqual(['S0']);
+    expect(progress.current_step).toBe('S0');
+    expect(progress.answered).toEqual(['CAL0']);
 
-    // 3. Simulate bypass attempt: manually modifying progress.json to answer S1 and S2 without new turn stamp
+    // 3. Simulate bypass attempt: manually modifying progress.json to answer S0 and S1 without new turn stamp
+    progress.answered.push('S0');
     progress.answered.push('S1');
-    progress.answered.push('S2');
     saveProgress(progressPath, progress);
 
     // 4. Next prompt submit must be BLOCKED because answered jumped by 2 since last turn stamp
@@ -95,21 +95,21 @@ describe('E2E Web Edge Cases Flow', () => {
     expect(result.message).toContain('Rate limit violation');
   });
 
-  test('Case (c): Đổi nhánh sau S6 -> không rollback ngầm, bảo vệ nhánh đã cam kết', () => {
+  test('Case (c): Đổi nhánh sau S7 -> không rollback ngầm, bảo vệ nhánh đã cam kết', () => {
     const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
 
-    // 1. Initialize session and answer S0 -> S6
+    // 1. Initialize session and answer CAL0 -> S7
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
 
-    const steps = ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (const step of steps) {
       const turnId = `turn-${step}`;
       onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: turnId });
       progress = loadProgress(progressPath);
 
-      const opts: { userTurnId: string; branchChoice?: 'web' | 'mobile' } = { userTurnId: turnId };
-      if (step === 'S6') {
+      const opts: { userTurnId: string; branchChoice?: string } = { userTurnId: turnId };
+      if (step === 'S7') {
         opts.branchChoice = 'web';
       }
       progress = commitStep(progress, script, opts);
@@ -146,7 +146,7 @@ describe('E2E Web Edge Cases Flow', () => {
     progress.phase = 'docs-emitted';
     progress.branch = 'web';
     progress.current_step = null;
-    progress.answered = ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'W1', 'W2', 'W3', 'W4', 'W5'];
+    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'W1', 'W2', 'W3', 'W4', 'W5'];
     saveProgress(progressPath, progress);
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)
@@ -182,7 +182,7 @@ describe('E2E Web Edge Cases Flow', () => {
 
     // 4. Emit tree checks for Web
     const answers: Record<string, string> = {
-      S0: 'A', S1: 'B', S2: 'C', S3: 'D', S4: 'E', S5: 'F', S6: 'web',
+      CAL0: 'Fast', S0: 'A', S1: 'B', S2: 'C', S3: 'D', S4: 'E', S5: 'F', S6: 'Solo', S7: 'web',
       W1: 'Next', W2: 'CSS', W3: 'Vercel', W4: 'Auth', W5: 'NoRealtime'
     };
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
@@ -206,14 +206,14 @@ describe('E2E Web Edge Cases Flow', () => {
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
 
-    // Answer S0
+    // Answer CAL0
     onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-dup-w-1' });
     progress = loadProgress(progressPath);
     progress = commitStep(progress, script, { userTurnId: 'turn-dup-w-1' });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
-    expect(progress.current_step).toBe('S1');
+    expect(progress.current_step).toBe('S0');
 
     expect(() => {
       commitStep(progress, script, { userTurnId: 'turn-dup-w-1' });

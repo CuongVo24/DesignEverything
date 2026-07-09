@@ -11,7 +11,7 @@ export function loadProgress(path: string): Progress {
         version: '0.1.0',
         phase: 'interview',
         branch: null,
-        current_step: 'S0',
+        current_step: 'CAL0',
         answered: [],
         emitted_docs: [],
         gates_passed: [],

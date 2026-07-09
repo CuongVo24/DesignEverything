@@ -12,39 +12,43 @@ const scriptPath = join(__dirname, '../../Design/Content/interview-script/script
 const script = loadScript(scriptPath);
 
 describe('advanceState engine', () => {
-  test('should go S0 -> S1 -> ... -> S6 correctly', () => {
+  test('should go CAL0 -> S0 -> S1 -> ... -> S7 correctly', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progress.current_step = 'CAL0';
 
-    for (let i = 0; i <= 5; i++) {
-      expect(progress.current_step).toBe(`S${i}`);
-      progress = commitStep(progress, script, { userTurnId: `turn-${i}` });
+    const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    for (let i = 0; i < steps.length; i++) {
+      expect(progress.current_step).toBe(steps[i]);
+      progress = commitStep(progress, script, { userTurnId: `turn-${steps[i]}` });
     }
-    expect(progress.current_step).toBe('S6');
+    expect(progress.current_step).toBe('S7');
   });
 
-  test('should require branchChoice when committing S6 and enforce immutability of branch', () => {
+  test('should require branchChoice when committing S7 and enforce immutability of branch', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
-    for (let i = 0; i <= 5; i++) {
-      progress = commitStep(progress, script, { userTurnId: `turn-${i}` });
+    progress.current_step = 'CAL0';
+    const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    for (const step of steps) {
+      progress = commitStep(progress, script, { userTurnId: `turn-${step}` });
     }
 
-    // Try committing S6 without branchChoice -> should throw
-    expect(() => commitStep(progress, script, { userTurnId: 'turn-6' })).toThrow(
-      /branchChoice must be provided when committing step S6/
+    // Try committing S7 without branchChoice -> should throw
+    expect(() => commitStep(progress, script, { userTurnId: 'turn-S7' })).toThrow(
+      /branchChoice must be provided when committing step S7/
     );
 
-    // Commit S6 with web branch
-    const progressWeb = commitStep(progress, script, { userTurnId: 'turn-6', branchChoice: 'web' });
+    // Commit S7 with web branch
+    const progressWeb = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
     expect(progressWeb.branch).toBe('web');
     expect(progressWeb.current_step).toBe('W1');
 
     // Try changing branch -> should throw
     expect(() =>
-      commitStep(progressWeb, script, { userTurnId: 'turn-7', branchChoice: 'mobile' })
+      commitStep(progressWeb, script, { userTurnId: 'turn-8', branchChoice: 'mobile' })
     ).toThrow(/Cannot change branch once set/);
 
-    // Commit S6 with mobile branch
-    const progressMobile = commitStep(progress, script, { userTurnId: 'turn-6', branchChoice: 'mobile' });
+    // Commit S7 with mobile branch
+    const progressMobile = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'mobile' });
     expect(progressMobile.branch).toBe('mobile');
     expect(progressMobile.current_step).toBe('M1');
   });
@@ -83,13 +87,15 @@ describe('advanceState engine', () => {
 
   test('should transition phase to docs-emitted or ready-to-build upon completing interview', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progress.current_step = 'CAL0';
 
-    // S0 -> S6
-    for (let i = 0; i <= 5; i++) {
-      progress = commitStep(progress, script, { userTurnId: `turn-${i}` });
+    // CAL0 -> S6
+    const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    for (const step of steps) {
+      progress = commitStep(progress, script, { userTurnId: `turn-${step}` });
     }
-    // S6 -> Web branch
-    progress = commitStep(progress, script, { userTurnId: 'turn-6', branchChoice: 'web' });
+    // S7 -> Web branch
+    progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
 
     // W1 -> W4
     for (let i = 1; i <= 4; i++) {
@@ -114,14 +120,17 @@ describe('advanceState engine', () => {
     expect(progressReady.phase).toBe('ready-to-build');
   });
 
-  test('should support hybrid branch flow committing S6 and routing all core, web, and mobile questions', () => {
+  test('should support hybrid branch flow committing S7 and routing all core, web, and mobile questions', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
-    for (let i = 0; i <= 5; i++) {
-      progress = commitStep(progress, script, { userTurnId: `turn-${i}` });
+    progress.current_step = 'CAL0';
+
+    const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    for (const step of steps) {
+      progress = commitStep(progress, script, { userTurnId: `turn-${step}` });
     }
 
-    // Commit S6 with hybrid branch
-    progress = commitStep(progress, script, { userTurnId: 'turn-6', branchChoice: 'hybrid' });
+    // Commit S7 with hybrid branch
+    progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'hybrid' });
     expect(progress.branch).toBe('hybrid');
 
     // The next questions must include both Web and Mobile questions.

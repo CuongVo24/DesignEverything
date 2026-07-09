@@ -39,7 +39,7 @@ describe('loadProgress & saveProgress', () => {
     expect(defaultProgress.version).toBe('0.1.0');
     expect(defaultProgress.phase).toBe('interview');
     expect(defaultProgress.branch).toBeNull();
-    expect(defaultProgress.current_step).toBe('S0');
+    expect(defaultProgress.current_step).toBe('CAL0');
     expect(defaultProgress.answered.length).toBe(0);
     expect(defaultProgress.answered_len_at_last_turn).toBe(0);
   });

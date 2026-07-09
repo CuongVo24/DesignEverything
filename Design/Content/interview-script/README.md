@@ -11,19 +11,22 @@ Toàn bộ giá trị dồn vào chất lượng phương pháp gốc (người 
 - [M-mobile.md](M-mobile.md) — bản đầy đủ cho nhánh mobile M1-M5.
 - [script.yaml](script.yaml) — bản máy đọc đã khóa ở Batch 6, dùng cho adapter và validator.
 
-## KHUNG LÕI — S0 → S6 (dùng chung)
+## KHUNG LÕI — CAL0, S0 → S7 (dùng chung)
 
 | # | Câu hỏi đời thường | Nếu "không biết" → mặc định | Điền vào doc |
 |---|---|---|---|
+| **CAL0** | Thiết lập độ sâu giải thích (Meta-calibrate). | Đi nhanh thẳng vào việc, giải thích tối giản | (không có - biến trạng thái) |
 | **S0** | Mô tả dự án trong **1 câu**, như kể cho bạn thân. | (bắt buộc — mỏ neo) | `00-vision.md` |
 | **S1** | Người ta đang **khổ vì chuyện gì**? Hiện xoay xở ra sao? | Suy từ S0, hỏi xác nhận | `00-vision.md` |
 | **S2** | **Ai** sẽ dùng? Kể 1–2 người cụ thể & việc họ muốn làm xong. | "Người dùng phổ thông" + 1 admin | `01-personas.md` |
 | **S3** | Liệt kê việc người dùng **làm được** → agent xếp Phải/Nên/Để sau. | Agent đề xuất MVP tối thiểu | `02-scope.md` |
 | **S4** | Sản phẩm cần **nhớ những gì**? (user, bài viết, đơn hàng...) | Suy entity từ S3 | `03-data-model.md` |
 | **S5** | Kể **một lần dùng điển hình** từ mở app đến xong việc. | Dựng flow từ tính năng "Phải có" #1 | `04-flows.md` |
-| **S6** | **Một mình/nhóm**? **deadline**? **ngân sách**? **web hay app**? | Solo / không deadline cứng / free-tier / → rẽ nhánh | `06-constraints.md` + chọn nhánh |
+| **S6** | **Một mình/nhóm**? **deadline**? **ngân sách**? | Solo / không deadline cứng / free-tier | `06-constraints.md` |
+| **S7** | Chọn **hình-hài dự án** (web, mobile, hybrid, cli). | web | `06-constraints.md` + chọn nhánh |
 
 > **S3 khó & quan trọng nhất.** Người dùng kể bừa, agent phân loại Must/Should/Could.
+> **S7 quyết định nhánh câu hỏi tiếp theo** dựa trên shapes registry (web, mobile, hybrid, cli...).
 
 ## NHÁNH WEB — W1 → W5
 
@@ -48,8 +51,8 @@ Toàn bộ giá trị dồn vào chất lượng phương pháp gốc (người 
 > **2 bẫy mobile người mới luôn dính** — bới ra sớm: (a) offline/sync M2 đội chi phí gấp đôi; (b) quy trình lên store M5.
 
 ## Trạng thái hiện tại
-- Batch 2 đã mở rộng khung lõi thành bản chi tiết trong [S0-S6-core.md](S0-S6-core.md).
-- Batch 3 đã điền nhánh web trong [W-web.md](W-web.md).
-- Batch 4 đã điền nhánh mobile trong [M-mobile.md](M-mobile.md).
-- Batch 6 đã khóa bản máy đọc trong [script.yaml](script.yaml).
-- Batch 7 đã dùng bộ này để dựng golden example hoàn chỉnh cho một dự án mobile mẫu.
+- V2.0.0 đã cập nhật câu meta-calibrate `CAL0`, tách câu chọn hình-hài `S7` riêng biệt, và làm gọn `S6`.
+- Khung lõi đầy đủ bao gồm `CAL0`, `S0-S7` được ghi tại [S0-S6-core.md](S0-S6-core.md).
+- Nhánh web được ghi tại [W-web.md](W-web.md).
+- Nhánh mobile được ghi tại [M-mobile.md](M-mobile.md).
+- Bản máy đọc đã đồng bộ hoàn toàn tại [script.yaml](script.yaml).
