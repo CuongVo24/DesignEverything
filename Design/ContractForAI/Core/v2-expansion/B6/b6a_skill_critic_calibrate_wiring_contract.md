@@ -18,11 +18,11 @@ Cho lớp **skill** thực thi hành vi ngữ nghĩa v2: (a) inject câu `S7` ch
 - KHÔNG đụng emit (B5b).
 
 ## 3. Checklist
-- [ ] Skill inject S7, set branch khi commit S7, validate registry.
-- [ ] CAL0 inject đúng (không đòi target_doc); skill set `calibrate_mode`; vẫn là 1 bước answered.
-- [ ] Critic-pass fire đúng 2 điểm, phát content B4c, bắt xác nhận, không chặn cứng.
-- [ ] Hook không đổi; rate-limit vẫn đúng với CAL0/S7.
-- [ ] Test skill: S7 set branch; critic-pass yêu cầu xác nhận; meta không emit.
+- [x] Skill inject S7, set branch khi commit S7, validate registry.
+- [x] CAL0 inject đúng (không đòi target_doc); skill set `calibrate_mode`; vẫn là 1 bước answered.
+- [x] Critic-pass fire đúng 2 điểm, phát content B4c, bắt xác nhận, không chặn cứng.
+- [x] Hook không đổi; rate-limit vẫn đúng với CAL0/S7.
+- [x] Test skill: S7 set branch; critic-pass yêu cầu xác nhận; meta không emit.
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `src/adapters/claude/skill/render-inject.ts` (+ test)
@@ -42,4 +42,4 @@ Cho lớp **skill** thực thi hành vi ngữ nghĩa v2: (a) inject câu `S7` ch
 - `npm test` — toàn bộ xanh.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

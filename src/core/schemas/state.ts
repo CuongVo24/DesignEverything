@@ -12,7 +12,7 @@ if (existsSync(shapesPath)) {
     const fileContent = readFileSync(shapesPath, 'utf8');
     const registry = YAML.parse(fileContent);
     if (registry && Array.isArray(registry.shapes)) {
-      validBranchIds = registry.shapes.map((s: any) => s.id);
+      validBranchIds = registry.shapes.map((s: { id: string }) => s.id);
     }
   } catch {
     // Ignore and use fallback
