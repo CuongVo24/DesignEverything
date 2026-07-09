@@ -30,11 +30,10 @@ DeepSeek/GLM là model chạy trong harness → **không có dòng riêng**. Dù
 - GATE: thử sinh code khi doc chưa xong → có bị chặn (A) / cảnh báo (B) không?
 - EMIT: output có rơi đúng cây taxonomy không?
 
-## Trạng thái v2 (đang khoá spec — [V2-ExpansionPlan](../RoadMap/V2-ExpansionPlan.md))
-v2.0.0 mở **đa hình-hài dự án** (registry ở [taxonomy.md](../Content/taxonomy.md): `web`/`mobile`/`hybrid` ✅ code; `cli` 📐 spec khoá B2, chưa code) và thêm **critic role** (pass phản biện) + **meta-calibrate**. Cả hai adapter phải đồng bộ khi code B5–B6:
-- **Claude Code (A):** inject thêm câu chọn hình-hài `S7` + câu `meta`; critic ép mạnh (chặn/cảnh báo scope creep qua kênh hook/skill).
-- **AGENTS.md (B):** critic + calibrate ở dạng rule mềm (không đảm bảo cứng).
-MAJOR → bảng ma trận trên phải cập nhật cùng commit khi B5–B6 land (DecisionLog D21–D26).
+## Trạng thái v2 (Đồng bộ mốc v2.0.0 — [V2-ExpansionPlan](../RoadMap/V2-ExpansionPlan.md))
+v2.0.0 mở **đa hình-hài dự án** (registry ở [taxonomy.md](../Content/taxonomy.md): `web`/`mobile`/`hybrid`/`cli` ✅ code) và thêm **critic role** (pass phản biện) + **meta-calibrate**. Cả hai adapter đã đồng bộ đầy đủ:
+- **Claude Code (A):** inject câu chọn hình-hài `S7` + câu `meta` CAL0 (chốt `calibrate_mode`); chạy và bắt xác nhận critic-pass ở skill (cho `S3`, `W5`, `M5`, `C5`). ✅ Đã code + test.
+- **AGENTS.md (B):** tích hợp luật mềm cho các hình-hài mới, critic, và calibrate. ✅ Đã code + test.
 
 ## Trạng thái sau Month 2 (v1.0.0)
 - Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.

@@ -70,3 +70,4 @@ Chi tiết: [../../Adapters/ConformanceMatrix.md](../../Adapters/ConformanceMatr
 | Version | Thay đổi |
 |---|---|
 | 0.1.0 | Khoá schema ổn định cho Batch 1: chốt cấu trúc gate, luật validate và map bậc A/B. |
+| 2.0.0 | 2026-07-09 | Bump version đồng bộ toàn bộ schema và kịch bản lên mốc v2.0.0. |

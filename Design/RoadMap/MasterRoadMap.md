@@ -23,11 +23,13 @@ Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md`
 | [Month 1](Month1/README.md) | Reference: Claude Code + Web chạy được | Bản chạy được | **HOÀN THÀNH** |
 | [Month 2](Month2/README.md) | Mobile + AGENTS.md + chau chuốt | v1 dùng được | **HOÀN THÀNH (v1.0.0)** |
 | [Month 3](Month3/README.md) | Dogfood + kiểm chứng dự án thật | Đáng chia sẻ | Kế hoạch |
-| [Month 4](Month4/README.md) | Phân phối + đặt nền maintain | Đáng chia sẻ + tầm xa | Kế hoạch |
+| [Month 4](Month4/README.md) | Phân phối + đặt nền maintain (một số mốc hoãn tới sau v2 theo D26) | Đáng chia sẻ + tầm xa | Kế hoạch (hoãn post-v2) |
 
 ## Phân pha
 - **Phase 0 — Khoá nội dung trong `Design/`**: đã hoàn tất qua [ContentFillPlan.md](ContentFillPlan.md), từ B1 đến B9.
-- **Phase 1–4 — 16 tuần triển khai**: bắt đầu từ lúc nội dung lõi, template, golden và adapter spec đã đủ sạch để chuyển sang code, dogfood và phân phối.
+- **Phase 1 — v1.0.0 (Month 1 & Month 2)**: đã hoàn thành triển khai code lõi, kịch bản web/mobile và bộ sinh rules.
+- **Phase 2 — v2.0.0 (Đa hình-hài & Phản biện)**: đã hoàn tất triển khai (B5-B6) — chốt mốc v2.0.0.
+- **Phase 3–4 — 16 tuần triển khai tiếp theo**: tiếp tục với dogfooding và phân phối.
 
 ## Điền nội dung
 [ContentFillPlan.md](ContentFillPlan.md) là kế hoạch điền toàn bộ nội dung `Design/` theo batch: B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example mobile → B8 adapter → B9 QA. Ở trạng thái hiện tại, phase này được coi là completed và là tiền đề cho toàn bộ kế hoạch 16 tuần bên dưới.

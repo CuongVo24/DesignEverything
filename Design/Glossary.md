@@ -34,12 +34,13 @@ Không có nguồn từ vựng chuẩn → mỗi doc viết mỗi kiểu, adapte
 
 | Thuật ngữ | Nghĩa |
 |---|---|
-| **Kịch bản phỏng vấn (interview-script)** | Sản phẩm thật: luồng câu hỏi S0–S6 + nhánh W/M, định dạng máy đọc. |
+| **Kịch bản phỏng vấn (interview-script)** | Sản phẩm thật: luồng câu hỏi S0–S7 + các nhánh shape, định dạng máy đọc. |
 | **Dịch ngược (translate-back)** | Người dùng trả lời đời thường → agent tóm lại bằng ngôn ngữ chuẩn rồi xác nhận. |
 | **Mặc định thông minh (smart default)** | Mỗi câu kèm lựa chọn phổ biến nhất; "không biết → chọn giúp" vẫn đi tiếp. |
-| **Khung Lõi (S0–S6)** | Phần phỏng vấn dùng chung web & mobile (~70%). |
-| **Nhánh (W1–W5 / M1–M5)** | Phần rẽ riêng cho web / mobile sau S6. |
+| **Khung Lõi (S0–S7)** | Phần phỏng vấn dùng chung cho tất cả các hình-hài dự án. |
+| **Nhánh (W1–W5 / M1–M5 / C1–C5...)** | Phần rẽ riêng cho từng hình-hài dự án sau S7. |
 | **MoSCoW** | Phân loại tính năng: Must / Should / Could / Won't. S3 dùng. |
+| **Hình-hài dự án (project shape)** | Loại dự án muốn xây dựng (`web`, `mobile`, `hybrid`, `cli`), được chọn ở câu S7. |
 
 ## State & Gate
 
@@ -48,6 +49,8 @@ Không có nguồn từ vựng chuẩn → mỗi doc viết mỗi kiểu, adapte
 | **State machine** | Trạng thái phiên trong `progress.json`; chỉ tiến 1 bước mỗi lượt người thật. |
 | **gate-policy** | Khai báo: chưa có doc X thì cấm hành động Y. |
 | **Artifact-based gating** | Ép dựa trên "file có chưa / state đủ chưa", KHÔNG dựa trên ý định hay chất lượng câu. |
+| **Phản biện (critic)** | Cơ chế đặt thử thách (challenge) và bắt xác nhận (ack_prompt) tại các câu hỏi quan trọng để ngăn sai lầm thiết kế. |
+| **Hiệu chỉnh (calibrate)** | Chế độ phỏng vấn (`deep` hoặc `fast`) thiết lập ở câu CAL0 để tinh chỉnh mức độ kỹ lưỡng của kịch bản và phản biện. |
 
 ## Truy vết & Maintain (tầm nhìn xa)
 

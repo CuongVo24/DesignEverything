@@ -33,7 +33,9 @@ Mở phiên mới, **hành động đầu tiên tuyệt đối** là đọc tr�
 | 9 | `Design/Core/Schemas/gate-policy.md` | Khi đụng logic GATE / hook |
 | 10 | `Design/Core/AnchorFormat.md` | Khi đụng mỏ neo truy vết trong output |
 | 11 | `Design/Content/taxonomy.md` | Khi đụng cây doc đầu ra (EMIT) |
-| 12 | `Design/Content/interview-script/README.md` | Khi mài nội dung S0–S6 / W / M |
+| 12 | `Design/Content/interview-script/README.md` | Khi mài nội dung S0–S7 / W / M / C |
+| 12.1 | `Design/Content/interview-script/shapes.yaml` | Khi cấu hình hình-hài dự án (registry) |
+| 12.2 | `Design/Content/golden-example-cli/` | Cây thư mục golden mẫu của CLI |
 
 **Tài liệu adapter & quy ước — đọc khi code:**
 

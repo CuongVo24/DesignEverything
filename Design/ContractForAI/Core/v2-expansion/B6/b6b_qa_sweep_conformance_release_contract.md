@@ -18,13 +18,13 @@
 - KHÔNG đổi behavior code (chỉ doc/sync + regen artifact do đổi đã có).
 
 ## 3. Checklist
-- [ ] Wording enforcement/critic/shape đồng nhất mọi file spec.
-- [ ] Glossary có thuật ngữ mới; reading order khớp file thật.
-- [ ] ConformanceMatrix phản ánh cli + critic + calibrate đúng bậc A/B.
-- [ ] Versioning 2.0.0 phát hành + changelog schema; ConformanceMatrix cập nhật **cùng commit** (§3).
-- [ ] MasterRoadMap phản ánh Phase 2 + Month 4 hoãn.
-- [ ] `AGENTS.sample.md` khớp generator (drift guard xanh).
-- [ ] Không link treo; mỗi file còn "## Tại sao cần file này".
+- [x] Wording enforcement/critic/shape đồng nhất mọi file spec.
+- [x] Glossary có thuật ngữ mới; reading order khớp file thật.
+- [x] ConformanceMatrix phản ánh cli + critic + calibrate đúng bậc A/B.
+- [x] Versioning 2.0.0 phát hành + changelog schema; ConformanceMatrix cập nhật **cùng commit** (§3).
+- [x] MasterRoadMap phản ánh Phase 2 + Month 4 hoãn.
+- [x] `AGENTS.sample.md` khớp generator (drift guard xanh).
+- [x] Không link treo; mỗi file còn "## Tại sao cần file này".
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Adapters/ConformanceMatrix.md`, `Design/Core/Versioning.md`, `Design/Core/Schemas/*` (changelog), `Design/Glossary.md`, `Design/Guideline.md`, `Design/VibeCode.md`, `Design/RoadMap/MasterRoadMap.md`
@@ -43,4 +43,4 @@
 - Review thủ công: đọc Design/ không còn chỗ ép `web|mobile` cứng; ConformanceMatrix + Versioning 2.0.0 nhất quán; MasterRoadMap đúng trạng thái.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

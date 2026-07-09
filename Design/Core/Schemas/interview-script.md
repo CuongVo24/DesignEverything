@@ -112,4 +112,4 @@ Validator cho Batch 6 và test sau này phải kiểm được tối thiểu cá
 | Version | Thay đổi |
 |---|---|
 | 0.1.0 | Khoá schema ổn định cho Batch 1: chốt field, ràng buộc, thứ tự thực thi và luật validate. |
-| 2.0.0 (B2 — khoá spec, chưa code) | Mở `branch` thành hình-hài dự án (registry ở taxonomy); thêm field `kind: anchored\|meta` (`target_doc` null khi meta); tách câu chọn hình-hài (S7) khỏi S6; câu nhánh `depends_on` S7; thêm top-level `critics:` map theo điểm fire. MAJOR: D21–D24. |
+| 2.0.0 | 2026-07-09 | Mở `branch` thành hình-hài dự án (registry ở taxonomy); thêm field `kind: anchored\|meta` (`target_doc` null khi meta); tách câu chọn hình-hài (S7) khỏi S6; câu nhánh `depends_on` S7; thêm top-level `critics:` map theo điểm fire. MAJOR: D21–D24. |

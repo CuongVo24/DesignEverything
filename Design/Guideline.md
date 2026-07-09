@@ -14,7 +14,7 @@ Người mới (kể cả chính mình sau 3 tháng) mở thư mục `Design/` s
 4. [Core/Schemas/](Core/Schemas/) — các định dạng dữ liệu trung tính (interview-script, state, gate).
 5. [Core/AnchorFormat.md](Core/AnchorFormat.md) — format mỏ neo truy vết (đã chốt).
 6. [Core/Versioning.md](Core/Versioning.md) — chính sách version để không vỡ adapter.
-7. [Content/](Content/) — **sản phẩm thật**: kịch bản phỏng vấn + template + taxonomy + [QualityRubric](Content/QualityRubric.md).
+7. [Content/](Content/) — **sản phẩm thật**: kịch bản phỏng vấn, shapes.yaml, template, taxonomy + [QualityRubric](Content/QualityRubric.md), các kịch bản nhánh (`W-web.md`, `M-mobile.md`, `H-hybrid.md`, `C-cli.md`) và thư mục golden-cli.
 8. [Adapters/](Adapters/) — cách phủ từng harness + ma trận conformance.
 9. [Conventions/](Conventions/) — [TechStack](Conventions/TechStack.md) + chuẩn code/git + chiến lược test.
 10. [RoadMap/MasterRoadMap.md](RoadMap/MasterRoadMap.md) — mốc thời gian & phạm vi.
