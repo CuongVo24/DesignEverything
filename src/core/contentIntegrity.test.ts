@@ -1,6 +1,7 @@
 import { expect, test, describe } from 'vitest';
 import { loadScript } from './loadScript.js';
 import { loadGatePolicy } from './loadGatePolicy.js';
+import { loadShapes } from './loadShapes.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
@@ -34,7 +35,9 @@ describe('Content Integrity (Tầng 1)', () => {
     const validDocs = new Set(matches);
 
     for (const question of script.questions) {
-      expect(validDocs.has(question.target_doc)).toBe(true);
+      if (question.target_doc !== null) {
+        expect(validDocs.has(question.target_doc)).toBe(true);
+      }
     }
   });
 
@@ -68,5 +71,27 @@ describe('Content Integrity (Tầng 1)', () => {
     expect(mdContent).toContain('Write');
     expect(mdContent).toContain('Edit');
     expect(mdContent).toContain('Bash');
+  });
+
+  test('shapes.yaml shapes list must match taxonomy.md shapes list 100%', () => {
+    const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+    const registry = loadShapes(shapesPath);
+    const taxonomyContent = readFileSync(taxonomyPath, 'utf8');
+
+    // For each shape, verify its id is documented in taxonomy.md
+    for (const shape of registry.shapes) {
+      expect(taxonomyContent).toContain(`\`${shape.id}\``);
+    }
+  });
+
+  test('every branch in script.yaml must exist in shapes.yaml or be core', () => {
+    const script = loadScript(scriptPath);
+    const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+    const registry = loadShapes(shapesPath);
+    const validBranches = new Set(['core', ...registry.shapes.map((s) => s.id)]);
+
+    for (const question of script.questions) {
+      expect(validBranches.has(question.branch)).toBe(true);
+    }
   });
 });

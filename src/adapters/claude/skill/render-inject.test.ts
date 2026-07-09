@@ -10,6 +10,7 @@ describe('renderInject function', () => {
         id: 'S0',
         ask: 'Question S0',
         default: 'Default S0',
+        kind: 'anchored',
         translate_back: 'Translate S0',
         target_doc: '00-vision.md',
         depends_on: [],
@@ -20,6 +21,7 @@ describe('renderInject function', () => {
         id: 'S3',
         ask: 'Cứ kể lộn xộn những việc bạn muốn người dùng làm được',
         default: 'Không có',
+        kind: 'anchored',
         translate_back: 'Translate S3',
         target_doc: '02-scope.md',
         depends_on: ['S2'],
@@ -41,6 +43,7 @@ describe('renderInject function', () => {
       last_user_turn_id: null,
       answered_len_at_last_turn: 0,
       updated_at: new Date().toISOString(),
+      calibrate_mode: null,
     };
 
     const result = renderInject(progress, mockScript);
@@ -59,6 +62,7 @@ describe('renderInject function', () => {
       last_user_turn_id: 'turn-2',
       answered_len_at_last_turn: 2,
       updated_at: new Date().toISOString(),
+      calibrate_mode: null,
     };
 
     const result = renderInject(progress, mockScript);
@@ -81,6 +85,7 @@ describe('renderInject function', () => {
       last_user_turn_id: null,
       answered_len_at_last_turn: 0,
       updated_at: new Date().toISOString(),
+      calibrate_mode: null,
     };
 
     expect(() => renderInject(progress, mockScript)).toThrow(

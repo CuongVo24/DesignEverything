@@ -1,6 +1,20 @@
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import type { Progress, Script } from './schemas/index.js';
+import { loadShapes } from './loadShapes.js';
 
-function isQuestionCompatible(qBranch: 'core' | 'web' | 'mobile', progressBranch: string | null): boolean {
+function getRegistryBranchIds(): string[] {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  if (existsSync(shapesPath)) {
+    const registry = loadShapes(shapesPath);
+    return registry.shapes.map(s => s.id);
+  }
+  return ['web', 'mobile', 'hybrid', 'cli'];
+}
+
+function isQuestionCompatible(qBranch: string, progressBranch: string | null): boolean {
   if (qBranch === 'core') return true;
   if (progressBranch === 'hybrid') return qBranch === 'web' || qBranch === 'mobile';
   return qBranch === progressBranch;
@@ -9,7 +23,7 @@ function isQuestionCompatible(qBranch: 'core' | 'web' | 'mobile', progressBranch
 export function commitStep(
   progress: Progress,
   script: Script,
-  args: { userTurnId: string; branchChoice?: 'web' | 'mobile' | 'hybrid' }
+  args: { userTurnId: string; branchChoice?: string }
 ): Progress {
   const currentStepId = progress.current_step;
   if (currentStepId === null) {
@@ -39,8 +53,9 @@ export function commitStep(
     if (!args.branchChoice) {
       throw new Error('branchChoice must be provided when committing step S6');
     }
-    if (args.branchChoice !== 'web' && args.branchChoice !== 'mobile' && args.branchChoice !== 'hybrid') {
-      throw new Error(`Invalid branch choice: ${args.branchChoice}. Must be 'web', 'mobile' or 'hybrid'`);
+    const validBranches = getRegistryBranchIds();
+    if (!validBranches.includes(args.branchChoice)) {
+      throw new Error(`Invalid branch choice: ${args.branchChoice}. Must be one of: ${validBranches.join(', ')}`);
     }
     if (progress.branch !== null && progress.branch !== args.branchChoice) {
       throw new Error(`Cannot change branch once set. Current: ${progress.branch}, New: ${args.branchChoice}`);
@@ -81,8 +96,8 @@ export function commitStep(
     // Interview complete, determine phase based on emitted docs and gates passed
     const requiredDocs = new Set(
       script.questions
-        .filter((q) => isQuestionCompatible(q.branch, nextProgress.branch))
-        .map((q) => q.target_doc)
+        .filter((q) => isQuestionCompatible(q.branch, nextProgress.branch) && q.target_doc !== null)
+        .map((q) => q.target_doc as string)
     );
     const requiredGates = new Set(
       script.questions

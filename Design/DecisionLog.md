@@ -33,6 +33,7 @@ Quyết định nằm rải rác trong nhiều file → quên mất *vì sao* đ
 | D24 | 2026-06-29 | **Ranh giới multi-agent:** KHÔNG dùng multi-agent cho generation; critic = **một role/pass phản biện trong agent sẵn có**, ép mạnh ở harness có hook, mềm ở rules-only. | Bài toán của sản phẩm là *moi ý định + ràng buộc* (convergent), không phải *sinh sản lượng* (divergent như tool viết truyện nhiều agent) — swarm chỉ sinh thêm doc-nghe-hợp-lý-nhưng-sai. Giữ nguyên [D4] (không build agent). | Active |
 | D25 | 2026-06-29 | Phân biệt rõ: mở **hình-hài dự án** (D21) ≠ mở **doc enterprise** (ADR/test-plan/ContractForAI). [D17] vẫn Active. | Chống lẫn "mở rộng tốt" (phủ thêm loại dự án cho người mới) với "mở rộng đã hoãn" (file enterprise cho cùng một dự án) — hai thứ khác bản chất. | Active |
 | D26 | 2026-06-29 | **Thứ tự Phase 2:** làm v2.0.0 (overhaul kịch bản) TRƯỚC, đóng gói/ship ra ngoài SAU. | Sản phẩm chưa đủ shape để mời người ngoài; ship sớm sẽ lấy tín hiệu sai. Đánh đổi: lùi mốc "Đáng chia sẻ". Month 4 W13D/W14A/W14B/W16 hoãn tới sau v2 (deferred post-v2, không phải BLOCKED chờ tuần). | Active |
+| D27 | 2026-07-09 | Chốt vị trí và định dạng của registry hình-hài tại `shapes.yaml` | Runtime registry để engine load các hình-hài dự án mở rộng, tránh hardcode danh sách shape trong code. File đặt tại `Design/Content/interview-script/shapes.yaml`, mirror 100% mục lục `taxonomy.md` (theo tiền lệ D15). | Active |
 
 ## Quy ước thêm dòng
 - ID tăng dần, không tái dùng.

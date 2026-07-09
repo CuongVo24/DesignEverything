@@ -18,6 +18,7 @@ export function loadProgress(path: string): Progress {
         last_user_turn_id: null,
         answered_len_at_last_turn: 0,
         updated_at: new Date().toISOString(),
+        calibrate_mode: null,
       };
     }
     throw new Error(`Failed to read progress file at ${path}: ${(error as Error).message}`);

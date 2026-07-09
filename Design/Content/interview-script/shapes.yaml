@@ -1,0 +1,23 @@
+version: 2.0.0
+shapes:
+  - id: web
+    name: "Ứng dụng web"
+    branch_prefix: W
+    release_docs:
+      - 07-deployment.md
+  - id: mobile
+    name: "App di động"
+    branch_prefix: M
+    release_docs:
+      - 07-release.md
+  - id: hybrid
+    name: "Web + Mobile"
+    branch_prefix: hybrid
+    release_docs:
+      - 07-deployment.md
+      - 07-release.md
+  - id: cli
+    name: "Công cụ dòng lệnh / tool dev"
+    branch_prefix: C
+    release_docs:
+      - 07-distribution.md

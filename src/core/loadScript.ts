@@ -1,6 +1,9 @@
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import YAML from 'yaml';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { scriptSchema, type Script } from './schemas/index.js';
+import { loadShapes } from './loadShapes.js';
 
 export function loadScript(path: string): Script {
   let fileContent: string;
@@ -28,6 +31,14 @@ export function loadScript(path: string): Script {
   const seenIds = new Set<string>();
   let seenS6 = false;
 
+  let shapesPath = join(dirname(path), 'shapes.yaml');
+  if (!existsSync(shapesPath)) {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  }
+  const registry = loadShapes(shapesPath);
+  const validBranches = new Set(['core', ...registry.shapes.map((s) => s.id)]);
+
   for (const question of script.questions) {
     // 1. Check unique id
     if (seenIds.has(question.id)) {
@@ -43,11 +54,18 @@ export function loadScript(path: string): Script {
       }
     }
 
-    // 3. Check web/mobile branch does not precede S6
+    // 3. Check valid branch
+    if (!validBranches.has(question.branch)) {
+      throw new Error(
+        `Question ${question.id} has invalid branch: ${question.branch}. Must be 'core' or one of: ${Array.from(validBranches).filter(b => b !== 'core').join(', ')}`
+      );
+    }
+
+    // 4. Check shape branch does not precede S6
     if (question.id === 'S6') {
       seenS6 = true;
     }
-    if ((question.branch === 'web' || question.branch === 'mobile') && !seenS6) {
+    if (question.branch !== 'core' && !seenS6) {
       throw new Error(`Question ${question.id} on branch ${question.branch} cannot precede S6`);
     }
 

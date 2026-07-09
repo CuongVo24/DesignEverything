@@ -104,7 +104,9 @@ describe('advanceState engine', () => {
     // Setup for ready-to-build
     let progressReady = { ...progress };
     const webQuestions = script.questions.filter((q) => q.branch === 'core' || q.branch === 'web');
-    progressReady.emitted_docs = webQuestions.map((q) => q.target_doc);
+    progressReady.emitted_docs = webQuestions
+      .filter((q) => q.target_doc !== null)
+      .map((q) => q.target_doc as string);
     progressReady.gates_passed = ['scope-locked'];
 
     progressReady = commitStep(progressReady, script, { userTurnId: 'turn-web-5' });
