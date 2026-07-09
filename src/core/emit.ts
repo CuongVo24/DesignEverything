@@ -1,5 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { loadShapes } from './loadShapes.js';
 
 export type InterviewAnswers = Record<string, string>;
 
@@ -46,11 +48,37 @@ export function emitDoc(
  */
 export function emitTree(
   answers: InterviewAnswers,
-  branch: 'web' | 'mobile' | 'hybrid',
+  branch: string,
   templatesDir: string,
   options?: { srcPrefix?: string }
 ): EmittedDoc[] {
-  // 1. Determine files list
+  // 1. Determine release docs from shapes.yaml registry
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  let releaseDocs: string[] = [];
+
+  if (existsSync(shapesPath)) {
+    const registry = loadShapes(shapesPath);
+    const shape = registry.shapes.find((s) => s.id === branch);
+    if (!shape) {
+      throw new Error(`Invalid branch/shape: ${branch}`);
+    }
+    releaseDocs = shape.release_docs;
+  } else {
+    // Fallback if shapes.yaml does not exist
+    if (branch === 'hybrid') {
+      releaseDocs = ['07-deployment.md', '07-release.md'];
+    } else if (branch === 'web') {
+      releaseDocs = ['07-deployment.md'];
+    } else if (branch === 'mobile') {
+      releaseDocs = ['07-release.md'];
+    } else if (branch === 'cli') {
+      releaseDocs = ['07-distribution.md'];
+    } else {
+      throw new Error(`Invalid branch/shape: ${branch}`);
+    }
+  }
+
   const files = [
     '00-vision.md',
     '01-personas.md',
@@ -59,16 +87,14 @@ export function emitTree(
     '04-flows.md',
     '05-architecture.md',
     '06-constraints.md',
-    ...(branch === 'hybrid'
-      ? ['07-deployment.md', '07-release.md']
-      : [branch === 'web' ? '07-deployment.md' : '07-release.md']),
+    ...releaseDocs,
     'README.md',
   ];
 
   // 2. Prepare filledSlots mapping
   const filledSlots: Record<string, string> = {};
 
-  // Map user content answers falling back from S0-S6, W1-W5, M1-M5
+  // Map user content answers falling back from S0-S6, W1-W5, M1-M5, C1-C5
   filledSlots['vision_elevator_pitch'] = answers['vision_elevator_pitch'] || answers['S0'] || '';
   filledSlots['problem_summary'] = answers['problem_summary'] || answers['S1'] || '';
   filledSlots['current_workaround'] = answers['current_workaround'] || answers['S1'] || '';
@@ -116,6 +142,17 @@ export function emitTree(
     filledSlots['store_readiness_notes'] = answers['store_readiness_notes'] || answers['M5'] || '';
     filledSlots['device_capabilities_and_permissions'] = answers['device_capabilities_and_permissions'] || answers['M1'] || '';
     filledSlots['monetization_strategy'] = answers['monetization_strategy'] || answers['M3'] || '';
+  } else if (branch === 'cli') {
+    filledSlots['architecture_overview'] = answers['architecture_overview'] || answers['C1'] || '';
+    filledSlots['client_and_rendering_strategy'] = answers['client_and_rendering_strategy'] || answers['C2'] || '';
+    filledSlots['auth_and_access_strategy'] = answers['auth_and_access_strategy'] || answers['C3'] || '';
+    filledSlots['device_capabilities_and_permissions'] = answers['device_capabilities_and_permissions'] || answers['C4'] || '';
+    filledSlots['realtime_push_or_sync_strategy'] = answers['realtime_push_or_sync_strategy'] || 'Không áp dụng đối với CLI.';
+
+    // CLI distribution templates slots
+    filledSlots['distribution_channel'] = answers['distribution_channel'] || answers['C5'] || '';
+    filledSlots['versioning_strategy'] = answers['versioning_strategy'] || answers['C5'] || '';
+    filledSlots['installation_guide'] = answers['installation_guide'] || answers['C5'] || '';
   } else {
     // hybrid
     const webStrategy = answers['client_and_rendering_strategy'] || answers['W1'] || answers['W2'] || '';
@@ -180,7 +217,8 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 └── README.md             # Mục lục tài liệu (File này)`
-        : `docs/
+        : branch === 'mobile'
+          ? `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
 ├── 01-personas.md        # Đối tượng người dùng mục tiêu
 ├── 02-scope.md           # Phạm vi tính năng MVP (MoSCoW)
@@ -189,6 +227,16 @@ export function emitTree(
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
+└── README.md             # Mục lục tài liệu (File này)`
+          : `docs/
+├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
+├── 01-personas.md        # Đối tượng người dùng mục tiêu
+├── 02-scope.md           # Phạm vi tính năng MVP (MoSCoW)
+├── 03-data-model.md      # Thiết kế thực thế dữ liệu (Database Schema)
+├── 04-flows.md           # Luồng trải nghiệm người dùng điển hình
+├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
+├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
+├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 └── README.md             # Mục lục tài liệu (File này)`
       )
     );
@@ -199,7 +247,9 @@ export function emitTree(
       ? 'Dự án Hybrid (Web & Mobile). Chi tiết triển khai Web ở 07-deployment.md, quy trình phân phối Mobile ở 07-release.md.'
       : branch === 'web'
         ? 'Dự án phát triển trên nền tảng Web. Cấu hình triển khai Next.js/Vercel chi tiết ở 07-deployment.md.'
-        : 'Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.');
+        : branch === 'mobile'
+          ? 'Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.'
+          : 'Dự án Công cụ dòng lệnh (CLI). Quy trình đóng gói và phân phối chi tiết ở 07-distribution.md.');
 
   filledSlots['docs_readme_build_notes'] =
     answers['docs_readme_build_notes'] ||
@@ -207,10 +257,12 @@ export function emitTree(
       ? 'Chạy Web local: `npm run dev`. Chạy Mobile Android: `npm run android`, iOS: `npm run ios`. Chạy tests: `npm test`.'
       : branch === 'web'
         ? 'Chạy local: `npm run dev`. Chạy tests: `npm test`.'
-        : 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.');
+        : branch === 'mobile'
+          ? 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.'
+          : 'Cài đặt dependencies: `npm install`. Chạy CLI local: `node bin/index.js` (hoặc build: `npm run build`). Chạy tests: `npm test`.');
 
   // Compute planned anchor source/symbol placeholders based on branch
-  const srcPrefix = options?.srcPrefix ?? (branch === 'web' ? 'src/' : 'apps/mobile/src/');
+  const srcPrefix = options?.srcPrefix ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
 
   const plannedMapping: Record<string, { file: string; symbol: string }> = {
     elevator_pitch: { file: 'features/vision/vision.ts', symbol: 'projectVision' },
@@ -247,6 +299,9 @@ export function emitTree(
     distribution_strategy: { file: 'features/release/release.ts', symbol: 'distributionStrategy' },
     store_readiness: { file: 'features/release/release.ts', symbol: 'storeReadinessNotes' },
     monetization_strategy: { file: 'features/release/release.ts', symbol: 'monetizationStrategy' },
+    distribution_channel: { file: 'features/distribution/dist.ts', symbol: 'distributionChannel' },
+    versioning_strategy: { file: 'features/distribution/dist.ts', symbol: 'versioningStrategy' },
+    installation_guide: { file: 'features/distribution/dist.ts', symbol: 'installationGuide' },
     docs_readme_order: { file: 'features/docs/readme.ts', symbol: 'readingOrder' },
     docs_readme_summary: { file: 'features/docs/readme.ts', symbol: 'projectSummary' },
     docs_readme_file_map: { file: 'features/docs/readme.ts', symbol: 'fileMap' },

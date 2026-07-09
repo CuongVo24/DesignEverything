@@ -150,4 +150,52 @@ describe('emitTree function', () => {
     expect(readmeDoc!.content).toContain('07-deployment.md');
     expect(readmeDoc!.content).toContain('07-release.md');
   });
+
+  test('should emit correct 9 files for cli branch, including 07-distribution.md', () => {
+    const cliAnswers: InterviewAnswers = {
+      ...mockAnswers,
+      C1: 'Node.js (TypeScript)',
+      C2: 'flags/arguments và interactive prompts',
+      C3: 'file config JSON ~/.config/myapp.json và ENV',
+      C4: 'cross-platform macOS, Linux, Windows',
+      C5: 'NPM registry',
+    };
+
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    expect(emitted).toHaveLength(9);
+
+    const fileNames = emitted.map((d) => d.file);
+    expect(fileNames).toContain('00-vision.md');
+    expect(fileNames).toContain('05-architecture.md');
+    expect(fileNames).toContain('07-distribution.md');
+    expect(fileNames).not.toContain('07-deployment.md');
+    expect(fileNames).not.toContain('07-release.md');
+
+    // Default srcPrefix for CLI should be 'src/'
+    const visionDoc = emitted.find((d) => d.file === '00-vision.md');
+    expect(visionDoc!.content).toContain('src=src/features/vision/vision.ts::projectVision');
+
+    // Verify architecture document contains C1-C4 answers
+    const archDoc = emitted.find((d) => d.file === '05-architecture.md');
+    expect(archDoc).toBeDefined();
+    expect(archDoc!.content).toContain('Node.js (TypeScript)');
+    expect(archDoc!.content).toContain('flags/arguments và interactive prompts');
+    expect(archDoc!.content).toContain('file config JSON ~/.config/myapp.json và ENV');
+    expect(archDoc!.content).toContain('cross-platform macOS, Linux, Windows');
+
+    // Verify distribution document contains C5 answer
+    const distDoc = emitted.find((d) => d.file === '07-distribution.md');
+    expect(distDoc).toBeDefined();
+    expect(distDoc!.content).toContain('NPM registry');
+
+    // Verify README.md references 07-distribution.md
+    const readmeDoc = emitted.find((d) => d.file === 'README.md');
+    expect(readmeDoc!.content).toContain('07-distribution.md');
+  });
+
+  test('should throw error for invalid branch', () => {
+    expect(() => emitTree(mockAnswers, 'invalid_branch', realTemplatesDir)).toThrow(
+      /Invalid branch\/shape/
+    );
+  });
 });
