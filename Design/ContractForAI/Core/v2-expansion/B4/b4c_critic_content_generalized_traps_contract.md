@@ -19,10 +19,10 @@ Viết **nội dung** critic (câu thách thức) để skill chạy pass phản
 - KHÔNG đổi placeholder doc.
 
 ## 3. Checklist
-- [ ] `critics:` top-level map, key = id câu (điểm fire), mỗi entry `{challenge, ack_prompt}`, optional — validate qua B5a.
-- [ ] Có nội dung critic cho fire-1 (scope) + fire-2 mỗi shape (web/mobile/hybrid/cli).
-- [ ] Cảnh báo M2/M5 cũ được gom vào pattern shape mà không mất nội dung/số phí $99/$25.
-- [ ] Mọi critic kết bằng câu bắt xác nhận; không chặn cứng.
+- [x] `critics:` top-level map, key = id câu (điểm fire), mỗi entry `{challenge, ack_prompt}`, optional — validate qua B5a.
+- [x] Có nội dung critic cho fire-1 (scope) + fire-2 mỗi shape (web/mobile/hybrid/cli).
+- [x] Cảnh báo M2/M5 cũ được gom vào pattern shape mà không mất nội dung/số phí $99/$25.
+- [x] Mọi critic kết bằng câu bắt xác nhận; không chặn cứng.
 
 ## 4. Interfaces / Files expected to change
 - `[MODIFY]` `Design/Content/interview-script/script.yaml` (nội dung critic)
@@ -42,4 +42,4 @@ Viết **nội dung** critic (câu thách thức) để skill chạy pass phản
 - `npm test` xanh (chưa cần B6a để pass content-level).
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`

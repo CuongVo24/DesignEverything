@@ -134,3 +134,12 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 
 **Ví dụ dịch ngược**  
 "Kênh phân phối chính của công cụ là registry công khai của NPM; quy trình phát hành tuân thủ quy tắc quản lý phiên bản SemVer."
+
+**critic**  
+*   **challenge**: |
+      [CẢNH BÁO BẪY CÔNG CỤ DÒNG LỆNH]
+      Hãy lưu ý các thách thức đặc thù của công cụ dòng lệnh (CLI):
+      - Đa hệ điều hành: Chạy tốt trên máy của bạn (ví dụ Mac) không có nghĩa là chạy được ngay trên Windows của đồng nghiệp nếu không xử lý đường dẫn (`path`) và ký tự xuống dòng (`CRLF`) chuẩn hóa.
+      - Đóng gói & Ký nhị phân: Việc build ra file chạy trực tiếp (standalone binary) trên các môi trường không cài sẵn Node/Python rất dễ gặp lỗi tương thích thư viện native.
+      - Breaking-change API: Thay đổi tham số lệnh (arguments/flags) sau khi người dùng đã tích hợp CLI vào script tự động của họ sẽ trực tiếp làm hỏng quy trình làm việc của họ.
+*   **ack_prompt**: "Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."

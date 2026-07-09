@@ -162,6 +162,15 @@ Agent phải nói rõ: **lên store là một quy trình riêng**, không chỉ 
 **Vì sao default này hợp lý**  
 Với MVP, bản thử qua TestFlight hoặc internal test giúp học nhanh hơn và ít rủi ro hơn lên store thật ngay. Nó giữ đúng tinh thần sản phẩm: kiểm chứng nhu cầu trước khi ôm thêm độ phức tạp vận hành.
 
+**critic**  
+*   **challenge**: |
+      [CẢNH BÁO BẪY PHÁT HÀNH DI ĐỘNG & HYBRID]
+      Xin lưu ý các rào cản lớn đối với ứng dụng di động (Mobile) và ứng dụng đa kênh (Hybrid):
+      1. Offline-first & Đồng bộ dữ liệu (nếu chọn): Sẽ đội chi phí và thời gian phát triển lên gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, và đồng bộ.
+      2. Quy trình lên App Store / Play Store: Bạn bắt buộc phải chuẩn bị phí tài khoản Developer ($99/năm cho Apple, $25 một lần cho Google), ký ứng dụng (App Signing), và chờ kiểm duyệt nghiêm ngặt.
+      3. Đồng bộ đa kênh (Hybrid): Việc đồng bộ hóa tính năng và thời điểm phát hành giữa hai kênh Web và Mobile đòi hỏi quy trình kiểm thử và tích hợp CI/CD rất chặt chẽ để tránh lệch pha dữ liệu.
+*   **ack_prompt**: "Vui lòng xác nhận 'Tôi đồng ý' để chấp nhận chi phí và quy trình này hoặc đưa ra yêu cầu điều chỉnh."
+
 ## Checklist nghiệm thu cho M1-M5
 - Mỗi câu có đủ `ask`, `default`, `translate_back`, `target_doc`, `gate`.
 - Mỗi câu đều có ví dụ đời thường, ví dụ dịch ngược, bẫy, và phần giải thích vì sao mặc định đó hợp lý.

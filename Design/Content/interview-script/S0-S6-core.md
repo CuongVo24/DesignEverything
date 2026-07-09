@@ -150,6 +150,10 @@ Won't (MVP):
 **Bẫy thường gặp + cách gỡ**  
 Người mới có xu hướng gọi mọi thứ là "cần". Agent phải đứng ở vai trò cắt scope, không đứng ở vai trò chiều ý.
 
+**critic**  
+*   **challenge**: "Must có đang gánh thứ để-sau không? Cắt được gì để MVP nhỏ hơn?"
+*   **ack_prompt**: "Vui lòng xác nhận 'Tôi đồng ý' với danh sách Must đã chốt hoặc đưa ra yêu cầu điều chỉnh."
+
 ## Logic phân loại Must / Should / Could / Won't
 
 1. Bắt đầu từ nỗi đau ở S1, không bắt đầu từ danh sách tính năng.

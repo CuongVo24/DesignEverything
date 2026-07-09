@@ -225,3 +225,35 @@ questions:
     gate: null
     translate_back: "Mình xác nhận phương án đóng gói và phát hành là: `<NPM registry / Pip / GitHub Releases binary / Homebrew>`, cùng cơ chế quản lý phiên bản (versioning): `<Semantic Versioning (SemVer)>`."
     depends_on: [S7, C1, C2, C3, C4]
+critics:
+  S3:
+    challenge: |
+      [PHẢN BIỆN PHẠM VI (SCOPE CREEP)]
+      Danh sách các tính năng bạn liệt kê trong nhóm "Must" (Bắt buộc) liệu có thực sự tối giản chưa?
+      Hãy tự hỏi: Nếu bỏ bớt một tính năng bất kỳ trong nhóm "Must", luồng sử dụng cốt lõi của sản phẩm có thực sự bị gãy không?
+      Nhiều MVP thất bại chỉ vì nhóm "Must" gánh quá nhiều tính năng đáng ra thuộc nhóm "Should" hoặc "Could".
+    ack_prompt: "Vui lòng xác nhận 'Tôi đồng ý' với danh sách Must đã chốt hoặc đưa ra yêu cầu điều chỉnh."
+  W5:
+    challenge: |
+      [CẢNH BÁO BẪY THIẾT KẾ WEB]
+      Thiết kế ứng dụng Web thường dễ bị kéo vào các bài toán phức tạp ẩn:
+      - Tính năng thời gian thực (realtime) hoặc hiển thị tức thì sẽ làm tăng đáng kể chi phí hạ tầng và độ phức tạp mã nguồn.
+      - Server-Side Rendering (SSR) hỗ trợ tốt cho SEO nhưng đòi hỏi máy chủ vận hành đắt đỏ và cấu hình phức tạp hơn rất nhiều so với trang SPA (Client-Side Rendering) tĩnh.
+      Hãy đảm bảo bạn thực sự cần những giải pháp này cho phiên bản đầu tiên.
+    ack_prompt: "Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh cấu trúc web."
+  M5:
+    challenge: |
+      [CẢNH BÁO BẪY PHÁT HÀNH DI ĐỘNG & HYBRID]
+      Xin lưu ý các rào cản lớn đối với ứng dụng di động (Mobile) và ứng dụng đa kênh (Hybrid):
+      1. Offline-first & Đồng bộ dữ liệu (nếu chọn): Sẽ đội chi phí và thời gian phát triển lên gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, và đồng bộ.
+      2. Quy trình lên App Store / Play Store: Bạn bắt buộc phải chuẩn bị phí tài khoản Developer ($99/năm cho Apple, $25 một lần cho Google), ký ứng dụng (App Signing), và chờ kiểm duyệt nghiêm ngặt.
+      3. Đồng bộ đa kênh (Hybrid): Việc đồng bộ hóa tính năng và thời điểm phát hành giữa hai kênh Web và Mobile đòi hỏi quy trình kiểm thử và tích hợp CI/CD rất chặt chẽ để tránh lệch pha dữ liệu.
+    ack_prompt: "Vui lòng xác nhận 'Tôi đồng ý' để chấp nhận chi phí và quy trình này hoặc đưa ra yêu cầu điều chỉnh."
+  C5:
+    challenge: |
+      [CẢNH BÁO BẪY CÔNG CỤ DÒNG LỆNH]
+      Hãy lưu ý các thách thức đặc thù của công cụ dòng lệnh (CLI):
+      - Đa hệ điều hành: Chạy tốt trên máy của bạn (ví dụ Mac) không có nghĩa là chạy được ngay trên Windows của đồng nghiệp nếu không xử lý đường dẫn (`path`) và ký tự xuống dòng (`CRLF`) chuẩn hóa.
+      - Đóng gói & Ký nhị phân: Việc build ra file chạy trực tiếp (standalone binary) trên các môi trường không cài sẵn Node/Python rất dễ gặp lỗi tương thích thư viện native.
+      - Breaking-change API: Thay đổi tham số lệnh (arguments/flags) sau khi người dùng đã tích hợp CLI vào script tự động của họ sẽ trực tiếp làm hỏng quy trình làm việc của họ.
+    ack_prompt: "Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."

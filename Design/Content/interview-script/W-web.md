@@ -156,6 +156,15 @@ Người mới dễ bị hấp dẫn bởi chat, notification live, dashboard ad
 **Vì sao default này hợp lý**  
 Realtime và admin riêng thường đẩy kiến trúc phức tạp lên rất nhanh. Nếu S2 chưa có một persona quản trị thật và luồng chính không cần tức thời, giữ MVP non-realtime sẽ tiết kiệm đáng kể chi phí xây và test.
 
+**critic**  
+*   **challenge**: |
+      [CẢNH BÁO BẪY THIẾT KẾ WEB]
+      Thiết kế ứng dụng Web thường dễ bị kéo vào các bài toán phức tạp ẩn:
+      - Tính năng thời gian thực (realtime) hoặc hiển thị tức thì sẽ làm tăng đáng kể chi phí hạ tầng và độ phức tạp mã nguồn.
+      - Server-Side Rendering (SSR) hỗ trợ tốt cho SEO nhưng đòi hỏi máy chủ vận hành đắt đỏ và cấu hình phức tạp hơn rất nhiều so với trang SPA (Client-Side Rendering) tĩnh.
+      Hãy đảm bảo bạn thực sự cần những giải pháp này cho phiên bản đầu tiên.
+*   **ack_prompt**: "Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh cấu trúc web."
+
 ## Checklist nghiệm thu cho W1-W5
 - Mỗi câu có đủ `ask`, `default`, `translate_back`, `target_doc`, `gate`.
 - Mỗi câu đều có ví dụ đời thường, ví dụ dịch ngược, bẫy, và phần giải thích vì sao mặc định đó hợp lý.
