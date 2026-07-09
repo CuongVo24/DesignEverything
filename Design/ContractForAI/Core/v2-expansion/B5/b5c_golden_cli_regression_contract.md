@@ -17,10 +17,10 @@ Khoá chất lượng đa-shape bằng golden: (a) dựng **golden `cli` mới**
 - KHÔNG wiring skill (B6a).
 
 ## 3. Checklist
-- [ ] Golden cli đầy đủ: transcript + cây docs (có `07-distribution.md`) + quality-score.
-- [ ] `golden-cli.test.ts` xanh.
-- [ ] web/mobile/hybrid golden xanh (hoặc chỉ regen `06-constraints` có ghi diff, không đổi chỗ khác).
-- [ ] Không có golden nào bị "sửa cho xanh" ngoài phạm vi S6-trim.
+- [x] Golden cli đầy đủ: transcript + cây docs (có `07-distribution.md`) + quality-score.
+- [x] `golden-cli.test.ts` xanh.
+- [x] web/mobile/hybrid golden xanh (hoặc chỉ regen `06-constraints` có ghi diff, không đổi chỗ khác).
+- [x] Không có golden nào bị "sửa cho xanh" ngoài phạm vi S6-trim.
 
 ## 4. Interfaces / Files expected to change
 - `[NEW]` `Design/Content/golden-example-cli/**`
@@ -40,4 +40,4 @@ Khoá chất lượng đa-shape bằng golden: (a) dựng **golden `cli` mới**
 - Diff web/mobile golden (nếu có) chỉ ở `06-constraints.md`, giải thích được bằng S6-trim.
 
 ## 7. Status
-`WAITING_FOR_APPROVAL`
+`DONE`
