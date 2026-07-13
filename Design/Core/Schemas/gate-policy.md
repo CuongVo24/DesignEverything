@@ -66,6 +66,10 @@ Chi tiết: [../../Adapters/ConformanceMatrix.md](../../Adapters/ConformanceMatr
 - Thêm một gate mới là thay đổi MINOR nếu không phá gate cũ.
 - Đổi nghĩa `id`, đổi semantics của `blocks`, hoặc bỏ một gate đang dùng là thay đổi MAJOR.
 
+## V3 Execution Expansion — target 4.0.0, chưa implement
+
+Gate hiện hành chỉ kiểm artifact docs. B8a sẽ bổ sung requires_validation, task_id, allows_paths và requires_evidence để tách docs-emitted, plan-validated và executing. Với Bậc A, write/edit ngoài active task hoặc sang task sau khi verify chưa pass phải bị deny deterministic. Với Bậc B, policy cùng nghĩa nhưng chỉ là hướng dẫn và evidence phải được gắn self-reported nếu host không cung cấp output tool. Không được sửa runtime policy theo spec này trước khi B8a READY_TO_IMPLEMENT.
+
 ## Changelog
 | Version | Thay đổi |
 |---|---|

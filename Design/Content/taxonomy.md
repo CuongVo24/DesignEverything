@@ -16,6 +16,7 @@ docs/
   05-architecture.md    ← câu nhánh theo hình-hài
   06-constraints.md     ← S6 (+ S7 chọn hình-hài)
   07-*.md               ← file phát hành tuỳ hình-hài (xem Registry)
+  08-build-plan.md      ← dẫn xuất từ S3 + S5 (không có câu hỏi riêng)
   README.md             ← mục lục + "đọc theo thứ tự này"
 ```
 
@@ -29,7 +30,7 @@ docs/
 | `web` | Ứng dụng web | W1–W5 | `07-deployment.md` | ✅ code |
 | `mobile` | App di động | M1–M5 | `07-release.md` | ✅ code |
 | `hybrid` | Web + Mobile (opt-in) | W1–W5 + M1–M5 | `07-deployment.md` + `07-release.md` | ✅ code (v1.2.0) |
-| `cli` | Công cụ dòng lệnh / tool dev | C-series (định nghĩa ở B4) | `07-distribution.md` | 📐 spec khoá (B2), chưa code |
+| `cli` | Công cụ dòng lệnh / tool dev | C1–C5 | `07-distribution.md` | ✅ code + golden (v2.0.0) |
 
 > Câu chọn hình-hài **S7** (`branch: core`) set `branch` thành đúng một `shape-id` trong bảng này. Shape ngoài MVP (extension, library, desktop, bot…) chỉ thêm khi nhu cầu thật đòi — xem [V2-ExpansionPlan](../RoadMap/V2-ExpansionPlan.md).
 
@@ -51,8 +52,21 @@ docs/
 | W1, W2, W4, W5 / M1, M2, M3, M4 | `05-architecture.md` |
 | W3 / M5 | `07-deployment.md` / `07-release.md` |
 | C-series (cli, định nghĩa ở B4) | `05-architecture.md` + `07-distribution.md` |
+| *(dẫn xuất — không có câu hỏi riêng)* | `08-build-plan.md` ← suy từ S3 (Must) + S5 (flow), xem [DecisionLog D28](../DecisionLog.md) |
 
 > Câu `kind=meta` (vd calibrate) KHÔNG có dòng ở đây vì không neo doc.
+> `08-build-plan.md` là **file dẫn xuất** (derived doc): emit cho MỌI hình-hài; slot (`build_plan_principles`, `build_milestones`, `build_verification_notes`) do lớp skill điền lúc emit dựa trên Must-list và flow chính; engine có fallback deterministic. Đây là cầu nối docs→code cho người mới (D28), không phải doc enterprise (D17 vẫn Active).
 
 ## Mở rộng tương lai (KHÔNG trong MVP)
 Bản "giống công ty": ADR, test plan, ContractForAI (đã có mỏ neo truy vết sẵn → đầu đề-pa cho maintain).
+
+## V3 Execution Expansion — target 4.0.0, chưa emit ở runtime
+
+Taxonomy hiện hành kết thúc ở 08-build-plan.md. Khi và chỉ khi contracts B7–B10 hoàn tất, cây sẽ thêm:
+
+    09-execution-plan.md  ← R1 + dẫn xuất từ S3/S5/08; risk, spike, task, evidence
+    .design-everything/
+      execution-plan.json ← task graph máy đọc
+      execution-state.json ← active task, evidence, resume
+
+09 không phải ADR/test-plan enterprise: nó chỉ chuyển một MVP thành task nhỏ có precondition, allowed paths, expected result và evidence. Đổi này là MAJOR 4.0.0 theo D35; template, emitter và golden hiện hành chưa được phép giả vờ đã hỗ trợ nó. Chi tiết: [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md).

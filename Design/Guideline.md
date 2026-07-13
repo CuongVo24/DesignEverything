@@ -19,6 +19,7 @@ Người mới (kể cả chính mình sau 3 tháng) mở thư mục `Design/` s
 9. [Conventions/](Conventions/) — [TechStack](Conventions/TechStack.md) + chuẩn code/git + chiến lược test.
 10. [RoadMap/MasterRoadMap.md](RoadMap/MasterRoadMap.md) — mốc thời gian & phạm vi.
 11. [DecisionLog.md](DecisionLog.md) — nhật ký quyết định + lý do (tra khi phân vân).
+12. [RoadMap/V3-ExecutionExpansionPlan.md](RoadMap/V3-ExecutionExpansionPlan.md) — lane kế tiếp: từ docs/build-plan sang semantic validation, task/evidence và evaluation; target 4.0.0, chưa code.
 
 ## Bản đồ nhanh
 

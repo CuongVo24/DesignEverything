@@ -88,6 +88,7 @@ export function emitTree(
     '05-architecture.md',
     '06-constraints.md',
     ...releaseDocs,
+    '08-build-plan.md',
     'README.md',
   ];
 
@@ -186,6 +187,18 @@ export function emitTree(
     filledSlots['monetization_strategy'] = answers['monetization_strategy'] || answers['M3'] || '';
   }
 
+  // 08-build-plan.md — file dẫn xuất (D28): slot do skill điền lúc emit;
+  // fallback deterministic dựng từ answers thô S3 (Must) + S5 (flow) nếu skill không cung cấp.
+  filledSlots['build_plan_principles'] =
+    answers['build_plan_principles'] ||
+    'Đi từng milestone một, theo đúng thứ tự — không nhảy cóc. Milestone đầu tiên luôn là "khung xương biết đi" (walking skeleton): một lát cắt mỏng nhất của flow chính chạy được từ đầu tới cuối, dù xấu. Mỗi milestone sau chỉ thêm đúng một mục Must, và phải chạy lại được flow chính trước khi sang milestone kế. Chưa xong Must thì chưa đụng Should/Could.';
+  filledSlots['build_milestones'] =
+    answers['build_milestones'] ||
+    `M0 — Khung xương biết đi: dựng project chạy được với lát cắt mỏng nhất của flow chính (xem 04-flows.md). Done-when: chạy được một lượt flow từ đầu tới cuối với dữ liệu cứng.\n\nCác milestone kế tiếp — mỗi mục Must trong 02-scope.md là một milestone, xếp theo thứ tự xuất hiện trong flow chính:\n${filledSlots['must_have_scope']}\n\nDone-when của mỗi milestone: bước tương ứng trong 04-flows.md chạy được thật (không mock), và các milestone trước vẫn chạy.`;
+  filledSlots['build_verification_notes'] =
+    answers['build_verification_notes'] ||
+    `Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: ${filledSlots['main_flow_risks_or_edge_cases'] || '(xem 04-flows.md mục Điểm Dễ Vỡ)'}`;
+
   // Compute README slots
   filledSlots['docs_readme_project_summary'] =
     answers['docs_readme_project_summary'] ||
@@ -205,6 +218,7 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
+├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 └── README.md             # Mục lục tài liệu (File này)`
       : (branch === 'web'
         ? `docs/
@@ -216,6 +230,7 @@ export function emitTree(
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
+├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 └── README.md             # Mục lục tài liệu (File này)`
         : branch === 'mobile'
           ? `docs/
@@ -227,6 +242,7 @@ export function emitTree(
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
+├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 └── README.md             # Mục lục tài liệu (File này)`
           : `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
@@ -237,6 +253,7 @@ export function emitTree(
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
+├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 └── README.md             # Mục lục tài liệu (File này)`
       )
     );
@@ -302,6 +319,9 @@ export function emitTree(
     distribution_channel: { file: 'features/distribution/dist.ts', symbol: 'distributionChannel' },
     versioning_strategy: { file: 'features/distribution/dist.ts', symbol: 'versioningStrategy' },
     installation_guide: { file: 'features/distribution/dist.ts', symbol: 'installationGuide' },
+    build_principles: { file: 'features/build/plan.ts', symbol: 'buildPlanPrinciples' },
+    build_milestones: { file: 'features/build/plan.ts', symbol: 'buildMilestones' },
+    build_verification: { file: 'features/build/plan.ts', symbol: 'buildVerificationNotes' },
     docs_readme_order: { file: 'features/docs/readme.ts', symbol: 'readingOrder' },
     docs_readme_summary: { file: 'features/docs/readme.ts', symbol: 'projectSummary' },
     docs_readme_file_map: { file: 'features/docs/readme.ts', symbol: 'fileMap' },

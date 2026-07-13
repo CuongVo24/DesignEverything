@@ -24,3 +24,7 @@ Cuối tháng phải có README và onboarding đủ rõ để người lạ cà
 
 ## Rủi ro & kỷ luật phạm vi
 Rủi ro lớn nhất của tháng này là lại mở thêm một dự án con mới thay vì đóng gói cái đang có. Kỷ luật bắt buộc là: Drift Flagging trước, Drift Fixing để sau; đóng gói và định vị trước, adapter native mới để sau; và mọi quyết định mở rộng cuối tháng phải dựa trên số đo thực tế từ Month 3, không chỉ vì nghe hấp dẫn.
+
+## Follow-up đã khoá sau smoke run
+
+08-build-plan đã giải quyết khoảng trống docs→milestone nhưng chưa chứng minh newbie tự thực thi được. Follow-up duy nhất được mở là [V3-ExecutionExpansionPlan](../V3-ExecutionExpansionPlan.md): semantic validation, risk spike, task/evidence và evaluation journey, target 4.0.0. Đây là một lane có contract/evidence rõ, không phải mở thêm dashboard hay agent mới.

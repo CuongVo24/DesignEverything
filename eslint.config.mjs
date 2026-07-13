@@ -13,5 +13,15 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },
+  },
+  {
+    files: ['adapter/**/*.mjs', '*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+      },
+    },
   }
 );

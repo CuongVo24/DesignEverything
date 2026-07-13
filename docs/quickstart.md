@@ -35,7 +35,7 @@ npx vitest run test/regression/run-dogfood.test.ts
 Bài test trên sẽ giả lập việc nạp các câu trả lời thật cho dự án **HabitBuilder Mobile App** (proj-01), tự động vượt qua các chốt chặn (gates) và gọi hàm lõi `emitTree` để sinh ra một cây thư mục tài liệu thiết kế hoàn chỉnh tại:
 - [Design/RoadMap/Month3/dogfood/proj-01/docs-generated/](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/proj-01/docs-generated/)
 
-Mở thư mục trên, bạn sẽ thấy cấu trúc 9 file tài liệu chuẩn:
+Mở thư mục trên, bạn sẽ thấy cấu trúc 10 file tài liệu chuẩn:
 ```text
 docs-generated/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
@@ -46,6 +46,7 @@ docs-generated/
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc dự án
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
+├── 08-build-plan.md      # Kế hoạch build theo milestone (cầu nối docs → code)
 └── README.md             # Mục lục tài liệu và thứ tự đọc
 ```
 
@@ -58,7 +59,11 @@ docs-generated/
 
 ---
 
-## 5. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
+## 5. Ranh giới hiện tại và hướng execution
+
+Sau khi emit, hãy mở 08-build-plan.md và bắt đầu từ M0; đó là hướng dẫn milestone, chưa phải một executor có task/evidence gate. Đừng hiểu việc phase ready-to-build hiện tại là chứng minh spec đã khả thi hoặc mọi lệnh trong docs đã tồn tại. V3 Execution Expansion (target 4.0.0) sẽ thêm semantic validation, risk spike, execution plan và resume có evidence; xem [RoadMap](../Design/RoadMap/V3-ExecutionExpansionPlan.md).
+
+## 6. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
 
 | Sự cố / Lỗi | Nguyên nhân | Giải pháp |
 |---|---|---|

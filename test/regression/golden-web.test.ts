@@ -36,7 +36,7 @@ describe('Golden Web Regression Check', () => {
     };
 
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(9);
+    expect(emittedDocs).toHaveLength(10);
 
     const fileNames = emittedDocs.map((d) => d.file);
     expect(fileNames).toContain('07-deployment.md');

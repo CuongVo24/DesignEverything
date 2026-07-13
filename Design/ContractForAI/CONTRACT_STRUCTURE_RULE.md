@@ -9,6 +9,8 @@
 - **Không tạo lớp TaskBrief riêng.** Dự án này nhỏ; Week file đã là brief. Contract là lớp duy nhất thêm vào.
 - Contract chỉ viết được **sau khi design đã khoá** (RemediationPlan FB1–FB4). Contract tham chiếu schema chưa khoá = phải viết lại.
 
+**Ngoại lệ expansion lane:** khi có một Vn ExpansionPlan đã khoá quyết định/schema xuyên nhiều tháng, plan đó thay Week file làm TaskBrief nguồn cho thư mục Core/vN-expansion. Mỗi contract phải ghi rõ plan, DecisionLog và dependency đã khoá; không được dùng ngoại lệ này để viết contract trước design.
+
 ## 1. Cấu trúc thư mục
 ```text
 Design/ContractForAI/
@@ -20,6 +22,7 @@ Design/ContractForAI/
     break_task/
       week{N}_break/           # contract fix/polish sau khi review output tuần N
       project_structure_break/ # (tuỳ chọn) fix lệch cấu trúc xuyên tuần
+    vN-expansion/              # lane xuyên tháng, chỉ khi có Vn ExpansionPlan đã khoá
 ```
 > Phạm vi hiện tại: **chỉ Month 1**. Month 2 (mobile + AGENTS.md + hardening) và Month 4 W15 (drift flagging) viết contract khi tới tuần đó. Month 3 là dogfood/nội dung → dùng nghiệm thu Week sẵn có, thường không cần contract code.
 

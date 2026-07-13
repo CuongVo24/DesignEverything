@@ -60,10 +60,10 @@ describe('emitTree function', () => {
     W5: 'Không realtime ở MVP',
   };
 
-  test('should emit correct 9 files for web branch, including 07-deployment.md and excluding 07-release.md', () => {
+  test('should emit correct 10 files for web branch, including 07-deployment.md and excluding 07-release.md', () => {
     const emitted = emitTree(mockAnswers, 'web', realTemplatesDir);
 
-    expect(emitted).toHaveLength(9);
+    expect(emitted).toHaveLength(10);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('00-vision.md');
@@ -91,10 +91,10 @@ describe('emitTree function', () => {
     expect(readmeDoc!.content).toContain('Next.js/Vercel chi tiết ở 07-deployment.md');
   });
 
-  test('should emit correct 9 files for mobile branch, including 07-release.md and excluding 07-deployment.md', () => {
+  test('should emit correct 10 files for mobile branch, including 07-release.md and excluding 07-deployment.md', () => {
     const emitted = emitTree(mockAnswers, 'mobile', realTemplatesDir);
 
-    expect(emitted).toHaveLength(9);
+    expect(emitted).toHaveLength(10);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');
@@ -121,7 +121,7 @@ describe('emitTree function', () => {
     expect(visionMobile!.content).toContain('src=app/features/vision/vision.ts::projectVision');
   });
 
-  test('should emit correct 10 files for hybrid branch, including both 07-deployment.md and 07-release.md', () => {
+  test('should emit correct 11 files for hybrid branch, including both 07-deployment.md and 07-release.md', () => {
     const hybridAnswers: InterviewAnswers = {
       ...mockAnswers,
       M1: 'Expo Standalone',
@@ -132,7 +132,7 @@ describe('emitTree function', () => {
     };
     const emitted = emitTree(hybridAnswers, 'hybrid', realTemplatesDir);
 
-    expect(emitted).toHaveLength(10);
+    expect(emitted).toHaveLength(11);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('07-deployment.md');
@@ -151,7 +151,7 @@ describe('emitTree function', () => {
     expect(readmeDoc!.content).toContain('07-release.md');
   });
 
-  test('should emit correct 9 files for cli branch, including 07-distribution.md', () => {
+  test('should emit correct 10 files for cli branch, including 07-distribution.md', () => {
     const cliAnswers: InterviewAnswers = {
       ...mockAnswers,
       C1: 'Node.js (TypeScript)',
@@ -162,7 +162,7 @@ describe('emitTree function', () => {
     };
 
     const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
-    expect(emitted).toHaveLength(9);
+    expect(emitted).toHaveLength(10);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('00-vision.md');

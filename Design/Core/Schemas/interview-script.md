@@ -108,6 +108,10 @@ Validator cho Batch 6 và test sau này phải kiểm được tối thiểu cá
 - Mở `branch` khỏi enum đóng + thêm hình-hài mới (đổi cây taxonomy) là thay đổi **MAJOR** — v2.0.0 ([DecisionLog D21](../../DecisionLog.md)); phải cập nhật [ConformanceMatrix](../../Adapters/ConformanceMatrix.md) cùng commit.
 - Danh sách hình-hài hợp lệ là **single source** ở registry trong [taxonomy.md](../../Content/taxonomy.md); schema/loader tham chiếu, không tự chế.
 
+## V3 Execution Expansion — target 4.0.0, chưa implement
+
+B7b sẽ thêm R1 sau khi chọn shape để ghi external dependency, platform, cost, permission, terms và điều chưa biết vào 09-execution-plan. R1 là anchored question: không hỏi người dùng kiến thức chuyên môn, cho phép không biết và bắt agent phân loại confirmed, assumption hoặc spike-required. Không được thêm R1 vào runtime script hay thay đổi thứ tự hiện hành trước khi B7a/B7b được duyệt.
+
 ## Changelog
 | Version | Thay đổi |
 |---|---|

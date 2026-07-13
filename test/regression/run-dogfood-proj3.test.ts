@@ -28,7 +28,7 @@ describe('Dogfood Project #3 Emission (TaskFlow Mobile App)', () => {
     };
 
     const docs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(docs).toHaveLength(9);
+    expect(docs).toHaveLength(10);
 
     mkdirSync(outputDocsDir, { recursive: true });
 

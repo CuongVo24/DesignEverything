@@ -90,6 +90,10 @@ Enforcement chia làm hai lớp tách bạch — **đây là điểm cốt lõi 
 8. `answered_len_at_last_turn` là số nguyên `>= 0` và `<= answered.length`.
 9. `calibrate_mode` ∈ {`deep`, `fast`, `null`}; chỉ khác `null` sau khi `CAL0` ∈ `answered`.
 
+## V3 Execution Expansion — target 4.0.0, chưa implement
+
+progress.json vẫn chỉ quản lý interview. B8a sẽ thêm file riêng .design-everything/execution-state.json, không nhồi execution vào lịch sử phỏng vấn. File đó có phases plan-validating, ready-to-execute, executing, verifying, repairing, blocked, ready-to-ship; đúng một active_task; completed_tasks và evidence append-only. Evidence phải chứa task id, command, exit code, expected/observed result, timestamp, artifact paths và actor/self-reported marker. Transition và schema đầy đủ bị khoá ở contract B8a; không adapter nào được tự thêm field trước mốc 4.0.0.
+
 ## Changelog
 | Version | Thay đổi |
 |---|---|

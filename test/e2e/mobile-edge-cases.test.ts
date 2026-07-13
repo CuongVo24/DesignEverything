@@ -140,7 +140,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
       M1: 'RN', M2: 'Offline', M3: 'Camera', M4: 'FCM', M5: 'Store'
     };
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(9);
+    expect(emittedDocs).toHaveLength(10);
 
     const fileNames = emittedDocs.map(d => d.file);
     expect(fileNames).toContain('07-release.md');

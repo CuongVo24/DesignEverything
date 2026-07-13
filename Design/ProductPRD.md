@@ -6,10 +6,10 @@
 Một câu trả lời chung cho mọi quyết định sau này: "Sản phẩm là gì, cho ai, thắng bằng gì?" Khi phân vân tính năng/phạm vi, quay về đây.
 
 ## 1. Một câu
-DesignEverything = bộ **Lõi-text portable** (kịch bản phỏng vấn + template doc + taxonomy + lý do) **+ adapter native gầy theo từng harness**, ép enforcement xuống bậc theo nền tảng, ra mắt từ Claude Code.
+DesignEverything = bộ **Lõi-text portable** (kịch bản phỏng vấn + template doc + taxonomy) **+ adapter native gầy theo từng harness**, biến ý định đời thường thành spec. Hiện sản phẩm đã tới docs + build plan; validation/task state để dẫn từng task có evidence là target 4.0.0.
 
 ## 2. Nỗi đau gốc
-Người vibe code nhảy thẳng vào code, bỏ qua tài liệu nền móng. Soạn tài liệu mất ~1 tuần và thường chưa tối ưu. Nhiều người giỏi vẫn không biết thiết kế thư mục tài liệu chi tiết.
+Người vibe code nhảy thẳng vào code, bỏ qua tài liệu nền móng. Soạn tài liệu mất ~1 tuần và thường chưa tối ưu. Ngay cả khi đã có spec đẹp, người mới vẫn không biết task đầu tiên là gì, cần kiểm chứng môi trường nào, test fail thì sửa ra sao, hoặc khi nào được sang milestone tiếp.
 
 ## 3. Đối tượng
 - Dự án **greenfield** (từ số 0).
@@ -26,7 +26,7 @@ Người vibe code nhảy thẳng vào code, bỏ qua tài liệu nền móng. S
 - Lối thoát: **nội dung như nhau mọi nơi**, ép tốt nhất nền tảng cho phép (graceful degradation).
 
 ## 6. Lợi thế cạnh tranh
-Không nằm ở công cụ mà ở **phương pháp đã thực chiến, opinionated** (ContractForAI / TaskBrief mài qua 2 dự án). Mỗi file sinh ra kèm "tại sao cần file này" → người dùng vừa có sản phẩm vừa học nghề. Từ **v2 (đang triển khai)**, lợi thế được khoét sâu: **phủ nhiều hình-hài dự án** (web/mobile/hybrid/cli…), **calibrate theo trình độ**, và **critic phản biện** chủ động thách thức scope creep + phức tạp ẩn — đối thủ generic không có. Xem [RoadMap/V2-ExpansionPlan.md](RoadMap/V2-ExpansionPlan.md).
+Không nằm ở công cụ mà ở **phương pháp đã thực chiến, opinionated** (ContractForAI / TaskBrief mài qua 2 dự án). Mỗi file sinh ra kèm "tại sao cần file này" → người dùng vừa có sản phẩm vừa học nghề. Từ v2, lợi thế được khoét sâu bằng đa hình-hài dự án, calibrate theo trình độ và critic phản biện. V3 Execution Expansion tiếp tục bằng **semantic validation, feasibility spike, task-level gate và evidence/resume**; mục tiêu là không chỉ tạo doc nghe hợp lý mà tạo đường thực thi nhỏ, kiểm được. Xem [RoadMap/V3-ExecutionExpansionPlan.md](RoadMap/V3-ExecutionExpansionPlan.md).
 
 ## 7. Đối thủ
 GitHub Spec Kit · Kiro (AWS) · BMAD-METHOD · Taskmaster AI · cookiecutter/Yeoman.
@@ -37,11 +37,12 @@ Chạy **trên lưng** agent có sẵn. Kịch bản phỏng vấn = system prom
 
 ## 9. Phi mục tiêu (out of scope cho MVP)
 - Không tự nuôi/fine-tune model.
-- Không UI, không backend, không DB, không deploy hạ tầng.
+- Không UI, không backend, không DB, không deploy hạ tầng hay tự động publish thay người dùng.
+- Không biến thành swarm agent, issue tracker hoặc quy trình enterprise.
 - Maintain tài liệu (drift flagging/fixing) → tầm nhìn xa, KHÔNG trong MVP.
 
 ## 10. Tiêu chí thành công MVP
-Trên Claude Code: skill + hook gate + kịch bản lõi (web) sinh được cây doc end-to-end, và **rút thời gian "1 tuần soạn doc" xuống đo được** trên dự án thật.
+Mốc hiện tại: sinh được cây doc end-to-end và build plan milestone. Mốc 4.0.0 chỉ đạt khi Claude Code đi được từ plan-validated đến task đầu có evidence, rules-only công khai giới hạn mềm, và evaluation có người mới chứng minh được journey thay vì chỉ golden test.
 
 ## Liên kết
 - Kiến trúc: [Core/Contract.md](Core/Contract.md)

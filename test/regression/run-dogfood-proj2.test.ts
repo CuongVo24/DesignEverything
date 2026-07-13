@@ -28,7 +28,7 @@ describe('Dogfood Project #2 Emission (BookRegistry Web App)', () => {
     };
 
     const docs = emitTree(answers, 'web', realTemplatesDir);
-    expect(docs).toHaveLength(9);
+    expect(docs).toHaveLength(10);
 
     mkdirSync(outputDocsDir, { recursive: true });
 

@@ -89,7 +89,7 @@ Khi nhận task, AI **KHÔNG tuôn code ngay**. Bắt buộc:
 
 ## 🚧 STEP 4: KỶ LUẬT LÕI BÉO — ADAPTER GẦY (STRICT ECOSYSTEM)
 
-- **Logic chung dồn về lõi.** Adapter chỉ làm đúng 3 việc: INJECT / GATE / EMIT (xem `Core/Contract.md` §2). Thấy adapter bắt đầu chứa logic phỏng vấn/taxonomy → kéo ngược về lõi.
+- **Logic chung dồn về lõi.** Adapter hiện làm 3 việc: INJECT / GATE / EMIT; target 4.0.0 thêm ORCHESTRATE mỏng qua core state (xem `Core/Contract.md` §2). Thấy adapter bắt đầu chứa logic phỏng vấn/taxonomy/task graph → kéo ngược về lõi.
 - **Không hardcode câu hỏi/taxonomy trong code.** Code **đọc** từ `interview-script` & `taxonomy` — file schema là nguồn sự thật duy nhất.
 - **Cấm import lậu:** không thêm dependency ngoài cái đã thống nhất mà không xin approve.
 - **Đổi schema = bump version:** mọi thay đổi `Core/Schemas/*` phải theo `Versioning.md` (MAJOR/MINOR/PATCH) và cập nhật `ConformanceMatrix.md` nếu phá tương thích.
@@ -135,6 +135,7 @@ Sau push → quay lại **Step 2** cho nhóm tiếp theo.
 | 7 | **Gate chặn nhầm "Stop"** | Hook chặn cả khi AI hỏi xong nhường lượt | Chỉ chặn khi định build/kết thúc mà state chưa đủ (gate-policy §3). |
 | 8 | **Scope creep về Non-goals** | Bắt đầu nuôi model / dựng UI / làm maintain trong MVP | Chiếu `ProductPRD.md` §9. STOP & hỏi. |
 | 9 | **Hứa ép cứng ở harness mềm** | Bảo người dùng Cursor "sẽ bị chặn" | Bậc B chỉ khuyến nghị. Nói đúng năng lực từng harness (graceful degradation). |
+| 10 | **Mở toàn bộ code sau emit** | Docs tồn tại là agent làm M0 tới M4 hoặc sửa ngoài phạm vi | V3 target: plan-validated trước, chỉ active task được mở, verify/evidence rồi mới sang task kế. |
 
 ---
 

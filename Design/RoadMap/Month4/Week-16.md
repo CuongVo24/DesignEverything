@@ -32,3 +32,7 @@ Rủi ro lớn nhất là kết luận quá nhanh từ dữ liệu còn mỏng, 
 - [ ] Có quyết định giai đoạn 2 với lý do và thứ tự ưu tiên rõ.
 - [ ] MasterRoadMap và DecisionLog phản ánh được các quyết định chiến lược mới nếu có.
 - [ ] Kết thúc 16 tuần với cảm giác "biết mình đang đứng ở đâu", không chỉ "đã làm xong checklist".
+
+## Quyết định follow-up sau review 2026-07-13
+
+D29-D35 và [V3-ExecutionExpansionPlan.md](../V3-ExecutionExpansionPlan.md) là quyết định giai đoạn kế tiếp: không nâng claim newbie end-to-end chỉ vì smoke run/74 tests; thực hiện B7–B10 rồi dùng B10a làm evidence cho bước phân phối rộng hơn.

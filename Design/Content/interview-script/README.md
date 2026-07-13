@@ -50,6 +50,10 @@ Toàn bộ giá trị dồn vào chất lượng phương pháp gốc (người 
 
 > **2 bẫy mobile người mới luôn dính** — bới ra sớm: (a) offline/sync M2 đội chi phí gấp đôi; (b) quy trình lên store M5.
 
+## V3 Execution Expansion — target 4.0.0, chưa code
+
+Sau S7 và bộ câu shape, V3 sẽ thêm R1 discovery rủi ro tối giản. Mục đích không phải kéo dài phỏng vấn hay hỏi luật: agent chỉ gom dependency/platform/cost/permission/điều khoản/điều chưa biết thành confirmed, assumption hoặc spike-required. R1 sẽ lấp 09-execution-plan cùng task/evidence dẫn xuất; deep/fast chỉ khác cách giải thích. Xem [V3-ExecutionExpansionPlan.md](../../RoadMap/V3-ExecutionExpansionPlan.md).
+
 ## Trạng thái hiện tại
 - V2.0.0 đã cập nhật câu meta-calibrate `CAL0`, tách câu chọn hình-hài `S7` riêng biệt, và làm gọn `S6`.
 - Khung lõi đầy đủ bao gồm `CAL0`, `S0-S7` được ghi tại [S0-S6-core.md](S0-S6-core.md).

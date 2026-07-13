@@ -186,7 +186,7 @@ describe('E2E Web Edge Cases Flow', () => {
       W1: 'Next', W2: 'CSS', W3: 'Vercel', W4: 'Auth', W5: 'NoRealtime'
     };
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(9);
+    expect(emittedDocs).toHaveLength(10);
 
     const fileNames = emittedDocs.map(d => d.file);
     expect(fileNames).toContain('07-deployment.md');

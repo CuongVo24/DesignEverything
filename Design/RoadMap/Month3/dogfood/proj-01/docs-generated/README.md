@@ -26,6 +26,7 @@ docs/
 ├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
+├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 └── README.md             # Mục lục tài liệu (File này)
 <!-- anchor: id=docs-readme/file-map  src=apps/mobile/src/features/docs/readme.ts::fileMap  rev=  status=planned -->
 

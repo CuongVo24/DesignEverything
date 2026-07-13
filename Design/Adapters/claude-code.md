@@ -228,6 +228,10 @@ Sau mỗi lần kiểm tra gate:
 - Nếu Claude Code có hook `Stop`, chỉ dùng để nhắc nhẹ khi AI định kết thúc phiên build mà state chưa đủ.
 - Không được chặn mọi lần AI tạm dừng để hỏi tiếp.
 
+## ORCHESTRATE — target 4.0.0, chưa code
+
+Sau B8, Claude workflow sẽ đọc execution plan/state qua core CLI, chỉ mở đúng active task, chạy preflight/verify, lưu evidence rồi mới chuyển task. PreToolUse sẽ thêm task/path gate deterministic cho Bậc A. Khi verify fail, workflow phải repair hoặc blocked thay vì nhảy milestone. Đây không phải autonomous deployer và không cho adapter tự chế task; source of truth là Core. Contract: V3-ExecutionExpansionPlan B9a.
+
 ## EMIT — output đúng cây
 - Tất cả output doc phải rơi đúng taxonomy.
 - Cuối mỗi mục phải có anchor theo [../Core/AnchorFormat.md](../Core/AnchorFormat.md).

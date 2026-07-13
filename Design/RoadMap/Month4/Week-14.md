@@ -32,3 +32,15 @@ Rủi ro lớn nhất là viết định vị bằng những câu quá rộng ho
 - [ ] Mọi claim trong pitch/landing đều bám vào thứ đã làm được.
 - [ ] Định vị nêu rõ cả đối tượng phù hợp lẫn trường hợp không phù hợp.
 - [ ] Người đọc mới có thể hiểu sản phẩm mà không cần đọc toàn bộ `Design/`.
+
+## Kết quả W14A — Smoke run thật đầu tiên (2026-07-10, post-v2)
+Chạy trọn một phiên phỏng vấn thật trong Claude Code (model Fable 5, calibrate `deep`) trên dự án greenfield **yt-cli** (trình nghe nhạc YouTube không quảng cáo, shape `cli`), qua bộ đóng gói [adapter/claude-code/](../../../adapter/claude-code/):
+- **Cơ chế:** 14 bước CAL0→C5 commit đúng một-bước-mỗi-lượt; critic-pass fire đúng 2 điểm (S3, C5); branch một chiều; gate `scope-locked` chặn/mở đúng; emit đúng taxonomy. Một lệch spec nhỏ: skill viết `docs/00-vision.md` giữa phỏng vấn (đã siết trong SKILL.md: `docs/` chỉ sinh từ emit).
+- **Nội dung:** critic + S3 cắt đúng scope creep thật (người dùng mở đầu đòi CLI + mobile → mobile về Won't/giai-đoạn-2). Chất lượng quyết định kỹ thuật tốt (yt-dlp + mpv IPC, config theo chuẩn OS, SemVer).
+- **Metric gốc:** soạn xong bộ docs nền móng trong **~1.5–2 giờ** (baseline nỗi đau: ~1 tuần).
+- **Phát hiện quan trọng nhất:** docs 00–07 đủ "xây gì/vì sao" nhưng người mới vẫn không biết "bắt đầu từ đâu, thứ tự nào" → chốt [D28](../../DecisionLog.md): thêm file dẫn xuất `08-build-plan.md` (v3.0.0).
+- **Giới hạn:** đây là self-run (tác giả là người được phỏng vấn), chưa phải external validation với người ngoài — phần đó của W14A vẫn mở.
+
+## Follow-up sau review V3 (2026-07-13)
+
+Review output yt-cli xác nhận 08-build-plan là cần thiết nhưng chưa đủ: gate mở khi docs tồn tại, M0 vẫn gồm nhiều quyết định môi trường/dependency, README sinh ra có thể sai shape/lệnh, và unit/golden chưa chứng minh newbie làm được. D29-D35 đã khoá hướng sửa: semantic validation, risk spike, task/evidence state, execution protocol và evaluation journey. Kế hoạch/contract: [V3-ExecutionExpansionPlan.md](../V3-ExecutionExpansionPlan.md) và ContractForAI/Core/v3-expansion. W14A chỉ được coi là external validation khi có pilot người ngoài tác giả theo B10a.

@@ -158,7 +158,7 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
     // --- PHASE 5: Docs Scaffolding / Emission ---
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(9);
+    expect(emittedDocs).toHaveLength(10);
 
     const fileNames = emittedDocs.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');
