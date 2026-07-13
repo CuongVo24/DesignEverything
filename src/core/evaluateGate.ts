@@ -64,28 +64,59 @@ export function passedGates(
   return passed;
 }
 
+function matchGlob(path: string, glob: string): boolean {
+  const normPath = path.replace(/\\/g, '/');
+  const normGlob = glob.replace(/\\/g, '/');
+
+  if (normPath === normGlob || normPath.startsWith(normGlob + '/')) {
+    return true;
+  }
+
+  try {
+    let regexStr = normGlob
+      .replace(/\*\*\//g, '@@ANY_DIR@@')
+      .replace(/\*/g, '@@SINGLE@@');
+
+    regexStr = regexStr.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+
+    regexStr = regexStr
+      .replace(/@@ANY_DIR@@/g, '(?:.*/)?')
+      .replace(/@@SINGLE@@/g, '[^/]*');
+
+    const regex = new RegExp(`^${regexStr}$`);
+    if (regex.test(normPath)) {
+      return true;
+    }
+  } catch {
+    // fallback
+  }
+  return false;
+}
+
 export function checkExecutionGate(
   state: ExecutionState | null,
   policy: GatePolicy | null,
   tool: 'Write' | 'Edit' | 'Bash',
-  path?: string
+  path?: string,
+  allowedPathsFromPlan?: string[]
 ): { allowed: boolean; reason?: string } {
   if (!state) return { allowed: true };
 
-  // If there is an active task in the executing phase, check allows_paths
-  if (state.active_task && state.phase === 'executing') {
-    const taskGate = policy?.gates.find((g) => g.task_id === state.active_task);
-    const allowsPaths = taskGate?.allows_paths || [];
+  // If there is an active task in the executing/repairing phase, check allows_paths
+  if (state.active_task && (state.phase === 'executing' || state.phase === 'repairing')) {
+    let allowsPaths: string[] = [];
+    if (allowedPathsFromPlan && allowedPathsFromPlan.length > 0) {
+      allowsPaths = allowedPathsFromPlan;
+    } else {
+      const taskGate = policy?.gates.find((g) => g.task_id === state.active_task);
+      allowsPaths = taskGate?.allows_paths || [];
+    }
 
     if (tool === 'Write' || tool === 'Edit') {
       if (!path) {
         return { allowed: false, reason: 'Không thể ghi/sửa tệp khi không chỉ định đường dẫn.' };
       }
-      const normPath = path.replace(/\\/g, '/');
-      const isAllowed = allowsPaths.some((p) => {
-        const normP = p.replace(/\\/g, '/');
-        return normPath === normP || normPath.startsWith(normP + '/');
-      });
+      const isAllowed = allowsPaths.some((p) => matchGlob(path, p));
 
       if (!isAllowed) {
         return {

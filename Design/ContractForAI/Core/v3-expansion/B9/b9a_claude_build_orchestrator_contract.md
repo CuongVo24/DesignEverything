@@ -23,19 +23,19 @@ Thêm workflow build cho Claude Code điều phối duy nhất active task qua c
 
 ## 3. Checklist
 
-- [ ] Start/resume hiển thị đúng một active task với status/evidence.
-- [ ] Preflight check lưu output thiếu dependency vào evidence hoặc block_reason.
-- [ ] Write/Edit ngoài allows_paths bị deny sau plan-validating.
-- [ ] Test pass chỉ mở next task sau record-evidence hợp lệ.
-- [ ] Repair không làm mất evidence thất bại và có giới hạn scope task cũ.
+- [x] Start/resume hiển thị đúng một active task với status/evidence.
+- [x] Preflight check lưu output thiếu dependency vào evidence hoặc block_reason.
+- [x] Write/Edit ngoài allows_paths bị deny sau plan-validating.
+- [x] Test pass chỉ mở next task sau record-evidence hợp lệ.
+- [x] Repair không làm mất evidence thất bại và có giới hạn scope task cũ.
 
 ## 4. Interfaces / Files expected to change
 
-- [MODIFY] adapter/claude-code/cli.mjs, khoảng 200 dòng chia nhỏ nếu cần.
-- [NEW] adapter/claude-code/skill/build/SKILL.md hoặc cập nhật skill hiện có, khoảng 180 dòng.
-- [MODIFY] src/adapters/claude/preToolUse.ts và hook entry, khoảng 150 dòng.
-- [NEW] src/adapters/claude/buildWorkflow.test.ts và e2e fixture workspace.
-- [MODIFY] adapter/claude-code/install.mjs để cài skill/core artifacts.
+- [x] adapter/claude-code/cli.mjs, khoảng 200 dòng chia nhỏ nếu cần.
+- [x] adapter/claude-code/skill/build/SKILL.md hoặc cập nhật skill hiện có, khoảng 180 dòng.
+- [x] src/adapters/claude/preToolUse.ts và hook entry, khoảng 150 dòng.
+- [x] src/adapters/claude/buildWorkflow.test.ts và e2e fixture workspace.
+- [x] adapter/claude-code/install.mjs để cài skill/core artifacts.
 
 ## 5. Risks & mitigations
 
@@ -53,4 +53,4 @@ Thêm workflow build cho Claude Code điều phối duy nhất active task qua c
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE

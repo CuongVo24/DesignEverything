@@ -2,7 +2,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 import {
   ExecutionState,
-  ExecutionPlan,
   EvidenceRecord,
   executionStateSchema,
 } from './schemas/index.js';
@@ -72,37 +71,59 @@ export function startTask(
   state: ExecutionState,
   milestoneId: string,
   taskId: string,
-  plan: ExecutionPlan
+  plan: any
 ): ExecutionState {
   if (state.phase !== 'ready-to-execute' && state.phase !== 'repairing') {
     throw new Error(`Cannot start task in phase: ${state.phase}`);
   }
 
-  // Find milestone and task in the execution plan
-  const milestone = plan.milestones.find((m) => m.id === milestoneId);
-  if (!milestone) {
-    throw new Error(`Milestone ${milestoneId} not found in execution plan`);
-  }
-  const task = milestone.tasks.find((t) => t.id === taskId);
-  if (!task) {
-    throw new Error(`Task ${taskId} not found in milestone ${milestoneId}`);
-  }
+  const isV3 = 'tasks' in plan && plan.tasks && typeof plan.tasks === 'object' && !Array.isArray(plan.tasks);
 
-  // Verify task preconditions (if any)
-  const taskPreconditions = task.preconditions || [];
-  for (const pre of taskPreconditions) {
-    if (!state.completed_tasks.includes(pre)) {
-      throw new Error(`Precondition task ${pre} is not completed yet.`);
+  if (isV3) {
+    const milestone = plan.milestones.find((m: any) => m.id === milestoneId);
+    if (!milestone) {
+      throw new Error(`Milestone ${milestoneId} not found in execution plan`);
     }
-  }
+    const task = plan.tasks[taskId];
+    if (!task) {
+      throw new Error(`Task ${taskId} not found in execution plan`);
+    }
+    if (!milestone.tasks.includes(taskId)) {
+      throw new Error(`Task ${taskId} does not belong to milestone ${milestoneId}`);
+    }
 
-  // Verify milestone preconditions (if any)
-  const milestonePreconditions = milestone.preconditions || [];
-  for (const pre of milestonePreconditions) {
-    // A milestone precondition might refer to a previous task id or milestone id.
-    // For safety, check if that task is completed.
-    if (!state.completed_tasks.includes(pre)) {
-      throw new Error(`Milestone precondition ${pre} is not completed yet.`);
+    // Verify task preconditions
+    const taskPreconditions = task.depends_on || task.preconditions || [];
+    for (const pre of taskPreconditions) {
+      if (!state.completed_tasks.includes(pre)) {
+        throw new Error(`Precondition task ${pre} is not completed yet.`);
+      }
+    }
+  } else {
+    // Find milestone and task in the legacy execution plan
+    const milestone = plan.milestones.find((m: any) => m.id === milestoneId);
+    if (!milestone) {
+      throw new Error(`Milestone ${milestoneId} not found in execution plan`);
+    }
+    const task = milestone.tasks.find((t: any) => t.id === taskId);
+    if (!task) {
+      throw new Error(`Task ${taskId} not found in milestone ${milestoneId}`);
+    }
+
+    // Verify task preconditions (if any)
+    const taskPreconditions = task.preconditions || [];
+    for (const pre of taskPreconditions) {
+      if (!state.completed_tasks.includes(pre)) {
+        throw new Error(`Precondition task ${pre} is not completed yet.`);
+      }
+    }
+
+    // Verify milestone preconditions (if any)
+    const milestonePreconditions = milestone.preconditions || [];
+    for (const pre of milestonePreconditions) {
+      if (!state.completed_tasks.includes(pre)) {
+        throw new Error(`Milestone precondition ${pre} is not completed yet.`);
+      }
     }
   }
 
@@ -119,7 +140,7 @@ export function startTask(
 export function recordEvidence(
   state: ExecutionState,
   record: EvidenceRecord,
-  plan: ExecutionPlan
+  plan: any
 ): ExecutionState {
   if (state.phase !== 'executing' && state.phase !== 'verifying' && state.phase !== 'repairing') {
     throw new Error(`Cannot record evidence in phase: ${state.phase}`);
@@ -147,8 +168,15 @@ export function recordEvidence(
     }
 
     // Check if all tasks in the plan are completed
-    const allTaskIds = plan.milestones.flatMap((m) => m.tasks.map((t) => t.id));
-    const allCompleted = allTaskIds.every((id) => completedTasks.includes(id));
+    const isV3 = 'tasks' in plan && plan.tasks && typeof plan.tasks === 'object' && !Array.isArray(plan.tasks);
+    let allCompleted = false;
+    if (isV3) {
+      const allTaskIds = Object.keys(plan.tasks);
+      allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
+    } else {
+      const allTaskIds = plan.milestones.flatMap((m: any) => m.tasks.map((t: any) => t.id));
+      allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
+    }
 
     return {
       ...state,
@@ -161,7 +189,7 @@ export function recordEvidence(
       updated_at: new Date().toISOString(),
     };
   } else {
-    // Verification failed -> transition to repairing or blocked
+    // Verification failed -> transition to repairing
     return {
       ...state,
       phase: 'repairing',

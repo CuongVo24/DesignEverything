@@ -143,8 +143,21 @@ export function onPreToolUse(ctx: {
 
   // If there is an active execution state, check allows_paths/task gate
   if (execState) {
-    if (execState.phase === 'executing' && execState.active_task) {
-      const check = checkExecutionGate(execState, policy, ctx.tool, targetPath);
+    if ((execState.phase === 'executing' || execState.phase === 'repairing') && execState.active_task) {
+      let allowedPaths: string[] = [];
+      const execPlanPath = join(ctx.workspaceRoot, '.design-everything/execution-plan.json');
+      if (existsSync(execPlanPath)) {
+        try {
+          const planJson = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+          const activeTask = planJson.tasks?.[execState.active_task];
+          if (activeTask) {
+            allowedPaths = activeTask.allowed_paths || [];
+          }
+        } catch {
+          // ignore
+        }
+      }
+      const check = checkExecutionGate(execState, policy, ctx.tool, targetPath, allowedPaths);
       if (!check.allowed) {
         return {
           decision: 'deny',
@@ -154,9 +167,10 @@ export function onPreToolUse(ctx: {
       return { decision: 'allow' };
     }
 
-    // If execution state is present but not in executing phase, and we want to write/edit source code:
+    // If execution state is present but not in executing/repairing phase, and we want to write/edit source code:
     if (
       execState.phase !== 'executing' &&
+      execState.phase !== 'repairing' &&
       (ctx.tool === 'Write' || ctx.tool === 'Edit')
     ) {
       return {

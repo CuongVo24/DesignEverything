@@ -67,13 +67,22 @@ ensureHook('UserPromptSubmit', null, hookCmd('user-prompt-submit.mjs'));
 ensureHook('PreToolUse', 'Write|Edit|MultiEdit|NotebookEdit|Bash', hookCmd('pre-tool-use.mjs'));
 writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 
-// 2. Skill /design
+// 2. Skill /design and /build
 const skillDir = join(claudeDir, 'skills', 'design');
 mkdirSync(skillDir, { recursive: true });
 const skillTemplate = readFileSync(join(ADAPTER_DIR, 'skill', 'SKILL.md'), 'utf8');
 writeFileSync(
   join(skillDir, 'SKILL.md'),
   skillTemplate.replaceAll('__ENGINE_ROOT__', ENGINE_ROOT.replace(/\\/g, '/')),
+  'utf8'
+);
+
+const buildSkillDir = join(claudeDir, 'skills', 'build');
+mkdirSync(buildSkillDir, { recursive: true });
+const buildSkillTemplate = readFileSync(join(ADAPTER_DIR, 'skill', 'build', 'SKILL.md'), 'utf8');
+writeFileSync(
+  join(buildSkillDir, 'SKILL.md'),
+  buildSkillTemplate.replaceAll('__ENGINE_ROOT__', ENGINE_ROOT.replace(/\\/g, '/')),
   'utf8'
 );
 
@@ -102,6 +111,7 @@ console.log(`✅ Đã cài DesignEverything (adapter Claude Code) vào: ${target
 Cài đặt gồm:
   .claude/settings.json                    (3 hooks → engine tại ${ENGINE_ROOT})
   .claude/skills/design/SKILL.md           (skill /design)
+  .claude/skills/build/SKILL.md            (skill /build)
   Design/Content/interview-script/         (script.yaml, gate-policy.yaml, shapes.yaml)
   Design/Content/doc-templates/            (templates docs đầu ra)
 
@@ -110,4 +120,5 @@ Cách test:
   2. Mở phiên Claude Code MỚI (hooks chỉ nạp lúc khởi động phiên).
   3. Gõ: /design  → trả lời phỏng vấn từng câu.
   4. Thử bảo Claude viết code ngay → PreToolUse phải chặn với thông báo gate.
-  5. Xong phỏng vấn → docs/ được sinh → gate mở.`);
+  5. Xong phỏng vấn → docs/ được sinh → gate mở.
+  6. Gõ: /build   → bắt đầu chu trình thực thi các task và milestone.`);
