@@ -36,13 +36,14 @@ describe('Golden Mobile Regression Check', () => {
     };
 
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(10);
+    const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
+    expect(docFilesOnly).toHaveLength(11);
 
-    const fileNames = emittedDocs.map((d) => d.file);
+    const fileNames = docFilesOnly.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');
     expect(fileNames).not.toContain('07-deployment.md');
 
-    for (const doc of emittedDocs) {
+    for (const doc of docFilesOnly) {
       const goldenFilePath = join(goldenMobileDocsDir, doc.file);
       expect(existsSync(goldenFilePath)).toBe(true);
 

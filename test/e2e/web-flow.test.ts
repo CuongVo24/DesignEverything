@@ -160,7 +160,7 @@ describe('E2E Web Interview & Gating Flow', () => {
 
     // --- PHASE 5: Docs Scaffolding / Emission ---
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(10);
+    expect(emittedDocs).toHaveLength(12);
 
     // Write emitted docs to docs/ folder
     mkdirSync(docsDir, { recursive: true });

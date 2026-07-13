@@ -1,25 +1,18 @@
 ## Tại sao cần file này
-Tài liệu này đặc tả quy trình và các cấu hình cần thiết để đóng gói và đưa ứng dụng lên môi trường production. Nó giúp đảm bảo quá trình CI/CD diễn ra trơn tru, bảo mật các biến môi trường nhạy cảm và là hướng dẫn vận hành duy nhất khi bàn giao sản phẩm.
+File này giúp biến sản phẩm web từ ý tưởng thành thứ có người khác mở được bằng link thật. Nếu bỏ qua nó, dự án rất dễ có “app chạy local” nhưng không có đường chia sẻ và kiểm chứng sớm.
 
 ## Mục Tiêu Phát Hành Giai Đoạn Đầu
-*   **Vercel Platform**: Ứng dụng Next.js được kết nối trực tiếp với GitHub Repository của dự án.
-*   **Automatic Deployment**: Mỗi khi có commit mới được push lên nhánh `main`, Vercel sẽ tự động trigger pipeline để build và deploy bản mới nhất.
+Triển khai lên Vercel
 <!-- anchor: id=07-deployment/deployment-goal  src=src/features/deployment/deploy.ts::deployPipeline  rev=  status=planned -->
 
 ## Nơi Deploy
-*   **Neon / Supabase Serverless PostgreSQL**: Cơ sở dữ liệu SQL được duy trì trên đám mây ở gói free-tier.
-*   **Migration**: Sử dụng Prisma ORM để quản lý database schema. Lệnh `prisma db push` sẽ được chạy tự động trong build step của Vercel để đồng bộ schema database mới nhất.
+Triển khai lên Vercel
 <!-- anchor: id=07-deployment/hosting-strategy  src=src/features/deployment/deploy.ts::hostingStrategy  rev=  status=planned -->
 
 ## Link Truy Cập Và Tên Miền
-*   **Subdomain mặc định**: Sử dụng subdomain miễn phí do Vercel cấp (ví dụ: `https://recipeshareshare.vercel.app`). Chưa cần cấu hình tên miền riêng cho giai đoạn MVP.
+Triển khai lên Vercel
 <!-- anchor: id=07-deployment/domain-access  src=src/features/deployment/deploy.ts::domainAndAccessStrategy  rev=  status=planned -->
 
 ## Ghi Chú Vận Hành Ban Đầu
-Các khóa bí mật và URL kết nối bắt buộc phải được khai báo trên Vercel Dashboard, không được lưu trực tiếp vào mã nguồn:
-*   `DATABASE_URL`: Đường dẫn kết nối bảo mật tới serverless PostgreSQL.
-*   `NEXTAUTH_SECRET`: Khóa mã hóa JWT session của NextAuth.js.
-*   `NEXTAUTH_URL`: URL chạy ứng dụng (ví dụ: `https://recipeshareshare.vercel.app`).
-*   `GOOGLE_CLIENT_ID`: ID ứng dụng đăng nhập Google.
-*   `GOOGLE_CLIENT_SECRET`: Khóa bí mật đăng nhập Google.
+Không realtime ở MVP
 <!-- anchor: id=07-deployment/ops-notes  src=src/features/deployment/deploy.ts::initialOpsNotes  rev=  status=planned -->

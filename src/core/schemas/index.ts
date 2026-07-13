@@ -17,6 +17,12 @@ import {
   evidenceRecordSchema,
   executionStateSchema,
 } from './executionState.js';
+import {
+  taskTypeSchema,
+  taskCardSchema,
+  planRiskSchema,
+  executionPlanSchemaV3,
+} from './executionPlan.js';
 
 export {
   questionSchema,
@@ -36,6 +42,10 @@ export {
   executionPhaseSchema,
   evidenceRecordSchema,
   executionStateSchema,
+  taskTypeSchema,
+  taskCardSchema,
+  planRiskSchema,
+  executionPlanSchemaV3,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -56,5 +66,11 @@ export type ValidatorInput = z.infer<typeof validatorInputSchema>;
 export type ExecutionPhase = z.infer<typeof executionPhaseSchema>;
 export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;
 export type ExecutionState = z.infer<typeof executionStateSchema>;
+
+export type TaskType = z.infer<typeof taskTypeSchema>;
+export type TaskCard = z.infer<typeof taskCardSchema>;
+export type PlanRisk = z.infer<typeof planRiskSchema>;
+export type ExecutionPlanV3 = z.infer<typeof executionPlanSchemaV3>;
+
 
 

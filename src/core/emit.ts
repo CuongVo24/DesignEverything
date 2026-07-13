@@ -89,6 +89,7 @@ export function emitTree(
     '06-constraints.md',
     ...releaseDocs,
     '08-build-plan.md',
+    '09-execution-plan.md',
     'README.md',
   ];
 
@@ -219,6 +220,7 @@ export function emitTree(
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
 └── README.md             # Mục lục tài liệu (File này)`
       : (branch === 'web'
         ? `docs/
@@ -231,6 +233,7 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
 └── README.md             # Mục lục tài liệu (File này)`
         : branch === 'mobile'
           ? `docs/
@@ -243,6 +246,7 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
 └── README.md             # Mục lục tài liệu (File này)`
           : `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
@@ -254,6 +258,7 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
 └── README.md             # Mục lục tài liệu (File này)`
       )
     );
@@ -268,6 +273,16 @@ export function emitTree(
           ? 'Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.'
           : 'Dự án Công cụ dòng lệnh (CLI). Quy trình đóng gói và phân phối chi tiết ở 07-distribution.md.');
 
+  filledSlots['docs_readme_release_step'] =
+    answers['docs_readme_release_step'] ||
+    (branch === 'hybrid'
+      ? '`07-deployment.md` và `07-release.md` — xem đường phát hành phù hợp với web và mobile.'
+      : branch === 'web'
+        ? '`07-deployment.md` — xem đường phát hành phù hợp với web.'
+        : branch === 'mobile'
+          ? '`07-release.md` — xem quy trình phát hành & phân phối cửa hàng di động.'
+          : '`07-distribution.md` — xem hướng dẫn đóng gói, phân phối và cài đặt công cụ dòng lệnh.');
+
   filledSlots['docs_readme_build_notes'] =
     answers['docs_readme_build_notes'] ||
     (branch === 'hybrid'
@@ -277,6 +292,30 @@ export function emitTree(
         : branch === 'mobile'
           ? 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.'
           : 'Cài đặt dependencies: `npm install`. Chạy CLI local: `node bin/index.js` (hoặc build: `npm run build`). Chạy tests: `npm test`.');
+
+  filledSlots['first_supported_environment'] =
+    answers['first_supported_environment'] ||
+    (branch === 'mobile'
+      ? '- Nền tảng: Android Emulator hoặc iOS Simulator chạy trên thiết bị cục bộ.\n- Thử nghiệm: Expo Go hoặc bản build chạy trực tiếp trên thiết bị test thật duy nhất.'
+      : branch === 'web'
+        ? '- Trình duyệt: Google Chrome hoặc Firefox chạy trên môi trường phát triển cục bộ.\n- Môi trường: Node.js >= 18 cục bộ.'
+        : '- Môi trường: Node.js >= 18 và terminal cục bộ.\n- Thử nghiệm: Thực thi trực tiếp qua `node` hoặc `npm link`.');
+
+  filledSlots['risk_register'] =
+    answers['risk_register'] ||
+    `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n| R1-tech-uncertainty | Trung bình | spike-required | Viết spike chạy độc lập chứng minh thư viện hoạt động ổn định. |`;
+
+  filledSlots['feasibility_spikes'] =
+    answers['feasibility_spikes'] ||
+    '- **Spike R1**: Thực hiện chạy thử nghiệm nhỏ độc lập để kiểm chứng cách hoạt động của thư viện/API được mô tả trong R1 trước khi viết code nghiệp vụ chính thức.';
+
+  filledSlots['task_cards'] =
+    answers['task_cards'] ||
+    `### [Task T0-preflight] Môi trường phát triển\n- Loại: spike\n- Mục tiêu: Kiểm tra cấu hình Node.js/npm.\n- Preconditions: None.\n- Lệnh kiểm chứng: \`node --version && npm --version\`.\n\n### [Task T1-scaffold] Khởi tạo dự án\n- Loại: scaffold\n- Mục tiêu: Tạo khung xương dự án cơ bản.\n- Preconditions: T0-preflight.\n- Lệnh kiểm chứng: \`npm run build\`.\n\n### [Task T2-implementation] Code tính năng chính\n- Loại: implementation\n- Mục tiêu: Viết mã nguồn chính cho các yêu cầu Must-have.\n- Preconditions: T1-scaffold.\n- Lệnh kiểm chứng: \`npm test\` hoặc lệnh kiểm thử tương đương.\n\n### [Task T3-verification] Nghiệm thu cuối\n- Loại: verification\n- Mục tiêu: Chạy toàn bộ các bài test để kiểm chứng chất lượng code.\n- Preconditions: T2-implementation.\n- Lệnh kiểm chứng: \`npm run test:e2e\` hoặc lệnh tương đương.`;
+
+  filledSlots['acceptance_evidence_rules'] =
+    answers['acceptance_evidence_rules'] ||
+    '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc artifact tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại \`execution-state.json\` và tiếp tục từ task chưa hoàn thành gần nhất.';
 
   // Compute planned anchor source/symbol placeholders based on branch
   const srcPrefix = options?.srcPrefix ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
@@ -327,6 +366,11 @@ export function emitTree(
     docs_readme_file_map: { file: 'features/docs/readme.ts', symbol: 'fileMap' },
     docs_readme_branch_note: { file: 'features/docs/readme.ts', symbol: 'branchSpecificDocNote' },
     docs_readme_build_notes: { file: 'features/docs/readme.ts', symbol: 'buildNotes' },
+    environment: { file: 'features/execution/plan.ts', symbol: 'firstSupportedEnvironment' },
+    risk_register: { file: 'features/execution/plan.ts', symbol: 'riskRegister' },
+    spikes: { file: 'features/execution/plan.ts', symbol: 'feasibilitySpikes' },
+    task_cards: { file: 'features/execution/plan.ts', symbol: 'taskCards' },
+    resume_rules: { file: 'features/execution/plan.ts', symbol: 'resumeRules' },
   };
 
   // Populate planned anchors
@@ -336,8 +380,130 @@ export function emitTree(
   }
 
   // 3. Emit tree
-  return files.map((file) => {
+  const tree = files.map((file) => {
     const content = emitDoc(file, filledSlots, templatesDir);
     return { file, content };
   });
+
+  // Generate execution-plan.json as well
+  const planJson = generateExecutionPlanJson(answers, branch, options?.srcPrefix);
+  tree.push({
+    file: '.design-everything/execution-plan.json',
+    content: JSON.stringify(planJson, null, 2),
+  });
+
+  return tree;
+}
+
+import { ExecutionPlanV3, TaskCard, PlanRisk } from './schemas/executionPlan.js';
+
+export function generateExecutionPlanJson(
+  answers: InterviewAnswers,
+  branch: string,
+  srcPrefixOpt?: string
+): ExecutionPlanV3 {
+  const srcPrefix = srcPrefixOpt ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
+
+  const risks: PlanRisk[] = [
+    {
+      id: 'R1-tech-uncertainty',
+      title: answers['R1'] || 'Rủi ro công nghệ/thư viện bên ngoài chưa xác nhận.',
+      status: 'spike-required',
+      exit_criterion: 'Viết spike chạy độc lập thành công.',
+    }
+  ];
+
+  const mainAllowedPaths = branch === 'mobile'
+    ? ['apps/mobile/src/**/*.ts', 'apps/mobile/src/**/*.tsx']
+    : branch === 'web'
+      ? ['src/**/*.ts', 'src/**/*.tsx', 'pages/**/*.tsx', 'app/**/*.ts', 'app/**/*.tsx']
+      : ['src/**/*.ts'];
+
+  const preflightCmds = ['node --version', 'npm --version'];
+  const scaffoldCmds = ['npm run build'];
+  const verificationCmds = branch === 'mobile' ? ['npm run test:e2e'] : ['npm test'];
+
+  const tasks: Record<string, TaskCard> = {
+    'T0-preflight': {
+      id: 'T0-preflight',
+      type: 'spike',
+      milestone: 'M0',
+      intent: 'Kiểm tra cấu hình môi trường phát triển cục bộ.',
+      depends_on: [],
+      allowed_paths: [],
+      preconditions: [],
+      commands: preflightCmds,
+      expected_result: 'Môi trường sẵn sàng với Node.js.',
+      evidence_required: ['preflight-log.txt'],
+      failure_policy: 'Cấu hình lại Node.js/npm.',
+    },
+    'T1-scaffold': {
+      id: 'T1-scaffold',
+      type: 'scaffold',
+      milestone: 'M0',
+      intent: 'Khởi tạo khung xương (skeleton) của dự án.',
+      depends_on: ['T0-preflight'],
+      allowed_paths: mainAllowedPaths,
+      preconditions: ['T0-preflight'],
+      commands: scaffoldCmds,
+      expected_result: 'Dự án build thành công không lỗi.',
+      evidence_required: ['scaffold-build-log.txt'],
+      failure_policy: 'Kiểm tra compiler/bundler.',
+    },
+    'T2-implementation': {
+      id: 'T2-implementation',
+      type: 'implementation',
+      milestone: 'M1',
+      intent: 'Triển khai luồng nghiệp vụ chính của tính năng.',
+      depends_on: ['T1-scaffold'],
+      allowed_paths: mainAllowedPaths,
+      preconditions: ['T1-scaffold'],
+      commands: verificationCmds,
+      expected_result: 'Mã nguồn chạy đúng logic nghiệp vụ.',
+      evidence_required: ['implementation-test-log.txt'],
+      failure_policy: 'Debug lỗi logic nghiệp vụ.',
+    },
+    'T3-verification': {
+      id: 'T3-verification',
+      type: 'verification',
+      milestone: 'M1',
+      intent: 'Nghiệm thu toàn diện luồng chính.',
+      depends_on: ['T2-implementation'],
+      allowed_paths: [],
+      preconditions: ['T2-implementation'],
+      commands: verificationCmds,
+      expected_result: 'Tất cả các bài test tích hợp vượt qua.',
+      evidence_required: ['verification-report.txt'],
+      failure_policy: 'Kiểm tra log lỗi tích hợp.',
+    },
+  };
+
+  const milestones = [
+    {
+      id: 'M0',
+      title: 'Walking Skeleton (Khung xương biết đi)',
+      tasks: ['T0-preflight', 'T1-scaffold'],
+    },
+    {
+      id: 'M1',
+      title: 'Core Implementation (Triển khai luồng chính)',
+      tasks: ['T2-implementation', 'T3-verification'],
+    },
+  ];
+
+  return {
+    metadata: {
+      version: '4.0.0',
+      updated_at: new Date().toISOString(),
+    },
+    trace_links: {
+      'T0-preflight': `${srcPrefix}features/execution/preflight.ts`,
+      'T1-scaffold': `${srcPrefix}features/execution/scaffold.ts`,
+      'T2-implementation': `${srcPrefix}features/execution/implementation.ts`,
+      'T3-verification': `${srcPrefix}features/execution/verification.ts`,
+    },
+    risks,
+    milestones,
+    tasks,
+  };
 }

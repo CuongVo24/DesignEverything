@@ -1,0 +1,43 @@
+import { z } from 'zod';
+
+export const taskTypeSchema = z.enum(['spike', 'scaffold', 'implementation', 'verification']);
+export type TaskType = z.infer<typeof taskTypeSchema>;
+
+export const taskCardSchema = z.object({
+  id: z.string().min(1),
+  type: taskTypeSchema,
+  milestone: z.string().min(1),
+  intent: z.string().min(1),
+  depends_on: z.array(z.string()).default([]),
+  allowed_paths: z.array(z.string()).default([]),
+  preconditions: z.array(z.string()).default([]),
+  commands: z.array(z.string()).default([]),
+  expected_result: z.string().min(1),
+  evidence_required: z.array(z.string()).default([]),
+  failure_policy: z.string().min(1),
+});
+export type TaskCard = z.infer<typeof taskCardSchema>;
+
+export const planRiskSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  status: z.enum(['confirmed', 'assumption', 'spike-required']),
+  exit_criterion: z.string().min(1),
+});
+export type PlanRisk = z.infer<typeof planRiskSchema>;
+
+export const executionPlanSchemaV3 = z.object({
+  metadata: z.object({
+    version: z.string(),
+    updated_at: z.string().datetime(),
+  }),
+  trace_links: z.record(z.string(), z.string()).default({}),
+  risks: z.array(planRiskSchema).default([]),
+  milestones: z.array(z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    tasks: z.array(z.string()).default([]), // List of task IDs in this milestone
+  })).default([]),
+  tasks: z.record(z.string(), taskCardSchema).default({}), // Map of task ID to TaskCard
+});
+export type ExecutionPlanV3 = z.infer<typeof executionPlanSchemaV3>;

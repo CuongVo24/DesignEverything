@@ -9,7 +9,9 @@ File này là cửa vào của cả bộ tài liệu. Nó giúp người mới b
 5. `04-flows.md` — xem một lần dùng điển hình từ đầu đến cuối.
 6. `05-architecture.md` — xem các quyết định kỹ thuật bám theo nhu cầu.
 7. `06-constraints.md` — xem giới hạn về người, thời gian, tiền.
-8. `07-deployment.md` hoặc `07-release.md` — xem đường phát hành phù hợp với web hoặc mobile.
+8. `07-deployment.md` — xem đường phát hành phù hợp với web.
+9. `08-build-plan.md` — xem kế hoạch xây dựng theo milestone (đọc trước khi code).
+10. `09-execution-plan.md` — xem kế hoạch thực thi chi tiết và quản lý rủi ro kỹ thuật.
 <!-- anchor: id=docs-readme/reading-order  src=src/features/docs/readme.ts::readingOrder  rev=  status=planned -->
 
 ## Tóm Tắt Nhanh Dự Án
@@ -27,6 +29,7 @@ docs/
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
 └── README.md             # Mục lục tài liệu (File này)
 <!-- anchor: id=docs-readme/file-map  src=src/features/docs/readme.ts::fileMap  rev=  status=planned -->
 

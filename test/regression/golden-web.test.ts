@@ -36,13 +36,14 @@ describe('Golden Web Regression Check', () => {
     };
 
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(10);
+    const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
+    expect(docFilesOnly).toHaveLength(11);
 
-    const fileNames = emittedDocs.map((d) => d.file);
+    const fileNames = docFilesOnly.map((d) => d.file);
     expect(fileNames).toContain('07-deployment.md');
     expect(fileNames).not.toContain('07-release.md');
 
-    for (const doc of emittedDocs) {
+    for (const doc of docFilesOnly) {
       const goldenFilePath = join(goldenWebDocsDir, doc.file);
       expect(existsSync(goldenFilePath)).toBe(true);
 

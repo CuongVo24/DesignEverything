@@ -9,11 +9,11 @@ File này là cầu nối giữa tài liệu nền móng và dòng code đầu t
 M0 — Khung xương biết đi: dựng project chạy được với lát cắt mỏng nhất của flow chính (xem 04-flows.md). Done-when: chạy được một lượt flow từ đầu tới cuối với dữ liệu cứng.
 
 Các milestone kế tiếp — mỗi mục Must trong 02-scope.md là một milestone, xếp theo thứ tự xuất hiện trong flow chính:
-Must: (xem golden 02-scope.md)
+Must: Thêm công thức, Xem danh sách công thức, Tìm kiếm. Should: Xuất file JSON.
 
 Done-when của mỗi milestone: bước tương ứng trong 04-flows.md chạy được thật (không mock), và các milestone trước vẫn chạy.
 <!-- anchor: id=08-build-plan/milestones  src=src/features/build/plan.ts::buildMilestones  rev=  status=planned -->
 
 ## Kiểm Tra Sau Mỗi Milestone
-Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: (xem golden 04-flows.md)
+Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: Mở terminal -> gõ lệnh search -> xem công thức -> xuất file
 <!-- anchor: id=08-build-plan/verification  src=src/features/build/plan.ts::buildVerificationNotes  rev=  status=planned -->

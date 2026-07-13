@@ -209,7 +209,13 @@ switch (command) {
     const docsDir = join(workspaceRoot, 'docs');
     mkdirSync(docsDir, { recursive: true });
     for (const doc of tree) {
-      writeFileSync(join(docsDir, doc.file), doc.content, 'utf8');
+      if (doc.file.startsWith('.design-everything/')) {
+        const dest = join(workspaceRoot, doc.file);
+        mkdirSync(dirname(dest), { recursive: true });
+        writeFileSync(dest, doc.content, 'utf8');
+      } else {
+        writeFileSync(join(docsDir, doc.file), doc.content, 'utf8');
+      }
     }
 
     // Cập nhật state: emitted_docs + gates_passed + phase.

@@ -28,17 +28,18 @@ describe('Dogfood Project #3 Emission (TaskFlow Mobile App)', () => {
     };
 
     const docs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(docs).toHaveLength(10);
+    const docFilesOnly = docs.filter(d => !d.file.startsWith('.design-everything/'));
+    expect(docFilesOnly).toHaveLength(11);
 
     mkdirSync(outputDocsDir, { recursive: true });
 
-    for (const doc of docs) {
+    for (const doc of docFilesOnly) {
       const filePath = join(outputDocsDir, doc.file);
       mkdirSync(dirname(filePath), { recursive: true });
       writeFileSync(filePath, doc.content, 'utf8');
     }
 
-    const fileNames = docs.map((d) => d.file);
+    const fileNames = docFilesOnly.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');
     expect(fileNames).not.toContain('07-deployment.md');
   });

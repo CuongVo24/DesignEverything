@@ -186,14 +186,15 @@ describe('E2E Web Edge Cases Flow', () => {
       W1: 'Next', W2: 'CSS', W3: 'Vercel', W4: 'Auth', W5: 'NoRealtime'
     };
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(10);
+    const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
+    expect(docFilesOnly).toHaveLength(11);
 
-    const fileNames = emittedDocs.map(d => d.file);
+    const fileNames = docFilesOnly.map(d => d.file);
     expect(fileNames).toContain('07-deployment.md');
     expect(fileNames).not.toContain('07-release.md');
 
     // Verify all emitted docs have status=planned and correct web source path prefix (src/)
-    for (const doc of emittedDocs) {
+    for (const doc of docFilesOnly) {
       expect(doc.content).toContain('status=planned');
       if (doc.file !== 'README.md') {
         expect(doc.content).toContain('src=src/');
