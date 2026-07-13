@@ -24,9 +24,11 @@ Toàn bộ giá trị dồn vào chất lượng phương pháp gốc (người 
 | **S5** | Kể **một lần dùng điển hình** từ mở app đến xong việc. | Dựng flow từ tính năng "Phải có" #1 | `04-flows.md` |
 | **S6** | **Một mình/nhóm**? **deadline**? **ngân sách**? | Solo / không deadline cứng / free-tier | `06-constraints.md` |
 | **S7** | Chọn **hình-hài dự án** (web, mobile, hybrid, cli). | web | `06-constraints.md` + chọn nhánh |
+| **R1** | Khảo sát **bất định và rủi ro** kỹ thuật/Store/cost/thư viện. | Không biết/Cần khảo sát thêm | `09-execution-plan.md` |
 
 > **S3 khó & quan trọng nhất.** Người dùng kể bừa, agent phân loại Must/Should/Could.
 > **S7 quyết định nhánh câu hỏi tiếp theo** dựa trên shapes registry (web, mobile, hybrid, cli...).
+> **R1 giúp phát hiện sớm rủi ro** kỹ thuật và các spike cần làm trước khi code.
 
 ## NHÁNH WEB — W1 → W5
 

@@ -24,6 +24,7 @@ Nếu không định nghĩa "thế nào là một doc tốt" trước khi sản 
 | `04-flows.md` | 1 luồng điển hình mở→xong, bám tính năng Must #1 | Flow cho tính năng chưa có trong scope |
 | `05-architecture.md` | Quyết định khớp câu trả lời nhánh W/M + nêu lý do | Chọn tech "vì hot", không nối với nhu cầu |
 | `06-constraints.md` | Solo/deadline/ngân sách thật, ảnh hưởng scope | Bỏ trống hoặc chép mặc định không kiểm |
+| `09-execution-plan.md` | Môi trường thử nghiệm cụ thể, rủi ro phân loại rõ, có task spike đi trước task implementation | Kế hoạch chạy đa nền tảng mặc định, không có spike cho rủi ro chưa xác thực |
 
 ## C. Riêng S3 (câu khó nhất)
 - [ ] Agent **chủ động phân loại** Must/Should/Could, không bắt người mới tự ưu tiên.

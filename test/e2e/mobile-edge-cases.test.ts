@@ -84,7 +84,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
 
     progress = loadProgress(progressPath);
     expect(progress.branch).toBe('mobile');
-    expect(progress.current_step).toBe('M1');
+    expect(progress.current_step).toBe('R1');
 
     // Attempt to change branch
     expect(() => {
@@ -100,7 +100,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
     progress.phase = 'docs-emitted';
     progress.branch = 'mobile';
     progress.current_step = null;
-    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'M1', 'M2', 'M3', 'M4', 'M5'];
+    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'M1', 'M2', 'M3', 'M4', 'M5'];
     saveProgress(progressPath, progress);
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)

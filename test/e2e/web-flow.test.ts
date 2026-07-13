@@ -100,6 +100,17 @@ describe('E2E Web Interview & Gating Flow', () => {
 
     progress = loadProgress(progressPath);
     expect(progress.branch).toBe('web');
+    expect(progress.current_step).toBe('R1');
+
+    // Commit R1
+    const r1PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-core-R1' });
+    expect(r1PromptResult.decision).toBe('allow');
+
+    progress = loadProgress(progressPath);
+    progress = commitStep(progress, script, { userTurnId: 'turn-core-R1' });
+    saveProgress(progressPath, progress);
+
+    progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('W1');
 
     // --- PHASE 3: Gating verification (while gate is closed) ---

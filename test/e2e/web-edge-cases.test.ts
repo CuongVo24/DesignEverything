@@ -123,7 +123,7 @@ describe('E2E Web Edge Cases Flow', () => {
 
     progress = loadProgress(progressPath);
     expect(progress.branch).toBe('web');
-    expect(progress.current_step).toBe('W1');
+    expect(progress.current_step).toBe('R1');
 
     // 2. User/Skill tries to commit a step forcing mobile branch choice
     expect(() => {
@@ -133,7 +133,7 @@ describe('E2E Web Edge Cases Flow', () => {
     // 3. Verify next step is still on web track and doesn't rollback
     progress = loadProgress(progressPath);
     expect(progress.branch).toBe('web');
-    expect(progress.current_step).toBe('W1');
+    expect(progress.current_step).toBe('R1');
   });
 
   test('Case (d): Gating edge cases - thiếu/đủ/thừa doc và emit anchor check ở Web', () => {
@@ -146,7 +146,7 @@ describe('E2E Web Edge Cases Flow', () => {
     progress.phase = 'docs-emitted';
     progress.branch = 'web';
     progress.current_step = null;
-    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'W1', 'W2', 'W3', 'W4', 'W5'];
+    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'W1', 'W2', 'W3', 'W4', 'W5'];
     saveProgress(progressPath, progress);
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)
