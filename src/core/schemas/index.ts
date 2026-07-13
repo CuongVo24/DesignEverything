@@ -12,6 +12,11 @@ import {
   executionPlanSchema,
   validatorInputSchema,
 } from './planValidation.js';
+import {
+  executionPhaseSchema,
+  evidenceRecordSchema,
+  executionStateSchema,
+} from './executionState.js';
 
 export {
   questionSchema,
@@ -28,6 +33,9 @@ export {
   executionMilestoneSchema,
   executionPlanSchema,
   validatorInputSchema,
+  executionPhaseSchema,
+  evidenceRecordSchema,
+  executionStateSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -44,5 +52,9 @@ export type ExecutionTask = z.infer<typeof executionTaskSchema>;
 export type ExecutionMilestone = z.infer<typeof executionMilestoneSchema>;
 export type ExecutionPlan = z.infer<typeof executionPlanSchema>;
 export type ValidatorInput = z.infer<typeof validatorInputSchema>;
+
+export type ExecutionPhase = z.infer<typeof executionPhaseSchema>;
+export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;
+export type ExecutionState = z.infer<typeof executionStateSchema>;
 
 

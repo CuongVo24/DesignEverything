@@ -27,6 +27,7 @@ Không được chủ động sinh code khi các file tài liệu bắt buộc c
 
 Các cổng chặn cụ thể:
 - **Gate `scope-locked`**: Không bắt đầu tạo hoặc sửa mã nguồn ứng dụng khi chưa có đầy đủ các tài liệu: `00-vision.md`, `01-personas.md`, `02-scope.md`.
+- **Gate `plan-validated`**: Không bắt đầu tạo hoặc sửa mã nguồn ứng dụng khi chưa có đầy đủ các tài liệu: `00-vision.md`, `01-personas.md`, `02-scope.md`, `03-data-model.md`, `04-flows.md`, `05-architecture.md`, `06-constraints.md`, `08-build-plan.md`, `README.md`.
 
 **Các chỉ dẫn an toàn bắt buộc:**
 - Trước khi viết code, tự kiểm tra các doc bắt buộc của gate hiện tại đã tồn tại chưa.

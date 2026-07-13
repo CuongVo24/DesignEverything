@@ -90,9 +90,29 @@ Enforcement chia làm hai lớp tách bạch — **đây là điểm cốt lõi 
 8. `answered_len_at_last_turn` là số nguyên `>= 0` và `<= answered.length`.
 9. `calibrate_mode` ∈ {`deep`, `fast`, `null`}; chỉ khác `null` sau khi `CAL0` ∈ `answered`.
 
-## V3 Execution Expansion — target 4.0.0, chưa implement
+## V3 Execution Expansion — target 4.0.0
 
-progress.json vẫn chỉ quản lý interview. B8a sẽ thêm file riêng .design-everything/execution-state.json, không nhồi execution vào lịch sử phỏng vấn. File đó có phases plan-validating, ready-to-execute, executing, verifying, repairing, blocked, ready-to-ship; đúng một active_task; completed_tasks và evidence append-only. Evidence phải chứa task id, command, exit code, expected/observed result, timestamp, artifact paths và actor/self-reported marker. Transition và schema đầy đủ bị khoá ở contract B8a; không adapter nào được tự thêm field trước mốc 4.0.0.
+Trong khuôn khổ mở rộng thực thi V3, tệp `progress.json` giữ nguyên mục đích quản lý lịch sử phỏng vấn. Toàn bộ thông tin thực thi được theo dõi độc lập qua tệp `.design-everything/execution-state.json`.
+
+Cấu trúc chi tiết của `execution-state.json`:
+- `version`: string (e.g. "4.0.0")
+- `phase`: `plan-validating` | `ready-to-execute` | `executing` | `verifying` | `repairing` | `blocked` | `ready-to-ship`
+- `active_task`: string | null (id của task đang chạy)
+- `active_milestone`: string | null (id của milestone đang chạy)
+- `completed_tasks`: array<string> (danh sách id các task đã hoàn thành)
+- `evidence`: array<evidence_record> (bằng chứng nghiệm thu append-only)
+- `block_reason`: string | null (lý do bị block nếu có)
+- `updated_at`: string (ISO-8601 UTC)
+
+Định nghĩa `evidence_record`:
+- `task_id`: string
+- `command`: string (lệnh kiểm chứng đã chạy)
+- `exit_code`: number (exit code của lệnh)
+- `expected_result`: string (kết quả kỳ vọng)
+- `observed_result`: string (kết quả thực tế quan sát được)
+- `timestamp`: string (ISO-8601 UTC)
+- `artifact_paths`: array<string> (đường dẫn các file thay đổi/bằng chứng)
+- `actor`: string
 
 ## Changelog
 | Version | Thay đổi |
@@ -100,3 +120,4 @@ progress.json vẫn chỉ quản lý interview. B8a sẽ thêm file riêng .desi
 | 0.1.0 | Khoá schema ổn định cho Batch 1: chốt field `progress.json`, quy tắc chuyển bước và bất biến một-lượt-người-thật-một-bước. |
 | 0.1.0 (amend, FB1, 2026-06-26, pre-code) | Thêm field `answered_len_at_last_turn`; tách rõ lớp **skill** (commit ngữ nghĩa: append `answered`, set `branch`) vs lớp **hook** (giới hạn nhịp + gate artifact, không advance, không đọc ý định); chốt `branch` do skill set và là một chiều. Không bump vì chưa có code tiêu thụ. Xem DecisionLog D14. |
 | 2.0.0 | 2026-07-09 | `branch` mở thành `<shape-id>` theo registry hình-hài (không còn enum web/mobile); rẽ nhánh chuyển từ sau `S6` sang sau câu chọn hình-hài `S7`; thêm field `calibrate_mode` (chế độ giải thích do câu meta `CAL0` set, D23). MAJOR đồng bộ với interview-script. Xem DecisionLog D21–D23. |
+| 4.0.0 | 2026-07-13 | Thêm tệp độc lập `execution-state.json` và cấu trúc state machine cho thực thi task & lưu evidence nghiệm thu. |
