@@ -43,7 +43,13 @@ describe('validateExecutionPlan core logic', () => {
         depends_on: [],
         allowed_paths: ['package.json'],
         preconditions: [],
-        commands: ['npm install'],
+        commands: [
+          {
+            id: 'npm-install',
+            argv: ['npm', 'install'],
+            expected: { kind: 'exit-code-zero' },
+          }
+        ],
         expected_result: 'Succeeds without error',
         evidence_required: ['T0-evidence.txt'],
         failure_policy: 'abort',
@@ -56,7 +62,13 @@ describe('validateExecutionPlan core logic', () => {
         depends_on: ['T0'],
         allowed_paths: ['src/core/emit.ts', 'src/core/emit.test.ts'],
         preconditions: ['T0'],
-        commands: ['npm test'],
+        commands: [
+          {
+            id: 'npm-test',
+            argv: ['npm', 'test'],
+            expected: { kind: 'exit-code-zero' },
+          }
+        ],
         expected_result: 'Tests run green',
         evidence_required: ['T1-evidence.txt'],
         failure_policy: 'abort',
@@ -200,7 +212,13 @@ describe('validateExecutionPlan core logic', () => {
       depends_on: ['T1'],
       allowed_paths: ['src/core/sync.ts'],
       preconditions: ['T1'],
-      commands: ['npm test'],
+      commands: [
+        {
+          id: 'npm-test',
+          argv: ['npm', 'test'],
+          expected: { kind: 'exit-code-zero' },
+        }
+      ],
       expected_result: 'Sync works',
       evidence_required: ['T2-evidence.txt'],
       failure_policy: 'abort',
@@ -286,7 +304,13 @@ describe('validateExecutionPlan core logic', () => {
 
   test('should fail when verification command is phantom', () => {
     const badPlan = JSON.parse(JSON.stringify(mockPlan));
-    badPlan.tasks.T0.commands = ['formatCdrive --force'];
+    badPlan.tasks.T0.commands = [
+      {
+        id: 'format-cdrive',
+        argv: ['formatCdrive', '--force'],
+        expected: { kind: 'exit-code-zero' },
+      }
+    ];
     const badPlanStr = JSON.stringify(badPlan, null, 2);
     const badDigest = createHash('sha256').update(badPlanStr.trim()).digest('hex');
 

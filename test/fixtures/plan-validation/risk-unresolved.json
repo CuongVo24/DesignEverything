@@ -52,11 +52,11 @@
     },
     {
       "file": "09-execution-plan.md",
-      "content": "# Detailed Execution Plan\n\n<!-- plan-digest: e86483146b4f5dd19a5be7cf1d1469c17c183fbbdabca724cd186d299abe514d -->"
+      "content": "# Detailed Execution Plan\n\n<!-- plan-digest: abe27c7a5fb09ff92f8c22a8ee7e77e1b802d59ff601d1c5b55304904f3a78c3 -->"
     },
     {
       "file": ".design-everything/execution-plan.json",
-      "content": "{\n  \"metadata\": {\n    \"version\": \"4.0.0\",\n    \"updated_at\": \"2026-07-13T10:00:00.000Z\"\n  },\n  \"trace_links\": [\n    {\n      \"must_id\": \"Thêm công thức. Rủi ro: Có thể bị giới hạn bộ nhớ.\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"risks\": [\n    {\n      \"id\": \"R1-tech-uncertainty\",\n      \"title\": \"Risk related to tech uncertainty\",\n      \"status\": \"spike-required\",\n      \"exit_criterion\": \"Feasibility spike complete\"\n    }\n  ],\n  \"milestones\": [\n    {\n      \"id\": \"M1\",\n      \"title\": \"Core implementation\",\n      \"tasks\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"tasks\": {\n    \"T1\": {\n      \"id\": \"T1\",\n      \"type\": \"implementation\",\n      \"milestone\": \"M1\",\n      \"intent\": \"Implement core formulas\",\n      \"depends_on\": [],\n      \"allowed_paths\": [\n        \"src/core/emit.ts\"\n      ],\n      \"preconditions\": [],\n      \"commands\": [\n        \"npm test\"\n      ],\n      \"expected_result\": \"Green tests\",\n      \"evidence_required\": [\n        \"T1-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\"\n    }\n  }\n}"
+      "content": "{\n  \"metadata\": {\n    \"version\": \"4.0.0\",\n    \"updated_at\": \"2026-07-13T10:00:00.000Z\"\n  },\n  \"trace_links\": [\n    {\n      \"must_id\": \"Thêm công thức. Rủi ro: Có thể bị giới hạn bộ nhớ.\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"risks\": [\n    {\n      \"id\": \"R1-tech-uncertainty\",\n      \"title\": \"Risk related to tech uncertainty\",\n      \"status\": \"spike-required\",\n      \"exit_criterion\": \"Feasibility spike complete\"\n    }\n  ],\n  \"milestones\": [\n    {\n      \"id\": \"M1\",\n      \"title\": \"Core implementation\",\n      \"tasks\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"tasks\": {\n    \"T1\": {\n      \"id\": \"T1\",\n      \"type\": \"implementation\",\n      \"milestone\": \"M1\",\n      \"intent\": \"Implement core formulas\",\n      \"depends_on\": [],\n      \"allowed_paths\": [\n        \"src/core/emit.ts\"\n      ],\n      \"preconditions\": [],\n      \"commands\": [\n        {\n          \"id\": \"t1-cmd-0\",\n          \"argv\": [\n            \"npm\",\n            \"test\"\n          ],\n          \"cwd\": null,\n          \"expected\": {\n            \"kind\": \"exit-code-zero\"\n          }\n        }\n      ],\n      \"expected_result\": \"Green tests\",\n      \"evidence_required\": [\n        \"T1-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\"\n    }\n  }\n}"
     }
   ],
   "execution_plan": {
@@ -102,7 +102,17 @@
         ],
         "preconditions": [],
         "commands": [
-          "npm test"
+          {
+            "id": "t1-cmd-0",
+            "argv": [
+              "npm",
+              "test"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
         ],
         "expected_result": "Green tests",
         "evidence_required": [

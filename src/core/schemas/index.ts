@@ -19,6 +19,8 @@ import {
   taskCardSchema,
   planRiskSchema,
   executionPlanSchemaV3,
+  expectedResultSchema,
+  verificationCommandSchema,
 } from './executionPlan.js';
 
 export {
@@ -40,6 +42,8 @@ export {
   taskCardSchema,
   planRiskSchema,
   executionPlanSchemaV3,
+  expectedResultSchema,
+  verificationCommandSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -62,6 +66,8 @@ export type TaskType = z.infer<typeof taskTypeSchema>;
 export type TaskCard = z.infer<typeof taskCardSchema>;
 export type PlanRisk = z.infer<typeof planRiskSchema>;
 export type ExecutionPlanV3 = z.infer<typeof executionPlanSchemaV3>;
+export type ExpectedResult = z.infer<typeof expectedResultSchema>;
+export type VerificationCommand = z.infer<typeof verificationCommandSchema>;
 
 
 

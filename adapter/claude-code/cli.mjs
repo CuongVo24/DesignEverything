@@ -462,12 +462,12 @@ switch (command) {
     break;
   }
 
-  case 'record-evidence': {
+  case 'verify': {
     if (!args.task || args.task === true) {
       fail('Thiếu --task <task_id>.');
     }
-    if (args['exit-code'] === undefined || args['exit-code'] === true) {
-      fail('Thiếu --exit-code <0|1>.');
+    if (!args.command || args.command === true) {
+      fail('Thiếu --command <command_id>.');
     }
     if (!existsSync(execStatePath)) {
       fail('Chưa có execution-state.json.');
@@ -478,21 +478,15 @@ switch (command) {
     const execState = core.loadExecutionState(execStatePath);
     const v3Plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
 
-    const exitCode = parseInt(args['exit-code'], 10);
-    const evidenceRecord = {
-      task_id: args.task,
-      command: v3Plan.tasks?.[args.task]?.commands?.join(' && ') || 'manual',
-      exit_code: exitCode,
-      expected_result: v3Plan.tasks?.[args.task]?.expected_result || '',
-      observed_result: typeof args.observed === 'string' ? args.observed : (exitCode === 0 ? 'success' : 'failed'),
-      timestamp: new Date().toISOString(),
-      artifact_paths: typeof args.artifact === 'string' ? [args.artifact] : [],
-      actor: 'claude-code',
-    };
-
     let nextState;
     try {
-      nextState = core.recordEvidence(execState, evidenceRecord, v3Plan);
+      nextState = await core.runTaskVerification({
+        workspace: workspaceRoot,
+        plan: v3Plan,
+        state: execState,
+        task_id: args.task,
+        command_id: args.command
+      });
     } catch (e) {
       fail(e.message);
     }
@@ -502,8 +496,8 @@ switch (command) {
     console.log(
       JSON.stringify(
         {
-          recorded: args.task,
-          exit_code: exitCode,
+          verified: args.task,
+          command: args.command,
           phase: nextState.phase,
           block_reason: nextState.block_reason,
           completed_tasks: nextState.completed_tasks,
@@ -540,5 +534,5 @@ switch (command) {
   }
 
   default:
-    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | record-evidence | repair.`);
+    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | verify | repair.`);
 }

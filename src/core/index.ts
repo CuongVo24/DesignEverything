@@ -15,6 +15,7 @@ export {
   startTask,
   recordEvidence,
 } from './advanceExecutionState.js';
+export { runTaskVerification } from './runTaskVerification.js';
 
 
 

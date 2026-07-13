@@ -9,8 +9,8 @@ import {
   initExecutionState,
   saveExecutionState,
   startTask,
-  recordEvidence,
 } from '../../src/core/advanceExecutionState.js';
+import { runTaskVerification } from '../../src/core/runTaskVerification.js';
 
 describe('B10a Newbie Journey & Plan Validation Fixtures', () => {
   const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), '../fixtures/plan-validation');
@@ -194,7 +194,7 @@ gates:
     expect(result.message).toContain('Không có task hoạt động');
   });
 
-  test('should execute full developer workflow (Validate -> Start -> Deny/Allow Path -> Record Evidence Fail -> Repair -> Record Evidence Pass)', () => {
+  test('should execute full developer workflow (Validate -> Start -> Deny/Allow Path -> Record Evidence Fail -> Repair -> Record Evidence Pass)', async () => {
     let state = initExecutionState();
     state.phase = 'ready-to-execute';
     state.completed_tasks = ['T0-preflight'];
@@ -225,17 +225,16 @@ gates:
     expect(denyResult.decision).toBe('deny');
 
     // 2. Record failed evidence (exit code 1) -> repairing phase
-    const failEvidence = {
+    const failingPlan = JSON.parse(JSON.stringify(plan));
+    failingPlan.tasks['T1-scaffold'].commands[0].argv = ['node', '-e', 'process.exit(1)'];
+
+    state = await runTaskVerification({
+      workspace: testWorkspaceRoot,
+      plan: failingPlan,
+      state,
       task_id: 'T1-scaffold',
-      command: 'npm run build',
-      exit_code: 1,
-      expected_result: 'TSC compiler builds successfully',
-      observed_result: 'syntax error',
-      timestamp: new Date().toISOString(),
-      artifact_paths: [],
-      actor: 'claude-code',
-    };
-    state = recordEvidence(state, failEvidence, plan);
+      command_id: 'scaffold-file'
+    });
     expect(state.phase).toBe('repairing');
     expect(state.active_task).toBe('T1-scaffold');
     saveExecutionState(execStatePath, state);
@@ -257,17 +256,13 @@ gates:
     expect(repairDenyResult.decision).toBe('deny');
 
     // 3. Record successful evidence after repair (exit code 0) -> ready-to-execute
-    const passEvidence = {
+    state = await runTaskVerification({
+      workspace: testWorkspaceRoot,
+      plan,
+      state,
       task_id: 'T1-scaffold',
-      command: 'npm run build',
-      exit_code: 0,
-      expected_result: 'TSC compiler builds successfully',
-      observed_result: 'build success',
-      timestamp: new Date().toISOString(),
-      artifact_paths: [],
-      actor: 'claude-code',
-    };
-    state = recordEvidence(state, passEvidence, plan);
+      command_id: 'scaffold-file'
+    });
     expect(state.phase).toBe('ready-to-execute');
     expect(state.completed_tasks).toContain('T1-scaffold');
     expect(state.active_task).toBeNull();

@@ -33,9 +33,15 @@
       "depends_on": [],
       "allowed_paths": [],
       "preconditions": [],
-      "commands": ["npm --version"],
+      "commands": [
+        {
+          "id": "node-version",
+          "argv": ["node", "--version"],
+          "expected": { "kind": "exit-code-zero" }
+        }
+      ],
       "expected_result": "Node and NPM versions printed successfully",
-      "evidence_required": ["npm-version.log"],
+      "evidence_required": [],
       "failure_policy": "abort"
     },
     "T1-scaffold": {
@@ -46,9 +52,15 @@
       "depends_on": ["T0-preflight"],
       "allowed_paths": ["src/index.ts", "tsconfig.json"],
       "preconditions": ["T0-preflight"],
-      "commands": ["npm run build"],
+      "commands": [
+        {
+          "id": "scaffold-file",
+          "argv": ["node", "-e", "require('fs').writeFileSync('scaffold.txt', 'done')"],
+          "expected": { "kind": "file-exists", "value": "scaffold.txt" }
+        }
+      ],
       "expected_result": "TSC compiler builds successfully",
-      "evidence_required": ["build.log"],
+      "evidence_required": ["scaffold.txt"],
       "failure_policy": "abort"
     },
     "T2-implementation": {
@@ -59,9 +71,15 @@
       "depends_on": ["T1-scaffold"],
       "allowed_paths": ["src/**/*.ts"],
       "preconditions": ["T1-scaffold"],
-      "commands": ["npm test"],
+      "commands": [
+        {
+          "id": "impl-output",
+          "argv": ["node", "-e", "console.log('impl-passed')"],
+          "expected": { "kind": "output-includes", "value": "impl-passed" }
+        }
+      ],
       "expected_result": "Vitest test suite runs fully green",
-      "evidence_required": ["test-report.json"],
+      "evidence_required": [],
       "failure_policy": "debug"
     }
   }

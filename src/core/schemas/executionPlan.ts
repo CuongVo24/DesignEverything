@@ -3,6 +3,20 @@ import { z } from 'zod';
 export const taskTypeSchema = z.enum(['spike', 'scaffold', 'implementation', 'verification']);
 export type TaskType = z.infer<typeof taskTypeSchema>;
 
+export const expectedResultSchema = z.object({
+  kind: z.enum(['exit-code-zero', 'output-includes', 'file-exists']),
+  value: z.string().optional(),
+});
+export type ExpectedResult = z.infer<typeof expectedResultSchema>;
+
+export const verificationCommandSchema = z.object({
+  id: z.string().min(1),
+  argv: z.array(z.string()).default([]),
+  cwd: z.string().nullable().optional(),
+  expected: expectedResultSchema,
+});
+export type VerificationCommand = z.infer<typeof verificationCommandSchema>;
+
 export const taskCardSchema = z.object({
   id: z.string().min(1),
   type: taskTypeSchema,
@@ -11,7 +25,7 @@ export const taskCardSchema = z.object({
   depends_on: z.array(z.string()).default([]),
   allowed_paths: z.array(z.string()).default([]),
   preconditions: z.array(z.string()).default([]),
-  commands: z.array(z.string()).default([]),
+  commands: z.array(verificationCommandSchema).default([]),
   expected_result: z.string().min(1),
   evidence_required: z.array(z.string()).default([]),
   failure_policy: z.string().min(1),

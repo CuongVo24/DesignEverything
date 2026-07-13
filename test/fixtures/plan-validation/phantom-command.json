@@ -52,11 +52,11 @@
     },
     {
       "file": "09-execution-plan.md",
-      "content": "# Detailed Execution Plan\n\n<!-- plan-digest: d8a331e4d097e8dfb2db6f7a36d90d36b4d5ec5c9e8f37b6562e46d6948354a6 -->"
+      "content": "# Detailed Execution Plan\n\n<!-- plan-digest: 856194d6b410bff289599ab6ae25525ae6f36ab862995597b9fa88b0fb4546cd -->"
     },
     {
       "file": ".design-everything/execution-plan.json",
-      "content": "{\n  \"metadata\": {\n    \"version\": \"4.0.0\",\n    \"updated_at\": \"2026-07-13T10:00:00.000Z\"\n  },\n  \"trace_links\": [\n    {\n      \"must_id\": \"Thêm công thức\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    },\n    {\n      \"must_id\": \"Xem danh sách công thức.\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"risks\": [\n    {\n      \"id\": \"R1-tech-uncertainty\",\n      \"title\": \"Risk related to tech uncertainty\",\n      \"status\": \"spike-required\",\n      \"exit_criterion\": \"Feasibility spike complete\"\n    }\n  ],\n  \"milestones\": [\n    {\n      \"id\": \"M0\",\n      \"title\": \"Feasibility Spike\",\n      \"tasks\": [\n        \"T0\"\n      ]\n    },\n    {\n      \"id\": \"M1\",\n      \"title\": \"Core implementation\",\n      \"tasks\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"tasks\": {\n    \"T0\": {\n      \"id\": \"T0\",\n      \"type\": \"spike\",\n      \"milestone\": \"M0\",\n      \"intent\": \"Spike: check compatibility\",\n      \"depends_on\": [],\n      \"allowed_paths\": [\n        \"/etc/passwd\"\n      ],\n      \"preconditions\": [],\n      \"commands\": [\n        \"npm install\"\n      ],\n      \"expected_result\": \"Succeeds without error\",\n      \"evidence_required\": [\n        \"T0-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\"\n    },\n    \"T1\": {\n      \"id\": \"T1\",\n      \"type\": \"implementation\",\n      \"milestone\": \"M1\",\n      \"intent\": \"Add formulas and view list\",\n      \"depends_on\": [\n        \"T0\"\n      ],\n      \"allowed_paths\": [\n        \"src/core/emit.ts\",\n        \"src/core/emit.test.ts\"\n      ],\n      \"preconditions\": [\n        \"T0\"\n      ],\n      \"commands\": [\n        \"formatCdrive --force\"\n      ],\n      \"expected_result\": \"Tests run green\",\n      \"evidence_required\": [\n        \"T1-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\"\n    }\n  }\n}"
+      "content": "{\n  \"metadata\": {\n    \"version\": \"4.0.0\",\n    \"updated_at\": \"2026-07-13T10:00:00.000Z\"\n  },\n  \"trace_links\": [\n    {\n      \"must_id\": \"Thêm công thức\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    },\n    {\n      \"must_id\": \"Xem danh sách công thức.\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"risks\": [\n    {\n      \"id\": \"R1-tech-uncertainty\",\n      \"title\": \"Risk related to tech uncertainty\",\n      \"status\": \"spike-required\",\n      \"exit_criterion\": \"Feasibility spike complete\"\n    }\n  ],\n  \"milestones\": [\n    {\n      \"id\": \"M0\",\n      \"title\": \"Feasibility Spike\",\n      \"tasks\": [\n        \"T0\"\n      ]\n    },\n    {\n      \"id\": \"M1\",\n      \"title\": \"Core implementation\",\n      \"tasks\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"tasks\": {\n    \"T0\": {\n      \"id\": \"T0\",\n      \"type\": \"spike\",\n      \"milestone\": \"M0\",\n      \"intent\": \"Spike: check compatibility\",\n      \"depends_on\": [],\n      \"allowed_paths\": [\n        \"/etc/passwd\"\n      ],\n      \"preconditions\": [],\n      \"commands\": [\n        {\n          \"id\": \"t0-cmd-0\",\n          \"argv\": [\n            \"npm\",\n            \"install\"\n          ],\n          \"cwd\": null,\n          \"expected\": {\n            \"kind\": \"exit-code-zero\"\n          }\n        }\n      ],\n      \"expected_result\": \"Succeeds without error\",\n      \"evidence_required\": [\n        \"T0-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\"\n    },\n    \"T1\": {\n      \"id\": \"T1\",\n      \"type\": \"implementation\",\n      \"milestone\": \"M1\",\n      \"intent\": \"Add formulas and view list\",\n      \"depends_on\": [\n        \"T0\"\n      ],\n      \"allowed_paths\": [\n        \"src/core/emit.ts\",\n        \"src/core/emit.test.ts\"\n      ],\n      \"preconditions\": [\n        \"T0\"\n      ],\n      \"commands\": [\n        {\n          \"id\": \"t1-cmd-0\",\n          \"argv\": [\n            \"formatCdrive\",\n            \"--force\"\n          ],\n          \"cwd\": null,\n          \"expected\": {\n            \"kind\": \"exit-code-zero\"\n          }\n        }\n      ],\n      \"expected_result\": \"Tests run green\",\n      \"evidence_required\": [\n        \"T1-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\"\n    }\n  }\n}"
     }
   ],
   "execution_plan": {
@@ -116,7 +116,17 @@
         ],
         "preconditions": [],
         "commands": [
-          "npm install"
+          {
+            "id": "t0-cmd-0",
+            "argv": [
+              "npm",
+              "install"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
         ],
         "expected_result": "Succeeds without error",
         "evidence_required": [
@@ -140,7 +150,17 @@
           "T0"
         ],
         "commands": [
-          "formatCdrive --force"
+          {
+            "id": "t1-cmd-0",
+            "argv": [
+              "formatCdrive",
+              "--force"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
         ],
         "expected_result": "Tests run green",
         "evidence_required": [

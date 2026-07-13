@@ -104,7 +104,17 @@
         ],
         "preconditions": [],
         "commands": [
-          "npm install"
+          {
+            "id": "t0-cmd-0",
+            "argv": [
+              "npm",
+              "install"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
         ],
         "expected_result": "Succeeds without error",
         "evidence_required": [
@@ -128,7 +138,17 @@
           "T0"
         ],
         "commands": [
-          "npm test"
+          {
+            "id": "t1-cmd-0",
+            "argv": [
+              "npm",
+              "test"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
         ],
         "expected_result": "Tests run green",
         "evidence_required": [

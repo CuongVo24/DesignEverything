@@ -38,7 +38,13 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
         depends_on: [],
         allowed_paths: ['src/index.ts'],
         preconditions: [],
-        commands: ['npm run test:index'],
+        commands: [
+          {
+            id: 'test-index',
+            argv: ['npm', 'run', 'test:index'],
+            expected: { kind: 'exit-code-zero' },
+          }
+        ],
         expected_result: 'pass',
         evidence_required: ['T1-evidence.txt'],
         failure_policy: 'abort',
@@ -51,7 +57,13 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
         depends_on: ['T1'],
         allowed_paths: ['src/util.ts'],
         preconditions: ['T1'],
-        commands: ['npm run test:util'],
+        commands: [
+          {
+            id: 'test-util',
+            argv: ['npm', 'run', 'test:util'],
+            expected: { kind: 'exit-code-zero' },
+          }
+        ],
         expected_result: 'pass',
         evidence_required: ['T2-evidence.txt'],
         failure_policy: 'abort',
@@ -89,13 +101,15 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     // Record failure evidence
     const failEvidence = {
       task_id: 'T1',
-      command: 'npm run test:index',
+      command_id: 'test-index',
+      argv: ['npm', 'run', 'test:index'],
+      cwd: null,
       exit_code: 1,
-      expected_result: 'pass',
-      observed_result: 'failed 1 test',
-      timestamp: '2026-07-13T10:00:00.000Z',
-      artifact_paths: [],
-      actor: 'vitest',
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {},
+      captured_at: '2026-07-13T10:00:00.000Z',
+      source: 'runner' as const,
     };
 
     state = recordEvidence(state, failEvidence, plan);
@@ -115,13 +129,17 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     // Record success evidence
     const successEvidence = {
       task_id: 'T1',
-      command: 'npm run test:index',
+      command_id: 'test-index',
+      argv: ['npm', 'run', 'test:index'],
+      cwd: null,
       exit_code: 0,
-      expected_result: 'pass',
-      observed_result: 'all tests passed',
-      timestamp: '2026-07-13T10:00:01.000Z',
-      artifact_paths: [],
-      actor: 'vitest',
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {
+        'T1-evidence.txt': 'hash-artifact'
+      },
+      captured_at: '2026-07-13T10:00:01.000Z',
+      source: 'runner' as const,
     };
 
     state = recordEvidence(state, successEvidence, plan);
@@ -136,13 +154,17 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     // Record success evidence for T2 -> completes the plan!
     const successEvidence2 = {
       task_id: 'T2',
-      command: 'npm run test:util',
+      command_id: 'test-util',
+      argv: ['npm', 'run', 'test:util'],
+      cwd: null,
       exit_code: 0,
-      expected_result: 'pass',
-      observed_result: 'all tests passed',
-      timestamp: '2026-07-13T10:00:02.000Z',
-      artifact_paths: [],
-      actor: 'vitest',
+      stdout_sha256: 'hash3',
+      stderr_sha256: 'hash4',
+      artifact_digests: {
+        'T2-evidence.txt': 'hash-artifact-2'
+      },
+      captured_at: '2026-07-13T10:00:02.000Z',
+      source: 'runner' as const,
     };
 
     state = recordEvidence(state, successEvidence2, plan);

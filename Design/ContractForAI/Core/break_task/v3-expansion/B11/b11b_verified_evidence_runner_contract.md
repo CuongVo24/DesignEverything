@@ -23,15 +23,15 @@ Thay evidence tự khai bằng evidence do runner thực thi đúng verification
 - Không lấy screenshot/browser evidence; đó là extension sau V4.
 
 ## 3. Checklist
-
-- [ ] Plan schema không còn command verification dạng string mơ hồ ở đường runner; mỗi command có id/argv/expected rõ.
-- [ ] CLI reject cờ legacy tự khai và không có API public nào mark task complete chỉ từ `exit_code: 0` do caller truyền.
-- [ ] Evidence pass/fail đều chứa source runner, hash output và artifact digest; log path không rời workspace.
-- [ ] Artifact `file-exists` phải tồn tại sau command; path traversal, symlink outside workspace và duplicate command evidence bị reject.
-- [ ] Test chứng minh fake `--exit-code 0`, command id không thuộc task và output không đạt expected không thể mở task kế tiếp.
-
+ 
+- [x] Plan schema không còn command verification dạng string mơ hồ ở đường runner; mỗi command có id/argv/expected rõ.
+- [x] CLI reject cờ legacy tự khai và không có API public nào mark task complete chỉ từ `exit_code: 0` do caller truyền.
+- [x] Evidence pass/fail đều chứa source runner, hash output và artifact digest; log path không rời workspace.
+- [x] Artifact `file-exists` phải tồn tại sau command; path traversal, symlink outside workspace và duplicate command evidence bị reject.
+- [x] Test chứng minh fake `--exit-code 0`, command id không thuộc task và output không đạt expected không thể mở task kế tiếp.
+ 
 ## 4. Interfaces / Files expected to change
-
+ 
 - [MODIFY] `src/core/schemas/executionPlan.ts`, ≤120 dòng: `VerificationCommand`/expected schema thay command string runtime.
 - [MODIFY] `src/core/schemas/executionState.ts`, ≤120 dòng: `VerifiedEvidenceRecord`, artifact digest và evidence source enum.
 - [NEW] `src/core/runTaskVerification.ts`, ≤200 dòng: spawn argv không shell, capture/hash/check expected/append evidence.
@@ -39,22 +39,22 @@ Thay evidence tự khai bằng evidence do runner thực thi đúng verification
 - [MODIFY] `src/core/index.ts` và schema exports, ≤50 dòng.
 - [MODIFY] `adapter/claude-code/cli.mjs`, ≤140 dòng: verb `verify`, xóa self-report `record-evidence` flags.
 - [NEW] `src/core/runTaskVerification.test.ts`, ≤200 dòng và fixture command pass/fail/artifact/path traversal.
-
+ 
 ## 5. Risks & mitigations
-
+ 
 | Risk | Mức | Mitigation |
 |---|---:|---|
 | Chạy command qua shell tạo injection/bypass | Cao | Dùng `spawn` với `argv`, không `exec`/string interpolation; cwd canonical dưới workspace. |
 | Log chứa secret hoặc phình lớn | TB | Cap kích thước, redact biến môi trường phổ biến, chỉ hash + file local; không gửi telemetry. |
 | Test không portable Windows | TB | Fixture Node script portable; command argv riêng theo platform chỉ khi profile đã nêu. |
-
+ 
 ## 6. Verification plan
-
+ 
 - `npx vitest run runTaskVerification executionState`
 - `npm run typecheck && npm run lint && npm run build`
 - CLI E2E: pass thật → evidence log/hash → next mở; fail thật/artifact thiếu → repairing; fake legacy flags và task/command không khớp → exit non-zero.
 - Inspect evidence fixture để xác nhận stdout/stderr/file hash được tạo bởi runner, không từ input CLI.
-
+ 
 ## 7. Status
-
-WAITING_FOR_APPROVAL
+ 
+DONE

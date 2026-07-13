@@ -427,9 +427,27 @@ export function generateExecutionPlanJson(
       ? ['src/**/*.ts', 'src/**/*.tsx', 'pages/**/*.tsx', 'app/**/*.ts', 'app/**/*.tsx']
       : ['src/**/*.ts'];
 
-  const preflightCmds = ['node --version', 'npm --version'];
-  const scaffoldCmds = ['npm run build'];
-  const verificationCmds = branch === 'mobile' ? ['npm run test:e2e'] : ['npm test'];
+  const preflightCmds = [
+    {
+      id: 'node-version',
+      argv: ['node', '--version'],
+      expected: { kind: 'exit-code-zero' as const },
+    }
+  ];
+  const scaffoldCmds = [
+    {
+      id: 'build-project',
+      argv: ['npm', 'run', 'build'],
+      expected: { kind: 'exit-code-zero' as const },
+    }
+  ];
+  const verificationCmds = [
+    {
+      id: 'run-tests',
+      argv: branch === 'mobile' ? ['npm', 'run', 'test:e2e'] : ['npm', 'test'],
+      expected: { kind: 'exit-code-zero' as const },
+    }
+  ];
 
   const tasks: Record<string, TaskCard> = {
     'T0-preflight': {

@@ -151,44 +151,86 @@ export function recordEvidence(
     throw new Error(`Recorded evidence task_id ${record.task_id} does not match active_task ${state.active_task}`);
   }
 
-  // Check for duplicate evidence entry (same task_id and timestamp)
-  const isDuplicate = state.evidence.some(
-    (e) => e.task_id === record.task_id && e.timestamp === record.timestamp
-  );
+  // Check for duplicate evidence entry (same task_id, command_id, and captured_at)
+  const recordTimestamp = record.captured_at;
+  const isDuplicate = state.evidence.some((e) => {
+    return e.task_id === record.task_id &&
+           e.command_id === record.command_id &&
+           e.captured_at === recordTimestamp;
+  });
   if (isDuplicate) {
-    throw new Error(`Duplicate evidence recorded for task ${record.task_id} at timestamp ${record.timestamp}`);
+    throw new Error(`Duplicate evidence recorded for task ${record.task_id} command ${record.command_id} at timestamp ${recordTimestamp}`);
   }
 
   const updatedEvidence = [...state.evidence, record];
 
   if (record.exit_code === 0) {
-    // Verification passed
-    const completedTasks = [...state.completed_tasks];
-    if (!completedTasks.includes(record.task_id)) {
-      completedTasks.push(record.task_id);
-    }
-
-    // Check if all tasks in the plan are completed
+    // Check if all commands of the active task are verified successfully
+    let activeTaskCard: any = null;
     const isV3 = 'tasks' in plan && plan.tasks && typeof plan.tasks === 'object' && !Array.isArray(plan.tasks);
-    let allCompleted = false;
     if (isV3) {
-      const allTaskIds = Object.keys(plan.tasks);
-      allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
+      activeTaskCard = plan.tasks[state.active_task!];
     } else {
-      const allTaskIds = plan.milestones.flatMap((m: any) => m.tasks.map((t: any) => t.id));
-      allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
+      for (const m of plan.milestones) {
+        const t = m.tasks.find((task: any) => task.id === state.active_task);
+        if (t) {
+          activeTaskCard = t;
+          break;
+        }
+      }
     }
 
-    return {
-      ...state,
-      phase: allCompleted ? 'ready-to-ship' : 'ready-to-execute',
-      active_task: null,
-      active_milestone: null,
-      completed_tasks: completedTasks,
-      evidence: updatedEvidence,
-      block_reason: null,
-      updated_at: new Date().toISOString(),
-    };
+    let allCommandsVerified = true;
+    if (activeTaskCard && activeTaskCard.commands) {
+      for (const cmd of activeTaskCard.commands) {
+        const cmdId = typeof cmd === 'string' ? cmd : cmd.id;
+        const hasPass = updatedEvidence.some(
+          (e) => e.task_id === state.active_task && e.command_id === cmdId && e.exit_code === 0
+        );
+        if (!hasPass) {
+          allCommandsVerified = false;
+          break;
+        }
+      }
+    }
+
+    if (allCommandsVerified) {
+      // Verification passed fully for this task
+      const completedTasks = [...state.completed_tasks];
+      if (!completedTasks.includes(record.task_id)) {
+        completedTasks.push(record.task_id);
+      }
+
+      // Check if all tasks in the plan are completed
+      let allCompleted = false;
+      if (isV3) {
+        const allTaskIds = Object.keys(plan.tasks);
+        allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
+      } else {
+        const allTaskIds = plan.milestones.flatMap((m: any) => m.tasks.map((t: any) => t.id));
+        allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
+      }
+
+      return {
+        ...state,
+        phase: allCompleted ? 'ready-to-ship' : 'ready-to-execute',
+        active_task: null,
+        active_milestone: null,
+        completed_tasks: completedTasks,
+        evidence: updatedEvidence,
+        block_reason: null,
+        updated_at: new Date().toISOString(),
+      };
+    } else {
+      // Some commands are still pending verification
+      return {
+        ...state,
+        phase: 'verifying',
+        evidence: updatedEvidence,
+        block_reason: null,
+        updated_at: new Date().toISOString(),
+      };
+    }
   } else {
     // Verification failed -> transition to repairing
     return {

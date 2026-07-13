@@ -13,13 +13,15 @@ export type ExecutionPhase = z.infer<typeof executionPhaseSchema>;
 
 export const evidenceRecordSchema = z.object({
   task_id: z.string().min(1),
-  command: z.string(),
+  command_id: z.string().min(1),
+  argv: z.array(z.string()).default([]),
+  cwd: z.string().nullable().optional(),
   exit_code: z.number().int(),
-  expected_result: z.string(),
-  observed_result: z.string(),
-  timestamp: z.string().datetime(),
-  artifact_paths: z.array(z.string()),
-  actor: z.string().min(1),
+  stdout_sha256: z.string(),
+  stderr_sha256: z.string(),
+  artifact_digests: z.record(z.string(), z.string()).default({}),
+  captured_at: z.string().datetime(),
+  source: z.literal('runner'),
 });
 export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;
 

@@ -116,7 +116,13 @@ gates:
           depends_on: [],
           allowed_paths: [],
           preconditions: [],
-          commands: ['npm --version'],
+          commands: [
+            {
+              id: 'node-version',
+              argv: ['node', '--version'],
+              expected: { kind: 'exit-code-zero' },
+            }
+          ],
           expected_result: 'NPM ready',
           evidence_required: ['npm-log.txt'],
           failure_policy: 'abort',
@@ -129,7 +135,13 @@ gates:
           depends_on: ['T0-preflight'],
           allowed_paths: ['src/index.ts', 'src/types.ts'],
           preconditions: ['T0-preflight'],
-          commands: ['npm run build'],
+          commands: [
+            {
+              id: 'build-project',
+              argv: ['npm', 'run', 'build'],
+              expected: { kind: 'exit-code-zero' },
+            }
+          ],
           expected_result: 'build success',
           evidence_required: ['build-log.txt'],
           failure_policy: 'abort',
@@ -142,7 +154,13 @@ gates:
           depends_on: ['T1-scaffold'],
           allowed_paths: ['src/**/*.ts'],
           preconditions: ['T1-scaffold'],
-          commands: ['npm test'],
+          commands: [
+            {
+              id: 'run-tests',
+              argv: ['npm', 'test'],
+              expected: { kind: 'exit-code-zero' },
+            }
+          ],
           expected_result: 'test success',
           evidence_required: ['test-log.txt'],
           failure_policy: 'debug',
@@ -202,13 +220,15 @@ gates:
     // 3. Complete T0-preflight
     const preflightEvidence = {
       task_id: 'T0-preflight',
-      command: 'npm --version',
+      command_id: 'node-version',
+      argv: ['node', '--version'],
+      cwd: null,
       exit_code: 0,
-      expected_result: 'NPM ready',
-      observed_result: 'NPM v10',
-      timestamp: new Date().toISOString(),
-      artifact_paths: [],
-      actor: 'vitest',
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {},
+      captured_at: new Date().toISOString(),
+      source: 'runner' as const,
     };
     nextState = recordEvidence(nextState, preflightEvidence, plan);
     expect(nextState.phase).toBe('ready-to-execute');
@@ -240,13 +260,15 @@ gates:
     // 5. Fail T1-scaffold
     const scaffoldEvidenceFail = {
       task_id: 'T1-scaffold',
-      command: 'npm run build',
+      command_id: 'build-project',
+      argv: ['npm', 'run', 'build'],
+      cwd: null,
       exit_code: 1,
-      expected_result: 'build success',
-      observed_result: 'compilation error',
-      timestamp: new Date().toISOString(),
-      artifact_paths: [],
-      actor: 'vitest',
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {},
+      captured_at: new Date().toISOString(),
+      source: 'runner' as const,
     };
     nextState = recordEvidence(nextState, scaffoldEvidenceFail, plan);
     expect(nextState.phase).toBe('repairing');
@@ -271,13 +293,15 @@ gates:
     // 6. Complete T1-scaffold after repair
     const scaffoldEvidencePass = {
       task_id: 'T1-scaffold',
-      command: 'npm run build',
+      command_id: 'build-project',
+      argv: ['npm', 'run', 'build'],
+      cwd: null,
       exit_code: 0,
-      expected_result: 'build success',
-      observed_result: 'build success',
-      timestamp: new Date().toISOString(),
-      artifact_paths: [],
-      actor: 'vitest',
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {},
+      captured_at: new Date().toISOString(),
+      source: 'runner' as const,
     };
     // Since recordEvidence requires active task status, check executing/repairing phase
     nextState = recordEvidence(nextState, scaffoldEvidencePass, plan);

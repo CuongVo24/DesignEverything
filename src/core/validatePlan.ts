@@ -509,7 +509,16 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
     }
 
     for (const cmd of task.commands || []) {
-      const baseCmd = cmd.trim().split(/\s+/)[0];
+      if (!cmd.argv || cmd.argv.length === 0) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Lệnh kiểm chứng "${cmd.id}" trong task "${task.id}" không có đối số argv.`,
+          remediation: `Nhập argv cho lệnh kiểm chứng "${cmd.id}".`,
+        });
+        continue;
+      }
+      const baseCmd = cmd.argv[0];
       if (
         baseCmd &&
         !allowedCommands.includes(baseCmd) &&
@@ -519,7 +528,7 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
         issues.push({
           id: 'phantom-command',
           severity: 'error',
-          message: `Lệnh kiểm chứng "${cmd}" trong task "${task.id}" sử dụng lệnh lạ "${baseCmd}" không nằm trong danh sách lệnh được hỗ trợ.`,
+          message: `Lệnh kiểm chứng "${cmd.id}" trong task "${task.id}" sử dụng lệnh lạ "${baseCmd}" không nằm trong danh sách lệnh được hỗ trợ.`,
           remediation: `Sử dụng các lệnh chuẩn như npm, npx, tsc, git hoặc các file script nội bộ bắt đầu bằng ./`,
         });
       }
