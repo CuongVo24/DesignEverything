@@ -6,5 +6,7 @@ export { commitStep, checkRate, stampTurn } from './advanceState.js';
 export { evaluateGate, isBlocked, passedGates } from './evaluateGate.js';
 export { emitDoc, emitTree } from './emit.js';
 export { generateAgentsMd } from '../adapters/agents/generateAgentsMd.js';
+export { validatePlan } from './validatePlan.js';
+
 
 

@@ -21,11 +21,11 @@ Tạo contract máy-đọc được để chấm bộ docs và execution plan tr
 
 ## 3. Checklist
 
-- [ ] Có schema public PlanValidationResult và ValidationIssue trong Core Schemas.
-- [ ] Có error code cố định cho branch/readme/traceability/phantom-command/scope-leak/risk-unresolved.
-- [ ] Validator nhận answers, emitted docs, shape và execution plan; không parse Markdown tùy tiện để đoán business meaning.
-- [ ] pass chỉ khi không còn error; warning phải hiện cho user trước khi xác nhận.
-- [ ] Gate plan-validated cần validator pass và risk acknowledgement, không chỉ requires_docs.
+- [x] Có schema public PlanValidationResult và ValidationIssue trong Core Schemas.
+- [x] Có error code cố định cho branch/readme/traceability/phantom-command/scope-leak/risk-unresolved.
+- [x] Validator nhận answers, emitted docs, shape và execution plan; không parse Markdown tùy tiện để đoán business meaning.
+- [x] pass chỉ khi không còn error; warning phải hiện cho user trước khi xác nhận.
+- [x] Gate plan-validated cần validator pass và risk acknowledgement, không chỉ requires_docs.
 
 ## 4. Interfaces / Files expected to change
 
@@ -51,4 +51,4 @@ Tạo contract máy-đọc được để chấm bộ docs và execution plan tr
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE
