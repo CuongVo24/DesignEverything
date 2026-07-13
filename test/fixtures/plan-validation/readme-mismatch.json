@@ -1,0 +1,60 @@
+{
+  "shape": "cli",
+  "answers": {
+    "S3": "Must: Thêm công thức, Xem danh sách công thức. Should: Sắp xếp theo ngày. Won't: Đồng bộ đám mây.",
+    "S5": "Mở terminal -> gõ lệnh search -> xem công thức -> xuất file",
+    "C1": "architecture details",
+    "C2": "flags and arguments",
+    "C3": "auth details",
+    "C4": "cross-platform",
+    "C5": "NPM registry"
+  },
+  "emittedDocs": [
+    { "file": "00-vision.md", "content": "vision" },
+    { "file": "01-personas.md", "content": "personas" },
+    { "file": "02-scope.md", "content": "scope" },
+    { "file": "03-data-model.md", "content": "data model" },
+    { "file": "04-flows.md", "content": "flows" },
+    { "file": "05-architecture.md", "content": "architecture" },
+    { "file": "06-constraints.md", "content": "constraints" },
+    { "file": "07-distribution.md", "content": "distribution" },
+    { "file": "08-build-plan.md", "content": "build plan" },
+    {
+      "file": "README.md",
+      "content": "missing everything"
+    }
+  ],
+  "executionPlan": {
+    "milestones": [
+      {
+        "id": "M0",
+        "title": "Feasibility Spike",
+        "tasks": [
+          {
+            "id": "T0",
+            "title": "Spike: check compatibility",
+            "scopeMapped": ["Khảo sát môi trường"],
+            "filesToModify": ["package.json"],
+            "verificationCommands": ["npm install"],
+            "verificationExpected": "Succeeds without error"
+          }
+        ]
+      },
+      {
+        "id": "M1",
+        "title": "Core implementation",
+        "tasks": [
+          {
+            "id": "T1",
+            "title": "Add formulas and view list",
+            "scopeMapped": ["Thêm công thức", "Xem danh sách công thức"],
+            "filesToModify": ["src/core/emit.ts", "src/core/emit.test.ts"],
+            "verificationCommands": ["npm test"],
+            "verificationExpected": "Tests run green"
+          }
+        ]
+      }
+    ],
+    "risksAcknowledged": []
+  }
+}

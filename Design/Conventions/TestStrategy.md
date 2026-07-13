@@ -26,13 +26,14 @@ Theo [../Adapters/ConformanceMatrix.md](../Adapters/ConformanceMatrix.md): INJEC
 ### Tại sao cần bổ sung
 Unit test state và golden headings không chứng minh người mới thực sự đi từ docs tới code chạy được. V3 thêm kiểm tra semantic, hành vi adapter và journey để public claim không vượt quá evidence.
 
-### Tầng kiểm thử bổ sung
+### Các tệp kiểm thử và fixtures đã triển khai
+1. **Semantic mutation fixtures** (`test/fixtures/plan-validation/`):
+   - Chứa các đột biến ngữ nghĩa gây lỗi validation: `invalid-shape-docs.json`, `readme-mismatch.json`, `traceability-missing.json`, `phantom-command.json`, `scope-leak.json`, `risk-unresolved.json`, và tệp chuẩn `valid-cli.json`.
+2. **Execution E2E flow test** (`test/e2e/execution-flow.test.ts`):
+   - Chạy trên temporary workspace, mô phỏng đầy đủ chuỗi vòng đời thực tế: Validate -> Allowed/Denied path -> Record evidence fail -> Repair -> Record evidence pass -> Resume.
+   - Chứa kiểm thử "rules-only smoke test" ghi nhận các limitation tự báo cáo.
 
-1. Semantic mutation: validator phải fail với README/shape sai, Must không có flow/task/acceptance, Won't leak, phantom command và risk unresolved.
-2. Execution E2E: temporary workspace chạy validate, active task, path deny/allow, verify fail, repair, evidence và resume qua adapter thật.
-3. Journey/pilot: transcript bất định và người dùng mới; đo điểm kẹt, can thiệp cần thiết, evidence thực tế và limitation. LLM reviewer chỉ bổ sung rubric có dẫn chứng, không phải điều kiện pass duy nhất.
-
-Chi tiết fixture, rubric và release gate nằm ở B10a/B10b trong [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md).
+Chi tiết fixture, rubric và release gate nằm ở B10a/B10b trong [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md) và báo cáo thực tế trong [v3-evaluation-report.md](../RoadMap/v3-evaluation-report.md).
 
 ## Dogfooding (test case #1)
 Khi tool chạy được: **dùng nó sinh lại chính cây `Design/` này**. Vừa là demo, vừa là regression test cho cả script + taxonomy + gate.

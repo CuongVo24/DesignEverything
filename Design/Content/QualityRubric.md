@@ -39,11 +39,11 @@ Nếu không định nghĩa "thế nào là một doc tốt" trước khi sản 
 
 Một output được coi là plan-validated không chỉ vì mỗi file có đủ heading/anchor. Nó còn phải:
 
-- [ ] README phản ánh đúng shape, file thực tế và không có command/file scaffold ảo.
-- [ ] Mỗi Must nối được sang flow, task/milestone, acceptance và evidence expected.
-- [ ] Won't không xuất hiện trong task MVP.
-- [ ] Assumption/risk được ghi confirmed, assumption hoặc spike-required; chưa xác nhận không trình bày như fact.
-- [ ] Task đầu tiên có first environment, precondition, allowed paths, expected result và failure policy.
+- [x] README phản ánh đúng shape, file thực tế và không có command/file scaffold ảo.
+- [x] Mỗi Must nối được sang flow, task/milestone, acceptance và evidence expected.
+- [x] Won't không xuất hiện trong task MVP.
+- [x] Assumption/risk được ghi confirmed, assumption hoặc spike-required; chưa xác nhận không trình bày như fact.
+- [x] Task đầu tiên có first environment, precondition, allowed paths, expected result và failure policy.
 
 Các check deterministic và release evidence nằm ở B7a/B10a; rubric không tự cấp pass thay validator.
 

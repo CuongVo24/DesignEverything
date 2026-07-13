@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "version": "4.0.0",
+    "updated_at": "2026-07-13T09:00:00Z"
+  },
+  "trace_links": {},
+  "risks": [
+    {
+      "id": "R1-tech-uncertainty",
+      "title": "Uncertainty about environment compatibility",
+      "status": "spike-required",
+      "exit_criterion": "Check Node/NPM version is compliant"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Pre-flight & Skeleton",
+      "tasks": ["T0-preflight", "T1-scaffold"]
+    },
+    {
+      "id": "M1",
+      "title": "Core Implementation",
+      "tasks": ["T2-implementation"]
+    }
+  ],
+  "tasks": {
+    "T0-preflight": {
+      "id": "T0-preflight",
+      "type": "spike",
+      "milestone": "M0",
+      "intent": "Verify environmental prerequisites",
+      "depends_on": [],
+      "allowed_paths": [],
+      "preconditions": [],
+      "commands": ["npm --version"],
+      "expected_result": "Node and NPM versions printed successfully",
+      "evidence_required": ["npm-version.log"],
+      "failure_policy": "abort"
+    },
+    "T1-scaffold": {
+      "id": "T1-scaffold",
+      "type": "scaffold",
+      "milestone": "M0",
+      "intent": "Scaffold index and configuration files",
+      "depends_on": ["T0-preflight"],
+      "allowed_paths": ["src/index.ts", "tsconfig.json"],
+      "preconditions": ["T0-preflight"],
+      "commands": ["npm run build"],
+      "expected_result": "TSC compiler builds successfully",
+      "evidence_required": ["build.log"],
+      "failure_policy": "abort"
+    },
+    "T2-implementation": {
+      "id": "T2-implementation",
+      "type": "implementation",
+      "milestone": "M1",
+      "intent": "Implement core logic",
+      "depends_on": ["T1-scaffold"],
+      "allowed_paths": ["src/**/*.ts"],
+      "preconditions": ["T1-scaffold"],
+      "commands": ["npm test"],
+      "expected_result": "Vitest test suite runs fully green",
+      "evidence_required": ["test-report.json"],
+      "failure_policy": "debug"
+    }
+  }
+}
