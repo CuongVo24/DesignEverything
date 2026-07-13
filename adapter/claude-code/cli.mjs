@@ -32,44 +32,6 @@ function fail(msg) {
   process.exit(1);
 }
 
-function convertV3PlanToLegacy(v3Plan, answers) {
-  return {
-    milestones: (v3Plan.milestones || []).map((m) => {
-      return {
-        id: m.id,
-        title: m.title,
-        tasks: (m.tasks || []).map((taskId) => {
-          const t = v3Plan.tasks?.[taskId] || {};
-          const scopeMapped = [];
-          const mustText = answers.must_have_scope || answers.S3 || '';
-          const features = (mustText.match(/[^,*•\d+.-]+/g) || [])
-            .map(x => x.trim())
-            .filter(x => x.length > 2 && !/must|should|could|wont/i.test(x));
-
-          for (const f of features) {
-            if (t.intent && t.intent.toLowerCase().includes(f.toLowerCase())) {
-              scopeMapped.push(f);
-            }
-          }
-          if (scopeMapped.length === 0) {
-            scopeMapped.push('core');
-          }
-          return {
-            id: taskId,
-            title: t.intent || taskId,
-            scopeMapped,
-            filesToModify: t.allowed_paths || [],
-            verificationCommands: t.commands || [],
-            verificationExpected: t.expected_result || '',
-            preconditions: t.depends_on || t.preconditions || [],
-          };
-        }),
-        preconditions: [],
-      };
-    }),
-    risksAcknowledged: (v3Plan.risks || []).map((r) => r.id),
-  };
-}
 
 function loadAnswers() {
   if (!existsSync(answersPath)) return {};
@@ -341,7 +303,6 @@ switch (command) {
       fail(`Không đọc được execution-plan.json: ${e.message}`);
     }
 
-    const legacyPlan = convertV3PlanToLegacy(v3Plan, answers);
     const emittedDocs = [];
     const docsDir = join(workspaceRoot, 'docs');
     if (existsSync(docsDir)) {
@@ -368,12 +329,19 @@ switch (command) {
         });
       }
     }
+    // Push the JSON execution plan to emitted docs as well for verification
+    if (existsSync(execPlanPath)) {
+      emittedDocs.push({
+        file: '.design-everything/execution-plan.json',
+        content: readFileSync(execPlanPath, 'utf8'),
+      });
+    }
 
-    const valResult = core.validatePlan({
+    const valResult = core.validateExecutionPlan({
       shape: progress.branch,
       answers,
-      executionPlan: legacyPlan,
-      emittedDocs,
+      execution_plan: v3Plan,
+      emitted_docs: emittedDocs,
     });
 
     const nextState = core.transitionToReadyToExecute(execState, valResult.pass);

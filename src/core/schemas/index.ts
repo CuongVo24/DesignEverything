@@ -7,10 +7,7 @@ import {
   validationIssueSeveritySchema,
   validationIssueSchema,
   planValidationResultSchema,
-  executionTaskSchema,
-  executionMilestoneSchema,
-  executionPlanSchema,
-  validatorInputSchema,
+  planValidationInputSchema,
 } from './planValidation.js';
 import {
   executionPhaseSchema,
@@ -35,10 +32,7 @@ export {
   validationIssueSeveritySchema,
   validationIssueSchema,
   planValidationResultSchema,
-  executionTaskSchema,
-  executionMilestoneSchema,
-  executionPlanSchema,
-  validatorInputSchema,
+  planValidationInputSchema,
   executionPhaseSchema,
   evidenceRecordSchema,
   executionStateSchema,
@@ -58,10 +52,7 @@ export type { Shape, ShapesRegistry };
 export type ValidationIssueSeverity = z.infer<typeof validationIssueSeveritySchema>;
 export type ValidationIssue = z.infer<typeof validationIssueSchema>;
 export type PlanValidationResult = z.infer<typeof planValidationResultSchema>;
-export type ExecutionTask = z.infer<typeof executionTaskSchema>;
-export type ExecutionMilestone = z.infer<typeof executionMilestoneSchema>;
-export type ExecutionPlan = z.infer<typeof executionPlanSchema>;
-export type ValidatorInput = z.infer<typeof validatorInputSchema>;
+export type PlanValidationInput = z.infer<typeof planValidationInputSchema>;
 
 export type ExecutionPhase = z.infer<typeof executionPhaseSchema>;
 export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;

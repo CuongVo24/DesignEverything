@@ -2,6 +2,8 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadShapes } from './loadShapes.js';
+import { createHash } from 'crypto';
+import { extractMustFeatures } from './validatePlan.js';
 
 export type InterviewAnswers = Record<string, string>;
 
@@ -385,11 +387,19 @@ export function emitTree(
     return { file, content };
   });
 
-  // Generate execution-plan.json as well
-  const planJson = generateExecutionPlanJson(answers, branch, options?.srcPrefix);
+  const planJson = generateExecutionPlanJson(answers, branch);
+  const planJsonContent = JSON.stringify(planJson, null, 2);
+  const digest = createHash('sha256').update(planJsonContent.trim()).digest('hex');
+
+  // Append digest to 09-execution-plan.md
+  const planMdEntry = tree.find((t) => t.file === '09-execution-plan.md');
+  if (planMdEntry) {
+    planMdEntry.content += `\n\n<!-- plan-digest: ${digest} -->`;
+  }
+
   tree.push({
     file: '.design-everything/execution-plan.json',
-    content: JSON.stringify(planJson, null, 2),
+    content: planJsonContent,
   });
 
   return tree;
@@ -399,10 +409,8 @@ import { ExecutionPlanV3, TaskCard, PlanRisk } from './schemas/executionPlan.js'
 
 export function generateExecutionPlanJson(
   answers: InterviewAnswers,
-  branch: string,
-  srcPrefixOpt?: string
+  branch: string
 ): ExecutionPlanV3 {
-  const srcPrefix = srcPrefixOpt ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
 
   const risks: PlanRisk[] = [
     {
@@ -491,17 +499,26 @@ export function generateExecutionPlanJson(
     },
   ];
 
+  const mustFeatures = extractMustFeatures(answers);
+  const trace_links = mustFeatures.map((feat) => ({
+    must_id: feat,
+    flow_id: answers['S5'] || 'Luồng người dùng chính',
+    task_ids: ['T2-implementation'],
+  }));
+  if (trace_links.length === 0) {
+    trace_links.push({
+      must_id: 'Tính năng cốt lõi',
+      flow_id: answers['S5'] || 'Luồng người dùng chính',
+      task_ids: ['T2-implementation'],
+    });
+  }
+
   return {
     metadata: {
       version: '4.0.0',
       updated_at: new Date().toISOString(),
     },
-    trace_links: {
-      'T0-preflight': `${srcPrefix}features/execution/preflight.ts`,
-      'T1-scaffold': `${srcPrefix}features/execution/scaffold.ts`,
-      'T2-implementation': `${srcPrefix}features/execution/implementation.ts`,
-      'T3-verification': `${srcPrefix}features/execution/verification.ts`,
-    },
+    trace_links,
     risks,
     milestones,
     tasks,

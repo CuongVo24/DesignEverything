@@ -3,7 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
-import { validatePlan } from '../../src/core/validatePlan.js';
+import { validateExecutionPlan } from '../../src/core/validatePlan.js';
 import { onPreToolUse } from '../../src/adapters/claude/preToolUse.js';
 import {
   initExecutionState,
@@ -17,49 +17,84 @@ describe('B10a Newbie Journey & Plan Validation Fixtures', () => {
 
   test('invalid-shape-docs fixture should fail with invalid-shape-docs issue', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'invalid-shape-docs.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(false);
     expect(result.issues.some((i) => i.id === 'invalid-shape-docs')).toBe(true);
   });
 
   test('readme-mismatch fixture should fail with readme-mismatch issue', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'readme-mismatch.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(false);
     expect(result.issues.some((i) => i.id === 'readme-mismatch')).toBe(true);
   });
 
   test('traceability-missing fixture should fail with traceability-missing issue', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'traceability-missing.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(false);
     expect(result.issues.some((i) => i.id === 'traceability-missing')).toBe(true);
   });
 
   test('phantom-command fixture should fail with phantom-command issue', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'phantom-command.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(false);
     expect(result.issues.some((i) => i.id === 'phantom-command')).toBe(true);
   });
 
   test('scope-leak fixture should fail with scope-leak issue', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'scope-leak.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(false);
     expect(result.issues.some((i) => i.id === 'scope-leak')).toBe(true);
   });
 
   test('risk-unresolved fixture should trigger risk-unresolved warning', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'risk-unresolved.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(true);
     expect(result.issues.some((i) => i.id === 'risk-unresolved' && i.severity === 'warning')).toBe(true);
   });
 
   test('valid-cli fixture should pass validation', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'valid-cli.json'), 'utf8'));
-    const result = validatePlan(input);
+    const result = validateExecutionPlan({
+      shape: input.shape,
+      answers: input.answers,
+      emitted_docs: input.emitted_docs,
+      execution_plan: input.execution_plan,
+    });
     expect(result.pass).toBe(true);
     expect(result.issues).toHaveLength(0);
   });

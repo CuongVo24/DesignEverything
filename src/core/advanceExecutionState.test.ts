@@ -10,40 +10,53 @@ import {
   startTask,
   recordEvidence,
   checkExecutionGate,
-  ExecutionPlan,
+  ExecutionPlanV3,
   GatePolicy,
 } from './index.js';
 
 describe('advanceExecutionState and checkExecutionGate logic', () => {
-  const plan: ExecutionPlan = {
+  const plan: ExecutionPlanV3 = {
+    metadata: {
+      version: '4.0.0',
+      updated_at: new Date().toISOString(),
+    },
+    trace_links: [],
+    risks: [],
     milestones: [
       {
         id: 'M1',
         title: 'Milestone 1',
-        tasks: [
-          {
-            id: 'T1',
-            title: 'Task 1',
-            scopeMapped: ['core'],
-            filesToModify: ['src/index.ts'],
-            verificationCommands: ['npm run test:index'],
-            verificationExpected: 'pass',
-            preconditions: [],
-          },
-          {
-            id: 'T2',
-            title: 'Task 2',
-            scopeMapped: ['core'],
-            filesToModify: ['src/util.ts'],
-            verificationCommands: ['npm run test:util'],
-            verificationExpected: 'pass',
-            preconditions: ['T1'],
-          },
-        ],
-        preconditions: [],
+        tasks: ['T1', 'T2'],
       },
     ],
-    risksAcknowledged: [],
+    tasks: {
+      T1: {
+        id: 'T1',
+        type: 'implementation',
+        milestone: 'M1',
+        intent: 'Task 1',
+        depends_on: [],
+        allowed_paths: ['src/index.ts'],
+        preconditions: [],
+        commands: ['npm run test:index'],
+        expected_result: 'pass',
+        evidence_required: ['T1-evidence.txt'],
+        failure_policy: 'abort',
+      },
+      T2: {
+        id: 'T2',
+        type: 'implementation',
+        milestone: 'M1',
+        intent: 'Task 2',
+        depends_on: ['T1'],
+        allowed_paths: ['src/util.ts'],
+        preconditions: ['T1'],
+        commands: ['npm run test:util'],
+        expected_result: 'pass',
+        evidence_required: ['T2-evidence.txt'],
+        failure_policy: 'abort',
+      },
+    },
   };
 
   test('should initialize and transition state correctly', () => {

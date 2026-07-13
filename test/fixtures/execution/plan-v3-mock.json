@@ -3,7 +3,7 @@
     "version": "4.0.0",
     "updated_at": "2026-07-13T09:00:00Z"
   },
-  "trace_links": {},
+  "trace_links": [],
   "risks": [
     {
       "id": "R1-tech-uncertainty",

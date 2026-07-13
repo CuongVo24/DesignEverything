@@ -1,12 +1,14 @@
+import { createHash } from 'crypto';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadShapes } from './loadShapes.js';
 import {
-  ValidatorInput,
+  PlanValidationInput,
   PlanValidationResult,
   ValidationIssue,
 } from './schemas/planValidation.js';
+import { executionPlanSchemaV3 } from './schemas/executionPlan.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,7 +31,7 @@ function getShapesRegistry() {
   return null;
 }
 
-function extractFeatures(text: string | undefined): string[] {
+export function extractFeatures(text: string | undefined): string[] {
   if (!text) return [];
   const lines = text.split('\n');
   const features: string[] = [];
@@ -45,7 +47,7 @@ function extractFeatures(text: string | undefined): string[] {
   return features.filter(f => f.length > 2);
 }
 
-function extractMustFeatures(answers: Record<string, string>): string[] {
+export function extractMustFeatures(answers: Record<string, string>): string[] {
   const mustText = answers['must_have_scope'] || '';
   let fullText = mustText;
   if (!fullText && answers['S3']) {
@@ -66,7 +68,7 @@ function extractMustFeatures(answers: Record<string, string>): string[] {
   return extractFeatures(fullText);
 }
 
-function extractWontFeatures(answers: Record<string, string>): string[] {
+export function extractWontFeatures(answers: Record<string, string>): string[] {
   const wontText = answers['wont_for_mvp_scope'] || '';
   let fullText = wontText;
   if (!fullText && answers['S3']) {
@@ -93,11 +95,31 @@ function isMatch(feature: string, mappedItem: string): boolean {
   return f.includes(m) || m.includes(f);
 }
 
-export function validatePlan(input: ValidatorInput): PlanValidationResult {
+export function validateExecutionPlan(input: PlanValidationInput): PlanValidationResult {
   const issues: ValidationIssue[] = [];
 
-  // 1. Branch/Shape Conformity ('invalid-shape-docs')
+  // 1. Zod schema validation of execution_plan
+  const schemaParse = executionPlanSchemaV3.safeParse(input.execution_plan);
+  if (!schemaParse.success) {
+    issues.push({
+      id: 'invalid-shape-docs',
+      severity: 'error',
+      message: `Cấu trúc execution-plan.json không hợp lệ: ${schemaParse.error.message}`,
+      remediation: 'Chạy phỏng vấn và emit lại để cập nhật kế hoạch theo đúng schema V3.',
+    });
+    return {
+      pass: false,
+      issues,
+      checkedAt: new Date().toISOString(),
+      evidenceReferences: [],
+    };
+  }
+
+  const plan = schemaParse.data;
+
+  // 2. Shape doc checks
   const registry = getShapesRegistry();
+  let expectedFiles: string[] = [];
   if (!registry) {
     issues.push({
       id: 'invalid-shape-docs',
@@ -115,7 +137,7 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
         remediation: `Đăng ký hình-hài "${input.shape}" trong shapes.yaml hoặc chọn một hình-hài hợp lệ.`,
       });
     } else {
-      const expectedFiles = [
+      expectedFiles = [
         '00-vision.md',
         '01-personas.md',
         '02-scope.md',
@@ -125,12 +147,16 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
         '06-constraints.md',
         ...shapeObj.release_docs,
         '08-build-plan.md',
+        '09-execution-plan.md',
+        '.design-everything/execution-plan.json',
         'README.md',
       ];
 
       // Check missing files
       for (const file of expectedFiles) {
-        const found = input.emittedDocs.some((d) => d.file === file);
+        const found = input.emitted_docs.some(
+          (d) => d.file === file || d.file.endsWith(file)
+        );
         if (!found) {
           issues.push({
             id: 'invalid-shape-docs',
@@ -146,7 +172,7 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
         .filter((s) => s.id !== input.shape)
         .flatMap((s) => s.release_docs);
 
-      for (const doc of input.emittedDocs) {
+      for (const doc of input.emitted_docs) {
         if (allPossibleReleaseDocs.includes(doc.file) && !shapeObj.release_docs.includes(doc.file)) {
           issues.push({
             id: 'invalid-shape-docs',
@@ -159,8 +185,36 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
     }
   }
 
-  // 2. README Conformance ('readme-mismatch')
-  const readmeDoc = input.emittedDocs.find((d) => d.file === 'README.md');
+  // 3. Plan digest validation
+  const planMd = input.emitted_docs.find((d) => d.file === '09-execution-plan.md' || d.file.endsWith('09-execution-plan.md'));
+  const planJsonFile = input.emitted_docs.find((d) => d.file === '.design-everything/execution-plan.json' || d.file.endsWith('execution-plan.json'));
+
+  if (planMd && planJsonFile) {
+    const calculatedHash = createHash('sha256').update(planJsonFile.content.trim()).digest('hex');
+    const digestMatch = planMd.content.match(/<!--\s*plan-digest:\s*([a-f0-9]+)\s*-->/i);
+
+    if (!digestMatch) {
+      issues.push({
+        id: 'invalid-shape-docs',
+        severity: 'error',
+        message: 'Tài liệu 09-execution-plan.md thiếu chữ ký xác thực plan-digest.',
+        remediation: 'Đảm bảo tệp 09-execution-plan.md có mã comment <!-- plan-digest: <hash> --> ở cuối.',
+      });
+    } else {
+      const embeddedHash = digestMatch[1];
+      if (embeddedHash !== calculatedHash) {
+        issues.push({
+          id: 'invalid-shape-docs',
+          severity: 'error',
+          message: 'Chữ ký plan-digest trong 09-execution-plan.md không khớp với nội dung thực tế của execution-plan.json.',
+          remediation: 'Vui lòng chạy emit lại để sinh đồng bộ tệp 09 và file JSON.',
+        });
+      }
+    }
+  }
+
+  // 4. README Conformance
+  const readmeDoc = input.emitted_docs.find((d) => d.file === 'README.md' || d.file.endsWith('README.md'));
   if (!readmeDoc) {
     issues.push({
       id: 'readme-mismatch',
@@ -169,22 +223,6 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
       remediation: 'Đảm bảo README.md được sinh ra.',
     });
   } else {
-    const registryExpectedFiles = registry
-      ? registry.shapes.find((s) => s.id === input.shape)?.release_docs || []
-      : [];
-    const expectedFiles = [
-      '00-vision.md',
-      '01-personas.md',
-      '02-scope.md',
-      '03-data-model.md',
-      '04-flows.md',
-      '05-architecture.md',
-      '06-constraints.md',
-      ...registryExpectedFiles,
-      '08-build-plan.md',
-      'README.md',
-    ];
-
     for (const file of expectedFiles) {
       if (!readmeDoc.content.includes(file)) {
         issues.push({
@@ -198,75 +236,252 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
     }
   }
 
-  // 3. Must-to-Flow-to-Task Traceability ('traceability-missing')
+  // 5. Must-to-Flow-to-Task Traceability
   const mustFeatures = extractMustFeatures(input.answers);
   for (const mustFeature of mustFeatures) {
-    const isMappedToTask = input.executionPlan.milestones.some((m) =>
-      m.tasks.some((t) => t.scopeMapped.some((s) => isMatch(mustFeature, s)))
-    );
-
-    if (!isMappedToTask) {
+    const isMapped = plan.trace_links.some((t) => isMatch(mustFeature, t.must_id));
+    if (!isMapped) {
       issues.push({
         id: 'traceability-missing',
         severity: 'error',
-        message: `Tính năng Must-have "${mustFeature}" không được ánh xạ tới bất kỳ task nào trong Execution Plan.`,
-        remediation: `Thêm task thực thi tính năng "${mustFeature}" vào Execution Plan và khai báo trong scopeMapped.`,
+        message: `Tính năng Must-have "${mustFeature}" không được ánh xạ tới bất kỳ trace link nào trong Execution Plan.`,
+        remediation: `Thêm trace link trong execution-plan.json map Must-have này với flow và task.`,
       });
     }
   }
 
-  // Check empty verification fields
-  for (const milestone of input.executionPlan.milestones) {
-    for (const task of milestone.tasks) {
-      if (!task.verificationExpected || task.verificationExpected.trim().length < 3) {
+  // Check: "Must không có flow"
+  for (const link of plan.trace_links) {
+    if (!link.flow_id || link.flow_id.trim().length === 0) {
+      issues.push({
+        id: 'traceability-missing',
+        severity: 'error',
+        message: `Trace link cho Must-have "${link.must_id}" không có flow_id.`,
+        remediation: `Khai báo flow_id cụ thể cho trace link này.`,
+      });
+    }
+  }
+
+  // Check: "flow không có task"
+  for (const link of plan.trace_links) {
+    if (!link.task_ids || link.task_ids.length === 0) {
+      issues.push({
+        id: 'traceability-missing',
+        severity: 'error',
+        message: `Flow "${link.flow_id}" trong trace link không có task_ids.`,
+        remediation: `Gắn ít nhất một task_id cho flow này.`,
+      });
+    }
+  }
+
+  // Check: "task không tồn tại"
+  for (const link of plan.trace_links) {
+    for (const tid of link.task_ids) {
+      if (!plan.tasks[tid]) {
         issues.push({
           id: 'traceability-missing',
           severity: 'error',
-          message: `Task "${task.title}" thiếu tiêu chí kiểm chứng (verificationExpected).`,
-          remediation: `Nhập cụ thể kết quả kỳ vọng đạt được sau khi chạy lệnh kiểm chứng của task "${task.title}".`,
+          message: `Task ID "${tid}" trong trace link không tồn tại trong danh sách tasks.`,
+          remediation: `Đảm bảo task_id "${tid}" có định nghĩa task card trong plan.`,
         });
       }
     }
   }
 
-  // 4. Scope Leak Check ('scope-leak')
+  // Check empty verificationExpected in all tasks
+  for (const task of Object.values(plan.tasks)) {
+    if (!task.expected_result || task.expected_result.trim().length < 3) {
+      issues.push({
+        id: 'traceability-missing',
+        severity: 'error',
+        message: `Task "${task.id}" thiếu tiêu chí kiểm chứng (expected_result).`,
+        remediation: `Nhập cụ thể kết quả kỳ vọng đạt được sau khi chạy lệnh kiểm chứng của task "${task.id}".`,
+      });
+    }
+  }
+
+  // 6. Scope Leak Check
   const wontFeatures = extractWontFeatures(input.answers);
   for (const wontFeature of wontFeatures) {
-    for (const milestone of input.executionPlan.milestones) {
-      for (const task of milestone.tasks) {
-        const isLeaked = task.scopeMapped.some((s) => isMatch(wontFeature, s));
-        if (isLeaked) {
-          issues.push({
-            id: 'scope-leak',
-            severity: 'error',
-            message: `Tính năng Won't-have "${wontFeature}" bị đưa vào thực thi trong task "${task.title}".`,
-            remediation: `Loại bỏ tính năng "${wontFeature}" khỏi phạm vi MVP của task "${task.title}".`,
-          });
-        }
+    for (const task of Object.values(plan.tasks)) {
+      const isLeaked =
+        isMatch(wontFeature, task.intent || '') ||
+        (task.allowed_paths || []).some((p) => isMatch(wontFeature, p));
+      if (isLeaked) {
+        issues.push({
+          id: 'scope-leak',
+          severity: 'error',
+          message: `Tính năng Won't-have "${wontFeature}" bị đưa vào thực thi trong task "${task.id}".`,
+          remediation: `Loại bỏ tính năng "${wontFeature}" khỏi phạm vi MVP của task "${task.id}".`,
+        });
+      }
+    }
+
+    for (const link of plan.trace_links) {
+      if (isMatch(wontFeature, link.must_id)) {
+        issues.push({
+          id: 'scope-leak',
+          severity: 'error',
+          message: `Tính năng Won't-have "${wontFeature}" bị đưa vào trace link.`,
+          remediation: `Loại bỏ trace link liên kết tới tính năng Won't-have "${wontFeature}".`,
+        });
       }
     }
   }
 
-  // 5. Risk & Spike Check ('risk-unresolved')
-  const hasSpikeTask = input.executionPlan.milestones.some((m) =>
-    m.tasks.some((t) => /spike|feasibility|khảo sát|nghiên cứu|thử nghiệm/i.test(t.title))
-  );
-
+  // 7. Risk & Spike Check
   const riskKeywords = ['rủi ro', 'chưa rõ', 'phức tạp', 'platform', 'dependency', 'limit', 'giới hạn'];
   const hasRiskKeywordInAnswers = Object.values(input.answers).some((ans) =>
     riskKeywords.some((kw) => ans.toLowerCase().includes(kw))
   );
 
-  if (hasRiskKeywordInAnswers && !hasSpikeTask) {
+  const hasUnresolvedRisks = plan.risks.some(
+    (r) => r.status === 'assumption' || r.status === 'spike-required'
+  );
+
+  const hasSpikeTask = Object.values(plan.tasks).some(
+    (t) => t.type === 'spike' || /spike|feasibility|khảo sát|nghiên cứu|thử nghiệm/i.test(t.id) || /spike|feasibility|khảo sát|nghiên cứu|thử nghiệm/i.test(t.intent || '')
+  );
+
+  if ((hasRiskKeywordInAnswers || hasUnresolvedRisks) && !hasSpikeTask) {
     issues.push({
       id: 'risk-unresolved',
       severity: 'warning',
-      message: 'Phát hiện từ khóa rủi ro trong câu trả lời nhưng chưa có task Feasibility Spike nào trong Execution Plan.',
+      message: 'Phát hiện từ khóa rủi ro hoặc rủi ro chưa xác nhận trong câu trả lời nhưng chưa có task Feasibility Spike nào trong Execution Plan.',
       remediation: 'Hãy bổ sung một task dạng "Feasibility Spike" ở milestone đầu tiên để khảo sát các rủi ro kỹ thuật.',
     });
   }
 
-  // 6. Phantom Command Check ('phantom-command')
+  // 8. Graph Validation
+  // Validate duplicate milestone/task IDs
+  const milestoneIds = new Set<string>();
+  for (const m of plan.milestones) {
+    if (milestoneIds.has(m.id)) {
+      issues.push({
+        id: 'phantom-command',
+        severity: 'error',
+        message: `Milestone ID trùng lặp: ${m.id}`,
+        remediation: `Đảm bảo mỗi milestone có ID duy nhất.`,
+      });
+    }
+    milestoneIds.add(m.id);
+  }
+
+  // Validate tasks belonging to milestones
+  const tasksInMilestones = new Set<string>();
+  for (const m of plan.milestones) {
+    for (const tid of m.tasks) {
+      if (tasksInMilestones.has(tid)) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Task ID "${tid}" thuộc nhiều hơn một milestone.`,
+          remediation: `Đảm bảo mỗi task chỉ thuộc đúng một milestone.`,
+        });
+      }
+      tasksInMilestones.add(tid);
+
+      if (!plan.tasks[tid]) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Milestone "${m.id}" tham chiếu task "${tid}" không tồn tại.`,
+          remediation: `Khai báo task card cho "${tid}" trong execution-plan.json.`,
+        });
+      }
+    }
+  }
+
+  // Validate all defined tasks are in milestones
+  for (const tid of Object.keys(plan.tasks)) {
+    if (!tasksInMilestones.has(tid)) {
+      issues.push({
+        id: 'phantom-command',
+        severity: 'error',
+        message: `Task "${tid}" được định nghĩa nhưng không được đưa vào bất kỳ milestone nào.`,
+        remediation: `Hãy đưa task "${tid}" vào một milestone cụ thể.`,
+      });
+    }
+  }
+
+  // Validate precondition/command/path không rỗng
+  for (const task of Object.values(plan.tasks)) {
+    if (task.type === 'implementation' || task.type === 'scaffold') {
+      if (!task.allowed_paths || task.allowed_paths.length === 0) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Task "${task.id}" thuộc loại scaffold/implementation nhưng allowed_paths rỗng.`,
+          remediation: `Nhập ít nhất một đường dẫn tệp được phép sửa đổi cho task "${task.id}".`,
+        });
+      }
+    }
+    if (!task.commands || task.commands.length === 0) {
+      issues.push({
+        id: 'phantom-command',
+        severity: 'error',
+        message: `Task "${task.id}" không có lệnh kiểm chứng (commands rỗng).`,
+        remediation: `Nhập lệnh kiểm chứng cụ thể cho task "${task.id}".`,
+      });
+    }
+  }
+
+  // Detect cycle & missing dependency in task dependency graph
+  const adj: Record<string, string[]> = {};
+  for (const [tid, task] of Object.entries(plan.tasks)) {
+    const deps = task.depends_on || task.preconditions || [];
+    adj[tid] = [];
+    for (const dep of deps) {
+      if (!plan.tasks[dep]) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Task "${tid}" phụ thuộc vào task "${dep}" không tồn tại.`,
+          remediation: `Đảm bảo task phụ thuộc "${dep}" tồn tại trong kế hoạch.`,
+        });
+      } else {
+        adj[tid].push(dep);
+      }
+    }
+  }
+
+  // Cycle detection via DFS
+  const visited: Record<string, number> = {}; // 0 = unvisited, 1 = visiting, 2 = visited
+  let hasCycle = false;
+  const cycleTasks: string[] = [];
+
+  function dfs(u: string): boolean {
+    visited[u] = 1;
+    for (const v of adj[u] || []) {
+      if (visited[v] === 1) {
+        hasCycle = true;
+        cycleTasks.push(u, v);
+        return true;
+      }
+      if (!visited[v]) {
+        if (dfs(v)) return true;
+      }
+    }
+    visited[u] = 2;
+    return false;
+  }
+
+  for (const tid of Object.keys(plan.tasks)) {
+    if (!visited[tid]) {
+      if (dfs(tid)) break;
+    }
+  }
+
+  if (hasCycle) {
+    issues.push({
+      id: 'phantom-command',
+      severity: 'error',
+      message: `Phát hiện chu trình phụ thuộc vòng (dependency cycle) trong các task: ${cycleTasks.join(' -> ')}`,
+      remediation: 'Loại bỏ phụ thuộc vòng trong depends_on/preconditions của các task.',
+    });
+  }
+
+  // Phantom files and commands validation
   const allowedPathPrefixes = [
     'src/',
     'test/',
@@ -278,40 +493,35 @@ export function validatePlan(input: ValidatorInput): PlanValidationResult {
     'README.md',
     'Design/',
   ];
-
   const allowedCommands = ['npm', 'git', 'vitest', 'node', 'npx', 'tsc', 'eslint'];
 
-  for (const milestone of input.executionPlan.milestones) {
-    for (const task of milestone.tasks) {
-      // Validate paths
-      for (const file of task.filesToModify) {
-        const isValidPrefix = allowedPathPrefixes.some((pref) => file.startsWith(pref));
-        if (!isValidPrefix) {
-          issues.push({
-            id: 'phantom-command',
-            severity: 'error',
-            message: `Đường dẫn file cần sửa "${file}" trong task "${task.title}" không khớp với các thư mục dự án tiêu chuẩn (src/, test/, etc.).`,
-            remediation: `Đảm bảo đường dẫn file chỉ sửa trong các thư mục src/, test/, Design/ hoặc cấu hình chuẩn.`,
-          });
-        }
+  for (const task of Object.values(plan.tasks)) {
+    for (const file of task.allowed_paths || []) {
+      const isValidPrefix = allowedPathPrefixes.some((pref) => file.startsWith(pref) || file === pref || file.startsWith('**/'));
+      if (!isValidPrefix) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Đường dẫn file cần sửa "${file}" trong task "${task.id}" không khớp với các thư mục dự án tiêu chuẩn (src/, test/, etc.).`,
+          remediation: `Đảm bảo đường dẫn file chỉ sửa trong các thư mục src/, test/, Design/ hoặc cấu hình chuẩn.`,
+        });
       }
+    }
 
-      // Validate commands
-      for (const cmd of task.verificationCommands) {
-        const baseCmd = cmd.trim().split(/\s+/)[0];
-        if (
-          baseCmd &&
-          !allowedCommands.includes(baseCmd) &&
-          !baseCmd.startsWith('./') &&
-          !baseCmd.startsWith('.\\')
-        ) {
-          issues.push({
-            id: 'phantom-command',
-            severity: 'error',
-            message: `Lệnh kiểm chứng "${cmd}" trong task "${task.title}" sử dụng lệnh lạ "${baseCmd}" không nằm trong danh sách lệnh được hỗ trợ.`,
-            remediation: `Sử dụng các lệnh chuẩn như npm, npx, tsc, git hoặc các file script nội bộ bắt đầu bằng ./`,
-          });
-        }
+    for (const cmd of task.commands || []) {
+      const baseCmd = cmd.trim().split(/\s+/)[0];
+      if (
+        baseCmd &&
+        !allowedCommands.includes(baseCmd) &&
+        !baseCmd.startsWith('./') &&
+        !baseCmd.startsWith('.\\')
+      ) {
+        issues.push({
+          id: 'phantom-command',
+          severity: 'error',
+          message: `Lệnh kiểm chứng "${cmd}" trong task "${task.id}" sử dụng lệnh lạ "${baseCmd}" không nằm trong danh sách lệnh được hỗ trợ.`,
+          remediation: `Sử dụng các lệnh chuẩn như npm, npx, tsc, git hoặc các file script nội bộ bắt đầu bằng ./`,
+        });
       }
     }
   }

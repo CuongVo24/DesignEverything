@@ -24,11 +24,11 @@
 
 ## 3. Checklist
 
-- [ ] Chỉ còn một schema runtime kế hoạch được CLI, validator và state import; legacy schema bị xoá hoặc internal-only, không nhận tại public boundary.
-- [ ] 09-execution-plan và execution-plan.json thiếu, sai digest hoặc README không liệt kê đều fail có `source`/remediation cụ thể.
-- [ ] Mutation Must không có flow, flow không có task, task không tồn tại, dependency cycle và risk không có spike đều fail bằng error code ổn định.
-- [ ] Một plan V3 hợp lệ đi qua đúng CLI `validate` không có conversion/fuzzy mapping theo `intent.includes`.
-- [ ] Validator unit test dùng fixture emitted thật, không chỉ hand-written legacy payload.
+- [x] Chỉ còn một schema runtime kế hoạch được CLI, validator và state import; legacy schema bị xoá hoặc internal-only, không nhận tại public boundary.
+- [x] 09-execution-plan và execution-plan.json thiếu, sai digest hoặc README không liệt kê đều fail có `source`/remediation cụ thể.
+- [x] Mutation Must không có flow, flow không có task, task không tồn tại, dependency cycle và risk không có spike đều fail bằng error code ổn định.
+- [x] Một plan V3 hợp lệ đi qua đúng CLI `validate` không có conversion/fuzzy mapping theo `intent.includes`.
+- [x] Validator unit test dùng fixture emitted thật, không chỉ hand-written legacy payload.
 
 ## 4. Interfaces / Files expected to change
 
@@ -56,4 +56,4 @@
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE

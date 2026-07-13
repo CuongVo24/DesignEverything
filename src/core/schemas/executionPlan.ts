@@ -26,12 +26,19 @@ export const planRiskSchema = z.object({
 });
 export type PlanRisk = z.infer<typeof planRiskSchema>;
 
+export const traceLinkSchema = z.object({
+  must_id: z.string().min(1),
+  flow_id: z.string().min(1),
+  task_ids: z.array(z.string()).default([]),
+});
+export type TraceLink = z.infer<typeof traceLinkSchema>;
+
 export const executionPlanSchemaV3 = z.object({
   metadata: z.object({
     version: z.string(),
     updated_at: z.string().datetime(),
   }),
-  trace_links: z.record(z.string(), z.string()).default({}),
+  trace_links: z.array(traceLinkSchema).default([]),
   risks: z.array(planRiskSchema).default([]),
   milestones: z.array(z.object({
     id: z.string().min(1),

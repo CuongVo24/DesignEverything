@@ -57,3 +57,6 @@ Nguyên tắc xác thực bằng chứng (evidence-driven resume):
 - **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc artifact tương ứng.
 - **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.
 <!-- anchor: id=09-execution-plan/resume-rules  src=apps/mobile/src/features/execution/plan.ts::resumeRules  rev=  status=planned -->
+
+
+<!-- plan-digest: 3d7c6ddbea34c1c5fd22a9143aee3103b3d80f568930f8d9d287ad3836e3a08e -->
