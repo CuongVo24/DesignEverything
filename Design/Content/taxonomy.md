@@ -62,7 +62,7 @@ docs/
 ## Mở rộng tương lai (KHÔNG trong MVP)
 Bản "giống công ty": ADR, test plan, ContractForAI (đã có mỏ neo truy vết sẵn → đầu đề-pa cho maintain).
 
-## V3 Execution Expansion — target 4.0.0
+## V3 Execution Expansion (Hoàn thành mốc 4.0.0)
 
 Taxonomy đã tích hợp thêm 09-execution-plan.md để quản lý rủi ro và các bước khảo sát tính khả thi (Feasibility Spikes) trước khi tiến hành thực thi code:
 
@@ -71,4 +71,4 @@ Taxonomy đã tích hợp thêm 09-execution-plan.md để quản lý rủi ro v
       execution-plan.json ← task graph máy đọc
       execution-state.json ← active task, evidence, resume
 
-09 không phải ADR/test-plan enterprise: nó chỉ chuyển một MVP thành task nhỏ có precondition, allowed paths, expected result và evidence. Đổi này là MAJOR 4.0.0 theo D35; template, emitter và golden hiện hành chưa được phép giả vờ đã hỗ trợ nó. Chi tiết: [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md).
+09 không phải ADR/test-plan enterprise: nó chỉ chuyển một MVP thành task nhỏ có precondition, allowed paths, expected result và evidence. Đổi này là MAJOR 4.0.0 theo D35; hệ thống hiện hành đã hỗ trợ và kiểm thử đầy đủ. Chi tiết: [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md).

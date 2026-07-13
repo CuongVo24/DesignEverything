@@ -9,6 +9,7 @@ import {
   startTask,
   recordEvidence,
 } from '../../core/advanceExecutionState.js';
+import { ExecutionState } from '../../core/schemas/executionState.js';
 
 describe('B9a Build Workflow and PreToolUse path gating', () => {
   let testWorkspaceRoot: string;
@@ -182,7 +183,7 @@ gates:
 
     // 2. Start preflight task T0-preflight (Preconditions met)
     const plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
-    let nextState: any = { ...state, phase: 'ready-to-execute' }; // Simulate transition to ready-to-execute after validation
+    let nextState: ExecutionState = { ...state, phase: 'ready-to-execute' }; // Simulate transition to ready-to-execute after validation
     nextState = startTask(nextState, 'M0', 'T0-preflight', plan);
     expect(nextState.phase).toBe('executing');
     expect(nextState.active_task).toBe('T0-preflight');

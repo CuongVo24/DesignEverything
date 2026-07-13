@@ -53,6 +53,14 @@ ${gatesDescription.trim()}
 - Mỗi mục tài liệu phải được đính kèm mỏ neo ẩn ở dạng comment với trạng thái \`status=planned\` và \`rev\` để trống theo chuẩn mỏ neo truy vết.
 - Không tự tiện tạo thêm file tài liệu mới nằm ngoài cấu trúc taxonomy trừ khi lõi hệ thống đã được cập nhật chính thức.`;
 
+  // 6. Section 6: Quy trình thực thi V3 (soft enforcement)
+  const section6 = `## 6. Quy trình thực thi V3 (Soft Enforcement)
+Quy trình thực thi và ghi nhận bằng chứng ở các harness rules-only:
+1. **Xác thực kế hoạch (Validate)**: Phải chạy validator thông qua tài liệu \`09-execution-plan.md\` và \`.design-everything/execution-plan.json\` trước khi code.
+2. **Kích hoạt task (Start)**: Chỉ làm việc trên duy nhất một active task đang mở. Tự giới hạn phạm vi chỉnh sửa trong các tệp tin thuộc \`allowed_paths\` của task đó.
+3. **Ghi nhận bằng chứng (Evidence & Repair)**: Sau khi chạy các lệnh kiểm chứng, ghi nhận kết quả (exit code, output) vào phần bằng chứng. Nếu lỗi xảy ra, giữ trạng thái ở chế độ sửa chữa (\`repairing\`) cho tới khi test pass hoàn toàn.
+4. **Tuyên bố giới hạn (Self-reported Limitation)**: Chế độ Rules-Only là cơ chế ép buộc mềm. Agent và lập trình viên phải chủ động thực thi đúng kỷ luật và tự ghi nhận bằng chứng trung thực.`;
+
   // Assemble all sections
   return `# AGENTS
 
@@ -65,5 +73,7 @@ ${section3}
 ${section4}
 
 ${section5}
+
+${section6}
 `;
 }

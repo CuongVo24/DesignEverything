@@ -22,7 +22,7 @@ Không có nguồn từ vựng chuẩn → mỗi doc viết mỗi kiểu, adapte
 | **GATE** | Chặn sinh code khi doc chưa xong (hook cứng / rules mềm). |
 | **EMIT** | Cho output rơi đúng cây taxonomy. |
 
-| **ORCHESTRATE** | Target 4.0.0: adapter gọi core workflow cho active task, verify/evidence/repair; không tự tạo task hay business logic. |
+| **ORCHESTRATE** | Mốc 4.0.0: adapter gọi core workflow cho active task, verify/evidence/repair; không tự tạo task hay business logic. |
 
 ## Hai mức ép
 
@@ -54,7 +54,7 @@ Không có nguồn từ vựng chuẩn → mỗi doc viết mỗi kiểu, adapte
 | **Phản biện (critic)** | Cơ chế đặt thử thách (challenge) và bắt xác nhận (ack_prompt) tại các câu hỏi quan trọng để ngăn sai lầm thiết kế. |
 | **Hiệu chỉnh (calibrate)** | Chế độ phỏng vấn (`deep` hoặc `fast`) thiết lập ở câu CAL0 để tinh chỉnh mức độ kỹ lưỡng của kịch bản và phản biện. |
 
-## Execution có kiểm chứng — target 4.0.0
+## Execution có kiểm chứng (Mốc 4.0.0)
 
 | Thuật ngữ | Nghĩa |
 |---|---|
@@ -62,7 +62,7 @@ Không có nguồn từ vựng chuẩn → mỗi doc viết mỗi kiểu, adapte
 | **Feasibility spike** | Task kiểm chứng giả định rủi ro (dependency, platform, chi phí, quyền, điều khoản) với exit criterion trước implementation. |
 | **Evidence** | Bản ghi append-only của command, output/exit code, artifact và observed result cho một task; ở rules-only có thể là self-reported. |
 | **Active task** | Duy nhất task được phép viết/verify trong execution state hiện tại. |
-| **ORCHESTRATE** | Target 4.0.0: adapter gọi core workflow cho active task, verify/evidence/repair; không tự tạo task hay business logic. |
+| **ORCHESTRATE** | Mốc 4.0.0: adapter gọi core workflow cho active task, verify/evidence/repair; không tự tạo task hay business logic. |
 
 ## Truy vết & Maintain (tầm nhìn xa)
 

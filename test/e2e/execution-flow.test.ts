@@ -160,7 +160,7 @@ gates:
   });
 
   test('should execute full developer workflow (Validate -> Start -> Deny/Allow Path -> Record Evidence Fail -> Repair -> Record Evidence Pass)', () => {
-    let state: any = initExecutionState();
+    let state = initExecutionState();
     state.phase = 'ready-to-execute';
     state.completed_tasks = ['T0-preflight'];
     saveExecutionState(execStatePath, state);

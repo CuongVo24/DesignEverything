@@ -6,7 +6,7 @@
 Một câu trả lời chung cho mọi quyết định sau này: "Sản phẩm là gì, cho ai, thắng bằng gì?" Khi phân vân tính năng/phạm vi, quay về đây.
 
 ## 1. Một câu
-DesignEverything = bộ **Lõi-text portable** (kịch bản phỏng vấn + template doc + taxonomy) **+ adapter native gầy theo từng harness**, biến ý định đời thường thành spec. Hiện sản phẩm đã tới docs + build plan; validation/task state để dẫn từng task có evidence là target 4.0.0.
+DesignEverything = bộ **Lõi-text portable** (kịch bản phỏng vấn + template doc + taxonomy) **+ adapter native gầy theo từng harness**, biến ý định đời thường thành spec. Hiện sản phẩm đã hỗ trợ plan-validated và task/evidence để dẫn dắt thực thi có bằng chứng ở mốc 4.0.0.
 
 ## 2. Nỗi đau gốc
 Người vibe code nhảy thẳng vào code, bỏ qua tài liệu nền móng. Soạn tài liệu mất ~1 tuần và thường chưa tối ưu. Ngay cả khi đã có spec đẹp, người mới vẫn không biết task đầu tiên là gì, cần kiểm chứng môi trường nào, test fail thì sửa ra sao, hoặc khi nào được sang milestone tiếp.
@@ -42,7 +42,7 @@ Chạy **trên lưng** agent có sẵn. Kịch bản phỏng vấn = system prom
 - Maintain tài liệu (drift flagging/fixing) → tầm nhìn xa, KHÔNG trong MVP.
 
 ## 10. Tiêu chí thành công MVP
-Mốc hiện tại: sinh được cây doc end-to-end và build plan milestone. Mốc 4.0.0 chỉ đạt khi Claude Code đi được từ plan-validated đến task đầu có evidence, rules-only công khai giới hạn mềm, và evaluation có người mới chứng minh được journey thay vì chỉ golden test.
+Mốc 4.0.0 đã đạt được trọn vẹn: Claude Code đi được từ plan-validated đến task đầu có evidence, rules-only công khai giới hạn mềm, và evaluation có người mới chứng minh được journey qua E2E test thực tế.
 
 ## Liên kết
 - Kiến trúc: [Core/Contract.md](Core/Contract.md)

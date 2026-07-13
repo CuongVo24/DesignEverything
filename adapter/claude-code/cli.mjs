@@ -326,7 +326,7 @@ switch (command) {
     if (existsSync(execStatePath)) {
       try {
         execState = core.loadExecutionState(execStatePath);
-      } catch (e) {
+      } catch {
         execState = core.initExecutionState();
       }
     } else {

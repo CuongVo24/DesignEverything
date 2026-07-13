@@ -80,7 +80,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
       exit_code: 1,
       expected_result: 'pass',
       observed_result: 'failed 1 test',
-      timestamp: new Date().toISOString(),
+      timestamp: '2026-07-13T10:00:00.000Z',
       artifact_paths: [],
       actor: 'vitest',
     };
@@ -106,7 +106,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
       exit_code: 0,
       expected_result: 'pass',
       observed_result: 'all tests passed',
-      timestamp: new Date().toISOString(),
+      timestamp: '2026-07-13T10:00:01.000Z',
       artifact_paths: [],
       actor: 'vitest',
     };
@@ -127,7 +127,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
       exit_code: 0,
       expected_result: 'pass',
       observed_result: 'all tests passed',
-      timestamp: new Date().toISOString(),
+      timestamp: '2026-07-13T10:00:02.000Z',
       artifact_paths: [],
       actor: 'vitest',
     };

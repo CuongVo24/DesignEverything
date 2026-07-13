@@ -30,7 +30,7 @@ Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md`
 - **Phase 1 — v1.0.0 (Month 1 & Month 2)**: đã hoàn thành triển khai code lõi, kịch bản web/mobile và bộ sinh rules.
 - **Phase 2 — v2.0.0 (Đa hình-hài & Phản biện)**: đã hoàn tất triển khai (B5-B6) — chốt mốc v2.0.0.
 - **Phase 3–4 — 16 tuần triển khai tiếp theo**: tiếp tục với dogfooding và phân phối.
-- **Phase 5 — V3 Execution Expansion (target 4.0.0):** sau 3.0.0, chuyển từ milestone prose sang plan validation, task/evidence và evaluation journey; xem [V3-ExecutionExpansionPlan.md](V3-ExecutionExpansionPlan.md). Chưa bắt đầu implementation.
+- **Phase 5 — V3 Execution Expansion (mốc 4.0.0):** sau 3.0.0, chuyển từ milestone prose sang plan validation, task/evidence và evaluation journey; xem [V3-ExecutionExpansionPlan.md](V3-ExecutionExpansionPlan.md). **ĐÃ HOÀN THÀNH (v4.0.0)**.
 
 ## Điền nội dung
 [ContentFillPlan.md](ContentFillPlan.md) là kế hoạch điền toàn bộ nội dung `Design/` theo batch: B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example mobile → B8 adapter → B9 QA. Ở trạng thái hiện tại, phase này được coi là completed và là tiền đề cho toàn bộ kế hoạch 16 tuần bên dưới.

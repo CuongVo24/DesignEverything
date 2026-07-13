@@ -315,7 +315,7 @@ export function emitTree(
 
   filledSlots['acceptance_evidence_rules'] =
     answers['acceptance_evidence_rules'] ||
-    '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc artifact tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại \`execution-state.json\` và tiếp tục từ task chưa hoàn thành gần nhất.';
+    '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc artifact tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.';
 
   // Compute planned anchor source/symbol placeholders based on branch
   const srcPrefix = options?.srcPrefix ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
