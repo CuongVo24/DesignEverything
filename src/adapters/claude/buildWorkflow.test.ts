@@ -8,7 +8,10 @@ import {
   saveExecutionState,
   startTask,
   recordEvidence,
-} from '../../core/advanceExecutionState.js';
+  calculatePlanDigest,
+  calculateDocsDigest,
+  loadEmittedDocs,
+} from '../../core/index.js';
 import { ExecutionState } from '../../core/schemas/executionState.js';
 
 describe('B9a Build Workflow and PreToolUse path gating', () => {
@@ -144,7 +147,7 @@ gates:
           ],
           expected_result: 'build success',
           evidence_required: ['build-log.txt'],
-          failure_policy: 'abort',
+          failure_policy: 'debug',
         },
         'T2-implementation': {
           id: 'T2-implementation',
@@ -168,6 +171,17 @@ gates:
       },
     };
     writeFileSync(execPlanPath, JSON.stringify(planJson, null, 2), 'utf8');
+
+    const planDigest = calculatePlanDigest(planJson);
+    writeFileSync(
+      join(testWorkspaceRoot, 'docs/09-execution-plan.md'),
+      `# Plan\n\n<!-- plan-digest: ${planDigest} -->`
+    );
+
+    writeFileSync(
+      join(testWorkspaceRoot, 'docs/README.md'),
+      `- 09-execution-plan.md\n- README.md\n`
+    );
   });
 
   afterAll(() => {
@@ -201,7 +215,16 @@ gates:
 
     // 2. Start preflight task T0-preflight (Preconditions met)
     const plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
-    let nextState: ExecutionState = { ...state, phase: 'ready-to-execute' }; // Simulate transition to ready-to-execute after validation
+    const planDigest = calculatePlanDigest(plan);
+    const emittedDocs = loadEmittedDocs(testWorkspaceRoot, execPlanPath);
+    const docsDigest = calculateDocsDigest(emittedDocs);
+    let nextState: ExecutionState = {
+      ...state,
+      phase: 'ready-to-execute',
+      validated_plan_digest: planDigest,
+      validated_docs_digest: docsDigest,
+      validation_result_digest: '',
+    };
     nextState = startTask(nextState, 'M0', 'T0-preflight', plan);
     expect(nextState.phase).toBe('executing');
     expect(nextState.active_task).toBe('T0-preflight');

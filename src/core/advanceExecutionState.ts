@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import { dirname } from 'path';
 import {
   ExecutionState,
@@ -16,6 +16,11 @@ export function initExecutionState(): ExecutionState {
     completed_tasks: [],
     evidence: [],
     block_reason: null,
+    validated_plan_digest: '',
+    validated_docs_digest: '',
+    validation_result_digest: '',
+    plan_revision: 1,
+    amendment_history: [],
     updated_at: new Date().toISOString(),
   };
 }
@@ -25,7 +30,12 @@ export function loadExecutionState(path: string): ExecutionState {
     throw new Error(`Execution state file does not exist at ${path}`);
   }
   const content = readFileSync(path, 'utf8');
-  const parsed = JSON.parse(content);
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (err: any) {
+    throw new Error(`Execution state is malformed JSON: ${err.message}`);
+  }
   const result = executionStateSchema.safeParse(parsed);
   if (!result.success) {
     throw new Error(`Invalid execution state schema: ${JSON.stringify(result.error.format())}`);
@@ -42,12 +52,19 @@ export function saveExecutionState(path: string, state: ExecutionState): void {
   if (!result.success) {
     throw new Error(`Cannot save invalid execution state: ${JSON.stringify(result.error.format())}`);
   }
-  writeFileSync(path, JSON.stringify(state, null, 2), 'utf8');
+  const tempPath = `${path}.tmp`;
+  writeFileSync(tempPath, JSON.stringify(state, null, 2), 'utf8');
+  renameSync(tempPath, path);
 }
 
 export function transitionToReadyToExecute(
   state: ExecutionState,
-  validationPass: boolean
+  validationPass: boolean,
+  digests?: {
+    plan_digest: string;
+    docs_digest: string;
+    validation_digest: string;
+  }
 ): ExecutionState {
   if (state.phase !== 'plan-validating') {
     throw new Error(`Cannot transition to ready-to-execute from phase: ${state.phase}`);
@@ -64,6 +81,9 @@ export function transitionToReadyToExecute(
     ...state,
     phase: 'ready-to-execute',
     block_reason: null,
+    validated_plan_digest: digests?.plan_digest ?? '',
+    validated_docs_digest: digests?.docs_digest ?? '',
+    validation_result_digest: digests?.validation_digest ?? '',
     updated_at: new Date().toISOString(),
   };
 }
@@ -74,6 +94,12 @@ export function startTask(
   taskId: string,
   plan: any
 ): ExecutionState {
+  if (state.active_task !== null && state.active_task !== taskId) {
+    throw new Error(`Cannot start task ${taskId} because task ${state.active_task} is currently active.`);
+  }
+  if (state.phase === 'repairing' && state.active_task !== taskId) {
+    throw new Error(`Cannot start task ${taskId} while repairing task ${state.active_task}.`);
+  }
   if (state.phase !== 'ready-to-execute' && state.phase !== 'repairing') {
     throw new Error(`Cannot start task in phase: ${state.phase}`);
   }
@@ -232,13 +258,38 @@ export function recordEvidence(
       };
     }
   } else {
-    // Verification failed -> transition to repairing
-    return {
-      ...state,
-      phase: 'repairing',
-      evidence: updatedEvidence,
-      block_reason: `Task verification command failed with exit code ${record.exit_code}.`,
-      updated_at: new Date().toISOString(),
-    };
+    // Verification failed -> check failure_policy
+    let activeTaskCard: any = null;
+    const isV3 = 'tasks' in plan && plan.tasks && typeof plan.tasks === 'object' && !Array.isArray(plan.tasks);
+    if (isV3) {
+      activeTaskCard = plan.tasks[state.active_task!];
+    } else {
+      for (const m of plan.milestones) {
+        const t = m.tasks.find((task: any) => task.id === state.active_task);
+        if (t) {
+          activeTaskCard = t;
+          break;
+        }
+      }
+    }
+
+    const failurePolicy = activeTaskCard?.failure_policy || 'abort';
+    if (failurePolicy === 'abort') {
+      return {
+        ...state,
+        phase: 'blocked',
+        evidence: updatedEvidence,
+        block_reason: `Task verification failed under abort policy. Command failed with exit code ${record.exit_code}.`,
+        updated_at: new Date().toISOString(),
+      };
+    } else {
+      return {
+        ...state,
+        phase: 'repairing',
+        evidence: updatedEvidence,
+        block_reason: `Task verification command failed with exit code ${record.exit_code}.`,
+        updated_at: new Date().toISOString(),
+      };
+    }
   }
 }

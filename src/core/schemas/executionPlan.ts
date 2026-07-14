@@ -14,8 +14,21 @@ export const verificationCommandSchema = z.object({
   argv: z.array(z.string()).default([]),
   cwd: z.string().nullable().optional(),
   expected: expectedResultSchema,
+  requires_user_confirmation: z.boolean().optional(),
 });
 export type VerificationCommand = z.infer<typeof verificationCommandSchema>;
+
+export const capabilitySourceSchema = z.enum(['existing-manifest', 'installed-runtime', 'user-confirmed']);
+export type CapabilitySource = z.infer<typeof capabilitySourceSchema>;
+
+export const capabilityEvidenceSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  source: capabilitySourceSchema,
+  checked_at: z.string().datetime(),
+  metadata: z.record(z.string(), z.string()).optional(),
+});
+export type CapabilityEvidence = z.infer<typeof capabilityEvidenceSchema>;
 
 export const taskCardSchema = z.object({
   id: z.string().min(1),
@@ -29,6 +42,7 @@ export const taskCardSchema = z.object({
   expected_result: z.string().min(1),
   evidence_required: z.array(z.string()).default([]),
   failure_policy: z.string().min(1),
+  requires_capability: z.string().nullable().optional(),
 });
 export type TaskCard = z.infer<typeof taskCardSchema>;
 
@@ -60,5 +74,7 @@ export const executionPlanSchemaV3 = z.object({
     tasks: z.array(z.string()).default([]), // List of task IDs in this milestone
   })).default([]),
   tasks: z.record(z.string(), taskCardSchema).default({}), // Map of task ID to TaskCard
+  capabilities_evidence: z.array(capabilityEvidenceSchema).default([]),
+  discovery_status: z.enum(['blocked', 'pass']).default('pass'),
 });
 export type ExecutionPlanV3 = z.infer<typeof executionPlanSchemaV3>;

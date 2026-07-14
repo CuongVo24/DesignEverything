@@ -7,56 +7,69 @@
 
 ## 1. Môi trường chạy thử đầu tiên (First Supported Environment)
 Thiết lập môi trường phát triển cục bộ và thiết bị thử nghiệm thực tế đầu tiên. Không tự động mở rộng sang đa nền tảng hoặc môi trường production khi chưa có yêu cầu kiểm chứng cụ thể.
-- Trình duyệt: Google Chrome hoặc Firefox chạy trên môi trường phát triển cục bộ.
-- Môi trường: Node.js >= 18 cục bộ.
+- Target: node-cli
+- Runtime: node
+- Package Manager: npm
+- Language: typescript
+- Capabilities: node-npm-project, typescript-lang
 <!-- anchor: id=09-execution-plan/environment  src=src/features/execution/plan.ts::firstSupportedEnvironment  rev=  status=planned -->
 
 ## 2. Bảng theo dõi rủi ro (Risk Register)
 Mỗi rủi ro kỹ thuật, API bên ngoài, chi phí hoặc quyền hạn phải được định vị, phân loại trạng thái rõ ràng (confirmed / assumption / spike-required) kèm theo tiêu chuẩn thoát (exit criterion).
-| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |
+| Mã rủi ro | Tiêu đề | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |
 |---|---|---|---|
-| R1-tech-uncertainty | Trung bình | spike-required | Viết spike chạy độc lập chứng minh thư viện hoạt động ổn định. |
+| R1 | Environment runtime verification | confirmed | Verification commands for T0-discovery pass successfully. |
+| R2 | Scaffolding manifests correctly | confirmed | T1-scaffold verified and package manifest files exist. |
 <!-- anchor: id=09-execution-plan/risk-register  src=src/features/execution/plan.ts::riskRegister  rev=  status=planned -->
 
 ## 3. Khảo sát tính khả thi (Feasibility Spikes)
 Tất cả các rủi ro ở trạng thái `spike-required` hoặc `assumption` liên quan đến thư viện/API bên ngoài phải được lập kế hoạch khảo sát độc lập (Spike Task) trước khi tiến hành viết mã nguồn chính thức.
-- **Spike R1**: Thực hiện chạy thử nghiệm nhỏ độc lập để kiểm chứng cách hoạt động của thư viện/API được mô tả trong R1 trước khi viết code nghiệp vụ chính thức.
+- Không có spike yêu cầu khảo sát thêm.
 <!-- anchor: id=09-execution-plan/spikes  src=src/features/execution/plan.ts::feasibilitySpikes  rev=  status=planned -->
 
 ## 4. Danh sách nhiệm vụ chi tiết (Task Cards)
 Mỗi Task Card đại diện cho một phần việc nhỏ nhất, ghi rõ các file được phép chỉnh sửa (allowed paths), điều kiện tiên quyết (preconditions), lệnh kiểm chứng (verification commands) và kết quả kỳ vọng đạt được.
-### [Task T0-preflight] Môi trường phát triển
+### [Task T0-discovery] Verify Node.js and package manager runtime environment.
 - Loại: spike
-- Mục tiêu: Kiểm tra cấu hình Node.js/npm.
-- Preconditions: None.
-- Lệnh kiểm chứng: `node --version && npm --version`.
+- Milestone: M0-discovery
+- Preconditions: Không
+- Allowed paths: Không
+- Lệnh kiểm chứng:
+  * `node --version` (expected: exit-code-zero )
+  * `npm --version` (expected: exit-code-zero )
 
-### [Task T1-scaffold] Khởi tạo dự án
+### [Task T1-scaffold] Initialize project manifests and package scripts.
 - Loại: scaffold
-- Mục tiêu: Tạo khung xương dự án cơ bản.
-- Preconditions: T0-preflight.
-- Lệnh kiểm chứng: `npm run build`.
+- Milestone: M1-scaffold
+- Preconditions: T0-discovery verified
+- Allowed paths: package.json, tsconfig.json
+- Lệnh kiểm chứng:
+  * `npm init -y` (expected: file-exists package.json)
 
-### [Task T2-implementation] Code tính năng chính
+### [Task T2-skeleton] Create walking skeleton entrypoint file.
 - Loại: implementation
-- Mục tiêu: Viết mã nguồn chính cho các yêu cầu Must-have.
-- Preconditions: T1-scaffold.
-- Lệnh kiểm chứng: `npm test` hoặc lệnh kiểm thử tương đương.
+- Milestone: M2-skeleton
+- Preconditions: T1-scaffold completed
+- Allowed paths: src/index.ts, src/**
+- Lệnh kiểm chứng:
+  * `node -e process.exit(require('fs').existsSync('src/index.ts') ? 0 : 1)` (expected: exit-code-zero )
 
-### [Task T3-verification] Nghiệm thu cuối
+### [Task T3-verify] Run test suite to verify project code integrity.
 - Loại: verification
-- Mục tiêu: Chạy toàn bộ các bài test để kiểm chứng chất lượng code.
-- Preconditions: T2-implementation.
-- Lệnh kiểm chứng: `npm run test:e2e` hoặc lệnh tương đương.
+- Milestone: M3-verify
+- Preconditions: T2-skeleton verified
+- Allowed paths: Không
+- Lệnh kiểm chứng:
+  * `npm test` (expected: exit-code-zero )
 <!-- anchor: id=09-execution-plan/task-cards  src=src/features/execution/plan.ts::taskCards  rev=  status=planned -->
 
 ## 5. Quy tắc tiếp tục và nghiệm thu bằng chứng (Acceptance/Evidence & Resume Rules)
 Nguyên tắc xác thực bằng chứng (evidence-driven resume):
 - Chỉ được chuyển sang task tiếp theo khi lệnh kiểm chứng của task hiện tại chạy thành công và tạo ra bằng chứng (logs/artifacts) hợp lệ.
 - Khi gặp lỗi kiểm chứng, lập tức dừng lại, phân tích log lỗi, sửa mã nguồn cục bộ và chạy lại lệnh kiểm chứng, không được viết tiếp tính năng mới.
-- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc artifact tương ứng.
+- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc bằng chứng tương ứng.
 - **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.
 <!-- anchor: id=09-execution-plan/resume-rules  src=src/features/execution/plan.ts::resumeRules  rev=  status=planned -->
 
 
-<!-- plan-digest: f4e99a08058ad50ad9cc7050254330c93cf5f3ecbda0b46f58f4c73ce626c110 -->
+<!-- plan-digest: 644886fd6270188f29c3432854be1317ec2acefa04bcbeaba65a692135c6c2e5 -->

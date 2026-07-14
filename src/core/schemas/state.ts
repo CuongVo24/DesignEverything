@@ -5,7 +5,13 @@ import { fileURLToPath } from 'url';
 import YAML from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
+let shapesPath = join(process.cwd(), 'Design/Content/interview-script/shapes.yaml');
+if (!existsSync(shapesPath)) {
+  shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
+}
+if (!existsSync(shapesPath)) {
+  shapesPath = join(__dirname, '../../../../Design/Content/interview-script/shapes.yaml');
+}
 let validBranchIds = ['web', 'mobile', 'hybrid', 'cli'];
 if (existsSync(shapesPath)) {
   try {

@@ -59,9 +59,19 @@ describe('runTaskVerification core engine', () => {
         ],
         expected_result: 'pass',
         evidence_required: ['test.txt'],
-        failure_policy: 'abort',
+        failure_policy: 'debug',
+        requires_capability: 'node-npm-project',
       },
     },
+    capabilities_evidence: [
+      {
+        id: 'node-npm-project',
+        name: 'Node.js NPM Project Manifest',
+        source: 'existing-manifest',
+        checked_at: new Date().toISOString(),
+      }
+    ],
+    discovery_status: 'pass',
   };
 
   test('should pass verification and capture evidence correctly', async () => {

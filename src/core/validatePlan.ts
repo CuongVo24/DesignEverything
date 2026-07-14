@@ -346,10 +346,27 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
   if ((hasRiskKeywordInAnswers || hasUnresolvedRisks) && !hasSpikeTask) {
     issues.push({
       id: 'risk-unresolved',
-      severity: 'warning',
+      severity: 'error',
       message: 'Phát hiện từ khóa rủi ro hoặc rủi ro chưa xác nhận trong câu trả lời nhưng chưa có task Feasibility Spike nào trong Execution Plan.',
       remediation: 'Hãy bổ sung một task dạng "Feasibility Spike" ở milestone đầu tiên để khảo sát các rủi ro kỹ thuật.',
     });
+  }
+
+  // Enforce risk -> spike -> ordering: a spike must run BEFORE the work it
+  // de-risks, so a spike task may only depend on other spike tasks.
+  for (const task of Object.values(plan.tasks)) {
+    if (task.type !== 'spike') continue;
+    for (const dep of task.depends_on || []) {
+      const depTask = plan.tasks[dep];
+      if (depTask && depTask.type !== 'spike') {
+        issues.push({
+          id: 'risk-unresolved',
+          severity: 'error',
+          message: `Spike "${task.id}" phụ thuộc vào task không phải spike "${dep}"; spike phải được thực thi trước để gỡ rủi ro.`,
+          remediation: `Đặt spike "${task.id}" ở milestone đầu tiên và loại bỏ phụ thuộc vào task triển khai "${dep}".`,
+        });
+      }
+    }
   }
 
   // 8. Graph Validation
@@ -495,6 +512,19 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
   ];
   const allowedCommands = ['npm', 'git', 'vitest', 'node', 'npx', 'tsc', 'eslint'];
 
+  const hasPython = plan.capabilities_evidence?.some((c) => c.id === 'python-venv-project' || c.id === 'python-lang');
+  const hasVite = plan.capabilities_evidence?.some((c) => c.id === 'vite-bundler');
+  const hasNode = plan.capabilities_evidence?.some((c) => c.id === 'node-npm-project');
+
+  if (hasPython) {
+    allowedPathPrefixes.push('requirements.txt', 'pyproject.toml', 'poetry.lock', 'Pipfile', 'Pipfile.lock');
+    allowedCommands.push('python', 'pip', 'pytest', 'poetry');
+  }
+  if (hasVite || hasNode) {
+    allowedCommands.push('pnpm', 'yarn');
+    allowedPathPrefixes.push('index.html', 'public/');
+  }
+
   for (const task of Object.values(plan.tasks)) {
     for (const file of task.allowed_paths || []) {
       const isValidPrefix = allowedPathPrefixes.some((pref) => file.startsWith(pref) || file === pref || file.startsWith('**/'));
@@ -531,6 +561,106 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
           message: `Lệnh kiểm chứng "${cmd.id}" trong task "${task.id}" sử dụng lệnh lạ "${baseCmd}" không nằm trong danh sách lệnh được hỗ trợ.`,
           remediation: `Sử dụng các lệnh chuẩn như npm, npx, tsc, git hoặc các file script nội bộ bắt đầu bằng ./`,
         });
+      }
+    }
+  }
+
+  // 9. Capability Gating & Discovery Check
+  for (const task of Object.values(plan.tasks)) {
+    if (task.requires_capability) {
+      const hasCapability = plan.capabilities_evidence?.some((c) => c.id === task.requires_capability);
+      if (!hasCapability) {
+        issues.push({
+          id: 'phantom-capability',
+          severity: 'error',
+          message: `Nhiệm vụ "${task.id}" yêu cầu capability "${task.requires_capability}" nhưng capability này không tồn tại trong danh sách capabilities_evidence.`,
+          remediation: `Thêm capability evidence hợp lệ vào kế hoạch hoặc chạy discovery.`,
+        });
+      }
+    } else {
+      if (task.type === 'implementation') {
+        issues.push({
+          id: 'phantom-capability',
+          severity: 'error',
+          message: `Nhiệm vụ implementation "${task.id}" không được phép tồn tại khi không liên kết với capability nào.`,
+          remediation: `Chỉ định requires_capability hợp lệ cho nhiệm vụ implementation "${task.id}".`,
+        });
+      }
+      if (task.type !== 'spike') {
+        for (const path of task.allowed_paths) {
+          if (!path.startsWith('.design-everything/')) {
+            issues.push({
+              id: 'phantom-capability',
+              severity: 'error',
+              message: `Nhiệm vụ "${task.id}" yêu cầu allowed_path "${path}" bên ngoài thư mục .design-everything/ nhưng không có capability.`,
+              remediation: `Chỉ cho phép allowed_path trong .design-everything/ đối với nhiệm vụ không có capability.`,
+            });
+          }
+        }
+        for (const evidence of task.evidence_required) {
+          if (!evidence.startsWith('.design-everything/')) {
+            issues.push({
+              id: 'phantom-capability',
+              severity: 'error',
+              message: `Nhiệm vụ "${task.id}" yêu cầu evidence "${evidence}" bên ngoài thư mục .design-everything/ nhưng không có capability.`,
+              remediation: `Chỉ cho phép evidence trong .design-everything/ đối với nhiệm vụ không có capability.`,
+            });
+          }
+        }
+        for (const cmd of task.commands) {
+          const cmdStr = cmd.argv.join(' ');
+          if (
+            cmdStr.includes('npm') ||
+            cmdStr.includes('test') ||
+            cmdStr.includes('build') ||
+            cmdStr.includes('run') ||
+            cmdStr.includes('cargo') ||
+            cmdStr.includes('python')
+          ) {
+            issues.push({
+              id: 'phantom-capability',
+              severity: 'error',
+              message: `Nhiệm vụ "${task.id}" chạy lệnh thực thi "${cmdStr}" yêu cầu môi trường dự án nhưng không có capability.`,
+              remediation: `Loại bỏ các lệnh build/test runtime khỏi nhiệm vụ không có capability.`,
+            });
+          }
+        }
+      }
+    }
+
+    if (task.type === 'scaffold') {
+      if (task.requires_capability === 'node-npm-project') {
+        const hasPackageJson = task.allowed_paths.some((p) => p.includes('package.json'));
+        if (!hasPackageJson) {
+          issues.push({
+            id: 'missing-manifest-path',
+            severity: 'error',
+            message: `Nhiệm vụ scaffold "${task.id}" yêu cầu capability node-npm-project nhưng allowed_paths thiếu tệp cấu hình package.json.`,
+            remediation: `Thêm package.json vào allowed_paths của nhiệm vụ scaffold.`,
+          });
+        }
+      }
+      if (task.requires_capability === 'rust-cargo-project') {
+        const hasCargoToml = task.allowed_paths.some((p) => p.includes('Cargo.toml'));
+        if (!hasCargoToml) {
+          issues.push({
+            id: 'missing-manifest-path',
+            severity: 'error',
+            message: `Nhiệm vụ scaffold "${task.id}" yêu cầu capability rust-cargo-project nhưng allowed_paths thiếu tệp cấu hình Cargo.toml.`,
+            remediation: `Thêm Cargo.toml vào allowed_paths của nhiệm vụ scaffold.`,
+          });
+        }
+      }
+      if (task.requires_capability === 'python-pip-project') {
+        const hasReqTxt = task.allowed_paths.some((p) => p.includes('requirements.txt'));
+        if (!hasReqTxt) {
+          issues.push({
+            id: 'missing-manifest-path',
+            severity: 'error',
+            message: `Nhiệm vụ scaffold "${task.id}" yêu cầu capability python-pip-project nhưng allowed_paths thiếu tệp cấu hình requirements.txt.`,
+            remediation: `Thêm requirements.txt vào allowed_paths của nhiệm vụ scaffold.`,
+          });
+        }
       }
     }
   }

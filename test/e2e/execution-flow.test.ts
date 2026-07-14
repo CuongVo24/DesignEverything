@@ -3,14 +3,17 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
-import { validateExecutionPlan } from '../../src/core/validatePlan.js';
 import { onPreToolUse } from '../../src/adapters/claude/preToolUse.js';
 import {
   initExecutionState,
   saveExecutionState,
   startTask,
-} from '../../src/core/advanceExecutionState.js';
-import { runTaskVerification } from '../../src/core/runTaskVerification.js';
+  runTaskVerification,
+  calculatePlanDigest,
+  calculateDocsDigest,
+  validateExecutionPlan,
+  loadEmittedDocs,
+} from '../../src/core/index.js';
 
 describe('B10a Newbie Journey & Plan Validation Fixtures', () => {
   const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), '../fixtures/plan-validation');
@@ -75,7 +78,7 @@ describe('B10a Newbie Journey & Plan Validation Fixtures', () => {
     expect(result.issues.some((i) => i.id === 'scope-leak')).toBe(true);
   });
 
-  test('risk-unresolved fixture should trigger risk-unresolved warning', () => {
+  test('risk-unresolved fixture should block validation with a risk-unresolved error', () => {
     const input = JSON.parse(readFileSync(join(fixtureDir, 'risk-unresolved.json'), 'utf8'));
     const result = validateExecutionPlan({
       shape: input.shape,
@@ -83,8 +86,8 @@ describe('B10a Newbie Journey & Plan Validation Fixtures', () => {
       emitted_docs: input.emitted_docs,
       execution_plan: input.execution_plan,
     });
-    expect(result.pass).toBe(true);
-    expect(result.issues.some((i) => i.id === 'risk-unresolved' && i.severity === 'warning')).toBe(true);
+    expect(result.pass).toBe(false);
+    expect(result.issues.some((i) => i.id === 'risk-unresolved' && i.severity === 'error')).toBe(true);
   });
 
   test('valid-cli fixture should pass validation', () => {
@@ -156,6 +159,19 @@ describe('E2E Execution Flow Journey', () => {
     );
     writeFileSync(execPlanPath, mockPlan);
 
+    const planJson = JSON.parse(mockPlan);
+    const planDigest = calculatePlanDigest(planJson);
+
+    writeFileSync(
+      join(testWorkspaceRoot, 'docs/09-execution-plan.md'),
+      `# Plan\n\n<!-- plan-digest: ${planDigest} -->`
+    );
+
+    writeFileSync(
+      join(testWorkspaceRoot, 'docs/README.md'),
+      `- 02-scope.md\n- 09-execution-plan.md\n- README.md\n`
+    );
+
     // Write mock gate-policy.yaml
     writeFileSync(
       join(testWorkspaceRoot, 'Design/Content/interview-script/gate-policy.yaml'),
@@ -196,11 +212,17 @@ gates:
 
   test('should execute full developer workflow (Validate -> Start -> Deny/Allow Path -> Record Evidence Fail -> Repair -> Record Evidence Pass)', async () => {
     let state = initExecutionState();
+    const plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+    const planDigest = calculatePlanDigest(plan);
+    const emittedDocs = loadEmittedDocs(testWorkspaceRoot, execPlanPath);
+    const docsDigest = calculateDocsDigest(emittedDocs);
+
     state.phase = 'ready-to-execute';
     state.completed_tasks = ['T0-preflight'];
+    state.validated_plan_digest = planDigest;
+    state.validated_docs_digest = docsDigest;
+    state.validation_result_digest = '';
     saveExecutionState(execStatePath, state);
-
-    const plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
 
     // 1. Start T1-scaffold (allowed_paths: ['src/index.ts', 'tsconfig.json'])
     state = startTask(state, 'M0', 'T1-scaffold', plan);

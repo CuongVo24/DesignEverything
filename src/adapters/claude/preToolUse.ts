@@ -1,4 +1,4 @@
-import { join, resolve, relative } from 'path';
+import { join, resolve, relative, normalize } from 'path';
 import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
 import {
   loadProgress,
@@ -7,6 +7,11 @@ import {
   evaluateGate,
   isBlocked,
   checkExecutionGate,
+  loadExecutionState,
+  saveExecutionState,
+  assertValidatedSnapshot,
+  loadEmittedDocs,
+  ExecutionPlanV3,
 } from '../../core/index.js';
 
 function getFilesRecursive(dir: string): string[] {
@@ -32,9 +37,20 @@ export function onPreToolUse(ctx: {
   tool: 'Write' | 'Edit' | 'Bash';
   toolInput: unknown;
 }): { decision: 'allow' | 'deny'; message?: string } {
-  let targetPath = '';
+  // 1. Load progress state
+  const progressPath = join(ctx.workspaceRoot, 'progress.json');
+  let progress;
+  try {
+    progress = loadProgress(progressPath);
+  } catch (error: unknown) {
+    return {
+      decision: 'deny',
+      message: `Failed to load progress state: ${(error as Error).message}`,
+    };
+  }
 
-  // 1. Classify tool actions and always allow document edits
+  // 2. Normalize and check path traversal for Write/Edit
+  let targetPath = '';
   if (ctx.tool === 'Write' || ctx.tool === 'Edit') {
     if (typeof ctx.toolInput === 'string') {
       targetPath = ctx.toolInput;
@@ -47,25 +63,28 @@ export function onPreToolUse(ctx: {
         '';
     }
 
-    if (targetPath) {
-      const absPath = resolve(ctx.workspaceRoot, targetPath);
-      const relPath = relative(ctx.workspaceRoot, absPath).replace(/\\/g, '/');
-
-      // Always allow changes inside Design/ or docs/ directories
-      if (
-        relPath.startsWith('Design/') ||
-        relPath.startsWith('docs/') ||
-        relPath === 'Design' ||
-        relPath === 'docs'
-      ) {
-        return { decision: 'allow' };
-      }
+    if (!targetPath) {
+      return { decision: 'deny', message: 'Không chỉ định đường dẫn tệp để sửa đổi.' };
     }
+
+    const normalizedPath = normalize(targetPath).replace(/\\/g, '/');
+    const absPath = resolve(ctx.workspaceRoot, normalizedPath);
+    const relPath = relative(ctx.workspaceRoot, absPath).replace(/\\/g, '/');
+
+    if (relPath.startsWith('..') || relPath.startsWith('/') || absPath === ctx.workspaceRoot) {
+      return {
+        decision: 'deny',
+        message: `Đường dẫn không hợp lệ hoặc cố gắng path traversal ngoài workspace: ${targetPath}`,
+      };
+    }
+    targetPath = relPath;
   }
 
-  // 2. Classify Bash commands (whitelist safe commands)
+  // 3. Classify and check Bash commands
+  let command = '';
+  let argv: string[] = [];
+  let baseCmd = '';
   if (ctx.tool === 'Bash') {
-    let command = '';
     if (typeof ctx.toolInput === 'string') {
       command = ctx.toolInput;
     } else if (ctx.toolInput && typeof ctx.toolInput === 'object') {
@@ -73,63 +92,201 @@ export function onPreToolUse(ctx: {
       command = typeof obj.command === 'string' ? obj.command : '';
     }
 
-    const trimCmd = command.trim();
-    const cmdName = trimCmd.split(/\s+/)[0];
-    const safeCmds = [
-      'cat',
-      'less',
-      'more',
-      'tail',
-      'head',
-      'ls',
-      'dir',
-      'find',
-      'pwd',
-      'git',
-      'grep',
-      'rg',
-      'echo',
-    ];
+    if (!command) {
+      return { decision: 'deny', message: 'Không chỉ định lệnh thực thi.' };
+    }
 
-    let isSafe = false;
-    if (safeCmds.includes(cmdName)) {
-      isSafe = true;
-      // Redirects might write to source code files, block to be safe if redirects are present
-      if (trimCmd.includes('>') || trimCmd.includes('>>')) {
-        isSafe = false;
+    const cmdStr = command.trim();
+    const hasSeparator = /[&;|]/.test(cmdStr);
+    const hasRedirect = /[<>]/.test(cmdStr);
+    const hasSubstitution = /\$\(|`/.test(cmdStr);
+    const hasInlineInterpreter = /node\s+-e|python\s+-c/i.test(cmdStr);
+
+    if (hasSeparator || hasRedirect || hasSubstitution || hasInlineInterpreter) {
+      return {
+        decision: 'deny',
+        message: `Lệnh thực thi bị chặn do chứa ký tự shell đặc biệt hoặc inline interpreter: ${cmdStr}. Vui lòng sử dụng lệnh kiểm chứng chính xác hoặc chạy verify.`,
+      };
+    }
+
+    argv = cmdStr.split(/\s+/);
+    baseCmd = argv[0];
+
+    if (baseCmd === 'git') {
+      const sub = argv[1];
+      const disallowedGit = ['apply', 'checkout', 'reset', 'commit', 'push', 'merge', 'rebase', 'add', 'rm', 'mv'];
+      if (disallowedGit.includes(sub)) {
+        return {
+          decision: 'deny',
+          message: `Không được phép sử dụng lệnh git ghi sửa "${sub}" trong pha thực thi để tránh mất mát code/state.`,
+        };
       }
     }
 
-    // Always allow safe read-only/doc commands
-    if (isSafe) {
+    const safeCmds = ['cat', 'less', 'more', 'tail', 'head', 'ls', 'dir', 'find', 'pwd', 'git', 'grep', 'rg', 'echo'];
+    if (safeCmds.includes(baseCmd)) {
       return { decision: 'allow' };
     }
   }
 
-  // 3. Load progress state, execution state, and gate policy
-  const progressPath = join(ctx.workspaceRoot, 'progress.json');
-  let progress;
-  try {
-    progress = loadProgress(progressPath);
-  } catch (error: unknown) {
-    return {
-      decision: 'deny',
-      message: `Failed to load progress state: ${(error as Error).message}`,
-    };
-  }
-
-  // Load execution state if exists
+  // 4. Load execution state
   const execStatePath = join(ctx.workspaceRoot, '.design-everything/execution-state.json');
   let execState = null;
   if (existsSync(execStatePath)) {
     try {
-      const content = readFileSync(execStatePath, 'utf8');
-      execState = JSON.parse(content);
-    } catch {
-      // ignore
+      execState = loadExecutionState(execStatePath);
+    } catch (error: unknown) {
+      return {
+        decision: 'deny',
+        message: `Tệp trạng thái thực thi bị lỗi hoặc không hợp lệ: ${(error as Error).message}`,
+      };
+    }
+  } else {
+    if (progress.phase !== 'interview' && progress.phase !== 'docs-emitted') {
+      return {
+        decision: 'deny',
+        message: 'Thiếu tệp trạng thái thực thi (execution-state.json). Vui lòng phỏng vấn hoàn tất và chạy lệnh "validate" trước.',
+      };
     }
   }
 
+  // 5. Handle Early Bypass for docs/Design in non-execution or interview phase
+  const isDocOrDesign = ctx.tool === 'Write' || ctx.tool === 'Edit' ? (
+    targetPath.startsWith('Design/') ||
+    targetPath.startsWith('docs/') ||
+    targetPath === 'progress.json'
+  ) : false;
+
+  if (isDocOrDesign) {
+    if (!execState || execState.phase === 'plan-validating') {
+      return { decision: 'allow' };
+    }
+  }
+
+  // 6. Handle Blocked / Plan-Validating Phases
+  if (execState) {
+    if (execState.phase === 'blocked') {
+      return {
+        decision: 'deny',
+        message: `Quy trình thực thi đang bị chặn (blocked). Lý do: ${execState.block_reason || 'Không rõ lý do.'}. Vui lòng chạy "validate" hoặc "repair" để khắc phục.`,
+      };
+    }
+
+    if (execState.phase === 'plan-validating') {
+      if (ctx.tool === 'Write' || ctx.tool === 'Edit') {
+        if (
+          !targetPath.startsWith('Design/') &&
+          !targetPath.startsWith('docs/') &&
+          !targetPath.startsWith('.design-everything/')
+        ) {
+          return {
+            decision: 'deny',
+            message: `Không có task hoạt động (active_task) nào đang chạy. Vui lòng chạy lệnh "validate" để bắt đầu quy trình.`,
+          };
+        }
+      }
+      if (ctx.tool === 'Bash') {
+        const isCliCommand = argv.includes('cli.mjs') || argv.includes('cli.js');
+        if (isCliCommand) {
+          return { decision: 'allow' };
+        }
+        const safeCmds = ['cat', 'less', 'more', 'tail', 'head', 'ls', 'dir', 'find', 'pwd', 'git', 'grep', 'rg', 'echo'];
+        if (!safeCmds.includes(baseCmd)) {
+          return {
+            decision: 'deny',
+            message: `Lệnh "${baseCmd}" bị chặn trong pha validate kế hoạch. Vui lòng chạy lệnh "validate" trước.`,
+          };
+        }
+      }
+    }
+  }
+
+  // 7. Handle Execution Phases (ready-to-execute, executing, verifying, repairing)
+  if (execState && execState.phase !== 'plan-validating' && execState.phase !== 'blocked') {
+    const execPlanPath = join(ctx.workspaceRoot, '.design-everything/execution-plan.json');
+    let planJson: ExecutionPlanV3 | null = null;
+    if (existsSync(execPlanPath)) {
+      try {
+        planJson = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+        const emittedDocs = loadEmittedDocs(ctx.workspaceRoot, execPlanPath);
+        assertValidatedSnapshot({ docs: emittedDocs, plan: planJson!, state: execState });
+      } catch (error: unknown) {
+        try {
+          saveExecutionState(execStatePath, execState);
+        } catch {
+          // ignore
+        }
+        return {
+          decision: 'deny',
+          message: `Xác thực Snapshot thất bại: ${(error as Error).message}`,
+        };
+      }
+    }
+
+    if (!execState.active_task) {
+      return {
+        decision: 'deny',
+        message: 'Không có task hoạt động (active_task) nào đang chạy. Vui lòng kích hoạt một task bằng lệnh "start" trước khi sửa mã nguồn.',
+      };
+    }
+
+    const activeTask = planJson?.tasks?.[execState.active_task];
+    const allowedPaths = activeTask?.allowed_paths || [];
+
+    if (ctx.tool === 'Write' || ctx.tool === 'Edit') {
+      const policyPath = join(ctx.workspaceRoot, 'Design/Content/interview-script/gate-policy.yaml');
+      let policy;
+      try {
+        policy = loadGatePolicy(policyPath);
+      } catch (error: unknown) {
+        return { decision: 'deny', message: `Không thể nạp gate policy: ${(error as Error).message}` };
+      }
+
+      const check = checkExecutionGate(execState, policy, ctx.tool, targetPath, allowedPaths);
+      if (!check.allowed) {
+        return {
+          decision: 'deny',
+          message: `Đường dẫn tệp "${targetPath}" bị chặn. Lý do: ${check.reason || 'không nằm trong allowed_paths của active task.'} Tiếp theo: Vui lòng chạy "status", "verify", "repair" hoặc "validate".`,
+        };
+      }
+      return { decision: 'allow' };
+    }
+
+    if (ctx.tool === 'Bash') {
+      const isCliCommand = argv.includes('cli.mjs') || argv.includes('cli.js');
+      if (isCliCommand) {
+        return { decision: 'allow' };
+      }
+
+      const safeCmds = ['cat', 'less', 'more', 'tail', 'head', 'ls', 'dir', 'find', 'pwd', 'git', 'grep', 'rg', 'echo'];
+      if (safeCmds.includes(baseCmd)) {
+        return { decision: 'allow' };
+      }
+
+      let isExactVerification = false;
+      if (activeTask && activeTask.commands) {
+        const cmdStr = command.trim();
+        for (const cmd of activeTask.commands) {
+          const verificationCmdStr = cmd.argv.join(' ');
+          if (cmdStr === verificationCmdStr || cmdStr.replace(/['"]/g, '') === verificationCmdStr.replace(/['"]/g, '')) {
+            isExactVerification = true;
+            break;
+          }
+        }
+      }
+
+      if (isExactVerification) {
+        return { decision: 'allow' };
+      }
+
+      return {
+        decision: 'deny',
+        message: `Lệnh thực thi bị chặn: "${command}". Nhiệm vụ hoạt động hiện tại: "${execState.active_task}". Chỉ cho phép các lệnh đọc thông tin an sau hoặc lệnh kiểm chứng chính xác của task. Tiếp theo: Vui lòng chạy "status", "verify", "repair" hoặc "validate".`,
+      };
+    }
+  }
+
+  // 8. Evaluate Gate Policy for Interview / Progress
   const policyPath = join(ctx.workspaceRoot, 'Design/Content/interview-script/gate-policy.yaml');
   let policy;
   try {
@@ -141,65 +298,28 @@ export function onPreToolUse(ctx: {
     };
   }
 
-  // If there is an active execution state, check allows_paths/task gate
-  if (execState) {
-    if ((execState.phase === 'executing' || execState.phase === 'repairing') && execState.active_task) {
-      let allowedPaths: string[] = [];
-      const execPlanPath = join(ctx.workspaceRoot, '.design-everything/execution-plan.json');
-      if (existsSync(execPlanPath)) {
-        try {
-          const planJson = JSON.parse(readFileSync(execPlanPath, 'utf8'));
-          const activeTask = planJson.tasks?.[execState.active_task];
-          if (activeTask) {
-            allowedPaths = activeTask.allowed_paths || [];
-          }
-        } catch {
-          // ignore
-        }
-      }
-      const check = checkExecutionGate(execState, policy, ctx.tool, targetPath, allowedPaths);
-      if (!check.allowed) {
-        return {
-          decision: 'deny',
-          message: check.reason ?? 'Blocked by execution gate.',
-        };
-      }
-      return { decision: 'allow' };
-    }
-
-    // If execution state is present but not in executing/repairing phase, and we want to write/edit source code:
-    if (
-      execState.phase !== 'executing' &&
-      execState.phase !== 'repairing' &&
-      (ctx.tool === 'Write' || ctx.tool === 'Edit')
-    ) {
-      return {
-        decision: 'deny',
-        message: `Không có task hoạt động (active_task) nào đang chạy. Vui lòng kích hoạt một task trước khi sửa mã nguồn.`,
-      };
-    }
-  }
-
   const validationPass = execState ? !['plan-validating', 'blocked'].includes(execState.phase) : true;
   const completedTasks = execState ? execState.completed_tasks : [];
-
-  // 4. Retrieve existing documents list from docs/
   const docsDir = join(ctx.workspaceRoot, 'docs');
   const existingDocs = getFilesRecursive(docsDir);
 
-  // 5. Evaluate gates
   let stateModified = false;
   let blockedGate = null;
 
+  const isDocEdit = ctx.tool === 'Write' || ctx.tool === 'Edit' ? (
+    targetPath.startsWith('Design/') ||
+    targetPath.startsWith('docs/') ||
+    targetPath.startsWith('.design-everything/') ||
+    targetPath === 'progress.json'
+  ) : false;
+
   for (const gate of policy.gates) {
-    // If execution state doesn't exist, ignore V3 execution gates
     if (!execState && (gate.requires_validation || gate.task_id || gate.requires_evidence)) {
       continue;
     }
 
     const { open } = evaluateGate(gate, existingDocs, validationPass, completedTasks);
 
-    // If gate is open, append to gates_passed (append-only)
     if (open) {
       if (!progress.gates_passed.includes(gate.id)) {
         progress.gates_passed.push(gate.id);
@@ -207,13 +327,11 @@ export function onPreToolUse(ctx: {
       }
     }
 
-    // Check if the tool is blocked by this gate
-    if (isBlocked(gate, ctx.tool, existingDocs, validationPass, completedTasks) && !blockedGate) {
+    if (!isDocEdit && isBlocked(gate, ctx.tool, existingDocs, validationPass, completedTasks) && !blockedGate) {
       blockedGate = gate;
     }
   }
 
-  // 6. Save progress if updated
   if (stateModified) {
     try {
       saveProgress(progressPath, progress);
@@ -225,7 +343,6 @@ export function onPreToolUse(ctx: {
     }
   }
 
-  // 7. Return block message if blocked
   if (blockedGate) {
     return {
       decision: 'deny',

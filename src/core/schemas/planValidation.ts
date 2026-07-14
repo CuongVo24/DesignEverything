@@ -11,6 +11,8 @@ export const validationIssueSchema = z.object({
     'phantom-command',
     'scope-leak',
     'risk-unresolved',
+    'phantom-capability',
+    'missing-manifest-path',
   ]),
   severity: validationIssueSeveritySchema,
   message: z.string(),

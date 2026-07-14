@@ -30,6 +30,7 @@ docs/
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)
 <!-- anchor: id=docs-readme/file-map  src=apps/mobile/src/features/docs/readme.ts::fileMap  rev=  status=planned -->
 

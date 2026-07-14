@@ -63,35 +63,7 @@ export function passedGates(
   }
   return passed;
 }
-
-function matchGlob(path: string, glob: string): boolean {
-  const normPath = path.replace(/\\/g, '/');
-  const normGlob = glob.replace(/\\/g, '/');
-
-  if (normPath === normGlob || normPath.startsWith(normGlob + '/')) {
-    return true;
-  }
-
-  try {
-    let regexStr = normGlob
-      .replace(/\*\*\//g, '@@ANY_DIR@@')
-      .replace(/\*/g, '@@SINGLE@@');
-
-    regexStr = regexStr.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-
-    regexStr = regexStr
-      .replace(/@@ANY_DIR@@/g, '(?:.*/)?')
-      .replace(/@@SINGLE@@/g, '[^/]*');
-
-    const regex = new RegExp(`^${regexStr}$`);
-    if (regex.test(normPath)) {
-      return true;
-    }
-  } catch {
-    // fallback
-  }
-  return false;
-}
+import { evaluatePreAction } from './evaluatePreAction.js';
 
 export function checkExecutionGate(
   state: ExecutionState | null,
@@ -100,33 +72,43 @@ export function checkExecutionGate(
   path?: string,
   allowedPathsFromPlan?: string[]
 ): { allowed: boolean; reason?: string } {
-  if (!state) return { allowed: true };
+  if (!state) {
+    return { allowed: true };
+  }
+  const action_kind = tool === 'Bash' ? ('shell' as const) : ('write' as const);
+  const target_paths = path ? [path] : [];
+  const command_argv = tool === 'Bash' && path ? path.split(/\s+/) : [];
+  const workspace = process.cwd();
 
-  // If there is an active task in the executing/repairing phase, check allows_paths
-  if (state.active_task && (state.phase === 'executing' || state.phase === 'repairing')) {
-    let allowsPaths: string[] = [];
-    if (allowedPathsFromPlan && allowedPathsFromPlan.length > 0) {
-      allowsPaths = allowedPathsFromPlan;
-    } else {
-      const taskGate = policy?.gates.find((g) => g.task_id === state.active_task);
-      allowsPaths = taskGate?.allows_paths || [];
-    }
-
-    if (tool === 'Write' || tool === 'Edit') {
-      if (!path) {
-        return { allowed: false, reason: 'Không thể ghi/sửa tệp khi không chỉ định đường dẫn.' };
+  let plan = undefined;
+  if (state && state.active_task && allowedPathsFromPlan) {
+    plan = {
+      tasks: {
+        [state.active_task]: {
+          id: state.active_task,
+          allowed_paths: allowedPathsFromPlan,
+          commands: [],
+        }
       }
-      const isAllowed = allowsPaths.some((p) => matchGlob(path, p));
-
-      if (!isAllowed) {
-        return {
-          allowed: false,
-          reason: `Đường dẫn "${path}" không nằm trong danh sách được sửa (allows_paths) của task đang chạy "${state.active_task}".`,
-        };
-      }
-    }
+    } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 
-  return { allowed: true };
+  const decision = evaluatePreAction({
+    runtime: 'generic',
+    tool_name: tool,
+    action_kind,
+    target_paths,
+    command_argv,
+    workspace,
+    session_id: 'legacy-compat',
+    state: state || undefined,
+    policy: policy || undefined,
+    plan,
+  });
+
+  return {
+    allowed: decision.decision === 'allow',
+    reason: decision.user_message,
+  };
 }
 

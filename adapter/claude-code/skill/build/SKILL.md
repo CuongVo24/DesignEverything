@@ -17,13 +17,14 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" start --task <task_id> --milestone <milestone_id>
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" record-evidence --task <task_id> --exit-code <0|1> [--observed "output thực tế"] [--artifact "file log hoặc ảnh chụp"]
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" repair
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|fast]
 ```
 
 ## Chu trình làm việc cốt lõi (Bắt buộc)
 
 ### Bắt đầu: Đọc Trạng thái & Xác thực
-1. Chạy `status` để kiểm tra pha hiện tại.
-2. Nếu pha là `plan-validating`, chạy ngay lệnh `validate`.
+1. Chạy `next-step` để kiểm tra thẻ bước tiếp theo (Next Step Card).
+2. Nếu pha là `plan-validating` hoặc trạng thái yêu cầu validate, chạy ngay lệnh `validate`.
    - Nếu `validate` thành công: Pha chuyển sang `ready-to-execute`. Tiếp tục bước tiếp theo.
    - Nếu `validate` thất bại: Hệ thống chuyển sang `blocked`. Hãy đọc kỹ `block_reason` hoặc danh sách `issues` được trả về, sửa lại các tệp tài liệu thiết kế bị lỗi và chạy lại `validate`. Bạn không thể viết code khi chưa sửa xong.
 

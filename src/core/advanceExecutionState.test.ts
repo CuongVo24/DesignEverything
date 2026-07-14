@@ -47,7 +47,8 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
         ],
         expected_result: 'pass',
         evidence_required: ['T1-evidence.txt'],
-        failure_policy: 'abort',
+        failure_policy: 'debug',
+        requires_capability: 'node-npm-project',
       },
       T2: {
         id: 'T2',
@@ -67,8 +68,18 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
         expected_result: 'pass',
         evidence_required: ['T2-evidence.txt'],
         failure_policy: 'abort',
+        requires_capability: 'node-npm-project',
       },
     },
+    capabilities_evidence: [
+      {
+        id: 'node-npm-project',
+        name: 'Node.js NPM Project Manifest',
+        source: 'existing-manifest',
+        checked_at: new Date().toISOString(),
+      }
+    ],
+    discovery_status: 'pass',
   };
 
   test('should initialize and transition state correctly', () => {

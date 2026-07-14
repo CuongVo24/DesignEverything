@@ -3,7 +3,10 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadShapes } from './loadShapes.js';
 import { createHash } from 'crypto';
-import { extractMustFeatures } from './validatePlan.js';
+
+import { loadProjectProfile, saveProjectProfile } from './projectProfileState.js';
+import { inspectProjectProfile } from './inspectProjectProfile.js';
+import { synthesizeExecutionPlan } from './synthesizeExecutionPlan.js';
 
 export type InterviewAnswers = Record<string, string>;
 
@@ -52,11 +55,17 @@ export function emitTree(
   answers: InterviewAnswers,
   branch: string,
   templatesDir: string,
-  options?: { srcPrefix?: string }
+  options?: { srcPrefix?: string; workspaceDir?: string }
 ): EmittedDoc[] {
   // 1. Determine release docs from shapes.yaml registry
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  let shapesPath = join(process.cwd(), 'Design/Content/interview-script/shapes.yaml');
+  if (!existsSync(shapesPath)) {
+    shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  }
+  if (!existsSync(shapesPath)) {
+    shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
+  }
   let releaseDocs: string[] = [];
 
   if (existsSync(shapesPath)) {
@@ -223,6 +232,7 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       : (branch === 'web'
         ? `docs/
@@ -236,6 +246,7 @@ export function emitTree(
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
         : branch === 'mobile'
           ? `docs/
@@ -249,6 +260,7 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
           : `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
@@ -261,6 +273,7 @@ export function emitTree(
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       )
     );
@@ -295,29 +308,66 @@ export function emitTree(
           ? 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.'
           : 'Cài đặt dependencies: `npm install`. Chạy CLI local: `node bin/index.js` (hoặc build: `npm run build`). Chạy tests: `npm test`.');
 
-  filledSlots['first_supported_environment'] =
-    answers['first_supported_environment'] ||
-    (branch === 'mobile'
-      ? '- Nền tảng: Android Emulator hoặc iOS Simulator chạy trên thiết bị cục bộ.\n- Thử nghiệm: Expo Go hoặc bản build chạy trực tiếp trên thiết bị test thật duy nhất.'
-      : branch === 'web'
-        ? '- Trình duyệt: Google Chrome hoặc Firefox chạy trên môi trường phát triển cục bộ.\n- Môi trường: Node.js >= 18 cục bộ.'
-        : '- Môi trường: Node.js >= 18 và terminal cục bộ.\n- Thử nghiệm: Thực thi trực tiếp qua `node` hoặc `npm link`.');
+  const cwd = options?.workspaceDir ?? process.cwd();
+  let profile = loadProjectProfile(cwd);
+  if (!profile) {
+    const result = inspectProjectProfile(cwd);
+    profile = result.profile;
+    saveProjectProfile(cwd, profile);
+  }
 
-  filledSlots['risk_register'] =
-    answers['risk_register'] ||
-    `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n| R1-tech-uncertainty | Trung bình | spike-required | Viết spike chạy độc lập chứng minh thư viện hoạt động ổn định. |`;
+  const synthesis = synthesizeExecutionPlan({
+    answers,
+    profile,
+    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'],
+  });
 
-  filledSlots['feasibility_spikes'] =
-    answers['feasibility_spikes'] ||
-    '- **Spike R1**: Thực hiện chạy thử nghiệm nhỏ độc lập để kiểm chứng cách hoạt động của thư viện/API được mô tả trong R1 trước khi viết code nghiệp vụ chính thức.';
+  const planJson = synthesis.plan;
 
-  filledSlots['task_cards'] =
-    answers['task_cards'] ||
-    `### [Task T0-preflight] Môi trường phát triển\n- Loại: spike\n- Mục tiêu: Kiểm tra cấu hình Node.js/npm.\n- Preconditions: None.\n- Lệnh kiểm chứng: \`node --version && npm --version\`.\n\n### [Task T1-scaffold] Khởi tạo dự án\n- Loại: scaffold\n- Mục tiêu: Tạo khung xương dự án cơ bản.\n- Preconditions: T0-preflight.\n- Lệnh kiểm chứng: \`npm run build\`.\n\n### [Task T2-implementation] Code tính năng chính\n- Loại: implementation\n- Mục tiêu: Viết mã nguồn chính cho các yêu cầu Must-have.\n- Preconditions: T1-scaffold.\n- Lệnh kiểm chứng: \`npm test\` hoặc lệnh kiểm thử tương đương.\n\n### [Task T3-verification] Nghiệm thu cuối\n- Loại: verification\n- Mục tiêu: Chạy toàn bộ các bài test để kiểm chứng chất lượng code.\n- Preconditions: T2-implementation.\n- Lệnh kiểm chứng: \`npm run test:e2e\` hoặc lệnh tương đương.`;
+  if (synthesis.blocked) {
+    filledSlots['first_supported_environment'] =
+      `- Trạng thái: BỊ CHẶN (Blocked)\n- Lý do: ${synthesis.message || 'Thiếu project manifest hoặc chưa xác nhận cấu hình.'}`;
 
-  filledSlots['acceptance_evidence_rules'] =
-    answers['acceptance_evidence_rules'] ||
-    '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc artifact tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.';
+    filledSlots['risk_register'] =
+      `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n| R-blocked | Cao | spike-required | ${synthesis.message || 'Khởi tạo tệp tin cấu hình dự án.'} |`;
+
+    filledSlots['feasibility_spikes'] =
+      '- **Khảo sát rủi ro**: Vui lòng chạy lệnh doctor hoặc khởi tạo tệp tin cấu hình dự án tương ứng, sau đó chạy lại lệnh validate.';
+
+    filledSlots['task_cards'] =
+      `### [Task T0-discovery] Khảo sát môi trường và cấu hình tệp dự án\n- Loại: spike\n- Mục tiêu: Thiết lập cấu hình dự án hợp lệ.\n- Preconditions: Không.\n- Lệnh kiểm chứng: Không.`;
+
+    filledSlots['acceptance_evidence_rules'] =
+      '- **Chặn quy trình (Blocked)**: Toàn bộ quá trình triển khai bị chặn cho đến khi phát hiện được project manifest hợp lệ.';
+  } else {
+    filledSlots['first_supported_environment'] =
+      `- Target: ${profile.target}\n- Runtime: ${profile.runtime}\n- Package Manager: ${profile.package_manager}\n- Language: ${profile.language}\n- Capabilities: ${profile.capabilities.join(', ')}`;
+
+    filledSlots['risk_register'] =
+      `| Mã rủi ro | Tiêu đề | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n` +
+      planJson.risks.map((r) => `| ${r.id} | ${r.title} | ${r.status} | ${r.exit_criterion} |`).join('\n');
+
+    filledSlots['feasibility_spikes'] =
+      planJson.risks
+        .filter((r) => r.status === 'spike-required')
+        .map((r) => `- **Spike ${r.id}**: ${r.exit_criterion}`)
+        .join('\n') || '- Không có spike yêu cầu khảo sát thêm.';
+
+    filledSlots['task_cards'] = Object.values(planJson.tasks)
+      .map((task) => {
+        const cmdLines = task.commands.map((cmd) => `  * \`${cmd.argv.join(' ')}\` (expected: ${cmd.expected.kind} ${cmd.expected.value || ''})`).join('\n');
+        return `### [Task ${task.id}] ${task.intent}\n` +
+          `- Loại: ${task.type}\n` +
+          `- Milestone: ${task.milestone}\n` +
+          `- Preconditions: ${task.preconditions.join(', ') || 'Không'}\n` +
+          `- Allowed paths: ${task.allowed_paths.join(', ') || 'Không'}\n` +
+          `- Lệnh kiểm chứng:\n${cmdLines || '  * Không'}`;
+      })
+      .join('\n\n');
+
+    filledSlots['acceptance_evidence_rules'] =
+      '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc bằng chứng tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.';
+  }
 
   // Compute planned anchor source/symbol placeholders based on branch
   const srcPrefix = options?.srcPrefix ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
@@ -387,7 +437,6 @@ export function emitTree(
     return { file, content };
   });
 
-  const planJson = generateExecutionPlanJson(answers, branch);
   const planJsonContent = JSON.stringify(planJson, null, 2);
   const digest = createHash('sha256').update(planJsonContent.trim()).digest('hex');
 
@@ -405,140 +454,25 @@ export function emitTree(
   return tree;
 }
 
-import { ExecutionPlanV3, TaskCard, PlanRisk } from './schemas/executionPlan.js';
+import { ExecutionPlanV3 } from './schemas/executionPlan.js';
 
 export function generateExecutionPlanJson(
   answers: InterviewAnswers,
-  branch: string
+  _branch: string,
+  workspaceDir: string = process.cwd()
 ): ExecutionPlanV3 {
-
-  const risks: PlanRisk[] = [
-    {
-      id: 'R1-tech-uncertainty',
-      title: answers['R1'] || 'Rủi ro công nghệ/thư viện bên ngoài chưa xác nhận.',
-      status: 'spike-required',
-      exit_criterion: 'Viết spike chạy độc lập thành công.',
-    }
-  ];
-
-  const mainAllowedPaths = branch === 'mobile'
-    ? ['apps/mobile/src/**/*.ts', 'apps/mobile/src/**/*.tsx']
-    : branch === 'web'
-      ? ['src/**/*.ts', 'src/**/*.tsx', 'pages/**/*.tsx', 'app/**/*.ts', 'app/**/*.tsx']
-      : ['src/**/*.ts'];
-
-  const preflightCmds = [
-    {
-      id: 'node-version',
-      argv: ['node', '--version'],
-      expected: { kind: 'exit-code-zero' as const },
-    }
-  ];
-  const scaffoldCmds = [
-    {
-      id: 'build-project',
-      argv: ['npm', 'run', 'build'],
-      expected: { kind: 'exit-code-zero' as const },
-    }
-  ];
-  const verificationCmds = [
-    {
-      id: 'run-tests',
-      argv: branch === 'mobile' ? ['npm', 'run', 'test:e2e'] : ['npm', 'test'],
-      expected: { kind: 'exit-code-zero' as const },
-    }
-  ];
-
-  const tasks: Record<string, TaskCard> = {
-    'T0-preflight': {
-      id: 'T0-preflight',
-      type: 'spike',
-      milestone: 'M0',
-      intent: 'Kiểm tra cấu hình môi trường phát triển cục bộ.',
-      depends_on: [],
-      allowed_paths: [],
-      preconditions: [],
-      commands: preflightCmds,
-      expected_result: 'Môi trường sẵn sàng với Node.js.',
-      evidence_required: ['preflight-log.txt'],
-      failure_policy: 'Cấu hình lại Node.js/npm.',
-    },
-    'T1-scaffold': {
-      id: 'T1-scaffold',
-      type: 'scaffold',
-      milestone: 'M0',
-      intent: 'Khởi tạo khung xương (skeleton) của dự án.',
-      depends_on: ['T0-preflight'],
-      allowed_paths: mainAllowedPaths,
-      preconditions: ['T0-preflight'],
-      commands: scaffoldCmds,
-      expected_result: 'Dự án build thành công không lỗi.',
-      evidence_required: ['scaffold-build-log.txt'],
-      failure_policy: 'Kiểm tra compiler/bundler.',
-    },
-    'T2-implementation': {
-      id: 'T2-implementation',
-      type: 'implementation',
-      milestone: 'M1',
-      intent: 'Triển khai luồng nghiệp vụ chính của tính năng.',
-      depends_on: ['T1-scaffold'],
-      allowed_paths: mainAllowedPaths,
-      preconditions: ['T1-scaffold'],
-      commands: verificationCmds,
-      expected_result: 'Mã nguồn chạy đúng logic nghiệp vụ.',
-      evidence_required: ['implementation-test-log.txt'],
-      failure_policy: 'Debug lỗi logic nghiệp vụ.',
-    },
-    'T3-verification': {
-      id: 'T3-verification',
-      type: 'verification',
-      milestone: 'M1',
-      intent: 'Nghiệm thu toàn diện luồng chính.',
-      depends_on: ['T2-implementation'],
-      allowed_paths: [],
-      preconditions: ['T2-implementation'],
-      commands: verificationCmds,
-      expected_result: 'Tất cả các bài test tích hợp vượt qua.',
-      evidence_required: ['verification-report.txt'],
-      failure_policy: 'Kiểm tra log lỗi tích hợp.',
-    },
-  };
-
-  const milestones = [
-    {
-      id: 'M0',
-      title: 'Walking Skeleton (Khung xương biết đi)',
-      tasks: ['T0-preflight', 'T1-scaffold'],
-    },
-    {
-      id: 'M1',
-      title: 'Core Implementation (Triển khai luồng chính)',
-      tasks: ['T2-implementation', 'T3-verification'],
-    },
-  ];
-
-  const mustFeatures = extractMustFeatures(answers);
-  const trace_links = mustFeatures.map((feat) => ({
-    must_id: feat,
-    flow_id: answers['S5'] || 'Luồng người dùng chính',
-    task_ids: ['T2-implementation'],
-  }));
-  if (trace_links.length === 0) {
-    trace_links.push({
-      must_id: 'Tính năng cốt lõi',
-      flow_id: answers['S5'] || 'Luồng người dùng chính',
-      task_ids: ['T2-implementation'],
-    });
+  let profile = loadProjectProfile(workspaceDir);
+  if (!profile) {
+    const result = inspectProjectProfile(workspaceDir);
+    profile = result.profile;
+    saveProjectProfile(workspaceDir, profile);
   }
 
-  return {
-    metadata: {
-      version: '4.0.0',
-      updated_at: new Date().toISOString(),
-    },
-    trace_links,
-    risks,
-    milestones,
-    tasks,
-  };
+  const synthesis = synthesizeExecutionPlan({
+    answers,
+    profile,
+    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'],
+  });
+
+  return synthesis.plan;
 }

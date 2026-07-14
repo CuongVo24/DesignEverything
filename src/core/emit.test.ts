@@ -217,4 +217,30 @@ describe('emitTree function', () => {
       /Invalid branch\/shape/
     );
   });
+
+  test('should emit a blocked discovery plan when workspaceDir option is an empty directory without manifest', () => {
+    const tempDir = join(__dirname, '../../test/fixtures/progress/temp-empty-cwd-test');
+    if (existsSync(tempDir)) {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+    mkdirSync(tempDir, { recursive: true });
+
+    try {
+      const emitted = emitTree(mockAnswers, 'web', realTemplatesDir, { workspaceDir: tempDir });
+      const planDoc = emitted.find((d) => d.file === '.design-everything/execution-plan.json');
+      expect(planDoc).toBeDefined();
+
+      const planJson = JSON.parse(planDoc!.content);
+      expect(planJson.discovery_status).toBe('blocked');
+      expect(planJson.tasks['T0-discovery']).toBeDefined();
+      expect(planJson.tasks['T1-scaffold']).toBeUndefined();
+
+      const mdDoc = emitted.find((d) => d.file === '09-execution-plan.md');
+      expect(mdDoc).toBeDefined();
+      expect(mdDoc!.content).toContain('BỊ CHẶN');
+      expect(mdDoc!.content).toContain('R-blocked');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 });

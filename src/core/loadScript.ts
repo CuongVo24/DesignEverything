@@ -33,8 +33,15 @@ export function loadScript(path: string): Script {
 
   let shapesPath = join(dirname(path), 'shapes.yaml');
   if (!existsSync(shapesPath)) {
+    shapesPath = join(process.cwd(), 'Design/Content/interview-script/shapes.yaml');
+  }
+  if (!existsSync(shapesPath)) {
     const __dirname = dirname(fileURLToPath(import.meta.url));
     shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  }
+  if (!existsSync(shapesPath)) {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
   }
   const registry = loadShapes(shapesPath);
   const validBranches = new Set(['core', ...registry.shapes.map((s) => s.id)]);

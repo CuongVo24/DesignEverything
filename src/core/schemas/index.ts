@@ -21,7 +21,24 @@ import {
   executionPlanSchemaV3,
   expectedResultSchema,
   verificationCommandSchema,
+  capabilitySourceSchema,
+  capabilityEvidenceSchema,
 } from './executionPlan.js';
+import {
+  preActionRequestSchema,
+  preActionDecisionSchema,
+  adapterCapabilitySchema,
+} from './preActionGate.js';
+import {
+  workspaceKindSchema,
+  projectProfileTargetSchema,
+  projectProfileSchema,
+  profileQuestionSchema,
+} from './projectProfile.js';
+import {
+  planAmendmentSchema,
+  amendmentReasonSchema,
+} from './planAmendment.js';
 
 export {
   questionSchema,
@@ -44,6 +61,17 @@ export {
   executionPlanSchemaV3,
   expectedResultSchema,
   verificationCommandSchema,
+  capabilitySourceSchema,
+  capabilityEvidenceSchema,
+  preActionRequestSchema,
+  preActionDecisionSchema,
+  adapterCapabilitySchema,
+  workspaceKindSchema,
+  projectProfileTargetSchema,
+  projectProfileSchema,
+  profileQuestionSchema,
+  planAmendmentSchema,
+  amendmentReasonSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -68,6 +96,19 @@ export type PlanRisk = z.infer<typeof planRiskSchema>;
 export type ExecutionPlanV3 = z.infer<typeof executionPlanSchemaV3>;
 export type ExpectedResult = z.infer<typeof expectedResultSchema>;
 export type VerificationCommand = z.infer<typeof verificationCommandSchema>;
+export type CapabilitySource = z.infer<typeof capabilitySourceSchema>;
+export type CapabilityEvidence = z.infer<typeof capabilityEvidenceSchema>;
+
+export type PreActionRequest = z.infer<typeof preActionRequestSchema>;
+export type PreActionDecision = z.infer<typeof preActionDecisionSchema>;
+export type AdapterCapability = z.infer<typeof adapterCapabilitySchema>;
+
+export type WorkspaceKind = z.infer<typeof workspaceKindSchema>;
+export type ProjectProfileTarget = z.infer<typeof projectProfileTargetSchema>;
+export type ProjectProfile = z.infer<typeof projectProfileSchema>;
+export type ProfileQuestion = z.infer<typeof profileQuestionSchema>;
+export type PlanAmendment = z.infer<typeof planAmendmentSchema>;
+export type AmendmentReason = z.infer<typeof amendmentReasonSchema>;
 
 
 

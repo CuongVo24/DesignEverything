@@ -120,7 +120,8 @@
         "evidence_required": [
           "T0-evidence.txt"
         ],
-        "failure_policy": "abort"
+        "failure_policy": "abort",
+        "requires_capability": "node-npm-project"
       },
       "T1": {
         "id": "T1",
@@ -154,8 +155,18 @@
         "evidence_required": [
           "T1-evidence.txt"
         ],
-        "failure_policy": "abort"
+        "failure_policy": "abort",
+        "requires_capability": "node-npm-project"
       }
-    }
+    },
+    "capabilities_evidence": [
+      {
+        "id": "node-npm-project",
+        "name": "Node.js NPM Project Manifest",
+        "source": "existing-manifest",
+        "checked_at": "2026-07-13T14:06:58.559Z"
+      }
+    ],
+    "discovery_status": "pass"
   }
 }

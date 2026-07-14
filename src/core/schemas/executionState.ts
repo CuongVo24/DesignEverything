@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { planAmendmentSchema } from './planAmendment.js';
 
 export const executionPhaseSchema = z.enum([
   'plan-validating',
@@ -33,6 +34,11 @@ export const executionStateSchema = z.object({
   completed_tasks: z.array(z.string()),
   evidence: z.array(evidenceRecordSchema),
   block_reason: z.string().nullable(),
+  validated_plan_digest: z.string(),
+  validated_docs_digest: z.string(),
+  validation_result_digest: z.string(),
+  plan_revision: z.number().int().default(1),
+  amendment_history: z.array(planAmendmentSchema).default([]),
   updated_at: z.string().datetime(),
 });
 export type ExecutionState = z.infer<typeof executionStateSchema>;

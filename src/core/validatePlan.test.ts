@@ -53,6 +53,7 @@ describe('validateExecutionPlan core logic', () => {
         expected_result: 'Succeeds without error',
         evidence_required: ['T0-evidence.txt'],
         failure_policy: 'abort',
+        requires_capability: 'node-npm-project',
       },
       T1: {
         id: 'T1',
@@ -72,8 +73,18 @@ describe('validateExecutionPlan core logic', () => {
         expected_result: 'Tests run green',
         evidence_required: ['T1-evidence.txt'],
         failure_policy: 'abort',
+        requires_capability: 'node-npm-project',
       },
     },
+    capabilities_evidence: [
+      {
+        id: 'node-npm-project',
+        name: 'Node.js NPM Project Manifest',
+        source: 'existing-manifest',
+        checked_at: new Date().toISOString(),
+      }
+    ],
+    discovery_status: 'pass',
   };
 
   const planJsonStr = JSON.stringify(mockPlan, null, 2);
@@ -246,7 +257,7 @@ describe('validateExecutionPlan core logic', () => {
     expect(result.issues.some((i) => i.id === 'scope-leak')).toBe(true);
   });
 
-  test('should warning when risk keywords are present but no spike task exists', () => {
+  test('should error (block) when risk keywords are present but no spike task exists', () => {
     const badPlan = JSON.parse(JSON.stringify(mockPlan));
     // Remove spike task
     delete badPlan.tasks.T0;
@@ -274,8 +285,8 @@ describe('validateExecutionPlan core logic', () => {
       }),
     };
     const result = validateExecutionPlan(inputWithRisk);
-    expect(result.pass).toBe(true); // Warnings do not block pass
-    expect(result.issues.some((i) => i.id === 'risk-unresolved' && i.severity === 'warning')).toBe(true);
+    expect(result.pass).toBe(false); // Unresolved risk without a spike now blocks
+    expect(result.issues.some((i) => i.id === 'risk-unresolved' && i.severity === 'error')).toBe(true);
   });
 
   test('should fail when task modifies phantom files', () => {

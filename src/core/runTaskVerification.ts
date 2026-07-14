@@ -46,9 +46,10 @@ export function runTaskVerification(input: {
   state: ExecutionState;
   task_id: string;
   command_id: string;
+  user_confirmed?: boolean;
 }): Promise<ExecutionState> {
   return new Promise((res, rej) => {
-    const { workspace, plan, state, task_id, command_id } = input;
+    const { workspace, plan, state, task_id, command_id, user_confirmed } = input;
 
     if (state.active_task !== task_id) {
       return rej(new Error(`Task ${task_id} is not the active task in execution state`));
@@ -62,6 +63,17 @@ export function runTaskVerification(input: {
     const cmd = task.commands.find((c) => c.id === command_id);
     if (!cmd) {
       return rej(new Error(`Command ${command_id} not found in task ${task_id}`));
+    }
+
+    // A command that mutates the environment (e.g. `npm init`, `python -m venv`)
+    // must not be auto-run by the verifier without an explicit user confirmation.
+    if (cmd.requires_user_confirmation && !user_confirmed) {
+      return rej(
+        new Error(
+          `Command ${command_id} in task ${task_id} requires explicit user confirmation before it can run. ` +
+            `Re-run verification with user_confirmed=true after the user approves.`
+        )
+      );
     }
 
     const runCwd = cmd.cwd ? resolve(workspace, cmd.cwd) : workspace;
@@ -131,7 +143,26 @@ export function runTaskVerification(input: {
       const artifactDigests: Record<string, string> = {};
       let artifactsOk = true;
 
+      // evidence_required may list either command IDs (proven by a passing
+      // evidence record for that command) or file artifacts (proven by file
+      // existence). Command IDs must NOT be treated as files on disk.
+      const commandIds = new Set(task.commands.map((c) => c.id));
+
       for (const artifact of task.evidence_required || []) {
+        if (commandIds.has(artifact)) {
+          // Command-evidence: satisfied when that command has a passing record.
+          const passed =
+            artifact === command_id
+              ? isPassed
+              : state.evidence.some(
+                  (e) => e.task_id === task_id && e.command_id === artifact && e.exit_code === 0
+                );
+          if (isCompletingCommand && !passed) {
+            artifactsOk = false;
+          }
+          continue;
+        }
+
         const filePath = resolve(workspace, artifact);
         if (!isPathSafe(workspace, filePath)) {
           artifactsOk = false;

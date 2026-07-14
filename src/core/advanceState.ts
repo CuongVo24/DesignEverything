@@ -6,7 +6,13 @@ import { loadShapes } from './loadShapes.js';
 
 function getRegistryBranchIds(): string[] {
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  let shapesPath = join(process.cwd(), 'Design/Content/interview-script/shapes.yaml');
+  if (!existsSync(shapesPath)) {
+    shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  }
+  if (!existsSync(shapesPath)) {
+    shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
+  }
   if (existsSync(shapesPath)) {
     const registry = loadShapes(shapesPath);
     return registry.shapes.map(s => s.id);
