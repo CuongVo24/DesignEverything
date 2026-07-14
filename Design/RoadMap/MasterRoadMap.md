@@ -32,6 +32,7 @@ Mỗi tháng một thư mục, mỗi tháng chia 4 tuần. Các file `Week-*.md`
 - **Phase 3–4 — 16 tuần triển khai tiếp theo**: tiếp tục với dogfooding và phân phối.
 - **Phase 5 — V3 Execution Expansion (mốc 4.0.0):** sau 3.0.0, chuyển từ milestone prose sang plan validation, task/evidence và evaluation journey; xem [V3-ExecutionExpansionPlan.md](V3-ExecutionExpansionPlan.md). Implementation B7–B10 đã xong nhưng integrity remediation B11 đang chờ duyệt; xem [V3-PostImplementationReview.md](V3-PostImplementationReview.md).
 - **Phase 6 — V4 Newbie Expansion (mốc 5.0.0):** cross-runtime `PreActionGate`, Codex adapter, project doctor/stack-aware plan, newbie recovery và replay audit; chỉ bắt đầu sau B11f. Xem [V4-NewbieExpansionPlan.md](V4-NewbieExpansionPlan.md).
+- **Phase 7 — V5 Contract Synthesis (mốc 6.0.0):** sau skeleton, sinh hợp đồng bám feature theo quy mô (D41-D42), contract schema máy đọc + bind Conventions (D43-D44), phase `reviewing`/break-task fail-closed (D45), và pilot đi hết ≥1 feature Must thật (D47). Chỉ bắt đầu sau khi V4/5.0.0 phát hành. Xem [V5-ContractSynthesisPlan.md](V5-ContractSynthesisPlan.md).
 
 ## Điền nội dung
 [ContentFillPlan.md](ContentFillPlan.md) là kế hoạch điền toàn bộ nội dung `Design/` theo batch: B1 khoá schema → B2–B4 kịch bản → B5 template → B6 script.yaml → B7 golden example mobile → B8 adapter → B9 QA. Ở trạng thái hiện tại, phase này được coi là completed và là tiền đề cho toàn bộ kế hoạch 16 tuần bên dưới.
