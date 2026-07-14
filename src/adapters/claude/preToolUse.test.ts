@@ -192,4 +192,103 @@ describe('onPreToolUse hook', () => {
     const updated = loadProgress(projectProgressPath);
     expect(updated.gates_passed).toContain('scope-locked');
   });
+
+  test('should deny path traversal and drives on Write/Edit tools', () => {
+    // 1. Path traversal via relative parent dir
+    const result1 = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Write',
+      toolInput: { path: '../../outside.ts' },
+    });
+    expect(result1.decision).toBe('deny');
+    expect(result1.message).toContain('path traversal ngoài workspace');
+
+    // 2. Drive letter or absolute path on Windows/Unix
+    const result2 = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Write',
+      toolInput: { path: 'C:/Windows/System32/cmd.exe' },
+    });
+    expect(result2.decision).toBe('deny');
+  });
+
+  test('should deny disallowed Git commands', () => {
+    const resultCheckout = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'git checkout main' },
+    });
+    expect(resultCheckout.decision).toBe('deny');
+    expect(resultCheckout.message).toContain('Không được phép sử dụng lệnh git ghi sửa');
+
+    const resultApply = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'git apply patch.diff' },
+    });
+    expect(resultApply.decision).toBe('deny');
+  });
+
+  test('should deny Bash commands with shell operators, separators, or inline interpreters', () => {
+    const resultSeparator = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'npm install && node index.js' },
+    });
+    expect(resultSeparator.decision).toBe('deny');
+    expect(resultSeparator.message).toContain('chứa ký tự shell đặc biệt hoặc inline interpreter');
+
+    const resultRedirect = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'echo "test" > out.txt' },
+    });
+    expect(resultRedirect.decision).toBe('deny');
+
+    const resultNodeEval = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'node -e "console.log(1)"' },
+    });
+    expect(resultNodeEval.decision).toBe('deny');
+  });
+
+  test('should deny when execution-state.json is missing or corrupted outside interview phase', () => {
+    // Phase is ready-to-build, but no execution-state.json exists
+    const mockProgress = {
+      version: '0.1.0',
+      phase: 'ready-to-build',
+      branch: 'web',
+      current_step: null,
+      answered: [],
+      emitted_docs: [],
+      gates_passed: [],
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 0,
+      updated_at: new Date().toISOString(),
+    };
+    writeFileSync(projectProgressPath, JSON.stringify(mockProgress, null, 2), 'utf8');
+
+    // No execution-state.json file -> deny
+    const resultMissing = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Write',
+      toolInput: { path: 'src/index.ts' },
+    });
+    expect(resultMissing.decision).toBe('deny');
+    expect(resultMissing.message).toContain('Thiếu tệp trạng thái thực thi');
+
+    // Corrupted execution-state.json -> deny
+    const execStatePath = join(testWorkspaceRoot, '.design-everything/execution-state.json');
+    mkdirSync(dirname(execStatePath), { recursive: true });
+    writeFileSync(execStatePath, 'invalid json data', 'utf8');
+
+    const resultCorrupt = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Write',
+      toolInput: { path: 'src/index.ts' },
+    });
+    expect(resultCorrupt.decision).toBe('deny');
+    expect(resultCorrupt.message).toContain('Tệp trạng thái thực thi bị lỗi hoặc không hợp lệ');
+  });
 });

@@ -27,6 +27,7 @@ Không được chủ động sinh code khi các file tài liệu bắt buộc c
 
 Các cổng chặn cụ thể:
 - **Gate `scope-locked`**: Không bắt đầu tạo hoặc sửa mã nguồn ứng dụng khi chưa có đầy đủ các tài liệu: `00-vision.md`, `01-personas.md`, `02-scope.md`.
+- **Gate `plan-validated`**: Không bắt đầu tạo hoặc sửa mã nguồn ứng dụng khi chưa có đầy đủ các tài liệu: `00-vision.md`, `01-personas.md`, `02-scope.md`, `03-data-model.md`, `04-flows.md`, `05-architecture.md`, `06-constraints.md`, `08-build-plan.md`, `README.md`.
 
 **Các chỉ dẫn an toàn bắt buộc:**
 - Trước khi viết code, tự kiểm tra các doc bắt buộc của gate hiện tại đã tồn tại chưa.
@@ -40,3 +41,10 @@ Các cổng chặn cụ thể:
 - Mỗi file được tạo ra bắt buộc phải có phần tiêu đề mở đầu `## Tại sao cần file này`.
 - Mỗi mục tài liệu phải được đính kèm mỏ neo ẩn ở dạng comment với trạng thái `status=planned` và `rev` để trống theo chuẩn mỏ neo truy vết.
 - Không tự tiện tạo thêm file tài liệu mới nằm ngoài cấu trúc taxonomy trừ khi lõi hệ thống đã được cập nhật chính thức.
+
+## 6. Quy trình thực thi V3 (Soft Enforcement)
+Quy trình thực thi và ghi nhận bằng chứng ở các harness rules-only:
+1. **Xác thực kế hoạch (Validate)**: Phải chạy validator thông qua tài liệu `09-execution-plan.md` và `.design-everything/execution-plan.json` trước khi code.
+2. **Kích hoạt task (Start)**: Chỉ làm việc trên duy nhất một active task đang mở. Tự giới hạn phạm vi chỉnh sửa trong các tệp tin thuộc `allowed_paths` của task đó.
+3. **Ghi nhận bằng chứng (Evidence & Repair)**: Sau khi chạy các lệnh kiểm chứng, ghi nhận kết quả (exit code, output) vào phần bằng chứng. Nếu lỗi xảy ra, giữ trạng thái ở chế độ sửa chữa (`repairing`) cho tới khi test pass hoàn toàn.
+4. **Tuyên bố giới hạn (Self-reported Limitation)**: Chế độ Rules-Only là cơ chế ép buộc mềm. Agent và lập trình viên phải chủ động thực thi đúng kỷ luật và tự ghi nhận bằng chứng trung thực.

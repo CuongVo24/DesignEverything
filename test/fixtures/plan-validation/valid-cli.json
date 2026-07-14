@@ -1,0 +1,184 @@
+{
+  "shape": "cli",
+  "answers": {
+    "S3": "Must: Thêm công thức, Xem danh sách công thức. Should: Sắp xếp theo ngày. Won't: Đồng bộ đám mây.",
+    "S5": "Mở terminal -> gõ lệnh search -> xem công thức -> xuất file",
+    "C1": "architecture details",
+    "C2": "flags and arguments",
+    "C3": "auth details",
+    "C4": "cross-platform",
+    "C5": "NPM registry"
+  },
+  "emitted_docs": [
+    {
+      "file": "00-vision.md",
+      "content": "vision"
+    },
+    {
+      "file": "01-personas.md",
+      "content": "personas"
+    },
+    {
+      "file": "02-scope.md",
+      "content": "scope"
+    },
+    {
+      "file": "03-data-model.md",
+      "content": "data model"
+    },
+    {
+      "file": "04-flows.md",
+      "content": "flows"
+    },
+    {
+      "file": "05-architecture.md",
+      "content": "architecture"
+    },
+    {
+      "file": "06-constraints.md",
+      "content": "constraints"
+    },
+    {
+      "file": "07-distribution.md",
+      "content": "distribution"
+    },
+    {
+      "file": "08-build-plan.md",
+      "content": "build plan"
+    },
+    {
+      "file": "README.md",
+      "content": "- 00-vision.md\n- 01-personas.md\n- 02-scope.md\n- 03-data-model.md\n- 04-flows.md\n- 05-architecture.md\n- 06-constraints.md\n- 07-distribution.md\n- 08-build-plan.md\n- README.md\n\n- 09-execution-plan.md\n- .design-everything/execution-plan.json"
+    },
+    {
+      "file": "09-execution-plan.md",
+      "content": "# Detailed Execution Plan\n\n<!-- plan-digest: 8fd7e00fbf132bcbc4f3908de1c1f7c9f9e70077029c18648643abd561ee54f8 -->"
+    },
+    {
+      "file": ".design-everything/execution-plan.json",
+      "content": "{\n  \"metadata\": {\n    \"version\": \"4.0.0\",\n    \"updated_at\": \"2026-07-13T10:00:00.000Z\"\n  },\n  \"trace_links\": [\n    {\n      \"must_id\": \"Thêm công thức\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    },\n    {\n      \"must_id\": \"Xem danh sách công thức.\",\n      \"flow_id\": \"Mở terminal -> gõ lệnh search -> xem công thức -> xuất file\",\n      \"task_ids\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"risks\": [\n    {\n      \"id\": \"R1-tech-uncertainty\",\n      \"title\": \"Risk related to tech uncertainty\",\n      \"status\": \"spike-required\",\n      \"exit_criterion\": \"Feasibility spike complete\"\n    }\n  ],\n  \"milestones\": [\n    {\n      \"id\": \"M0\",\n      \"title\": \"Feasibility Spike\",\n      \"tasks\": [\n        \"T0\"\n      ]\n    },\n    {\n      \"id\": \"M1\",\n      \"title\": \"Core implementation\",\n      \"tasks\": [\n        \"T1\"\n      ]\n    }\n  ],\n  \"tasks\": {\n    \"T0\": {\n      \"id\": \"T0\",\n      \"type\": \"spike\",\n      \"milestone\": \"M0\",\n      \"intent\": \"Spike: check compatibility\",\n      \"depends_on\": [],\n      \"allowed_paths\": [\n        \"package.json\"\n      ],\n      \"preconditions\": [],\n      \"commands\": [\n        {\n          \"id\": \"t0-cmd-0\",\n          \"argv\": [\n            \"npm\",\n            \"install\"\n          ],\n          \"cwd\": null,\n          \"expected\": {\n            \"kind\": \"exit-code-zero\"\n          }\n        }\n      ],\n      \"expected_result\": \"Succeeds without error\",\n      \"evidence_required\": [\n        \"T0-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\",\n      \"requires_capability\": \"node-npm-project\"\n    },\n    \"T1\": {\n      \"id\": \"T1\",\n      \"type\": \"implementation\",\n      \"milestone\": \"M1\",\n      \"intent\": \"Add formulas and view list\",\n      \"depends_on\": [\n        \"T0\"\n      ],\n      \"allowed_paths\": [\n        \"src/core/emit.ts\",\n        \"src/core/emit.test.ts\"\n      ],\n      \"preconditions\": [\n        \"T0\"\n      ],\n      \"commands\": [\n        {\n          \"id\": \"t1-cmd-0\",\n          \"argv\": [\n            \"npm\",\n            \"test\"\n          ],\n          \"cwd\": null,\n          \"expected\": {\n            \"kind\": \"exit-code-zero\"\n          }\n        }\n      ],\n      \"expected_result\": \"Tests run green\",\n      \"evidence_required\": [\n        \"T1-evidence.txt\"\n      ],\n      \"failure_policy\": \"abort\",\n      \"requires_capability\": \"node-npm-project\"\n    }\n  },\n  \"capabilities_evidence\": [\n    {\n      \"id\": \"node-npm-project\",\n      \"name\": \"Node.js NPM Project Manifest\",\n      \"source\": \"existing-manifest\",\n      \"checked_at\": \"2026-07-13T14:06:58.599Z\"\n    }\n  ],\n  \"discovery_status\": \"pass\"\n}"
+    }
+  ],
+  "execution_plan": {
+    "metadata": {
+      "version": "4.0.0",
+      "updated_at": "2026-07-13T10:00:00.000Z"
+    },
+    "trace_links": [
+      {
+        "must_id": "Thêm công thức",
+        "flow_id": "Mở terminal -> gõ lệnh search -> xem công thức -> xuất file",
+        "task_ids": [
+          "T1"
+        ]
+      },
+      {
+        "must_id": "Xem danh sách công thức.",
+        "flow_id": "Mở terminal -> gõ lệnh search -> xem công thức -> xuất file",
+        "task_ids": [
+          "T1"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "id": "R1-tech-uncertainty",
+        "title": "Risk related to tech uncertainty",
+        "status": "spike-required",
+        "exit_criterion": "Feasibility spike complete"
+      }
+    ],
+    "milestones": [
+      {
+        "id": "M0",
+        "title": "Feasibility Spike",
+        "tasks": [
+          "T0"
+        ]
+      },
+      {
+        "id": "M1",
+        "title": "Core implementation",
+        "tasks": [
+          "T1"
+        ]
+      }
+    ],
+    "tasks": {
+      "T0": {
+        "id": "T0",
+        "type": "spike",
+        "milestone": "M0",
+        "intent": "Spike: check compatibility",
+        "depends_on": [],
+        "allowed_paths": [
+          "package.json"
+        ],
+        "preconditions": [],
+        "commands": [
+          {
+            "id": "t0-cmd-0",
+            "argv": [
+              "npm",
+              "install"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
+        ],
+        "expected_result": "Succeeds without error",
+        "evidence_required": [
+          "T0-evidence.txt"
+        ],
+        "failure_policy": "abort",
+        "requires_capability": "node-npm-project"
+      },
+      "T1": {
+        "id": "T1",
+        "type": "implementation",
+        "milestone": "M1",
+        "intent": "Add formulas and view list",
+        "depends_on": [
+          "T0"
+        ],
+        "allowed_paths": [
+          "src/core/emit.ts",
+          "src/core/emit.test.ts"
+        ],
+        "preconditions": [
+          "T0"
+        ],
+        "commands": [
+          {
+            "id": "t1-cmd-0",
+            "argv": [
+              "npm",
+              "test"
+            ],
+            "cwd": null,
+            "expected": {
+              "kind": "exit-code-zero"
+            }
+          }
+        ],
+        "expected_result": "Tests run green",
+        "evidence_required": [
+          "T1-evidence.txt"
+        ],
+        "failure_policy": "abort",
+        "requires_capability": "node-npm-project"
+      }
+    },
+    "capabilities_evidence": [
+      {
+        "id": "node-npm-project",
+        "name": "Node.js NPM Project Manifest",
+        "source": "existing-manifest",
+        "checked_at": "2026-07-13T14:06:58.599Z"
+      }
+    ],
+    "discovery_status": "pass"
+  }
+}

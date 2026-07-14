@@ -24,6 +24,7 @@ Nếu không định nghĩa "thế nào là một doc tốt" trước khi sản 
 | `04-flows.md` | 1 luồng điển hình mở→xong, bám tính năng Must #1 | Flow cho tính năng chưa có trong scope |
 | `05-architecture.md` | Quyết định khớp câu trả lời nhánh W/M + nêu lý do | Chọn tech "vì hot", không nối với nhu cầu |
 | `06-constraints.md` | Solo/deadline/ngân sách thật, ảnh hưởng scope | Bỏ trống hoặc chép mặc định không kiểm |
+| `09-execution-plan.md` | Môi trường thử nghiệm cụ thể, rủi ro phân loại rõ, có task spike đi trước task implementation | Kế hoạch chạy đa nền tảng mặc định, không có spike cho rủi ro chưa xác thực |
 
 ## C. Riêng S3 (câu khó nhất)
 - [ ] Agent **chủ động phân loại** Must/Should/Could, không bắt người mới tự ưu tiên.
@@ -38,11 +39,11 @@ Nếu không định nghĩa "thế nào là một doc tốt" trước khi sản 
 
 Một output được coi là plan-validated không chỉ vì mỗi file có đủ heading/anchor. Nó còn phải:
 
-- [ ] README phản ánh đúng shape, file thực tế và không có command/file scaffold ảo.
-- [ ] Mỗi Must nối được sang flow, task/milestone, acceptance và evidence expected.
-- [ ] Won't không xuất hiện trong task MVP.
-- [ ] Assumption/risk được ghi confirmed, assumption hoặc spike-required; chưa xác nhận không trình bày như fact.
-- [ ] Task đầu tiên có first environment, precondition, allowed paths, expected result và failure policy.
+- [x] README phản ánh đúng shape, file thực tế và không có command/file scaffold ảo.
+- [x] Mỗi Must nối được sang flow, task/milestone, acceptance và evidence expected.
+- [x] Won't không xuất hiện trong task MVP.
+- [x] Assumption/risk được ghi confirmed, assumption hoặc spike-required; chưa xác nhận không trình bày như fact.
+- [x] Task đầu tiên có first environment, precondition, allowed paths, expected result và failure policy.
 
 Các check deterministic và release evidence nằm ở B7a/B10a; rubric không tự cấp pass thay validator.
 

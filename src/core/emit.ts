@@ -2,6 +2,11 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadShapes } from './loadShapes.js';
+import { createHash } from 'crypto';
+
+import { loadProjectProfile, saveProjectProfile } from './projectProfileState.js';
+import { inspectProjectProfile } from './inspectProjectProfile.js';
+import { synthesizeExecutionPlan } from './synthesizeExecutionPlan.js';
 
 export type InterviewAnswers = Record<string, string>;
 
@@ -50,11 +55,17 @@ export function emitTree(
   answers: InterviewAnswers,
   branch: string,
   templatesDir: string,
-  options?: { srcPrefix?: string }
+  options?: { srcPrefix?: string; workspaceDir?: string }
 ): EmittedDoc[] {
   // 1. Determine release docs from shapes.yaml registry
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  const shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  let shapesPath = join(process.cwd(), 'Design/Content/interview-script/shapes.yaml');
+  if (!existsSync(shapesPath)) {
+    shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+  }
+  if (!existsSync(shapesPath)) {
+    shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
+  }
   let releaseDocs: string[] = [];
 
   if (existsSync(shapesPath)) {
@@ -89,6 +100,7 @@ export function emitTree(
     '06-constraints.md',
     ...releaseDocs,
     '08-build-plan.md',
+    '09-execution-plan.md',
     'README.md',
   ];
 
@@ -219,6 +231,8 @@ export function emitTree(
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       : (branch === 'web'
         ? `docs/
@@ -231,6 +245,8 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
         : branch === 'mobile'
           ? `docs/
@@ -243,6 +259,8 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
           : `docs/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
@@ -254,6 +272,8 @@ export function emitTree(
 ├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       )
     );
@@ -268,6 +288,16 @@ export function emitTree(
           ? 'Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.'
           : 'Dự án Công cụ dòng lệnh (CLI). Quy trình đóng gói và phân phối chi tiết ở 07-distribution.md.');
 
+  filledSlots['docs_readme_release_step'] =
+    answers['docs_readme_release_step'] ||
+    (branch === 'hybrid'
+      ? '`07-deployment.md` và `07-release.md` — xem đường phát hành phù hợp với web và mobile.'
+      : branch === 'web'
+        ? '`07-deployment.md` — xem đường phát hành phù hợp với web.'
+        : branch === 'mobile'
+          ? '`07-release.md` — xem quy trình phát hành & phân phối cửa hàng di động.'
+          : '`07-distribution.md` — xem hướng dẫn đóng gói, phân phối và cài đặt công cụ dòng lệnh.');
+
   filledSlots['docs_readme_build_notes'] =
     answers['docs_readme_build_notes'] ||
     (branch === 'hybrid'
@@ -277,6 +307,67 @@ export function emitTree(
         : branch === 'mobile'
           ? 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.'
           : 'Cài đặt dependencies: `npm install`. Chạy CLI local: `node bin/index.js` (hoặc build: `npm run build`). Chạy tests: `npm test`.');
+
+  const cwd = options?.workspaceDir ?? process.cwd();
+  let profile = loadProjectProfile(cwd);
+  if (!profile) {
+    const result = inspectProjectProfile(cwd);
+    profile = result.profile;
+    saveProjectProfile(cwd, profile);
+  }
+
+  const synthesis = synthesizeExecutionPlan({
+    answers,
+    profile,
+    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'],
+  });
+
+  const planJson = synthesis.plan;
+
+  if (synthesis.blocked) {
+    filledSlots['first_supported_environment'] =
+      `- Trạng thái: BỊ CHẶN (Blocked)\n- Lý do: ${synthesis.message || 'Thiếu project manifest hoặc chưa xác nhận cấu hình.'}`;
+
+    filledSlots['risk_register'] =
+      `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n| R-blocked | Cao | spike-required | ${synthesis.message || 'Khởi tạo tệp tin cấu hình dự án.'} |`;
+
+    filledSlots['feasibility_spikes'] =
+      '- **Khảo sát rủi ro**: Vui lòng chạy lệnh doctor hoặc khởi tạo tệp tin cấu hình dự án tương ứng, sau đó chạy lại lệnh validate.';
+
+    filledSlots['task_cards'] =
+      `### [Task T0-discovery] Khảo sát môi trường và cấu hình tệp dự án\n- Loại: spike\n- Mục tiêu: Thiết lập cấu hình dự án hợp lệ.\n- Preconditions: Không.\n- Lệnh kiểm chứng: Không.`;
+
+    filledSlots['acceptance_evidence_rules'] =
+      '- **Chặn quy trình (Blocked)**: Toàn bộ quá trình triển khai bị chặn cho đến khi phát hiện được project manifest hợp lệ.';
+  } else {
+    filledSlots['first_supported_environment'] =
+      `- Target: ${profile.target}\n- Runtime: ${profile.runtime}\n- Package Manager: ${profile.package_manager}\n- Language: ${profile.language}\n- Capabilities: ${profile.capabilities.join(', ')}`;
+
+    filledSlots['risk_register'] =
+      `| Mã rủi ro | Tiêu đề | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n` +
+      planJson.risks.map((r) => `| ${r.id} | ${r.title} | ${r.status} | ${r.exit_criterion} |`).join('\n');
+
+    filledSlots['feasibility_spikes'] =
+      planJson.risks
+        .filter((r) => r.status === 'spike-required')
+        .map((r) => `- **Spike ${r.id}**: ${r.exit_criterion}`)
+        .join('\n') || '- Không có spike yêu cầu khảo sát thêm.';
+
+    filledSlots['task_cards'] = Object.values(planJson.tasks)
+      .map((task) => {
+        const cmdLines = task.commands.map((cmd) => `  * \`${cmd.argv.join(' ')}\` (expected: ${cmd.expected.kind} ${cmd.expected.value || ''})`).join('\n');
+        return `### [Task ${task.id}] ${task.intent}\n` +
+          `- Loại: ${task.type}\n` +
+          `- Milestone: ${task.milestone}\n` +
+          `- Preconditions: ${task.preconditions.join(', ') || 'Không'}\n` +
+          `- Allowed paths: ${task.allowed_paths.join(', ') || 'Không'}\n` +
+          `- Lệnh kiểm chứng:\n${cmdLines || '  * Không'}`;
+      })
+      .join('\n\n');
+
+    filledSlots['acceptance_evidence_rules'] =
+      '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc bằng chứng tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.';
+  }
 
   // Compute planned anchor source/symbol placeholders based on branch
   const srcPrefix = options?.srcPrefix ?? (branch === 'mobile' ? 'apps/mobile/src/' : 'src/');
@@ -327,6 +418,11 @@ export function emitTree(
     docs_readme_file_map: { file: 'features/docs/readme.ts', symbol: 'fileMap' },
     docs_readme_branch_note: { file: 'features/docs/readme.ts', symbol: 'branchSpecificDocNote' },
     docs_readme_build_notes: { file: 'features/docs/readme.ts', symbol: 'buildNotes' },
+    environment: { file: 'features/execution/plan.ts', symbol: 'firstSupportedEnvironment' },
+    risk_register: { file: 'features/execution/plan.ts', symbol: 'riskRegister' },
+    spikes: { file: 'features/execution/plan.ts', symbol: 'feasibilitySpikes' },
+    task_cards: { file: 'features/execution/plan.ts', symbol: 'taskCards' },
+    resume_rules: { file: 'features/execution/plan.ts', symbol: 'resumeRules' },
   };
 
   // Populate planned anchors
@@ -336,8 +432,47 @@ export function emitTree(
   }
 
   // 3. Emit tree
-  return files.map((file) => {
+  const tree = files.map((file) => {
     const content = emitDoc(file, filledSlots, templatesDir);
     return { file, content };
   });
+
+  const planJsonContent = JSON.stringify(planJson, null, 2);
+  const digest = createHash('sha256').update(planJsonContent.trim()).digest('hex');
+
+  // Append digest to 09-execution-plan.md
+  const planMdEntry = tree.find((t) => t.file === '09-execution-plan.md');
+  if (planMdEntry) {
+    planMdEntry.content += `\n\n<!-- plan-digest: ${digest} -->`;
+  }
+
+  tree.push({
+    file: '.design-everything/execution-plan.json',
+    content: planJsonContent,
+  });
+
+  return tree;
+}
+
+import { ExecutionPlanV3 } from './schemas/executionPlan.js';
+
+export function generateExecutionPlanJson(
+  answers: InterviewAnswers,
+  _branch: string,
+  workspaceDir: string = process.cwd()
+): ExecutionPlanV3 {
+  let profile = loadProjectProfile(workspaceDir);
+  if (!profile) {
+    const result = inspectProjectProfile(workspaceDir);
+    profile = result.profile;
+    saveProjectProfile(workspaceDir, profile);
+  }
+
+  const synthesis = synthesizeExecutionPlan({
+    answers,
+    profile,
+    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'],
+  });
+
+  return synthesis.plan;
 }

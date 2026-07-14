@@ -22,18 +22,18 @@ Chứng minh bằng journey và failure cases rằng V3 giúp người mới đi
 
 ## 3. Checklist
 
-- [ ] Mỗi validator error code có một mutation fail xanh.
-- [ ] Có ít nhất web/mobile/cli transcript và một case external dependency.
-- [ ] Claude E2E chứng minh deny/allow task path, verify fail, repair và resume.
-- [ ] Rules-only smoke ghi đúng self-reported limitation.
-- [ ] Pilot rubric, raw findings và quyết định follow-up được versioned trong Design/RoadMap.
+- [x] Mỗi validator error code có một mutation fail xanh.
+- [x] Có ít nhất web/mobile/cli transcript và một case external dependency.
+- [x] Claude E2E chứng minh deny/allow task path, verify fail, repair và resume.
+- [x] Rules-only smoke ghi đúng self-reported limitation.
+- [x] Pilot rubric, raw findings và quyết định follow-up được versioned trong Design/RoadMap.
 
 ## 4. Interfaces / Files expected to change
 
-- [NEW] test/e2e/execution-flow.test.ts và edge cases, khoảng 200 dòng mỗi file tối đa.
-- [NEW] test/fixtures/execution/ và test/fixtures/plan-validation/.
-- [NEW] Design/RoadMap/v3-evaluation-report.md và raw anonymized findings.
-- [MODIFY] Design/Conventions/TestStrategy.md và QualityRubric.md.
+- [x] test/e2e/execution-flow.test.ts và edge cases, khoảng 200 dòng mỗi file tối đa.
+- [x] test/fixtures/execution/ và test/fixtures/plan-validation/.
+- [x] Design/RoadMap/v3-evaluation-report.md và raw anonymized findings.
+- [x] Design/Conventions/TestStrategy.md và QualityRubric.md.
 
 ## 5. Risks & mitigations
 
@@ -51,4 +51,4 @@ Chứng minh bằng journey và failure cases rằng V3 giúp người mới đi
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE

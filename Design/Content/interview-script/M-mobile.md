@@ -14,13 +14,13 @@ Người mới rất hay mơ một app mobile theo kiểu "code xong là có app
 ## M1 — Chạy trên iPhone, Android hay cả hai
 
 **ask**  
-"Bạn muốn app chạy trên iPhone, Android, hay ngay từ đầu phải phủ cả hai?"
+"App di động này trước mắt chạy trên hệ điều hành nào (iOS hoặc Android) mà bạn đang có thiết bị thật để test? Bạn có muốn giới hạn ở một bên để đơn giản hóa MVP, hay bắt buộc phải chạy cả hai ngay từ đầu?"
 
 **default**  
-"Cả hai, nên ưu tiên hướng cross-platform như React Native hoặc Flutter để giữ MVP gọn hơn."
+`Một nền tảng duy nhất mà bạn đang dùng thiết bị thật để thử nghiệm (Android hoặc iOS) để tránh phức tạp hóa việc build/test cả hai môi trường ở MVP.`
 
 **translate_back**  
-"Mình tóm lại phạm vi nền tảng là `<iPhone / Android / cả hai>`. Vì vậy hướng phù hợp hiện tại là `<cross-platform / native một nền tảng>` vì `<lý do gắn với phạm vi người dùng và nguồn lực>`."
+"Mình tóm lại phạm vi nền tảng thử nghiệm đầu tiên là `<Android / iOS / cả hai>`. Với nguồn lực hiện tại, việc tập trung vào `<Android / iOS>` làm MVP sẽ giúp giảm thiểu rủi ro build/test."
 
 **target_doc**  
 `05-architecture.md`
@@ -29,16 +29,16 @@ Người mới rất hay mơ một app mobile theo kiểu "code xong là có app
 `null`
 
 **Ví dụ trả lời đời thường**  
-"Chắc phải có cả iPhone lẫn Android, vì nhóm bạn em dùng lẫn lộn hết."
+"Mình có điện thoại Android nên muốn làm bản Android chạy trước cho dễ."
 
 **Ví dụ dịch ngược**  
-"Sản phẩm cần phục vụ đồng thời người dùng iOS và Android; với phạm vi MVP và nguồn lực giới hạn, hướng cross-platform là phù hợp hơn để giảm thời gian dựng hai app riêng."
+"MVP tập trung phát triển và thử nghiệm trên nền tảng Android trước để giảm thiểu rào cản thiết bị thử nghiệm; phiên bản iOS sẽ được xem xét tích hợp sau khi luồng core chạy tốt."
 
 **Bẫy thường gặp + cách gỡ**  
-Người mới hay nói "làm cả hai cho đủ" nhưng không ý thức chi phí gấp đôi nếu đi native. Agent phải kéo câu chuyện về nguồn lực thật: ai làm, bao lâu, ngân sách tới đâu.
+Người mới hay nói "làm cả hai cho đủ" nhưng không ý thức chi phí setup, build và test trên cả hai hệ điều hành lớn. Agent phải hướng người dùng chọn một bên có sẵn thiết bị thật để rút ngắn thời gian phản hồi ở MVP.
 
 **Vì sao default này hợp lý**  
-Cross-platform là mặc định thực dụng cho MVP khi cần phủ cả iPhone lẫn Android. Nó không luôn tối ưu tuyệt đối, nhưng thường là cách nhanh nhất để kiểm chứng giá trị sản phẩm trước.
+Tập trung vào một nền tảng duy nhất có thiết bị thật để kiểm thử là hướng đi thực dụng nhất cho MVP, tránh ma sát phân phối và build lỗi đa nền tảng.
 
 ## M2 — Có cần dùng được khi mất mạng không
 

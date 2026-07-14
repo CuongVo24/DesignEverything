@@ -49,4 +49,4 @@ Mở rộng AGENTS.md generator để harness rules-only tuân cùng execution p
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE

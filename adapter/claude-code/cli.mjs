@@ -9,9 +9,9 @@
 //
 // Chạy với cwd = workspace của dự án đích (hoặc đặt CLAUDE_PROJECT_DIR).
 import { pathToFileURL } from 'url';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
 
 const ENGINE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const workspaceRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -24,11 +24,14 @@ const policyPath = join(workspaceRoot, 'Design/Content/interview-script/gate-pol
 const templatesDir = join(workspaceRoot, 'Design/Content/doc-templates');
 const answersDir = join(workspaceRoot, 'Design', '.interview');
 const answersPath = join(answersDir, 'answers.json');
+const execStatePath = join(workspaceRoot, '.design-everything/execution-state.json');
+const execPlanPath = join(workspaceRoot, '.design-everything/execution-plan.json');
 
 function fail(msg) {
   console.error(`[DesignEverything CLI] LỖI: ${msg}`);
   process.exit(1);
 }
+
 
 function loadAnswers() {
   if (!existsSync(answersPath)) return {};
@@ -87,6 +90,14 @@ const script = core.loadScript(scriptPath);
 
 switch (command) {
   case 'status': {
+    let execState = null;
+    if (existsSync(execStatePath)) {
+      try {
+        execState = core.loadExecutionState(execStatePath);
+      } catch {
+        // ignore
+      }
+    }
     console.log(
       JSON.stringify(
         {
@@ -98,6 +109,14 @@ switch (command) {
           answered: progress.answered,
           emitted_docs: progress.emitted_docs,
           gates_passed: progress.gates_passed,
+          execution_state: execState ? {
+            phase: execState.phase,
+            active_task: execState.active_task,
+            active_milestone: execState.active_milestone,
+            completed_tasks: execState.completed_tasks,
+            evidence_count: execState.evidence.length,
+            block_reason: execState.block_reason,
+          } : null,
         },
         null,
         2
@@ -209,7 +228,13 @@ switch (command) {
     const docsDir = join(workspaceRoot, 'docs');
     mkdirSync(docsDir, { recursive: true });
     for (const doc of tree) {
-      writeFileSync(join(docsDir, doc.file), doc.content, 'utf8');
+      if (doc.file.startsWith('.design-everything/')) {
+        const dest = join(workspaceRoot, doc.file);
+        mkdirSync(dirname(dest), { recursive: true });
+        writeFileSync(dest, doc.content, 'utf8');
+      } else {
+        writeFileSync(join(docsDir, doc.file), doc.content, 'utf8');
+      }
     }
 
     // Cập nhật state: emitted_docs + gates_passed + phase.
@@ -255,6 +280,444 @@ switch (command) {
     break;
   }
 
+  case 'validate': {
+    if (!existsSync(execPlanPath)) {
+      fail('Không tìm thấy execution-plan.json. Vui lòng phỏng vấn hoàn tất và emit.');
+    }
+    let execState;
+    if (existsSync(execStatePath)) {
+      execState = core.loadExecutionState(execStatePath);
+    } else {
+      execState = core.initExecutionState();
+    }
+
+    const answers = loadAnswers();
+    let v3Plan;
+    try {
+      v3Plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+    } catch (e) {
+      fail(`Không đọc được execution-plan.json: ${e.message}`);
+    }
+
+    const emittedDocs = [];
+    const docsDir = join(workspaceRoot, 'docs');
+    if (existsSync(docsDir)) {
+      const getFilesRecursive = (dir) => {
+        let results = [];
+        const list = readdirSync(dir);
+        for (const file of list) {
+          const filePath = join(dir, file);
+          const stat = statSync(filePath);
+          if (stat && stat.isDirectory()) {
+            results = results.concat(getFilesRecursive(filePath));
+          } else {
+            results.push(filePath);
+          }
+        }
+        return results;
+      };
+      const files = getFilesRecursive(docsDir);
+      for (const f of files) {
+        const rel = relative(docsDir, f).replace(/\\/g, '/');
+        emittedDocs.push({
+          file: rel,
+          content: readFileSync(f, 'utf8'),
+        });
+      }
+    }
+    if (existsSync(execPlanPath)) {
+      emittedDocs.push({
+        file: '.design-everything/execution-plan.json',
+        content: readFileSync(execPlanPath, 'utf8'),
+      });
+    }
+
+    const valResult = core.validateExecutionPlan({
+      shape: progress.branch,
+      answers,
+      execution_plan: v3Plan,
+      emitted_docs: emittedDocs,
+    });
+
+    const planDigest = core.calculatePlanDigest(v3Plan);
+    const docsDigest = core.calculateDocsDigest(emittedDocs);
+    const validationDigest = core.calculateValidationResultDigest(valResult);
+
+    const nextState = core.transitionToReadyToExecute(execState, valResult.pass, {
+      plan_digest: planDigest,
+      docs_digest: docsDigest,
+      validation_digest: validationDigest,
+    });
+
+    if (!valResult.pass) {
+      nextState.block_reason = `Validation failed: ${valResult.issues.map(i => i.message).join('; ')}`;
+    }
+    core.saveExecutionState(execStatePath, nextState);
+
+    console.log(
+      JSON.stringify(
+        {
+          pass: valResult.pass,
+          issues: valResult.issues,
+          phase: nextState.phase,
+          block_reason: nextState.block_reason,
+        },
+        null,
+        2
+      )
+    );
+    break;
+  }
+
+  case 'next': {
+    if (!existsSync(execStatePath)) {
+      fail('Chưa có execution-state.json. Chạy "validate" trước.');
+    }
+    if (!existsSync(execPlanPath)) {
+      fail('Không thấy execution-plan.json.');
+    }
+    const execState = core.loadExecutionState(execStatePath);
+    const v3Plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+
+    const emittedDocs = core.loadEmittedDocs(workspaceRoot, execPlanPath);
+    try {
+      core.assertValidatedSnapshot({ docs: emittedDocs, plan: v3Plan, state: execState });
+    } catch (e) {
+      core.saveExecutionState(execStatePath, execState);
+      fail(e.message);
+    }
+
+    const runnable = [];
+    for (const milestone of v3Plan.milestones || []) {
+      for (const taskId of milestone.tasks || []) {
+        const task = v3Plan.tasks?.[taskId];
+        if (!task) continue;
+        if (execState.completed_tasks.includes(taskId)) continue;
+
+        const pre = task.depends_on || task.preconditions || [];
+        const preMet = pre.every(p => execState.completed_tasks.includes(p));
+        if (preMet) {
+          runnable.push({
+            id: taskId,
+            milestone: milestone.id,
+            type: task.type,
+            intent: task.intent,
+            allowed_paths: task.allowed_paths,
+            preconditions: pre,
+            commands: task.commands,
+            expected_result: task.expected_result,
+            evidence_required: task.evidence_required,
+          });
+        }
+      }
+    }
+
+    console.log(JSON.stringify({ runnable }, null, 2));
+    break;
+  }
+
+  case 'start': {
+    if (!args.task || args.task === true) {
+      fail('Thiếu tham số --task <task_id>.');
+    }
+    if (!existsSync(execStatePath)) {
+      fail('Chưa có execution-state.json. Chạy "validate" trước.');
+    }
+    if (!existsSync(execPlanPath)) {
+      fail('Không thấy execution-plan.json.');
+    }
+    const execState = core.loadExecutionState(execStatePath);
+    const v3Plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+
+    const emittedDocs = core.loadEmittedDocs(workspaceRoot, execPlanPath);
+    try {
+      core.assertValidatedSnapshot({ docs: emittedDocs, plan: v3Plan, state: execState });
+    } catch (e) {
+      core.saveExecutionState(execStatePath, execState);
+      fail(e.message);
+    }
+
+    let milestoneId = null;
+    for (const m of v3Plan.milestones || []) {
+      if ((m.tasks || []).includes(args.task)) {
+        milestoneId = m.id;
+        break;
+      }
+    }
+    if (!milestoneId) {
+      fail(`Không tìm thấy task ${args.task} trong execution plan milestones.`);
+    }
+
+    let nextState;
+    try {
+      nextState = core.startTask(execState, milestoneId, args.task, v3Plan);
+    } catch (e) {
+      fail(e.message);
+    }
+
+    core.saveExecutionState(execStatePath, nextState);
+    const task = v3Plan.tasks[args.task];
+
+    console.log(
+      JSON.stringify(
+        {
+          started: args.task,
+          milestone: milestoneId,
+          phase: nextState.phase,
+          task_details: {
+            id: args.task,
+            intent: task.intent,
+            allowed_paths: task.allowed_paths,
+            preconditions: task.depends_on || task.preconditions || [],
+            commands: task.commands,
+            expected_result: task.expected_result,
+            evidence_required: task.evidence_required,
+          },
+          note: 'Vui lòng chỉ chỉnh sửa các file thuộc allowed_paths của task hiện tại.',
+        },
+        null,
+        2
+      )
+    );
+    break;
+  }
+
+  case 'verify': {
+    if (!args.task || args.task === true) {
+      fail('Thiếu --task <task_id>.');
+    }
+    if (!args.command || args.command === true) {
+      fail('Thiếu --command <command_id>.');
+    }
+    if (!existsSync(execStatePath)) {
+      fail('Chưa có execution-state.json.');
+    }
+    if (!existsSync(execPlanPath)) {
+      fail('Không thấy execution-plan.json.');
+    }
+    const execState = core.loadExecutionState(execStatePath);
+    const v3Plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+
+    const emittedDocs = core.loadEmittedDocs(workspaceRoot, execPlanPath);
+    try {
+      core.assertValidatedSnapshot({ docs: emittedDocs, plan: v3Plan, state: execState });
+    } catch (e) {
+      core.saveExecutionState(execStatePath, execState);
+      fail(e.message);
+    }
+
+    let nextState;
+    try {
+      nextState = await core.runTaskVerification({
+        workspace: workspaceRoot,
+        plan: v3Plan,
+        state: execState,
+        task_id: args.task,
+        command_id: args.command
+      });
+    } catch (e) {
+      fail(e.message);
+    }
+
+    core.saveExecutionState(execStatePath, nextState);
+
+    console.log(
+      JSON.stringify(
+        {
+          verified: args.task,
+          command: args.command,
+          phase: nextState.phase,
+          block_reason: nextState.block_reason,
+          completed_tasks: nextState.completed_tasks,
+          evidence_count: nextState.evidence.length,
+        },
+        null,
+        2
+      )
+    );
+    break;
+  }
+
+  case 'repair': {
+    if (!existsSync(execStatePath)) {
+      fail('Chưa có execution-state.json.');
+    }
+    const execState = core.loadExecutionState(execStatePath);
+    if (execState.phase !== 'repairing') {
+      fail(`Không thể khởi động sửa lỗi khi pha là ${execState.phase}; pha phải là repairing.`);
+    }
+
+    console.log(
+      JSON.stringify(
+        {
+          phase: execState.phase,
+          active_task: execState.active_task,
+          note: `Vui lòng sửa mã nguồn trong phạm vi cho phép và chạy lại lệnh kiểm chứng, sau đó gọi record-evidence.`,
+        },
+        null,
+        2
+      )
+    );
+    break;
+  }
+
+  case 'next-step': {
+    let execPlan = null;
+    if (existsSync(execPlanPath)) {
+      try {
+        execPlan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+      } catch {
+        // ignore
+      }
+    }
+    let execState = null;
+    if (existsSync(execStatePath)) {
+      try {
+        execState = core.loadExecutionState(execStatePath);
+      } catch {
+        // ignore
+      }
+    }
+    let profile = core.loadProjectProfile(workspaceRoot);
+    if (!profile && existsSync(join(workspaceRoot, '.design-everything/project-profile.json'))) {
+      try {
+        profile = JSON.parse(readFileSync(join(workspaceRoot, '.design-everything/project-profile.json'), 'utf8'));
+      } catch {
+        // ignore
+      }
+    }
+
+    const card = core.renderNextStep(execPlan, execState, profile);
+    const mode = args.calibrate || progress.calibrate_mode || 'fast';
+    const text = core.renderNextStepMarkdown(card, mode);
+    console.log(text);
+    break;
+  }
+
+  case 'amend': {
+    const action = rest[0];
+    if (!action) {
+      fail('Thiếu action cho lệnh amend. Dùng: propose | show | approve | reject.');
+    }
+
+    if (!existsSync(execStatePath)) {
+      fail('Chưa có execution-state.json. Vui lòng validate trước.');
+    }
+    const execState = core.loadExecutionState(execStatePath);
+
+    let execPlan = null;
+    if (existsSync(execPlanPath)) {
+      try {
+        execPlan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+      } catch (e) {
+        fail(`Không đọc được execution-plan.json: ${e.message}`);
+      }
+    }
+    if (!execPlan) {
+      fail('Không thấy execution-plan.json.');
+    }
+
+    let profile = core.loadProjectProfile(workspaceRoot);
+    if (!profile && existsSync(join(workspaceRoot, '.design-everything/project-profile.json'))) {
+      try {
+        profile = JSON.parse(readFileSync(join(workspaceRoot, '.design-everything/project-profile.json'), 'utf8'));
+      } catch {
+        // ignore
+      }
+    }
+
+    if (action === 'propose') {
+      const reason = args.reason;
+      const changesFile = args.changes;
+      if (!reason) fail('Thiếu --reason <reason_code>.');
+      if (!changesFile) fail('Thiếu --changes <json_file>.');
+
+      if (!existsSync(changesFile)) {
+        fail(`Không tìm thấy changes file: ${changesFile}`);
+      }
+
+      let changes;
+      try {
+        changes = JSON.parse(readFileSync(changesFile, 'utf8'));
+      } catch (e) {
+        fail(`Changes file không phải JSON hợp lệ: ${e.message}`);
+      }
+
+      if (!profile) {
+        fail('Project profile không tồn tại. Vui lòng chạy doctor trước.');
+      }
+
+      let amendment;
+      try {
+        amendment = core.proposePlanAmendment({
+          plan: execPlan,
+          state: execState,
+          profile,
+          reason_code: reason,
+          proposed_changes: changes,
+          requested_by: args['requested-by'] || 'agent',
+        });
+      } catch (e) {
+        fail(e.message);
+      }
+
+      core.saveExecutionState(execStatePath, execState);
+
+      console.log(JSON.stringify({ proposed: amendment }, null, 2));
+    } else if (action === 'show') {
+      const amendId = rest[1];
+      if (!amendId) fail('Thiếu <amendment_id>.');
+      const amendment = execState.amendment_history.find(am => am.id === amendId);
+      if (!amendment) fail(`Không tìm thấy amendment: ${amendId}`);
+      console.log(JSON.stringify(amendment, null, 2));
+    } else if (action === 'approve') {
+      const amendId = rest[1];
+      if (!amendId) fail('Thiếu <amendment_id>.');
+
+      let result;
+      try {
+        result = core.approvePlanAmendment({
+          workspace: workspaceRoot,
+          plan: execPlan,
+          state: execState,
+          profile,
+          amendmentId: amendId,
+        });
+      } catch (e) {
+        fail(e.message);
+      }
+
+      console.log(
+        JSON.stringify(
+          {
+            approved: amendId,
+            plan_revision: result.state.plan_revision,
+            phase: result.state.phase,
+            note: 'Amendment approved. Cần chạy lại lệnh validate trước khi tiếp tục.',
+          },
+          null,
+          2
+        )
+      );
+    } else if (action === 'reject') {
+      const amendId = rest[1];
+      if (!amendId) fail('Thiếu <amendment_id>.');
+
+      let amendment;
+      try {
+        amendment = core.rejectPlanAmendment(execState, amendId);
+      } catch (e) {
+        fail(e.message);
+      }
+
+      core.saveExecutionState(execStatePath, execState);
+      console.log(JSON.stringify({ rejected: amendment.id }, null, 2));
+    } else {
+      fail(`Action không hợp lệ cho amend: ${action}. Dùng propose | show | approve | reject.`);
+    }
+    break;
+  }
+
   default:
-    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit.`);
+    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | verify | repair | next-step | amend.`);
 }

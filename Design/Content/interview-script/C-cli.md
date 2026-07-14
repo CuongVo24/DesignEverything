@@ -90,13 +90,13 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 ## C4 — Khả năng tương thích hệ điều hành
 
 **ask**  
-"Bạn cần ứng dụng chạy trên hệ điều hành nào? Chỉ macOS/Linux, chỉ Windows, hay phải hỗ trợ cả ba (cross-platform)?"
+"Ứng dụng CLI này trước mắt chạy trên hệ điều hành nào của riêng bạn? Bạn có muốn giới hạn ở một hệ điều hành duy nhất để đơn giản hóa MVP, hay bắt buộc phải chạy đa nền tảng (macOS, Linux, Windows) ngay từ đầu?"
 
 **default**  
-`Hỗ trợ cả ba hệ điều hành lớn (macOS, Linux, Windows) bằng cách sử dụng các module chuẩn hóa tránh phụ thuộc OS cụ thể.`
+`Chạy trên hệ điều hành hiện tại của người phát triển (ví dụ Windows hoặc macOS) để tối giản hóa việc tương thích.`
 
 **translate_back**  
-"Mình ghi nhận phạm vi tương thích hệ điều hành là: `<macOS/Linux / Windows / cả ba>`, hướng xử lý tương thích là `<sử dụng module đa nền tảng / cross-compile / native script>`."
+"Mình ghi nhận hệ điều hành hỗ trợ đầu tiên là: `<hệ điều hành của bạn>`. Các hệ điều hành khác sẽ được xem xét sau MVP để tối ưu hóa việc phân phối."
 
 **target_doc**  
 `05-architecture.md`
@@ -118,10 +118,10 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 "Bạn định phân phối công cụ này tới người dùng bằng cách nào? (ví dụ xuất bản lên NPM/Pip/Cargo, tải file binary biên dịch sẵn từ GitHub Releases, hay dùng homebrew/scoop)?"
 
 **default**  
-`Xuất bản lên NPM registry dưới dạng package cài đặt toàn cục (npm install -g myapp).`
+`Chạy cục bộ bằng node hoặc npx (hoặc npm link) để kiểm thử nội bộ trước khi xuất bản lên NPM registry.`
 
 **translate_back**  
-"Mình xác nhận phương án đóng gói và phát hành là: `<NPM registry / Pip / GitHub Releases binary / Homebrew>`, cùng cơ chế quản lý phiên bản (versioning): `<Semantic Versioning (SemVer)>`."
+"Mình xác nhận cơ chế phân phối ban đầu: `<cục bộ qua node/npx / npm link / NPM registry>`."
 
 **target_doc**  
 `07-distribution.md`

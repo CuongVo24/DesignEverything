@@ -44,13 +44,13 @@ Smoke run W14A đầu tiên (2026-07-10, phiên Claude Code thật, dự án yt-
 Bộ đóng gói nằm ở [adapter/claude-code/](../../adapter/claude-code/): 3 entry hook theo giao thức stdin/stdout thật của Claude Code (`hooks/`), CLI `status|commit|emit` cho skill (`cli.mjs`), skill `/design` (`skill/SKILL.md`) và installer (`install.mjs`). Cài vào dự án đích: `node adapter/claude-code/install.mjs <target>` — installer ghi `.claude/settings.json` + skill và copy lõi nội dung (`script.yaml`, `gate-policy.yaml`, `shapes.yaml`, doc-templates) vào workspace đích; engine (dist + node_modules) vẫn ở repo này.
 Đã nghiệm thu vòng đời đầy đủ bằng mô phỏng giao thức hook: SessionStart khởi tạo `progress.json` → UserPromptSubmit inject câu hỏi + TURN_ID và chặn vi phạm một-bước-mỗi-lượt → PreToolUse deny `Write`/`Bash` khi gate `scope-locked` đóng, allow vùng `Design/`+`docs/` → commit CAL0→S7(`--branch`)→W5 qua CLI (kèm `--slots-file`) → `emit` sinh 10 docs có anchor (gồm 08-build-plan) → phase `ready-to-build`, gate mở cho Write code. Còn thiếu: smoke run trong phiên Claude Code thật với người dùng (bước W14A).
 
-## V3 Execution Expansion — target 4.0.0
+## V3 Execution Expansion — target 4.0.0 (Hoàn thành — 2026-07-13)
 
-ORCHESTRATE, semantic validation, task-level gate và evidence **chưa được code**. Vì vậy không adapter nào được claim “newbie từ zero tới shipped” ở thời điểm này.
+Toàn bộ lõi trạng thái thực thi V3, kiểm duyệt ngữ nghĩa và luồng build điều khiển bởi Claude Code adapter đã được code và nghiệm thu hoàn chỉnh:
 
-- **Claude Code (A):** B9a sẽ thêm core-driven build workflow và deterministic active-task/path gate sau B8 state/plan. Trạng thái: contract, chưa code.
-- **AGENTS.md (B):** B9b sẽ sinh protocol active task/evidence/repair và nhãn self-reported. Trạng thái: contract; vẫn là soft enforcement.
-- Evidence bắt được trực tiếp từ tool output chỉ có thể hứa trên harness hỗ trợ; mọi nơi khác phải nói rõ giới hạn.
+- **Claude Code (A):** Tích hợp đầy đủ luồng build: validate, next, start, record-evidence, và repair. Triển khai PreToolUse hook kiểm duyệt ghi/sửa mã nguồn dựa trên `allowed_paths` của active task từ `execution-plan.json`. Đã kiểm chứng qua E2E test `buildWorkflow.test.ts` và `execution-flow.test.ts`. ✅ Đã code + test.
+- **AGENTS.md (B):** Tích hợp sinh quy trình rules cho trạng thái active task, evidence và repair dưới dạng soft enforcement. Đã cập nhật generator để sinh chỉ dẫn đúng mốc 4.0.0. ✅ Đã code + test.
+- Hệ thống hỗ trợ hoàn hảo chế độ soft enforcement ở các harness quy tắc (AGENTS.md) và hard enforcement ở harness tích hợp sâu (Claude Code).
 
 ## Trạng thái sau Month 2 (v1.0.0)
 - Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.

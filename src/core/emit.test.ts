@@ -60,10 +60,10 @@ describe('emitTree function', () => {
     W5: 'Không realtime ở MVP',
   };
 
-  test('should emit correct 10 files for web branch, including 07-deployment.md and excluding 07-release.md', () => {
+  test('should emit correct 12 files for web branch, including 07-deployment.md and excluding 07-release.md', () => {
     const emitted = emitTree(mockAnswers, 'web', realTemplatesDir);
 
-    expect(emitted).toHaveLength(10);
+    expect(emitted).toHaveLength(12);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('00-vision.md');
@@ -74,6 +74,8 @@ describe('emitTree function', () => {
     expect(fileNames).toContain('05-architecture.md');
     expect(fileNames).toContain('06-constraints.md');
     expect(fileNames).toContain('07-deployment.md');
+    expect(fileNames).toContain('09-execution-plan.md');
+    expect(fileNames).toContain('.design-everything/execution-plan.json');
     expect(fileNames).toContain('README.md');
     expect(fileNames).not.toContain('07-release.md');
 
@@ -91,13 +93,15 @@ describe('emitTree function', () => {
     expect(readmeDoc!.content).toContain('Next.js/Vercel chi tiết ở 07-deployment.md');
   });
 
-  test('should emit correct 10 files for mobile branch, including 07-release.md and excluding 07-deployment.md', () => {
+  test('should emit correct 12 files for mobile branch, including 07-release.md and excluding 07-deployment.md', () => {
     const emitted = emitTree(mockAnswers, 'mobile', realTemplatesDir);
 
-    expect(emitted).toHaveLength(10);
+    expect(emitted).toHaveLength(12);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');
+    expect(fileNames).toContain('09-execution-plan.md');
+    expect(fileNames).toContain('.design-everything/execution-plan.json');
     expect(fileNames).not.toContain('07-deployment.md');
 
     // Verify mobile src paths prefix
@@ -121,7 +125,7 @@ describe('emitTree function', () => {
     expect(visionMobile!.content).toContain('src=app/features/vision/vision.ts::projectVision');
   });
 
-  test('should emit correct 11 files for hybrid branch, including both 07-deployment.md and 07-release.md', () => {
+  test('should emit correct 13 files for hybrid branch, including both 07-deployment.md and 07-release.md', () => {
     const hybridAnswers: InterviewAnswers = {
       ...mockAnswers,
       M1: 'Expo Standalone',
@@ -132,11 +136,13 @@ describe('emitTree function', () => {
     };
     const emitted = emitTree(hybridAnswers, 'hybrid', realTemplatesDir);
 
-    expect(emitted).toHaveLength(11);
+    expect(emitted).toHaveLength(13);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('07-deployment.md');
     expect(fileNames).toContain('07-release.md');
+    expect(fileNames).toContain('09-execution-plan.md');
+    expect(fileNames).toContain('.design-everything/execution-plan.json');
 
     // Verify architecture document contains combined slots
     const archDoc = emitted.find((d) => d.file === '05-architecture.md');
@@ -151,7 +157,7 @@ describe('emitTree function', () => {
     expect(readmeDoc!.content).toContain('07-release.md');
   });
 
-  test('should emit correct 10 files for cli branch, including 07-distribution.md', () => {
+  test('should emit correct 12 files for cli branch, including 07-distribution.md', () => {
     const cliAnswers: InterviewAnswers = {
       ...mockAnswers,
       C1: 'Node.js (TypeScript)',
@@ -162,12 +168,14 @@ describe('emitTree function', () => {
     };
 
     const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
-    expect(emitted).toHaveLength(10);
+    expect(emitted).toHaveLength(12);
 
     const fileNames = emitted.map((d) => d.file);
     expect(fileNames).toContain('00-vision.md');
     expect(fileNames).toContain('05-architecture.md');
     expect(fileNames).toContain('07-distribution.md');
+    expect(fileNames).toContain('09-execution-plan.md');
+    expect(fileNames).toContain('.design-everything/execution-plan.json');
     expect(fileNames).not.toContain('07-deployment.md');
     expect(fileNames).not.toContain('07-release.md');
 
@@ -193,9 +201,46 @@ describe('emitTree function', () => {
     expect(readmeDoc!.content).toContain('07-distribution.md');
   });
 
+  test('should generate valid execution-plan.json conforming to executionPlanSchemaV3', async () => {
+    const { executionPlanSchemaV3 } = await import('./schemas/index.js');
+    const emitted = emitTree(mockAnswers, 'web', realTemplatesDir);
+    const planFile = emitted.find((d) => d.file === '.design-everything/execution-plan.json');
+    expect(planFile).toBeDefined();
+
+    const planJson = JSON.parse(planFile!.content);
+    const parsed = executionPlanSchemaV3.safeParse(planJson);
+    expect(parsed.success).toBe(true);
+  });
+
   test('should throw error for invalid branch', () => {
     expect(() => emitTree(mockAnswers, 'invalid_branch', realTemplatesDir)).toThrow(
       /Invalid branch\/shape/
     );
+  });
+
+  test('should emit a blocked discovery plan when workspaceDir option is an empty directory without manifest', () => {
+    const tempDir = join(__dirname, '../../test/fixtures/progress/temp-empty-cwd-test');
+    if (existsSync(tempDir)) {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+    mkdirSync(tempDir, { recursive: true });
+
+    try {
+      const emitted = emitTree(mockAnswers, 'web', realTemplatesDir, { workspaceDir: tempDir });
+      const planDoc = emitted.find((d) => d.file === '.design-everything/execution-plan.json');
+      expect(planDoc).toBeDefined();
+
+      const planJson = JSON.parse(planDoc!.content);
+      expect(planJson.discovery_status).toBe('blocked');
+      expect(planJson.tasks['T0-discovery']).toBeDefined();
+      expect(planJson.tasks['T1-scaffold']).toBeUndefined();
+
+      const mdDoc = emitted.find((d) => d.file === '09-execution-plan.md');
+      expect(mdDoc).toBeDefined();
+      expect(mdDoc!.content).toContain('BỊ CHẶN');
+      expect(mdDoc!.content).toContain('R-blocked');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

@@ -84,7 +84,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
 
     progress = loadProgress(progressPath);
     expect(progress.branch).toBe('mobile');
-    expect(progress.current_step).toBe('M1');
+    expect(progress.current_step).toBe('R1');
 
     // Attempt to change branch
     expect(() => {
@@ -100,7 +100,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
     progress.phase = 'docs-emitted';
     progress.branch = 'mobile';
     progress.current_step = null;
-    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'M1', 'M2', 'M3', 'M4', 'M5'];
+    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'M1', 'M2', 'M3', 'M4', 'M5'];
     saveProgress(progressPath, progress);
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)
@@ -140,14 +140,15 @@ describe('E2E Mobile Edge Cases Flow', () => {
       M1: 'RN', M2: 'Offline', M3: 'Camera', M4: 'FCM', M5: 'Store'
     };
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(10);
+    const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
+    expect(docFilesOnly).toHaveLength(11);
 
-    const fileNames = emittedDocs.map(d => d.file);
+    const fileNames = docFilesOnly.map(d => d.file);
     expect(fileNames).toContain('07-release.md');
     expect(fileNames).not.toContain('07-deployment.md');
 
     // Verify all emitted docs have status=planned and correct mobile source path prefix
-    for (const doc of emittedDocs) {
+    for (const doc of docFilesOnly) {
       expect(doc.content).toContain('status=planned');
       if (doc.file !== 'README.md') {
         expect(doc.content).toContain('src=apps/mobile/src/');

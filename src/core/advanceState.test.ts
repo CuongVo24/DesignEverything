@@ -40,17 +40,21 @@ describe('advanceState engine', () => {
     // Commit S7 with web branch
     const progressWeb = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
     expect(progressWeb.branch).toBe('web');
-    expect(progressWeb.current_step).toBe('W1');
+    expect(progressWeb.current_step).toBe('R1');
+    const progressWebR1 = commitStep(progressWeb, script, { userTurnId: 'turn-R1' });
+    expect(progressWebR1.current_step).toBe('W1');
 
     // Try changing branch -> should throw
     expect(() =>
-      commitStep(progressWeb, script, { userTurnId: 'turn-8', branchChoice: 'mobile' })
+      commitStep(progressWebR1, script, { userTurnId: 'turn-8', branchChoice: 'mobile' })
     ).toThrow(/Cannot change branch once set/);
 
     // Commit S7 with mobile branch
     const progressMobile = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'mobile' });
     expect(progressMobile.branch).toBe('mobile');
-    expect(progressMobile.current_step).toBe('M1');
+    expect(progressMobile.current_step).toBe('R1');
+    const progressMobileR1 = commitStep(progressMobile, script, { userTurnId: 'turn-R1' });
+    expect(progressMobileR1.current_step).toBe('M1');
   });
 
   test('should throw error on duplicate turn ID commit', () => {
@@ -96,6 +100,8 @@ describe('advanceState engine', () => {
     }
     // S7 -> Web branch
     progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
+    // R1 -> Core branch
+    progress = commitStep(progress, script, { userTurnId: 'turn-R1' });
 
     // W1 -> W4
     for (let i = 1; i <= 4; i++) {
@@ -132,6 +138,8 @@ describe('advanceState engine', () => {
     // Commit S7 with hybrid branch
     progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'hybrid' });
     expect(progress.branch).toBe('hybrid');
+    expect(progress.current_step).toBe('R1');
+    progress = commitStep(progress, script, { userTurnId: 'turn-R1' });
 
     // The next questions must include both Web and Mobile questions.
     const expectedQuestions = [

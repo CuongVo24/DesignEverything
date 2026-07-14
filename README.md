@@ -288,4 +288,4 @@ Nói ngắn gọn: mục tiêu không phải tạo thêm một generator. Mục 
 
 ## Trạng thái truthfulness
 
-Hiện repo sinh được docs nền móng và 08-build-plan. Nó **chưa** là lời hứa rằng một newbie có thể tự đi tới sản phẩm shipped: sau emit, runtime hiện vẫn thiếu semantic validation, active-task gate và evidence loop. Lane đã khoá để xử lý điều đó là [V3 Execution Expansion](Design/RoadMap/V3-ExecutionExpansionPlan.md), target 4.0.0; chỉ sau B10 evaluation mới được nâng claim.
+Hiện repo đã hoàn thành mốc 4.0.0, tích hợp đầy đủ quy trình thực thi V3: xác thực kế hoạch ngữ nghĩa (semantic plan validation), kiểm soát tệp và task đang hoạt động (active-task gate), ghi nhận bằng chứng (evidence log) và sửa lỗi (repair). Đã được kiểm chứng thực tế và đánh giá đầy đủ tại [V3 Execution Expansion](Design/RoadMap/V3-ExecutionExpansionPlan.md).

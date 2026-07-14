@@ -17,6 +17,7 @@ docs/
   06-constraints.md     ← S6 (+ S7 chọn hình-hài)
   07-*.md               ← file phát hành tuỳ hình-hài (xem Registry)
   08-build-plan.md      ← dẫn xuất từ S3 + S5 (không có câu hỏi riêng)
+  09-execution-plan.md  ← R1 (khảo sát rủi ro + danh sách task chi tiết)
   README.md             ← mục lục + "đọc theo thứ tự này"
 ```
 
@@ -36,7 +37,7 @@ docs/
 
 ## Quy tắc
 - Mỗi file kèm đoạn **"Tại sao cần file này"** (insight HCMUS: vừa có sản phẩm vừa học nghề).
-- Mỗi phiên đi qua **khung lõi** (câu `meta` calibrate nếu có → S0–S6 → S7 chọn hình-hài) **rồi bộ câu của một hình-hài**. Số câu tuỳ shape; thư viện định nghĩa bộ câu cho từng `shape-id` trong registry.
+- Mỗi phiên đi qua **khung lõi** (câu `meta` calibrate nếu có → S0–S6 → S7 chọn hình-hài → R1 khảo sát rủi ro) **rồi bộ câu của một hình-hài**. Số câu tuỳ shape; thư viện định nghĩa bộ câu cho từng `shape-id` trong registry.
 - Mỗi file mang mỏ neo truy vết theo [../Core/AnchorFormat.md](../Core/AnchorFormat.md).
 
 ## Map câu hỏi → file
@@ -49,6 +50,7 @@ docs/
 | S5 | `04-flows.md` |
 | S6 | `06-constraints.md` |
 | S7 (chọn hình-hài, `branch: core`) | `06-constraints.md` |
+| R1 (khảo sát rủi ro, `branch: core`) | `09-execution-plan.md` |
 | W1, W2, W4, W5 / M1, M2, M3, M4 | `05-architecture.md` |
 | W3 / M5 | `07-deployment.md` / `07-release.md` |
 | C-series (cli, định nghĩa ở B4) | `05-architecture.md` + `07-distribution.md` |
@@ -60,13 +62,13 @@ docs/
 ## Mở rộng tương lai (KHÔNG trong MVP)
 Bản "giống công ty": ADR, test plan, ContractForAI (đã có mỏ neo truy vết sẵn → đầu đề-pa cho maintain).
 
-## V3 Execution Expansion — target 4.0.0, chưa emit ở runtime
+## V3 Execution Expansion (Hoàn thành mốc 4.0.0)
 
-Taxonomy hiện hành kết thúc ở 08-build-plan.md. Khi và chỉ khi contracts B7–B10 hoàn tất, cây sẽ thêm:
+Taxonomy đã tích hợp thêm 09-execution-plan.md để quản lý rủi ro và các bước khảo sát tính khả thi (Feasibility Spikes) trước khi tiến hành thực thi code:
 
     09-execution-plan.md  ← R1 + dẫn xuất từ S3/S5/08; risk, spike, task, evidence
     .design-everything/
       execution-plan.json ← task graph máy đọc
       execution-state.json ← active task, evidence, resume
 
-09 không phải ADR/test-plan enterprise: nó chỉ chuyển một MVP thành task nhỏ có precondition, allowed paths, expected result và evidence. Đổi này là MAJOR 4.0.0 theo D35; template, emitter và golden hiện hành chưa được phép giả vờ đã hỗ trợ nó. Chi tiết: [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md).
+09 không phải ADR/test-plan enterprise: nó chỉ chuyển một MVP thành task nhỏ có precondition, allowed paths, expected result và evidence. Đổi này là MAJOR 4.0.0 theo D35; hệ thống hiện hành đã hỗ trợ và kiểm thử đầy đủ. Chi tiết: [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md).

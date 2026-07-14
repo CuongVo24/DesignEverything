@@ -1,36 +1,42 @@
 ## Tại sao cần file này
-File này là cửa vào của cả bộ tài liệu mẫu. Nó giúp một người mới mở thư mục `docs/` là biết nên đọc gì trước và vì sao từng file tồn tại, thay vì nhìn cả cây file rồi đoán.
+File này là cửa vào của cả bộ tài liệu. Nó giúp người mới biết nên đọc theo thứ tự nào và mỗi file trong bộ docs dùng để trả lời câu hỏi gì, thay vì mở ra một thư mục rồi không biết bắt đầu từ đâu.
 
 ## Đọc Theo Thứ Tự Này
-1. `00-vision.md` — hiểu app là gì và giải quyết nỗi đau nào.
-2. `01-personas.md` — hiểu ai dùng app đầu tiên.
-3. `02-scope.md` — chốt phần Must của MVP.
-4. `03-data-model.md` — xem app cần nhớ dữ liệu gì.
-5. `04-flows.md` — xem một lần dùng điển hình từ đầu tới cuối.
-6. `05-architecture.md` — hiểu các quyết định kỹ thuật gắn với nhu cầu.
-7. `06-constraints.md` — hiểu giới hạn về thời gian, người, tiền.
-8. `07-release.md` — hiểu cách bản mobile nên được phát hành thử trước.
+1. `00-vision.md` — hiểu dự án là gì và nỗi đau gốc ở đâu.
+2. `01-personas.md` — hiểu ai là người dùng thật đầu tiên.
+3. `02-scope.md` — chốt phần bắt buộc của MVP.
+4. `03-data-model.md` — hiểu sản phẩm cần nhớ những gì.
+5. `04-flows.md` — xem một lần dùng điển hình từ đầu đến cuối.
+6. `05-architecture.md` — xem các quyết định kỹ thuật bám theo nhu cầu.
+7. `06-constraints.md` — xem giới hạn về người, thời gian, tiền.
+8. `07-release.md` — xem quy trình phát hành & phân phối cửa hàng di động.
+9. `08-build-plan.md` — xem kế hoạch xây dựng theo milestone (đọc trước khi code).
+10. `09-execution-plan.md` — xem kế hoạch thực thi chi tiết và quản lý rủi ro kỹ thuật.
 <!-- anchor: id=docs-readme/reading-order  src=apps/mobile/src/features/docs/readme.ts::readingOrder  rev=  status=planned -->
 
 ## Tóm Tắt Nhanh Dự Án
-Đây là một app mobile cho nhóm bạn ở trọ để ghi khoản chi chung, chia tiền minh bạch và biết ai còn nợ bao nhiêu mà không phải cộng tay trong chat.
+RecipeShare mobile app giúp chia sẻ công thức nấu ăn
 <!-- anchor: id=docs-readme/project-summary  src=apps/mobile/src/features/docs/readme.ts::projectSummary  rev=  status=planned -->
 
 ## Bản Đồ File
-- `00-vision.md`: định nghĩa dự án và nỗi đau.
-- `01-personas.md`: chốt người dùng thật đầu tiên.
-- `02-scope.md`: khóa MVP.
-- `03-data-model.md`: khóa entity và quan hệ.
-- `04-flows.md`: mô tả luồng chính.
-- `05-architecture.md`: khóa hướng kỹ thuật mobile.
-- `06-constraints.md`: giới hạn thực tế.
-- `07-release.md`: đường ra bản thử và store.
+docs/
+├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
+├── 01-personas.md        # Đối tượng người dùng mục tiêu
+├── 02-scope.md           # Phạm vi tính năng MVP (MoSCoW)
+├── 03-data-model.md      # Thiết kế thực thế dữ liệu (Database Schema)
+├── 04-flows.md           # Luồng trải nghiệm người dùng điển hình
+├── 05-architecture.md    # Quyết định kiến trúc & Tech stack
+├── 06-constraints.md     # Ràng buộc về thời gian, ngân sách, nhân lực
+├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
+├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
+├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+└── README.md             # Mục lục tài liệu (File này)
 <!-- anchor: id=docs-readme/file-map  src=apps/mobile/src/features/docs/readme.ts::fileMap  rev=  status=planned -->
 
 ## Ghi Chú Về Nhánh Đã Chọn
-Bộ mẫu này đi theo nhánh mobile sau S6, nên file cuối là `07-release.md` thay vì `07-deployment.md`. File `07-deployment.md` vẫn tồn tại ở taxonomy và doc-template để phục vụ các dự án rẽ sang nhánh web.
+Dự án phát triển trên nền tảng Mobile. Quy trình phân phối CH Play/App Store chi tiết ở 07-release.md.
 <!-- anchor: id=docs-readme/branch-note  src=apps/mobile/src/features/docs/readme.ts::branchSpecificDocNote  rev=  status=planned -->
 
 ## Ghi Chú Khi Bắt Đầu Build
-Bản mẫu này cố ý giữ MVP nhỏ: online-first, chưa offline-first đầy đủ, chưa đẩy push thành Must, và phát hành thử trước khi nghĩ tới store công khai.
+Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.
 <!-- anchor: id=docs-readme/build-notes  src=apps/mobile/src/features/docs/readme.ts::buildNotes  rev=  status=planned -->

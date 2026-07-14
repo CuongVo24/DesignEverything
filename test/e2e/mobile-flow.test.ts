@@ -100,6 +100,17 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
     progress = loadProgress(progressPath);
     expect(progress.branch).toBe('mobile');
+    expect(progress.current_step).toBe('R1');
+
+    // Commit R1
+    const r1PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-core-R1' });
+    expect(r1PromptResult.decision).toBe('allow');
+
+    progress = loadProgress(progressPath);
+    progress = commitStep(progress, script, { userTurnId: 'turn-core-R1' });
+    saveProgress(progressPath, progress);
+
+    progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('M1');
 
     // --- PHASE 3: Gating verification (while gate is closed) ---
@@ -158,7 +169,7 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
     // --- PHASE 5: Docs Scaffolding / Emission ---
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(10);
+    expect(emittedDocs).toHaveLength(12);
 
     const fileNames = emittedDocs.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');

@@ -22,19 +22,19 @@ Emit cùng lúc 09-execution-plan.md cho người đọc và .design-everything/
 
 ## 3. Checklist
 
-- [ ] emitTree trả đúng taxonomy mới và update emitted_docs.
-- [ ] Mỗi Must có ít nhất một TaskCard; mỗi TaskCard truy về flow/anchor/risk nếu áp dụng.
-- [ ] Won't không có TaskCard MVP.
-- [ ] Plan có exactly one first runnable task và graph không cycle.
-- [ ] README không nói 07-deployment/release cho shape cli và không hardcode run command chưa scaffold.
+- [x] emitTree trả đúng taxonomy mới và update emitted_docs.
+- [x] Mỗi Must có ít nhất một TaskCard; mỗi TaskCard truy về flow/anchor/risk nếu áp dụng.
+- [x] Won't không có TaskCard MVP.
+- [x] Plan có exactly one first runnable task và graph không cycle.
+- [x] README không nói 07-deployment/release cho shape cli và không hardcode run command chưa scaffold.
 
 ## 4. Interfaces / Files expected to change
 
-- [NEW] src/core/schemas/executionPlan.ts, khoảng 180 dòng.
-- [MODIFY] src/core/emit.ts và emit tests, khoảng 200 dòng.
-- [MODIFY] adapter/claude-code/cli.mjs: emit/validate ghi plan JSON đúng thư mục.
-- [NEW] Design/Content/doc-templates/09-execution-plan.md và golden 09 cho web/mobile/cli.
-- [MODIFY] README template, taxonomy, QualityRubric và output fixtures.
+- [x] src/core/schemas/executionPlan.ts, khoảng 180 dòng.
+- [x] src/core/emit.ts và emit tests, khoảng 200 dòng.
+- [x] adapter/claude-code/cli.mjs: emit/validate ghi plan JSON đúng thư mục.
+- [x] Design/Content/doc-templates/09-execution-plan.md và golden 09 cho web/mobile/cli.
+- [x] README template, taxonomy, QualityRubric và output fixtures.
 
 ## 5. Risks & mitigations
 
@@ -52,4 +52,4 @@ Emit cùng lúc 09-execution-plan.md cho người đọc và .design-everything/
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE

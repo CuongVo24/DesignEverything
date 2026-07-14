@@ -1,0 +1,35 @@
+{
+  "workspace_kind": "existing-supported",
+  "target": "node-cli",
+  "runtime": "node",
+  "package_manager": "npm",
+  "framework": "none",
+  "language": "typescript",
+  "source_root": "src",
+  "manifest_paths": [
+    "package.json"
+  ],
+  "capabilities": [
+    "node-npm-project",
+    "typescript-lang"
+  ],
+  "confirmation": {
+    "confirmed": true,
+    "confirmed_by": "doctor-heuristic",
+    "confirmed_at": "2026-07-13T15:59:34.682Z"
+  },
+  "evidence": [
+    {
+      "name": "package.json",
+      "path": "package.json",
+      "observed_at": "2026-07-13T15:59:34.682Z",
+      "confidence": 1
+    },
+    {
+      "name": "package-lock.json",
+      "path": "package-lock.json",
+      "observed_at": "2026-07-13T15:59:34.682Z",
+      "confidence": 1
+    }
+  ]
+}

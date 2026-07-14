@@ -66,12 +66,22 @@ Chi tiết: [../../Adapters/ConformanceMatrix.md](../../Adapters/ConformanceMatr
 - Thêm một gate mới là thay đổi MINOR nếu không phá gate cũ.
 - Đổi nghĩa `id`, đổi semantics của `blocks`, hoặc bỏ một gate đang dùng là thay đổi MAJOR.
 
-## V3 Execution Expansion — target 4.0.0, chưa implement
+## V3 Execution Expansion — target 4.0.0
 
-Gate hiện hành chỉ kiểm artifact docs. B8a sẽ bổ sung requires_validation, task_id, allows_paths và requires_evidence để tách docs-emitted, plan-validated và executing. Với Bậc A, write/edit ngoài active task hoặc sang task sau khi verify chưa pass phải bị deny deterministic. Với Bậc B, policy cùng nghĩa nhưng chỉ là hướng dẫn và evidence phải được gắn self-reported nếu host không cung cấp output tool. Không được sửa runtime policy theo spec này trước khi B8a READY_TO_IMPLEMENT.
+Trong phiên bản 4.0.0, cấu trúc `gate` được mở rộng để hỗ trợ kiểm soát chất lượng ở mức thực thi (Execution Gate). Bổ sung các thuộc tính tùy chọn sau vào `gate` schema:
+
+| Field | Kiểu | Bắt buộc | Ý nghĩa |
+|---|---|---|---|
+| `requires_validation` | boolean | x | Nếu bằng `true`, gate chỉ mở khi quá trình semantic plan validation thành công (không còn lỗi nghiêm trọng). |
+| `task_id` | string | x | Định danh của task tương ứng mà gate này kiểm soát quyền sửa đổi. |
+| `allows_paths` | array\<string\> | x | Danh sách các đường dẫn tệp (hoặc thư mục) được phép ghi/sửa đổi khi task tương ứng đang hoạt động. |
+| `requires_evidence` | array\<string\> | x | Danh sách mã định danh của các task cần phải có bằng chứng nghiệm thu (exit code 0) để gate này có thể mở. |
+
+Với các Adapter bậc A (Claude Code), mọi hành động `Write`/`Edit` ngoài thư mục được chỉ định trong `allows_paths` của task đang hoạt động, hoặc việc nhảy cóc sang task tiếp theo khi chưa hoàn thành nghiệm thu task hiện tại, sẽ bị ngăn chặn triệt để (deterministic deny). Đối với các Adapter bậc B, cơ chế này hoạt động dưới dạng rules hướng dẫn.
 
 ## Changelog
 | Version | Thay đổi |
 |---|---|
 | 0.1.0 | Khoá schema ổn định cho Batch 1: chốt cấu trúc gate, luật validate và map bậc A/B. |
 | 2.0.0 | 2026-07-09 | Bump version đồng bộ toàn bộ schema và kịch bản lên mốc v2.0.0. |
+| 4.0.0 | 2026-07-13 | Mở rộng gate schema cho Execution Gates: thêm `requires_validation`, `task_id`, `allows_paths`, `requires_evidence` để hỗ trợ kiểm soát thực thi. |

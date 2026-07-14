@@ -1,0 +1,137 @@
+{
+  "metadata": {
+    "version": "4.0.0",
+    "updated_at": "2026-07-13T09:00:00Z"
+  },
+  "trace_links": [],
+  "risks": [
+    {
+      "id": "R1-tech-uncertainty",
+      "title": "Uncertainty about environment compatibility",
+      "status": "spike-required",
+      "exit_criterion": "Check Node/NPM version is compliant"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Pre-flight & Skeleton",
+      "tasks": [
+        "T0-preflight",
+        "T1-scaffold"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "Core Implementation",
+      "tasks": [
+        "T2-implementation"
+      ]
+    }
+  ],
+  "tasks": {
+    "T0-preflight": {
+      "id": "T0-preflight",
+      "type": "spike",
+      "milestone": "M0",
+      "intent": "Verify environmental prerequisites",
+      "depends_on": [],
+      "allowed_paths": [],
+      "preconditions": [],
+      "commands": [
+        {
+          "id": "node-version",
+          "argv": [
+            "node",
+            "--version"
+          ],
+          "expected": {
+            "kind": "exit-code-zero"
+          }
+        }
+      ],
+      "expected_result": "Node and NPM versions printed successfully",
+      "evidence_required": [],
+      "failure_policy": "abort",
+      "requires_capability": "node-npm-project"
+    },
+    "T1-scaffold": {
+      "id": "T1-scaffold",
+      "type": "scaffold",
+      "milestone": "M0",
+      "intent": "Scaffold index and configuration files",
+      "depends_on": [
+        "T0-preflight"
+      ],
+      "allowed_paths": [
+        "src/index.ts",
+        "tsconfig.json"
+      ],
+      "preconditions": [
+        "T0-preflight"
+      ],
+      "commands": [
+        {
+          "id": "scaffold-file",
+          "argv": [
+            "node",
+            "-e",
+            "require('fs').writeFileSync('scaffold.txt', 'done')"
+          ],
+          "expected": {
+            "kind": "file-exists",
+            "value": "scaffold.txt"
+          }
+        }
+      ],
+      "expected_result": "TSC compiler builds successfully",
+      "evidence_required": [
+        "scaffold.txt"
+      ],
+      "failure_policy": "debug",
+      "requires_capability": "node-npm-project"
+    },
+    "T2-implementation": {
+      "id": "T2-implementation",
+      "type": "implementation",
+      "milestone": "M1",
+      "intent": "Implement core logic",
+      "depends_on": [
+        "T1-scaffold"
+      ],
+      "allowed_paths": [
+        "src/**/*.ts"
+      ],
+      "preconditions": [
+        "T1-scaffold"
+      ],
+      "commands": [
+        {
+          "id": "impl-output",
+          "argv": [
+            "node",
+            "-e",
+            "console.log('impl-passed')"
+          ],
+          "expected": {
+            "kind": "output-includes",
+            "value": "impl-passed"
+          }
+        }
+      ],
+      "expected_result": "Vitest test suite runs fully green",
+      "evidence_required": [],
+      "failure_policy": "debug",
+      "requires_capability": "node-npm-project"
+    }
+  },
+  "capabilities_evidence": [
+    {
+      "id": "node-npm-project",
+      "name": "Node.js NPM Project Manifest",
+      "source": "existing-manifest",
+      "checked_at": "2026-07-13T14:07:06.680Z"
+    }
+  ],
+  "discovery_status": "pass"
+}

@@ -1,0 +1,69 @@
+{
+  "benchmarks": [
+    {
+      "name": "node-cli",
+      "target": "node-cli",
+      "expected_discovery_status": "pass",
+      "expected_tasks": ["T0-discovery", "T1-scaffold", "T2-skeleton", "T3-verify"],
+      "capabilities": ["node-npm-project", "typescript-lang"],
+      "checks": [
+        {
+          "tool_name": "Bash",
+          "command": "node --version",
+          "expected_decision": "allow",
+          "active_task": "T0-discovery"
+        },
+        {
+          "tool_name": "Bash",
+          "command": "npm install typescript",
+          "expected_decision": "deny",
+          "active_task": "T0-discovery",
+          "reason": "unregistered-command"
+        },
+        {
+          "tool_name": "apply_patch",
+          "path": "src/index.ts",
+          "expected_decision": "allow",
+          "active_task": "T2-skeleton"
+        },
+        {
+          "tool_name": "apply_patch",
+          "path": "package.json",
+          "expected_decision": "deny",
+          "active_task": "T2-skeleton",
+          "reason": "out-of-scope-write"
+        }
+      ]
+    },
+    {
+      "name": "vite-web",
+      "target": "vite-web",
+      "expected_discovery_status": "pass",
+      "expected_tasks": ["T0-discovery", "T1-scaffold", "T2-skeleton", "T3-verify"],
+      "capabilities": ["node-npm-project", "vite-bundler", "typescript-lang"],
+      "checks": [
+        {
+          "tool_name": "Bash",
+          "command": "npm run build",
+          "expected_decision": "allow",
+          "active_task": "T3-verify"
+        }
+      ]
+    },
+    {
+      "name": "python-cli",
+      "target": "python-cli",
+      "expected_discovery_status": "pass",
+      "expected_tasks": ["T0-discovery", "T1-scaffold", "T2-skeleton", "T3-verify"],
+      "capabilities": ["python-venv-project"],
+      "checks": [
+        {
+          "tool_name": "Bash",
+          "command": "pytest",
+          "expected_decision": "allow",
+          "active_task": "T3-verify"
+        }
+      ]
+    }
+  ]
+}
