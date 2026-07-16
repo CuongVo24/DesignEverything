@@ -367,6 +367,25 @@ switch (command) {
       emitted_docs: emittedDocs,
     });
 
+    // Profile drift: plan được synth cho một profile không còn khớp thực tế
+    // workspace (VD: emit lúc thư mục trống bị blocked, sau đó người dùng tự tạo
+    // manifest). So TARGET là đủ — workspace_kind đổi empty→existing sau scaffold
+    // là tiến triển bình thường, không phải drift.
+    const savedProfile = core.loadProjectProfile(workspaceRoot);
+    const freshProfile = core.inspectProjectProfile(
+      workspaceRoot,
+      core.inferProfileAnswersFromInterview(answers, progress.branch)
+    ).profile;
+    if ((savedProfile?.target ?? null) !== freshProfile.target) {
+      valResult.pass = false;
+      valResult.issues.push({
+        id: 'profile-drift',
+        message:
+          `Profile drift: plan hiện tại synth cho target "${savedProfile?.target ?? null}" nhưng workspace giờ là "${freshProfile.target}". ` +
+          'Chạy lại lệnh emit để re-synth execution plan theo profile mới.',
+      });
+    }
+
     const planDigest = core.calculatePlanDigest(v3Plan);
     const docsDigest = core.calculateDocsDigest(emittedDocs);
     const validationDigest = core.calculateValidationResultDigest(valResult);

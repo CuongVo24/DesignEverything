@@ -68,7 +68,11 @@ export function transitionToReadyToExecute(
     validation_digest: string;
   }
 ): ExecutionState {
-  if (state.phase !== 'plan-validating') {
+  // Re-validate hợp lệ từ các pha CHƯA thực thi: plan-validating (lần đầu/sau
+  // amend), blocked (sửa docs xong chạy lại validate — luồng tài liệu hóa trong
+  // build SKILL), ready-to-execute (revalidate idempotent, VD kiểm profile
+  // drift). Đang executing/repairing/reviewing thì không được revalidate.
+  if (state.phase !== 'plan-validating' && state.phase !== 'blocked' && state.phase !== 'ready-to-execute') {
     throw new Error(`Cannot transition to ready-to-execute from phase: ${state.phase}`);
   }
   if (!validationPass) {
