@@ -53,4 +53,6 @@ Thêm phase runtime `reviewing` giữa `verified` và feature kế: hợp đồn
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE
+
+> Đã code: phase `reviewing` + field `open_break_tasks`/`reviewed_milestones` (back-compat default) trong `schemas/executionState.ts`; `reviewFeatureOutput.ts`; transitions `transitionToReview`/`applyReviewOutcome`/`closeFeatureReview`/`assertNoUnreviewedFeature` (fail-closed) trong `advanceExecutionState.ts` + tests. typecheck/lint sạch.

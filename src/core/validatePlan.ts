@@ -288,6 +288,36 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
     }
   }
 
+  // Check: "Must -> skeleton mapping for feature Must" (B16b)
+  for (const link of plan.trace_links) {
+    if (mustFeatures.includes(link.must_id)) {
+      const slug = link.must_id
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const hasFeatureTasksForThisMust = Object.keys(plan.tasks).some(
+        (tid) =>
+          tid.includes(slug) && !['T0-discovery', 'T1-scaffold', 'T2-skeleton', 'T3-verify'].includes(tid)
+      );
+
+      if (hasFeatureTasksForThisMust) {
+        const hasSkeleton = link.task_ids.some((tid) =>
+          ['T0-discovery', 'T1-scaffold', 'T2-skeleton', 'T3-verify'].includes(tid)
+        );
+        if (hasSkeleton) {
+          issues.push({
+            id: 'traceability-missing',
+            severity: 'error',
+            message: `Tính năng Must-have "${link.must_id}" map về skeleton task (T0-T3) thay vì task build feature thực tế.`,
+            remediation: `Cập nhật trace link để trỏ về task build feature được sinh từ hợp đồng.`,
+          });
+        }
+      }
+    }
+  }
+
   // Check empty verificationExpected in all tasks
   for (const task of Object.values(plan.tasks)) {
     if (!task.expected_result || task.expected_result.trim().length < 3) {

@@ -54,4 +54,6 @@ Sau khi skeleton (T0–T3) verified, sinh feature-milestone `M4-{feature}` + h�
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE
+
+> Đã code: `parseDataModel.ts`, `parseFlows.ts`, `synthesizeFeatureContracts.ts` + wiring JIT trong `synthesizeExecutionPlan.ts`, reject Must→skeleton trong `validatePlan.ts`. Fix 2026-07-14: est_lines giờ scale theo độ phức tạp khớp (complexity × hệ số) nên auto-split ~200 dòng thật sự kích hoạt; có test bảo chứng. Parser khớp heading template 03/04 thật.

@@ -6,7 +6,7 @@ import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/sche
 const CLI = 'node adapter/claude-code/cli.mjs';
 
 export interface NextStepCard {
-  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'blocked' | 'complete' | 'unsupported';
+  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported';
   now: string;
   whyNow: string;
   allowedScope: string[];
@@ -158,6 +158,34 @@ export function renderNextStep(
       proof: `Chạy thành công lệnh kiểm chứng: ${cmds}`,
       ifItFails: 'Lựa chọn các cách khắc phục an toàn: 1. Retry verified command, 2. Repair active task, 3. Propose amendment.',
       enforcement: 'hard',
+    };
+  }
+
+  // 7b. Phase: Reviewing (B17a — feature-done gate qua review/break-task)
+  if (state.phase === 'reviewing') {
+    const milestone = state.active_milestone || 'feature hiện tại';
+    const openBreaks = state.open_break_tasks || [];
+    if (openBreaks.length > 0) {
+      return {
+        state: 'reviewing',
+        now: `Xử lý ${openBreaks.length} break-task của ${milestone} trước khi đóng feature.`,
+        whyNow: `Manager-check phát hiện output của ${milestone} chưa sạch; feature CHƯA được coi là done (fail-closed) tới khi các break-task xong.`,
+        allowedScope: openBreaks,
+        proof: `Mọi break-task (${openBreaks.join(', ')}) verify pass và review được đóng.`,
+        ifItFails: 'Sửa đúng điểm bẩn trong break-task; không nhảy sang feature kế khi review chưa đóng.',
+        enforcement: 'hard',
+        nextCommand: `${CLI} start ${openBreaks[0]}`,
+      };
+    }
+    return {
+      state: 'reviewing',
+      now: `Chạy manager-check cho ${milestone} rồi đóng review.`,
+      whyNow: `Mọi task build của ${milestone} đã xong; cần review lint/test/diff trước khi mở feature kế.`,
+      allowedScope: [],
+      proof: `Review đóng: ${milestone} vào reviewed_milestones, không phát sinh break-task chưa xử lý.`,
+      ifItFails: 'Nếu review phát hiện bẩn, hệ thống sinh break-task và giữ feature ở trạng thái chưa done.',
+      enforcement: 'hard',
+      nextCommand: `${CLI} review ${milestone}`,
     };
   }
 

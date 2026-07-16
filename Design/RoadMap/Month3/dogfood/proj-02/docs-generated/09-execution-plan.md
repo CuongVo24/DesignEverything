@@ -72,4 +72,4 @@ Nguyên tắc xác thực bằng chứng (evidence-driven resume):
 <!-- anchor: id=09-execution-plan/resume-rules  src=src/features/execution/plan.ts::resumeRules  rev=  status=planned -->
 
 
-<!-- plan-digest: 644886fd6270188f29c3432854be1317ec2acefa04bcbeaba65a692135c6c2e5 -->
+<!-- plan-digest: 23618170c9d3ca4c9f5ea040885f9c59153d4d36fe91af33e4239383963e7db5 -->

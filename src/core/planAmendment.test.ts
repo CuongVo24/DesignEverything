@@ -71,6 +71,8 @@ describe('PlanAmendment Engine', () => {
       validation_result_digest: 'old-val-digest',
       plan_revision: 1,
       amendment_history: [],
+      open_break_tasks: [],
+      reviewed_milestones: [],
       updated_at: new Date().toISOString(),
     };
 

@@ -5,8 +5,38 @@ import { loadShapes } from './loadShapes.js';
 import { createHash } from 'crypto';
 
 import { loadProjectProfile, saveProjectProfile } from './projectProfileState.js';
-import { inspectProjectProfile } from './inspectProjectProfile.js';
+import { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspectProjectProfile.js';
 import { synthesizeExecutionPlan } from './synthesizeExecutionPlan.js';
+import type { ProjectProfile } from './schemas/index.js';
+
+/**
+ * Resolve project profile cho workspace đích. Với workspace trống (greenfield),
+ * seed target/package manager từ câu trả lời phỏng vấn để execution plan không
+ * rơi vào blocked stub mâu thuẫn với 08-build-plan. Profile cũ bị kẹt null-target
+ * (emit trước khi có suy luận stack) cũng được re-inspect theo cùng cách.
+ */
+function resolveProjectProfile(cwd: string, answers: InterviewAnswers, branch: string): ProjectProfile {
+  const existing = loadProjectProfile(cwd);
+  const inferred = inferProfileAnswersFromInterview(answers, branch);
+
+  const staleEmptyProfile =
+    existing && existing.workspace_kind === 'empty' && !existing.target && !!inferred.target;
+
+  if (existing && !staleEmptyProfile) {
+    return existing;
+  }
+
+  const { profile } = inspectProjectProfile(cwd, inferred);
+  if (profile.workspace_kind === 'empty' && profile.target && inferred.target) {
+    profile.evidence.push({
+      name: 'Stack suy ra từ câu trả lời phỏng vấn (C/W-series)',
+      observed_at: new Date().toISOString(),
+      confidence: 0.8,
+    });
+  }
+  saveProjectProfile(cwd, profile);
+  return profile;
+}
 
 export type InterviewAnswers = Record<string, string>;
 
@@ -105,6 +135,8 @@ export function emitTree(
   ];
 
   // 2. Prepare filledSlots mapping
+  const cwd = options?.workspaceDir ?? process.cwd();
+  const profile = resolveProjectProfile(cwd, answers, branch);
   const filledSlots: Record<string, string> = {};
 
   // Map user content answers falling back from S0-S6, W1-W5, M1-M5, C1-C5
@@ -217,6 +249,21 @@ export function emitTree(
     filledSlots['vision_elevator_pitch'] ||
     'Tài liệu nền móng thiết kế dự án.';
 
+  // Glossary: skill điền thuật ngữ nghiệp vụ riêng của dự án lúc emit (D28);
+  // fallback deterministic là bảng thuật ngữ của chính phương pháp — luôn đúng
+  // cho mọi dự án, giúp người mới đọc docs không vấp khái niệm.
+  filledSlots['docs_readme_glossary'] =
+    answers['docs_readme_glossary'] ||
+    `| Thuật ngữ | Nghĩa |
+|---|---|
+| Must / Should / Could / Won't | Bốn tầng phạm vi MVP (xem 02-scope.md). Won't là cố ý KHÔNG làm, không phải quên. |
+| M0 — khung xương biết đi | Milestone đầu tiên: lát cắt mỏng nhất của flow chính chạy end-to-end với dữ liệu cứng. |
+| Done-when | Điều kiện nghiệm thu của milestone, kiểm bằng hành vi thật (chạy gì, thấy gì) — không phải "code xong". |
+| allowed_paths | Danh sách file được phép sửa trong một task; sửa ngoài phạm vi sẽ bị gate chặn. |
+| verify / evidence | Lệnh kiểm chứng do engine tự chạy và bằng chứng nó ghi lại; task chỉ done khi verify pass. |
+
+(Thuật ngữ nghiệp vụ riêng của dự án: xem thực thể trong 03-data-model.md.)`;
+
   filledSlots['docs_readme_file_map'] =
     answers['docs_readme_file_map'] ||
     (branch === 'hybrid'
@@ -232,6 +279,7 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       : (branch === 'web'
@@ -246,6 +294,7 @@ export function emitTree(
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
         : branch === 'mobile'
@@ -260,6 +309,7 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
           : `docs/
@@ -273,6 +323,7 @@ export function emitTree(
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       )
@@ -306,15 +357,9 @@ export function emitTree(
         ? 'Chạy local: `npm run dev`. Chạy tests: `npm test`.'
         : branch === 'mobile'
           ? 'Chạy Android: `npm run android`. Chạy iOS: `npm run ios`. Chạy tests: `npm test`.'
-          : 'Cài đặt dependencies: `npm install`. Chạy CLI local: `node bin/index.js` (hoặc build: `npm run build`). Chạy tests: `npm test`.');
-
-  const cwd = options?.workspaceDir ?? process.cwd();
-  let profile = loadProjectProfile(cwd);
-  if (!profile) {
-    const result = inspectProjectProfile(cwd);
-    profile = result.profile;
-    saveProjectProfile(cwd, profile);
-  }
+          : profile.language === 'python'
+            ? 'Cài đặt: tạo virtualenv rồi `pip install -e .`. Chạy CLI local: `python -m <tên_package>` (hoặc lệnh entrypoint khai báo trong pyproject.toml). Chạy tests: `pytest`.'
+            : 'Cài đặt dependencies: `npm install`. Chạy CLI local: `node bin/index.js` (hoặc build: `npm run build`). Chạy tests: `npm test`.');
 
   const synthesis = synthesizeExecutionPlan({
     answers,
@@ -332,7 +377,7 @@ export function emitTree(
       `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n| R-blocked | Cao | spike-required | ${synthesis.message || 'Khởi tạo tệp tin cấu hình dự án.'} |`;
 
     filledSlots['feasibility_spikes'] =
-      '- **Khảo sát rủi ro**: Vui lòng chạy lệnh doctor hoặc khởi tạo tệp tin cấu hình dự án tương ứng, sau đó chạy lại lệnh validate.';
+      '- **Khảo sát rủi ro**: Khởi tạo tệp manifest của stack đã chốt ngay tại thư mục gốc (`package.json` cho Node CLI, `pyproject.toml` hoặc `requirements.txt` cho Python CLI, scaffold Vite cho web), sau đó chạy lại lệnh `emit` để engine sinh lại execution plan theo stack thật.';
 
     filledSlots['task_cards'] =
       `### [Task T0-discovery] Khảo sát môi trường và cấu hình tệp dự án\n- Loại: spike\n- Mục tiêu: Thiết lập cấu hình dự án hợp lệ.\n- Preconditions: Không.\n- Lệnh kiểm chứng: Không.`;
@@ -415,6 +460,7 @@ export function emitTree(
     build_verification: { file: 'features/build/plan.ts', symbol: 'buildVerificationNotes' },
     docs_readme_order: { file: 'features/docs/readme.ts', symbol: 'readingOrder' },
     docs_readme_summary: { file: 'features/docs/readme.ts', symbol: 'projectSummary' },
+    docs_readme_glossary: { file: 'features/docs/readme.ts', symbol: 'projectGlossary' },
     docs_readme_file_map: { file: 'features/docs/readme.ts', symbol: 'fileMap' },
     docs_readme_branch_note: { file: 'features/docs/readme.ts', symbol: 'branchSpecificDocNote' },
     docs_readme_build_notes: { file: 'features/docs/readme.ts', symbol: 'buildNotes' },
@@ -425,10 +471,17 @@ export function emitTree(
     resume_rules: { file: 'features/execution/plan.ts', symbol: 'resumeRules' },
   };
 
-  // Populate planned anchors
+  // Populate planned anchors. Mapping mặc định viết theo TypeScript; với dự án
+  // Python đổi đuôi file và symbol sang idiom Python để anchor trỏ tới đích thật.
+  const isPython = profile.language === 'python';
+  const camelToSnake = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
   for (const [key, val] of Object.entries(plannedMapping)) {
-    filledSlots[`planned_src_${key}`] = answers[`planned_src_${key}`] || `${srcPrefix}${val.file}`;
-    filledSlots[`planned_symbol_${key}`] = answers[`planned_symbol_${key}`] || val.symbol;
+    const file = isPython
+      ? camelToSnake(val.file).replace(/-/g, '_').replace(/\.ts$/, '.py')
+      : val.file;
+    const symbol = isPython ? camelToSnake(val.symbol) : val.symbol;
+    filledSlots[`planned_src_${key}`] = answers[`planned_src_${key}`] || `${srcPrefix}${file}`;
+    filledSlots[`planned_symbol_${key}`] = answers[`planned_symbol_${key}`] || symbol;
   }
 
   // 3. Emit tree
@@ -458,15 +511,10 @@ import { ExecutionPlanV3 } from './schemas/executionPlan.js';
 
 export function generateExecutionPlanJson(
   answers: InterviewAnswers,
-  _branch: string,
+  branch: string,
   workspaceDir: string = process.cwd()
 ): ExecutionPlanV3 {
-  let profile = loadProjectProfile(workspaceDir);
-  if (!profile) {
-    const result = inspectProjectProfile(workspaceDir);
-    profile = result.profile;
-    saveProjectProfile(workspaceDir, profile);
-  }
+  const profile = resolveProjectProfile(workspaceDir, answers, branch);
 
   const synthesis = synthesizeExecutionPlan({
     answers,

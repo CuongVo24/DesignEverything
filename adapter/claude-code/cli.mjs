@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// DesignEverything CLI — lớp thao tác state cho skill /design.
+// DesignEverything CLI — lớp thao tác state cho skill /design-everything.
 // Skill KHÔNG tự sửa progress.json; mọi commit/emit đi qua đây để giữ deterministic.
 //
 //   node cli.mjs status
@@ -237,6 +237,32 @@ switch (command) {
       }
     }
 
+    // Conventions lock (B16a): khóa stack + allowed paths + dependency cho dự án
+    // đích tại docs/conventions/. Slot allowed_dependencies do skill suy từ mục
+    // "Thư viện/thành phần chính" của 05-architecture rồi truyền qua slots-file.
+    let conventionFiles = [];
+    const emittedProfile = core.loadProjectProfile(workspaceRoot);
+    if (emittedProfile?.target && emittedProfile.target !== 'unsupported') {
+      const dependencies = String(answers['allowed_dependencies'] || '')
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      conventionFiles = core
+        .emitProjectConventions({
+          architectureDoc: tree.find((d) => d.file === '05-architecture.md')?.content ?? '',
+          constraintsDoc: tree.find((d) => d.file === '06-constraints.md')?.content ?? '',
+          profile: emittedProfile,
+          cwd: workspaceRoot,
+          dependencies,
+        })
+        .map((p) => relative(workspaceRoot, p).replace(/\\/g, '/'));
+    }
+
+    // Consistency pass: phát hiện docs tự mâu thuẫn (câu sau sửa quyết định
+    // câu trước nhưng slot cũ chưa cập nhật). Không chặn emit — skill phải
+    // trình bày cảnh báo, sửa slot rồi re-emit.
+    const consistencyWarnings = core.checkDocsConsistency(tree, emittedProfile);
+
     // Cập nhật state: emitted_docs + gates_passed + phase.
     const next = { ...progress, emitted_docs: tree.map((d) => d.file) };
     if (existsSync(policyPath)) {
@@ -266,6 +292,8 @@ switch (command) {
       JSON.stringify(
         {
           emitted: tree.map((d) => `docs/${d.file}`),
+          conventions: conventionFiles,
+          consistency_warnings: consistencyWarnings,
           phase: next.phase,
           gates_passed: next.gates_passed,
           note:
@@ -338,6 +366,25 @@ switch (command) {
       execution_plan: v3Plan,
       emitted_docs: emittedDocs,
     });
+
+    // Profile drift: plan được synth cho một profile không còn khớp thực tế
+    // workspace (VD: emit lúc thư mục trống bị blocked, sau đó người dùng tự tạo
+    // manifest). So TARGET là đủ — workspace_kind đổi empty→existing sau scaffold
+    // là tiến triển bình thường, không phải drift.
+    const savedProfile = core.loadProjectProfile(workspaceRoot);
+    const freshProfile = core.inspectProjectProfile(
+      workspaceRoot,
+      core.inferProfileAnswersFromInterview(answers, progress.branch)
+    ).profile;
+    if ((savedProfile?.target ?? null) !== freshProfile.target) {
+      valResult.pass = false;
+      valResult.issues.push({
+        id: 'profile-drift',
+        message:
+          `Profile drift: plan hiện tại synth cho target "${savedProfile?.target ?? null}" nhưng workspace giờ là "${freshProfile.target}". ` +
+          'Chạy lại lệnh emit để re-synth execution plan theo profile mới.',
+      });
+    }
 
     const planDigest = core.calculatePlanDigest(v3Plan);
     const docsDigest = core.calculateDocsDigest(emittedDocs);
@@ -552,7 +599,7 @@ switch (command) {
         {
           phase: execState.phase,
           active_task: execState.active_task,
-          note: `Vui lòng sửa mã nguồn trong phạm vi cho phép và chạy lại lệnh kiểm chứng, sau đó gọi record-evidence.`,
+          note: `Vui lòng sửa mã nguồn trong phạm vi cho phép, sau đó gọi lại verify --task <task_id> --command <command_id>.`,
         },
         null,
         2
@@ -644,7 +691,7 @@ switch (command) {
       }
 
       if (!profile) {
-        fail('Project profile không tồn tại. Vui lòng chạy doctor trước.');
+        fail('Project profile không tồn tại. Chạy lại lệnh emit để sinh project profile trước.');
       }
 
       let amendment;

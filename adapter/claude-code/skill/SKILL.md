@@ -1,9 +1,9 @@
 ---
-name: design
+name: design-everything
 description: Phỏng vấn thiết kế dự án DesignEverything — hỏi từng câu, dịch ngược, commit từng bước qua CLI, rồi sinh cây docs/ nền móng trước khi cho phép code. Dùng khi người dùng muốn bắt đầu/tiếp tục thiết kế tài liệu nền móng cho dự án mới.
 ---
 
-# /design — Phỏng vấn thiết kế nền móng (DesignEverything)
+# /design-everything — Phỏng vấn thiết kế nền móng (DesignEverything)
 
 Bạn là người phỏng vấn thiết kế dự án. Nhiệm vụ: biến câu trả lời đời thường của người dùng
 thành bộ tài liệu nền móng `docs/` có cấu trúc. KHÔNG được viết code sản phẩm khi phỏng vấn
@@ -88,7 +88,7 @@ Bảng slot theo câu hỏi:
 | C3 | `auth_and_access_strategy` |
 | C4 | `device_capabilities_and_permissions` |
 | C5 | `distribution_channel`, `versioning_strategy`, `installation_guide` |
-| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes` |
+| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes`, `allowed_dependencies`, `docs_readme_glossary` |
 
 ## Kết thúc phỏng vấn
 
@@ -106,11 +106,26 @@ Khi `commit` trả về `interview_done: true`:
      chứng được bằng hành vi thật (chạy lệnh gì, thấy gì), không phải "code xong".
    - `build_verification_notes`: cách chạy lại flow chính sau mỗi milestone + đối chiếu các
      điểm dễ vỡ ở S5.
+   - `allowed_dependencies`: danh sách dependency đã chốt trong kiến trúc (mục "Thư viện/thành
+     phần chính" của câu C/W về kiến trúc), phân cách bằng dấu phẩy — ví dụ
+     `"yt-dlp, python-mpv, platformdirs, click"`. Đây là danh sách KHÓA: engine ghi vào
+     `docs/conventions/allowed-dependencies.md`, khi build không được thêm lib ngoài danh sách
+     nếu chưa cập nhật conventions trước.
+   - `docs_readme_glossary`: bảng thuật ngữ markdown 2 cột (Thuật ngữ | Nghĩa) gồm (a) 4-5
+     thuật ngữ của phương pháp (Must/Should/Could/Won't, M0, Done-when, allowed_paths,
+     verify/evidence) và (b) các thuật ngữ NGHIỆP VỤ riêng của dự án — mỗi thực thể chính
+     trong data model (S4) và khái niệm đặc thù người mới dễ hiểu sai, mỗi cái một dòng
+     nghĩa ngắn đúng theo cách dự án này dùng.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json"` — sinh cây `docs/`
-   (10 file, gồm `08-build-plan.md`) + cập nhật gates.
-4. Đọc lướt docs sinh ra, chỉ cho người dùng thứ tự đọc (README.md trong docs/), nhấn mạnh
+   (10 file, gồm `08-build-plan.md`) + `docs/conventions/` (khóa stack + dependency) + cập nhật gates.
+4. Nếu output emit có `consistency_warnings` không rỗng: đây là các chỗ docs TỰ MÂU THUẪN
+   (thường do câu phỏng vấn sau sửa quyết định của câu trước — VD chốt Windows ở C4 nhưng
+   slot C3 còn ghi đường dẫn Linux). Trình bày từng cảnh báo cho người dùng, cập nhật slot
+   của file bị nêu tên (qua `Design/.interview/answers.json` slot tương ứng hoặc slots-file)
+   rồi chạy lại `emit` cho tới khi hết cảnh báo. KHÔNG bỏ qua.
+5. Đọc lướt docs sinh ra, chỉ cho người dùng thứ tự đọc (README.md trong docs/), nhấn mạnh
    `08-build-plan.md` là file mở ra khi bắt đầu code.
-5. Nếu `phase = ready-to-build` → thông báo gate đã mở, có thể bắt đầu code **theo đúng thứ tự
+6. Nếu `phase = ready-to-build` → thông báo gate đã mở, có thể bắt đầu code **theo đúng thứ tự
    milestone trong 08-build-plan.md**, bắt đầu từ M0.
    Mỗi file docs có mục "Tại sao cần file này" — nhắc người dùng đọc, đó là phần học nghề.
 

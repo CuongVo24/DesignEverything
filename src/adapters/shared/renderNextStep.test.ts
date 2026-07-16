@@ -59,6 +59,8 @@ describe('renderNextStep Adapter Renderer', () => {
     validation_result_digest: 'some-digest',
     plan_revision: 1,
     amendment_history: [],
+    open_break_tasks: [],
+    reviewed_milestones: [],
     updated_at: new Date().toISOString(),
   };
 
@@ -163,6 +165,32 @@ describe('renderNextStep Adapter Renderer', () => {
     const card = renderNextStep(mockPlan, completeState, mockProfile);
     expect(card.state).toBe('complete');
     expect(card.enforcement).toBe('soft');
+  });
+
+  test('reviewing phase: open break-tasks surface as hard-gated scope (B17b)', () => {
+    const reviewingState: ExecutionState = {
+      ...mockState,
+      phase: 'reviewing',
+      active_milestone: 'M4-search-recipe',
+      open_break_tasks: ['C-search-recipe-fix-failing-tests'],
+    };
+    const card = renderNextStep(mockPlan, reviewingState, mockProfile);
+    expect(card.state).toBe('reviewing');
+    expect(card.enforcement).toBe('hard');
+    expect(card.allowedScope).toContain('C-search-recipe-fix-failing-tests');
+    expect(card.nextCommand).toContain('start C-search-recipe-fix-failing-tests');
+  });
+
+  test('reviewing phase: no break-tasks prompts manager-check to close review', () => {
+    const reviewingState: ExecutionState = {
+      ...mockState,
+      phase: 'reviewing',
+      active_milestone: 'M4-search-recipe',
+      open_break_tasks: [],
+    };
+    const card = renderNextStep(mockPlan, reviewingState, mockProfile);
+    expect(card.state).toBe('reviewing');
+    expect(card.nextCommand).toContain('review M4-search-recipe');
   });
 
   test('should render markdown next-step card in deep and fast modes', () => {

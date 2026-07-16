@@ -167,11 +167,11 @@ Luồng cốt lõi:
 
 1. **Cài đặt**: Chạy lệnh `npm ci` trong thư mục gốc.
 2. **Biên dịch**: Chạy lệnh `npm run build` để dịch mã nguồn TypeScript.
-3. **Cài thật vào một dự án mới (Claude Code path)**: Cài adapter (hooks + skill `/design` + lõi nội dung) vào dự án đích:
+3. **Cài thật vào một dự án mới (Claude Code path)**: Cài adapter (hooks + skill `/design-everything` + lõi nội dung) vào dự án đích:
    ```bash
    node adapter/claude-code/install.mjs <đường-dẫn-dự-án-mới>
    ```
-   Sau đó mở một phiên Claude Code **mới** trong dự án đích và gõ `/design`. Hook `PreToolUse` sẽ chặn cứng mọi thao tác sinh code cho tới khi phỏng vấn xong và `docs/` được emit.
+   Sau đó mở một phiên Claude Code **mới** trong dự án đích và gõ `/design-everything` (tên `/design` trần bị lệnh built-in của Claude Code chiếm). Hook `PreToolUse` sẽ chặn cứng mọi thao tác sinh code cho tới khi phỏng vấn xong và `docs/` được emit.
 4. **Chạy thử Demo giả lập (không cần Claude Code)**: Giả lập phỏng vấn và sinh tài liệu cho dự án HabitBuilder Mobile App bằng cách chạy:
    ```bash
    npx vitest run test/regression/run-dogfood.test.ts

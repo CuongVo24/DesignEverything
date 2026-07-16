@@ -54,4 +54,6 @@ Khoá `contractSchema` máy đọc (7 mục CONTRACT_STRUCTURE_RULE thành field
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE
+
+> Đã code: `schemas/contract.ts`, `compileContractToTaskCard.ts`, `emitProjectConventions.ts`, `validateContract.ts` + tests. typecheck/lint sạch. Review 2026-07-14: est_lines/auto-split ban đầu là code chết → đã sửa ở B16b; shadowing biến `errors` trong `validateContract` đã dọn.

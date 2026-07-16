@@ -2,6 +2,48 @@ import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { ProjectProfile, ProfileQuestion } from './schemas/index.js';
 
+/**
+ * Suy stack dự kiến từ câu trả lời phỏng vấn, dùng cho workspace trống (greenfield):
+ * lúc emit chưa có manifest nào trên đĩa nhưng C/W-series đã chốt ngôn ngữ/công nghệ.
+ * Chỉ trả về khi tín hiệu rõ ràng — thiếu tín hiệu thì trả {} và giữ nguyên
+ * hành vi blocked-until-manifest hiện tại.
+ */
+export function inferProfileAnswersFromInterview(
+  answers: Record<string, string>,
+  branch: string
+): { target?: 'node-cli' | 'vite-web' | 'python-cli'; packageManager?: 'npm' | 'pnpm' } {
+  const stackText = [
+    answers['architecture_overview'],
+    answers['client_and_rendering_strategy'],
+    answers['C1'],
+    answers['C2'],
+    answers['W1'],
+    answers['W2'],
+  ]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+
+  if (!stackText) return {};
+  const pm = /\bpnpm\b/.test(stackText) ? 'pnpm' : 'npm';
+
+  if (branch === 'cli') {
+    if (/\bpython\b|\bpip\b|pyproject/.test(stackText)) return { target: 'python-cli' };
+    if (/node(?:\.?js)?\b|typescript|javascript|\bnpm\b|\bpnpm\b/.test(stackText)) {
+      return { target: 'node-cli', packageManager: pm };
+    }
+    return {};
+  }
+  if (branch === 'web') {
+    // Next/Nuxt/Remix/Astro nằm ngoài recipe vite-web — không đoán bừa.
+    if (/next\.?js|nuxt|remix|astro/.test(stackText)) return {};
+    if (/\bvite\b|react|vue|svelte/.test(stackText)) return { target: 'vite-web', packageManager: pm };
+    return {};
+  }
+  // mobile/hybrid: chưa có recipe hỗ trợ.
+  return {};
+}
+
 export function inspectProjectProfile(
   workspace: string,
   userAnswers?: Record<string, string>

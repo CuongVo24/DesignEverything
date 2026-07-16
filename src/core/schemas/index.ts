@@ -39,6 +39,13 @@ import {
   planAmendmentSchema,
   amendmentReasonSchema,
 } from './planAmendment.js';
+import {
+  contractInterfaceSchema,
+  contractRiskSchema,
+  contractStatusSchema,
+  contractSchema,
+  projectConventionsSchema,
+} from './contract.js';
 
 export {
   questionSchema,
@@ -72,6 +79,11 @@ export {
   profileQuestionSchema,
   planAmendmentSchema,
   amendmentReasonSchema,
+  contractInterfaceSchema,
+  contractRiskSchema,
+  contractStatusSchema,
+  contractSchema,
+  projectConventionsSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -109,6 +121,12 @@ export type ProjectProfile = z.infer<typeof projectProfileSchema>;
 export type ProfileQuestion = z.infer<typeof profileQuestionSchema>;
 export type PlanAmendment = z.infer<typeof planAmendmentSchema>;
 export type AmendmentReason = z.infer<typeof amendmentReasonSchema>;
+
+export type Contract = z.infer<typeof contractSchema>;
+export type ContractInterface = z.infer<typeof contractInterfaceSchema>;
+export type ContractRisk = z.infer<typeof contractRiskSchema>;
+export type ContractStatus = z.infer<typeof contractStatusSchema>;
+export type ProjectConventions = z.infer<typeof projectConventionsSchema>;
 
 
 
