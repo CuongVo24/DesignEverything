@@ -32,6 +32,8 @@ export {
   calculateValidationResultDigest,
 } from './validatedSnapshot.js';
 export { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspectProjectProfile.js';
+export { checkDocsConsistency } from './checkDocsConsistency.js';
+export type { ConsistencyWarning } from './checkDocsConsistency.js';
 export {
   calculateProfileDigest,
   loadProjectProfile,

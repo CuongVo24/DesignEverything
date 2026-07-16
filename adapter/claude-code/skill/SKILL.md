@@ -113,9 +113,14 @@ Khi `commit` trả về `interview_done: true`:
      nếu chưa cập nhật conventions trước.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json"` — sinh cây `docs/`
    (10 file, gồm `08-build-plan.md`) + `docs/conventions/` (khóa stack + dependency) + cập nhật gates.
-4. Đọc lướt docs sinh ra, chỉ cho người dùng thứ tự đọc (README.md trong docs/), nhấn mạnh
+4. Nếu output emit có `consistency_warnings` không rỗng: đây là các chỗ docs TỰ MÂU THUẪN
+   (thường do câu phỏng vấn sau sửa quyết định của câu trước — VD chốt Windows ở C4 nhưng
+   slot C3 còn ghi đường dẫn Linux). Trình bày từng cảnh báo cho người dùng, cập nhật slot
+   của file bị nêu tên (qua `Design/.interview/answers.json` slot tương ứng hoặc slots-file)
+   rồi chạy lại `emit` cho tới khi hết cảnh báo. KHÔNG bỏ qua.
+5. Đọc lướt docs sinh ra, chỉ cho người dùng thứ tự đọc (README.md trong docs/), nhấn mạnh
    `08-build-plan.md` là file mở ra khi bắt đầu code.
-5. Nếu `phase = ready-to-build` → thông báo gate đã mở, có thể bắt đầu code **theo đúng thứ tự
+6. Nếu `phase = ready-to-build` → thông báo gate đã mở, có thể bắt đầu code **theo đúng thứ tự
    milestone trong 08-build-plan.md**, bắt đầu từ M0.
    Mỗi file docs có mục "Tại sao cần file này" — nhắc người dùng đọc, đó là phần học nghề.
 

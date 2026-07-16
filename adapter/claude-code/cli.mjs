@@ -258,6 +258,11 @@ switch (command) {
         .map((p) => relative(workspaceRoot, p).replace(/\\/g, '/'));
     }
 
+    // Consistency pass: phát hiện docs tự mâu thuẫn (câu sau sửa quyết định
+    // câu trước nhưng slot cũ chưa cập nhật). Không chặn emit — skill phải
+    // trình bày cảnh báo, sửa slot rồi re-emit.
+    const consistencyWarnings = core.checkDocsConsistency(tree, emittedProfile);
+
     // Cập nhật state: emitted_docs + gates_passed + phase.
     const next = { ...progress, emitted_docs: tree.map((d) => d.file) };
     if (existsSync(policyPath)) {
@@ -288,6 +293,7 @@ switch (command) {
         {
           emitted: tree.map((d) => `docs/${d.file}`),
           conventions: conventionFiles,
+          consistency_warnings: consistencyWarnings,
           phase: next.phase,
           gates_passed: next.gates_passed,
           note:
