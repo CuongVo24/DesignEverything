@@ -249,6 +249,21 @@ export function emitTree(
     filledSlots['vision_elevator_pitch'] ||
     'Tài liệu nền móng thiết kế dự án.';
 
+  // Glossary: skill điền thuật ngữ nghiệp vụ riêng của dự án lúc emit (D28);
+  // fallback deterministic là bảng thuật ngữ của chính phương pháp — luôn đúng
+  // cho mọi dự án, giúp người mới đọc docs không vấp khái niệm.
+  filledSlots['docs_readme_glossary'] =
+    answers['docs_readme_glossary'] ||
+    `| Thuật ngữ | Nghĩa |
+|---|---|
+| Must / Should / Could / Won't | Bốn tầng phạm vi MVP (xem 02-scope.md). Won't là cố ý KHÔNG làm, không phải quên. |
+| M0 — khung xương biết đi | Milestone đầu tiên: lát cắt mỏng nhất của flow chính chạy end-to-end với dữ liệu cứng. |
+| Done-when | Điều kiện nghiệm thu của milestone, kiểm bằng hành vi thật (chạy gì, thấy gì) — không phải "code xong". |
+| allowed_paths | Danh sách file được phép sửa trong một task; sửa ngoài phạm vi sẽ bị gate chặn. |
+| verify / evidence | Lệnh kiểm chứng do engine tự chạy và bằng chứng nó ghi lại; task chỉ done khi verify pass. |
+
+(Thuật ngữ nghiệp vụ riêng của dự án: xem thực thể trong 03-data-model.md.)`;
+
   filledSlots['docs_readme_file_map'] =
     answers['docs_readme_file_map'] ||
     (branch === 'hybrid'
@@ -264,6 +279,7 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       : (branch === 'web'
@@ -278,6 +294,7 @@ export function emitTree(
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
         : branch === 'mobile'
@@ -292,6 +309,7 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
           : `docs/
@@ -305,6 +323,7 @@ export function emitTree(
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
       )
@@ -441,6 +460,7 @@ export function emitTree(
     build_verification: { file: 'features/build/plan.ts', symbol: 'buildVerificationNotes' },
     docs_readme_order: { file: 'features/docs/readme.ts', symbol: 'readingOrder' },
     docs_readme_summary: { file: 'features/docs/readme.ts', symbol: 'projectSummary' },
+    docs_readme_glossary: { file: 'features/docs/readme.ts', symbol: 'projectGlossary' },
     docs_readme_file_map: { file: 'features/docs/readme.ts', symbol: 'fileMap' },
     docs_readme_branch_note: { file: 'features/docs/readme.ts', symbol: 'branchSpecificDocNote' },
     docs_readme_build_notes: { file: 'features/docs/readme.ts', symbol: 'buildNotes' },

@@ -44,6 +44,18 @@ Smoke run W14A đầu tiên (2026-07-10, phiên Claude Code thật, dự án yt-
 Bộ đóng gói nằm ở [adapter/claude-code/](../../adapter/claude-code/): 3 entry hook theo giao thức stdin/stdout thật của Claude Code (`hooks/`), CLI `status|commit|emit` cho skill (`cli.mjs`), skill `/design-everything` (`skill/SKILL.md`) và installer (`install.mjs`). Cài vào dự án đích: `node adapter/claude-code/install.mjs <target>` — installer ghi `.claude/settings.json` + skill và copy lõi nội dung (`script.yaml`, `gate-policy.yaml`, `shapes.yaml`, doc-templates) vào workspace đích; engine (dist + node_modules) vẫn ở repo này.
 Đã nghiệm thu vòng đời đầy đủ bằng mô phỏng giao thức hook: SessionStart khởi tạo `progress.json` → UserPromptSubmit inject câu hỏi + TURN_ID và chặn vi phạm một-bước-mỗi-lượt → PreToolUse deny `Write`/`Bash` khi gate `scope-locked` đóng, allow vùng `Design/`+`docs/` → commit CAL0→S7(`--branch`)→W5 qua CLI (kèm `--slots-file`) → `emit` sinh 10 docs có anchor (gồm 08-build-plan) → phase `ready-to-build`, gate mở cho Write code. Còn thiếu: smoke run trong phiên Claude Code thật với người dùng (bước W14A).
 
+## DX Hardening — 2026-07-16 (nhánh v5/dx-hardening)
+
+Các fix rút ra từ smoke run ytm thật tại E:/DE-TestDrive (dự án Python CLI, greenfield):
+
+- **Skill đổi tên `/design` → `/design-everything`**: tên cũ đụng lệnh built-in `/design` của Claude Code desktop (built-in ưu tiên, skill không bao giờ được gọi). Installer tự dọn thư mục skill tên cũ ở dự án đích.
+- **Greenfield stack inference**: `emit` suy target từ câu trả lời phỏng vấn (`inferProfileAnswersFromInterview`, C/W-series) khi workspace trống — execution plan không còn rơi vào blocked stub mâu thuẫn với 08-build-plan. Build notes README + anchor `src=` theo ngôn ngữ đã chốt (Python → `.py` + snake_case).
+- **Build skill dạy đúng interface**: `verify --task --command` (engine tự chạy lệnh kiểm chứng, chống done giả) thay cho `record-evidence` không tồn tại.
+- **Conventions lock**: `emit` sinh `docs/conventions/` (tech-stack, allowed-paths, coding-standards, test-tiers, allowed-dependencies). Slot `allowed_dependencies` do skill điền từ 05-architecture; re-emit không truyền giữ danh sách curated.
+- **Consistency pass**: `emit` trả `consistency_warnings` khi docs tự mâu thuẫn (`path-convention-conflict`: file còn XDG thuần sau khi chốt Windows/platformdirs; `stack-command-conflict`: lệnh sai ngôn ngữ dự án). Skill phải sửa slot rồi re-emit.
+- **Profile drift**: `validate` so profile đã lưu với inspect tươi, lệch target → issue `profile-drift` + hướng dẫn re-emit; state machine cho phép re-validate từ `blocked`/`ready-to-execute` (luồng "sửa docs → validate lại" trước đây crash).
+- **README onboarding**: template thêm "Mười Phút Đầu Tiên" (bảng theo phút + 4 câu tự kiểm) và "Thuật Ngữ Dự Án" (slot `docs_readme_glossary`, fallback thuật ngữ phương pháp).
+
 ## V3 Execution Expansion — target 4.0.0 (Hoàn thành — 2026-07-13)
 
 Toàn bộ lõi trạng thái thực thi V3, kiểm duyệt ngữ nghĩa và luồng build điều khiển bởi Claude Code adapter đã được code và nghiệm thu hoàn chỉnh:

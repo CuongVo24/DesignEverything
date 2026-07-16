@@ -88,7 +88,7 @@ Bảng slot theo câu hỏi:
 | C3 | `auth_and_access_strategy` |
 | C4 | `device_capabilities_and_permissions` |
 | C5 | `distribution_channel`, `versioning_strategy`, `installation_guide` |
-| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes`, `allowed_dependencies` |
+| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes`, `allowed_dependencies`, `docs_readme_glossary` |
 
 ## Kết thúc phỏng vấn
 
@@ -111,6 +111,11 @@ Khi `commit` trả về `interview_done: true`:
      `"yt-dlp, python-mpv, platformdirs, click"`. Đây là danh sách KHÓA: engine ghi vào
      `docs/conventions/allowed-dependencies.md`, khi build không được thêm lib ngoài danh sách
      nếu chưa cập nhật conventions trước.
+   - `docs_readme_glossary`: bảng thuật ngữ markdown 2 cột (Thuật ngữ | Nghĩa) gồm (a) 4-5
+     thuật ngữ của phương pháp (Must/Should/Could/Won't, M0, Done-when, allowed_paths,
+     verify/evidence) và (b) các thuật ngữ NGHIỆP VỤ riêng của dự án — mỗi thực thể chính
+     trong data model (S4) và khái niệm đặc thù người mới dễ hiểu sai, mỗi cái một dòng
+     nghĩa ngắn đúng theo cách dự án này dùng.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json"` — sinh cây `docs/`
    (10 file, gồm `08-build-plan.md`) + `docs/conventions/` (khóa stack + dependency) + cập nhật gates.
 4. Nếu output emit có `consistency_warnings` không rỗng: đây là các chỗ docs TỰ MÂU THUẪN
