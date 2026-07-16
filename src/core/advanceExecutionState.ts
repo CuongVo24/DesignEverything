@@ -21,6 +21,8 @@ export function initExecutionState(): ExecutionState {
     validation_result_digest: '',
     plan_revision: 1,
     amendment_history: [],
+    open_break_tasks: [],
+    reviewed_milestones: [],
     updated_at: new Date().toISOString(),
   };
 }
@@ -162,6 +164,142 @@ export function startTask(
     block_reason: null,
     updated_at: new Date().toISOString(),
   };
+}
+
+/**
+ * B17a — Feature-milestone (M4-*) đòi review trước khi coi là "done".
+ * Skeleton (M0-M3) và milestone khác đi thẳng như V3.
+ */
+export function requiresReview(milestoneId: string | null | undefined): boolean {
+  return !!milestoneId && milestoneId.startsWith('M4-');
+}
+
+/** Mọi task của milestone đã nằm trong completed_tasks chưa. */
+function milestoneTasksAllComplete(state: ExecutionState, milestoneId: string, plan: any): boolean {
+  const milestone = plan.milestones?.find((m: any) => m.id === milestoneId);
+  if (!milestone) return false;
+  return milestone.tasks.every((tid: string) => state.completed_tasks.includes(tid));
+}
+
+/**
+ * Vào phase reviewing khi mọi task build của một feature-milestone đã xong.
+ * Precondition: phase ready-to-execute/ready-to-ship và milestone tasks đủ.
+ */
+export function transitionToReview(
+  state: ExecutionState,
+  milestoneId: string,
+  plan: any
+): ExecutionState {
+  if (!requiresReview(milestoneId)) {
+    throw new Error(`Milestone ${milestoneId} không phải feature-milestone, không cần review.`);
+  }
+  if (state.phase !== 'ready-to-execute' && state.phase !== 'ready-to-ship') {
+    throw new Error(`Chỉ vào reviewing từ ready-to-execute/ready-to-ship, không phải ${state.phase}.`);
+  }
+  if (!milestoneTasksAllComplete(state, milestoneId, plan)) {
+    throw new Error(`Feature ${milestoneId} chưa hoàn thành mọi task build, chưa thể review.`);
+  }
+  return {
+    ...state,
+    phase: 'reviewing',
+    active_milestone: milestoneId,
+    active_task: null,
+    block_reason: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Ghi nhận kết quả manager-check. Break-task rỗng → feature-done ngay
+ * (đóng review). Có break-task → mở chúng ra và giữ phase reviewing
+ * (fail-closed: feature CHƯA done tới khi break-task xong).
+ */
+export function applyReviewOutcome(
+  state: ExecutionState,
+  milestoneId: string,
+  breakTaskIds: string[]
+): ExecutionState {
+  if (state.phase !== 'reviewing') {
+    throw new Error(`applyReviewOutcome chỉ chạy ở phase reviewing, không phải ${state.phase}.`);
+  }
+  if (state.active_milestone !== milestoneId) {
+    throw new Error(`Review đang mở cho ${state.active_milestone}, không phải ${milestoneId}.`);
+  }
+  if (breakTaskIds.length === 0) {
+    return closeFeatureReview({ ...state, open_break_tasks: [] }, milestoneId);
+  }
+  return {
+    ...state,
+    phase: 'reviewing',
+    open_break_tasks: breakTaskIds,
+    block_reason: `Feature ${milestoneId} có ${breakTaskIds.length} break-task chưa xử lý; chưa được coi là done.`,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Đóng review của một feature. Fail-closed: từ chối nếu còn break-task chưa
+ * nằm trong completed_tasks. Đóng xong → milestone vào reviewed_milestones,
+ * phase về ready-to-execute (hoặc ready-to-ship nếu plan đã xong hết).
+ */
+export function closeFeatureReview(
+  state: ExecutionState,
+  milestoneId: string,
+  plan?: any
+): ExecutionState {
+  if (state.phase !== 'reviewing') {
+    throw new Error(`closeFeatureReview chỉ chạy ở phase reviewing, không phải ${state.phase}.`);
+  }
+  if (state.active_milestone !== milestoneId) {
+    throw new Error(`Review đang mở cho ${state.active_milestone}, không phải ${milestoneId}.`);
+  }
+  const unresolved = state.open_break_tasks.filter((tid) => !state.completed_tasks.includes(tid));
+  if (unresolved.length > 0) {
+    throw new Error(
+      `Không thể đóng review ${milestoneId}: còn break-task chưa xong (${unresolved.join(', ')}).`
+    );
+  }
+  const reviewed = state.reviewed_milestones.includes(milestoneId)
+    ? state.reviewed_milestones
+    : [...state.reviewed_milestones, milestoneId];
+
+  // Nếu đã cung cấp plan và mọi task đều xong → ready-to-ship.
+  let allDone = false;
+  if (plan && 'tasks' in plan && plan.tasks && !Array.isArray(plan.tasks)) {
+    allDone = Object.keys(plan.tasks).every((id: string) => state.completed_tasks.includes(id));
+  }
+
+  return {
+    ...state,
+    phase: allDone ? 'ready-to-ship' : 'ready-to-execute',
+    active_milestone: null,
+    active_task: null,
+    open_break_tasks: [],
+    reviewed_milestones: reviewed,
+    block_reason: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Feature-done gate: không cho mở một feature-milestone mới khi còn
+ * feature-milestone nào đã hoàn thành task build nhưng chưa review xong.
+ */
+export function assertNoUnreviewedFeature(
+  state: ExecutionState,
+  nextMilestoneId: string,
+  plan: any
+): void {
+  if (!requiresReview(nextMilestoneId)) return;
+  for (const m of plan.milestones || []) {
+    if (!requiresReview(m.id) || m.id === nextMilestoneId) continue;
+    const complete = m.tasks.every((tid: string) => state.completed_tasks.includes(tid));
+    if (complete && !state.reviewed_milestones.includes(m.id)) {
+      throw new Error(
+        `Feature ${m.id} đã xong task build nhưng chưa đóng review; phải review trước khi mở ${nextMilestoneId}.`
+      );
+    }
+  }
 }
 
 export function recordEvidence(

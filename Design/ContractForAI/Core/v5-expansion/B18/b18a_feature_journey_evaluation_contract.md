@@ -52,4 +52,6 @@ Chạy pilot có artifact chứng minh ≥1 người mới hoàn thành **trọn
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS
+
+> Đã có: replay máy mock-free `test/replay/featureJourneyReplay.test.ts` (synth→compile→validate→review sạch/bẩn→feature-done fail-closed, small vs medium scale) + protocol [v5-feature-pilot-protocol.md](../../../RoadMap/evidence/v5-feature-pilot-protocol.md). **Chưa có**: pilot người thật (bảng số để trống có chủ đích). Không nâng claim "build tới sản phẩm" cho tới khi pilot chạy và audit được (D47).

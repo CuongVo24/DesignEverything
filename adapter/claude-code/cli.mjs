@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// DesignEverything CLI — lớp thao tác state cho skill /design.
+// DesignEverything CLI — lớp thao tác state cho skill /design-everything.
 // Skill KHÔNG tự sửa progress.json; mọi commit/emit đi qua đây để giữ deterministic.
 //
 //   node cli.mjs status
@@ -552,7 +552,7 @@ switch (command) {
         {
           phase: execState.phase,
           active_task: execState.active_task,
-          note: `Vui lòng sửa mã nguồn trong phạm vi cho phép và chạy lại lệnh kiểm chứng, sau đó gọi record-evidence.`,
+          note: `Vui lòng sửa mã nguồn trong phạm vi cho phép, sau đó gọi lại verify --task <task_id> --command <command_id>.`,
         },
         null,
         2
@@ -644,7 +644,7 @@ switch (command) {
       }
 
       if (!profile) {
-        fail('Project profile không tồn tại. Vui lòng chạy doctor trước.');
+        fail('Project profile không tồn tại. Chạy lại lệnh emit để sinh project profile trước.');
       }
 
       let amendment;

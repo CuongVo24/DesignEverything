@@ -14,3 +14,6 @@ dist/
 # Runtime state sinh ra trong lúc test
 **/progress.json
 .tmp/
+
+# Code index cục bộ
+.codegraph/

@@ -15,7 +15,14 @@ export {
   transitionToReadyToExecute,
   startTask,
   recordEvidence,
+  requiresReview,
+  transitionToReview,
+  applyReviewOutcome,
+  closeFeatureReview,
+  assertNoUnreviewedFeature,
 } from './advanceExecutionState.js';
+export { reviewFeatureOutput } from './reviewFeatureOutput.js';
+export type { ReviewSignal } from './reviewFeatureOutput.js';
 export { runTaskVerification } from './runTaskVerification.js';
 export {
   assertValidatedSnapshot,
@@ -37,6 +44,16 @@ export {
   approvePlanAmendment,
   rejectPlanAmendment,
 } from './planAmendment.js';
+export { compileContractToTaskCard } from './compileContractToTaskCard.js';
+export {
+  emitProjectConventions,
+  loadProjectConventions,
+  loadProjectConventionsFromCwd,
+} from './emitProjectConventions.js';
+export { validateContract } from './validateContract.js';
+export { parseDataModel } from './parseDataModel.js';
+export { parseFlows } from './parseFlows.js';
+export { synthesizeFeatureContracts } from './synthesizeFeatureContracts.js';
 
 
 

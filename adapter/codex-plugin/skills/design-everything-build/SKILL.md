@@ -29,3 +29,12 @@ Skill này giúp Codex kết nối trực tiếp với bộ điều phối và k
 *   **`/start <task_id>`**: Bắt đầu thực thi một task cụ thể.
 *   **`/verify`**: Thực hiện lệnh tự động kiểm chứng cho task hiện tại.
 *   **`/repair`**: Báo cáo lỗi và mở pha sửa đổi (repair) cho task.
+*   **`/review <milestone>`**: Chạy manager-check cho feature vừa xong; sinh break-task nếu output bẩn và đóng review khi sạch.
+
+## 3. Review feature & break-task (pha `reviewing` — B17a/V5)
+
+Sau khi mọi task build của một feature-milestone (`M4-*`) pass, pha chuyển sang `reviewing`:
+
+*   Output sạch → review đóng, mở feature kế.
+*   Output bẩn → sinh **break-task** (`fix_*`/`polish_*`); feature CHƯA done tới khi break-task xong (fail-closed).
+*   **Lưu ý Codex (soft-gate)**: vòng review là hướng dẫn ở mức soft. Codex cảnh báo khi bạn định nhảy sang feature kế lúc review chưa đóng, nhưng **không chặn cứng** như Claude. Coverage này được công bố đúng năng lực, không hứa hard-enforce.

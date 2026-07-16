@@ -6,12 +6,12 @@
 
 | Batch | Contract | Tầng | Phụ thuộc | Trạng thái |
 |---|---|---|---|---|
-| B16a | [contract_schema_and_conventions_bind](B16/b16a_contract_schema_and_conventions_bind_contract.md) | Lõi | B15b | WAITING_FOR_APPROVAL |
-| B16b | [feature_contract_synthesis](B16/b16b_feature_contract_synthesis_contract.md) | Lõi | B16a | WAITING_FOR_APPROVAL |
-| B17a | [review_break_task_state](B17/b17a_review_break_task_state_contract.md) | Lõi | B16b | WAITING_FOR_APPROVAL |
-| B17b | [claude_codex_feature_workflow](B17/b17b_claude_codex_feature_workflow_contract.md) | Adapter | B17a | WAITING_FOR_APPROVAL |
-| B18a | [feature_journey_evaluation](B18/b18a_feature_journey_evaluation_contract.md) | QA | B17b | WAITING_FOR_APPROVAL |
-| B18b | [v6_sync_release](B18/b18b_v6_sync_release_contract.md) | QA/Process | B18a | WAITING_FOR_APPROVAL |
+| B16a | [contract_schema_and_conventions_bind](B16/b16a_contract_schema_and_conventions_bind_contract.md) | Lõi | B15b | DONE |
+| B16b | [feature_contract_synthesis](B16/b16b_feature_contract_synthesis_contract.md) | Lõi | B16a | DONE |
+| B17a | [review_break_task_state](B17/b17a_review_break_task_state_contract.md) | Lõi | B16b | DONE |
+| B17b | [claude_codex_feature_workflow](B17/b17b_claude_codex_feature_workflow_contract.md) | Adapter | B17a | DONE |
+| B18a | [feature_journey_evaluation](B18/b18a_feature_journey_evaluation_contract.md) | QA | B17b | IN_PROGRESS (replay máy xong; pilot người CHƯA chạy) |
+| B18b | [v6_sync_release](B18/b18b_v6_sync_release_contract.md) | QA/Process | B18a | IN_PROGRESS (doc-sync xong; release gate chờ B18a pilot) |
 
 Thứ tự bắt buộc: `B16a → B16b → B17a → B17b → B18a → B18b`. Contract schema + Conventions bind (B16a) phải khoá trước synthesis (B16b) — đúng luật "no locked Core, no adapter code".
 

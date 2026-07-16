@@ -1,6 +1,6 @@
 {
   "name": "design-everything",
-  "version": "4.0.0",
+  "version": "6.0.0",
   "description": "Portable foundational documentation design method for AI coding agents",
   "main": "dist/index.js",
   "type": "module",

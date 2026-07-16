@@ -18,7 +18,14 @@ docs/
   07-*.md               ← file phát hành tuỳ hình-hài (xem Registry)
   08-build-plan.md      ← dẫn xuất từ S3 + S5 (không có câu hỏi riêng)
   09-execution-plan.md  ← R1 (khảo sát rủi ro + danh sách task chi tiết)
+  conventions/          ← quy chuẩn công nghệ do tool emit từ 05/06 + ProjectProfile (v6.0.0)
+    tech-stack.md
+    allowed-paths.md
+    coding-standards.md
+    test-tiers.md
   README.md             ← mục lục + "đọc theo thứ tự này"
+contracts/              ← các hợp đồng per-micro-task máy đọc lưu trữ tại đây (v6.0.0)
+  break/<feature>/      ← break-task (fix_*/polish_*) sinh từ pha `reviewing` (B17a)
 ```
 
 > File `07-*` **tuỳ hình-hài dự án** (xem Registry bên dưới): `web` → `07-deployment.md`; `mobile` → `07-release.md`; `cli` → `07-distribution.md`; `hybrid` → emit **cả** `07-deployment.md` lẫn `07-release.md`. Validator/adapter coi mỗi tên file là một entry hợp lệ riêng, không phải một chuỗi bracket. Đổi/thêm hình-hài = MAJOR ([DecisionLog D21](../DecisionLog.md)).

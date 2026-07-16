@@ -1,6 +1,10 @@
-import { ProjectProfile, ExecutionPlanV3 } from './schemas/index.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import { ProjectProfile, ExecutionPlanV3, ExecutionState, Contract } from './schemas/index.js';
 import { getRecipe } from './stackRecipes.js';
-import { extractMustFeatures } from './validatePlan.js';
+import { extractMustFeatures, extractWontFeatures } from './validatePlan.js';
+import { synthesizeFeatureContracts } from './synthesizeFeatureContracts.js';
+import { compileContractToTaskCard } from './compileContractToTaskCard.js';
 
 // Risk keywords that, when present in the interview answers, must be represented
 // as an unresolved (spike-required) risk so the plan validator forces a spike.
@@ -15,7 +19,9 @@ export interface SynthesizeResult {
 export function synthesizeExecutionPlan(options: {
   answers: Record<string, string>;
   profile: ProjectProfile;
-  docs: string[];
+  docs: string[] | Array<{ file: string; content: string }>;
+  workspaceDir?: string;
+  executionState?: ExecutionState;
 }): SynthesizeResult {
   const { profile, answers } = options;
   const updatedAt = new Date().toISOString();
@@ -201,6 +207,156 @@ export function synthesizeExecutionPlan(options: {
     capabilities_evidence: capabilitiesEvidence,
     discovery_status: 'pass' as const,
   };
+
+  // 4. Feature Contract Synthesis Integration (B16b)
+  const cwd = options.workspaceDir || process.cwd();
+  let executionState: ExecutionState | undefined = options.executionState;
+  if (!executionState) {
+    const statePath = path.join(cwd, '.design-everything', 'execution-state.json');
+    if (fs.existsSync(statePath)) {
+      try {
+        executionState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const isSkeletonVerified = executionState && executionState.completed_tasks.includes('T3-verify');
+
+  if (isSkeletonVerified) {
+    let docObjects: Array<{ file: string; content: string }> = [];
+    if (Array.isArray(options.docs)) {
+      if (typeof options.docs[0] === 'string') {
+        for (const filename of options.docs) {
+          const filePath = path.join(cwd, 'docs', filename as string);
+          if (fs.existsSync(filePath)) {
+            docObjects.push({
+              file: filename as string,
+              content: fs.readFileSync(filePath, 'utf8'),
+            });
+          }
+        }
+      } else {
+        docObjects = options.docs as Array<{ file: string; content: string }>;
+      }
+    }
+
+    const conventionsRef = 'docs/conventions/tech-stack.md';
+    const synthesizedContracts = synthesizeFeatureContracts({
+      answers,
+      profile,
+      docs: docObjects,
+      conventionsRef,
+    });
+
+    const activeCompletedTasks = executionState!.completed_tasks || [];
+
+    // Filter musts and find the JIT next one
+    const wonts = extractWontFeatures(answers);
+    const musts = mustFeatures.filter((m) => !wonts.includes(m));
+
+    let nextMust: string | null = null;
+    let nextMilestoneId: string | null = null;
+    let nextContracts: Contract[] = [];
+
+    // We track which musts are completed so we can keep their contracts in the plan
+    const completedMusts: string[] = [];
+
+    for (const must of musts) {
+      const slug = must
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const milestoneId = `M4-${slug}`;
+
+      const mustContracts = synthesizedContracts.filter((c) => c.feature_milestone === milestoneId);
+      if (mustContracts.length === 0) continue;
+
+      const allCompleted = mustContracts.every((c) => activeCompletedTasks.includes(c.id));
+      if (allCompleted) {
+        completedMusts.push(must);
+      } else {
+        if (!nextMust) {
+          nextMust = must;
+          nextMilestoneId = milestoneId;
+          nextContracts = mustContracts;
+        }
+      }
+    }
+
+    // Now, construct the plan milestones and tasks
+    // 1. Add completed musts
+    for (const must of completedMusts) {
+      const slug = must
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const milestoneId = `M4-${slug}`;
+      const mustContracts = synthesizedContracts.filter((c) => c.feature_milestone === milestoneId);
+
+      synthesizedPlan.milestones.push({
+        id: milestoneId,
+        title: `Feature Implementation: ${must}`,
+        tasks: mustContracts.map((c) => c.id),
+      });
+
+      for (const contract of mustContracts) {
+        synthesizedPlan.tasks[contract.id] = compileContractToTaskCard(contract);
+      }
+    }
+
+    // 2. Add JIT next must if found
+    if (nextMust && nextMilestoneId) {
+      synthesizedPlan.milestones.push({
+        id: nextMilestoneId,
+        title: `Feature Implementation: ${nextMust}`,
+        tasks: nextContracts.map((c) => c.id),
+      });
+
+      for (const contract of nextContracts) {
+        synthesizedPlan.tasks[contract.id] = compileContractToTaskCard(contract);
+      }
+    }
+
+    // 3. Update trace links to map correctly
+    // Active & completed musts map to their feature tasks.
+    // Unopened musts map to T0-T3 skeleton tasks.
+    const updatedTraceLinks = mustFeatures.map((must) => {
+      const slug = must
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const milestoneId = `M4-${slug}`;
+
+      const isCompleted = completedMusts.includes(must);
+      const isActive = nextMust === must;
+
+      if (isCompleted || isActive) {
+        const mustContracts = synthesizedContracts.filter((c) => c.feature_milestone === milestoneId);
+        return {
+          must_id: must,
+          flow_id: flowId,
+          task_ids: mustContracts.map((c) => c.id),
+        };
+      } else {
+        // Unopened maps to T0-T3
+        return {
+          must_id: must,
+          flow_id: flowId,
+          task_ids: allTaskIds,
+        };
+      }
+    });
+
+    synthesizedPlan.trace_links = updatedTraceLinks;
+  }
 
   return {
     plan: synthesizedPlan,

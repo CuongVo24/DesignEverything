@@ -53,4 +53,6 @@
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS
+
+> Đã có: taxonomy thêm `contracts/`, `contracts/break/`, `docs/conventions/`, phase `reviewing`; SKILL docs cập nhật; package.json ở 6.0.0. **Chưa đóng**: release gate 6.0.0 bị chặn bởi B18a (pilot người chưa chạy) — không claim "6.0.0 phát hành" hay "hỗ trợ build tới sản phẩm" cho tới khi pilot có artifact. Golden feature-contract mẫu + changelog cuối cùng làm cùng lúc mở release.

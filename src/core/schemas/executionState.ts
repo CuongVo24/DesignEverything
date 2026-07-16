@@ -7,6 +7,7 @@ export const executionPhaseSchema = z.enum([
   'executing',
   'verifying',
   'repairing',
+  'reviewing',
   'blocked',
   'ready-to-ship',
 ]);
@@ -39,6 +40,9 @@ export const executionStateSchema = z.object({
   validation_result_digest: z.string(),
   plan_revision: z.number().int().default(1),
   amendment_history: z.array(planAmendmentSchema).default([]),
+  // B17a — review/break-task loop. Optional với default để state cũ vẫn hợp lệ.
+  open_break_tasks: z.array(z.string()).default([]),
+  reviewed_milestones: z.array(z.string()).default([]),
   updated_at: z.string().datetime(),
 });
 export type ExecutionState = z.infer<typeof executionStateSchema>;
