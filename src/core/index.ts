@@ -31,7 +31,7 @@ export {
   calculateDocsDigest,
   calculateValidationResultDigest,
 } from './validatedSnapshot.js';
-export { inspectProjectProfile } from './inspectProjectProfile.js';
+export { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspectProjectProfile.js';
 export {
   calculateProfileDigest,
   loadProjectProfile,
