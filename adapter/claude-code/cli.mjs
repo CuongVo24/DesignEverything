@@ -237,6 +237,27 @@ switch (command) {
       }
     }
 
+    // Conventions lock (B16a): khóa stack + allowed paths + dependency cho dự án
+    // đích tại docs/conventions/. Slot allowed_dependencies do skill suy từ mục
+    // "Thư viện/thành phần chính" của 05-architecture rồi truyền qua slots-file.
+    let conventionFiles = [];
+    const emittedProfile = core.loadProjectProfile(workspaceRoot);
+    if (emittedProfile?.target && emittedProfile.target !== 'unsupported') {
+      const dependencies = String(answers['allowed_dependencies'] || '')
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      conventionFiles = core
+        .emitProjectConventions({
+          architectureDoc: tree.find((d) => d.file === '05-architecture.md')?.content ?? '',
+          constraintsDoc: tree.find((d) => d.file === '06-constraints.md')?.content ?? '',
+          profile: emittedProfile,
+          cwd: workspaceRoot,
+          dependencies,
+        })
+        .map((p) => relative(workspaceRoot, p).replace(/\\/g, '/'));
+    }
+
     // Cập nhật state: emitted_docs + gates_passed + phase.
     const next = { ...progress, emitted_docs: tree.map((d) => d.file) };
     if (existsSync(policyPath)) {
@@ -266,6 +287,7 @@ switch (command) {
       JSON.stringify(
         {
           emitted: tree.map((d) => `docs/${d.file}`),
+          conventions: conventionFiles,
           phase: next.phase,
           gates_passed: next.gates_passed,
           note:

@@ -88,7 +88,7 @@ Bảng slot theo câu hỏi:
 | C3 | `auth_and_access_strategy` |
 | C4 | `device_capabilities_and_permissions` |
 | C5 | `distribution_channel`, `versioning_strategy`, `installation_guide` |
-| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes` |
+| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes`, `allowed_dependencies` |
 
 ## Kết thúc phỏng vấn
 
@@ -106,8 +106,13 @@ Khi `commit` trả về `interview_done: true`:
      chứng được bằng hành vi thật (chạy lệnh gì, thấy gì), không phải "code xong".
    - `build_verification_notes`: cách chạy lại flow chính sau mỗi milestone + đối chiếu các
      điểm dễ vỡ ở S5.
+   - `allowed_dependencies`: danh sách dependency đã chốt trong kiến trúc (mục "Thư viện/thành
+     phần chính" của câu C/W về kiến trúc), phân cách bằng dấu phẩy — ví dụ
+     `"yt-dlp, python-mpv, platformdirs, click"`. Đây là danh sách KHÓA: engine ghi vào
+     `docs/conventions/allowed-dependencies.md`, khi build không được thêm lib ngoài danh sách
+     nếu chưa cập nhật conventions trước.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json"` — sinh cây `docs/`
-   (10 file, gồm `08-build-plan.md`) + cập nhật gates.
+   (10 file, gồm `08-build-plan.md`) + `docs/conventions/` (khóa stack + dependency) + cập nhật gates.
 4. Đọc lướt docs sinh ra, chỉ cho người dùng thứ tự đọc (README.md trong docs/), nhấn mạnh
    `08-build-plan.md` là file mở ra khi bắt đầu code.
 5. Nếu `phase = ready-to-build` → thông báo gate đã mở, có thể bắt đầu code **theo đúng thứ tự
