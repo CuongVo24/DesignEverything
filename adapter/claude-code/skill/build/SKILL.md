@@ -1,6 +1,6 @@
 ---
 name: build
-description: Điều phối chu trình thực thi các nhiệm vụ từ kế hoạch thiết kế qua các lệnh CLI chuyên biệt (validate, next, start, record-evidence, repair, status). Sử dụng khi dự án đã thiết kế xong và sẵn sàng phát triển mã nguồn.
+description: Điều phối chu trình thực thi các nhiệm vụ từ kế hoạch thiết kế qua các lệnh CLI chuyên biệt (validate, next, start, verify, repair, status). Sử dụng khi dự án đã thiết kế xong và sẵn sàng phát triển mã nguồn.
 ---
 
 # /build — Hướng dẫn Thực thi Kế hoạch (DesignEverything Build workflow)
@@ -15,7 +15,7 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" validate
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" start --task <task_id> --milestone <milestone_id>
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" record-evidence --task <task_id> --exit-code <0|1> [--observed "output thực tế"] [--artifact "file log hoặc ảnh chụp"]
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" verify --task <task_id> --command <command_id>
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" repair
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|fast]
 ```
@@ -45,19 +45,28 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|f
 1. Thực hiện viết code/chỉnh sửa trong phạm vi cho phép của task.
 2. **CẢNH BÁO**: Mọi hành động ghi/sửa tệp nằm ngoài `allows_paths` của task sẽ bị hook `PreToolUse` từ chối thẳng thừng (Bậc A). Đừng cố gắng chỉnh sửa các tệp không được chỉ định trong task card hiện tại.
 
-### Bước 4: Chạy Lệnh Kiểm chứng & Ghi nhận Bằng chứng (`record-evidence`)
-1. Chạy lệnh kiểm chứng được chỉ định trong Task Card (ví dụ: `npm test`, `node test.js`, v.v.).
-2. Gọi lệnh CLI `record-evidence` để lưu kết quả:
-   - **Nếu pass (exit code 0)**: Gọi `record-evidence --task <task_id> --exit-code 0 --observed "Tất cả test pass"`. Task sẽ chuyển vào `completed_tasks`, giải phóng `active_task`, pha chuyển về `ready-to-execute`. Lúc này bạn mới được phép sang task tiếp theo.
-   - **Nếu fail (exit code 1)**: Gọi `record-evidence --task <task_id> --exit-code 1 --observed "Lỗi xảy ra ở dòng X"`. Pha chuyển sang `repairing`.
+### Bước 4: Kiểm chứng bằng máy (`verify`)
+1. Với MỖI command trong Task Card, gọi `verify --task <task_id> --command <command_id>`. Engine TỰ chạy lệnh kiểm chứng đó và tự ghi nhận bằng chứng — bạn KHÔNG tự khai exit-code, không tự viết evidence.
+   - **Nếu pass**: khi mọi command của task đã verify pass, task vào `completed_tasks`, giải phóng `active_task`, pha về `ready-to-execute`. Lúc này bạn mới được phép sang task tiếp theo.
+   - **Nếu fail**: pha chuyển sang `repairing`.
 
 ### Bước 5: Sửa lỗi trong pha `repairing`
-1. Khi test fail, tuyệt đối không được bỏ qua hoặc bấm chuyển sang task tiếp theo.
+1. Khi verify fail, tuyệt đối không được bỏ qua hoặc bấm chuyển sang task tiếp theo.
 2. Giữ nguyên task hiện tại, phân tích log lỗi chi tiết, sửa code trong phạm vi cho phép của task đó.
-3. Rerun lệnh kiểm chứng. Khi test pass, gọi `record-evidence` với exit code 0 để giải phóng task.
+3. Gọi lại `verify --task <task_id> --command <command_id>`. Khi pass, task mới được giải phóng.
+
+### Bước 6: Review feature & break-task (pha `reviewing` — B17a/V5)
+
+Sau khi mọi task build của một feature-milestone (`M4-*`) đã pass, pha chuyển sang `reviewing` — **không** đi thẳng sang feature kế.
+
+1. Chạy manager-check (lint/test/diff của feature vừa xong).
+2. **Output sạch** → review đóng, feature vào `reviewed_milestones`, pha về `ready-to-execute` để mở feature kế.
+3. **Output bẩn** → hệ thống sinh **break-task** (`fix_*` cho bug, `polish_*` cho nợ kỹ thuật). Feature **CHƯA được coi là done** (fail-closed): phải làm xong mọi break-task (verify pass) rồi mới đóng được review.
+4. **Feature-done gate**: không được mở feature-milestone mới khi còn feature cũ đã xong task build nhưng chưa đóng review.
 
 ## Điều cấm kỵ
 
 - Không tự chỉnh sửa `.design-everything/execution-state.json`.
 - Không cố gắng viết code cho task mới khi task cũ chưa hoàn thành hoặc chưa có bằng chứng xác thực hợp lệ.
 - Không sửa mã nguồn khi không có active task nào đang chạy.
+- Không nhảy sang feature kế khi review của feature hiện tại chưa đóng (còn break-task chưa xong).

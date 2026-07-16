@@ -25,7 +25,7 @@ try {
         `[DesignEverything] Phiên phỏng vấn thiết kế đang hoạt động trong dự án này.\n` +
         `Trạng thái: phase=${progress.phase}, branch=${progress.branch ?? 'chưa chọn'}, ` +
         `bước hiện tại=${progress.current_step ?? 'đã xong phỏng vấn'}.\n` +
-        `Người dùng gõ /design để bắt đầu hoặc tiếp tục phỏng vấn. ` +
+        `Người dùng gõ /design-everything để bắt đầu hoặc tiếp tục phỏng vấn. ` +
         `Khi phỏng vấn chưa xong, hook PreToolUse sẽ chặn mọi thao tác sinh code.`,
     },
   });

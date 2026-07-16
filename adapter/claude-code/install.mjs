@@ -5,13 +5,13 @@
 //
 // Cài gì vào dự án đích:
 //   .claude/settings.json        — wiring 3 hook (SessionStart, UserPromptSubmit, PreToolUse)
-//   .claude/skills/design/SKILL.md — skill /design
+//   .claude/skills/design-everything/SKILL.md — skill /design-everything
 //   Design/Content/interview-script/{script.yaml,gate-policy.yaml,shapes.yaml}
 //   Design/Content/doc-templates/*  — lõi nội dung mà hook/CLI đọc tại workspace
 // Engine (dist/ + node_modules) vẫn nằm ở repo này; hooks trỏ đường dẫn tuyệt đối về đây.
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync, rmSync } from 'fs';
 
 const ADAPTER_DIR = dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = resolve(ADAPTER_DIR, '..', '..');
@@ -67,8 +67,11 @@ ensureHook('UserPromptSubmit', null, hookCmd('user-prompt-submit.mjs'));
 ensureHook('PreToolUse', 'Write|Edit|MultiEdit|NotebookEdit|Bash', hookCmd('pre-tool-use.mjs'));
 writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 
-// 2. Skill /design and /build
-const skillDir = join(claudeDir, 'skills', 'design');
+// 2. Skill /design-everything and /build
+// Tên cũ "design" đụng lệnh built-in /design của Claude Code (bị built-in nuốt) — dọn nếu còn.
+const legacySkillDir = join(claudeDir, 'skills', 'design');
+if (existsSync(join(legacySkillDir, 'SKILL.md'))) rmSync(legacySkillDir, { recursive: true, force: true });
+const skillDir = join(claudeDir, 'skills', 'design-everything');
 mkdirSync(skillDir, { recursive: true });
 const skillTemplate = readFileSync(join(ADAPTER_DIR, 'skill', 'SKILL.md'), 'utf8');
 writeFileSync(
@@ -110,7 +113,7 @@ console.log(`✅ Đã cài DesignEverything (adapter Claude Code) vào: ${target
 
 Cài đặt gồm:
   .claude/settings.json                    (3 hooks → engine tại ${ENGINE_ROOT})
-  .claude/skills/design/SKILL.md           (skill /design)
+  .claude/skills/design-everything/SKILL.md (skill /design-everything)
   .claude/skills/build/SKILL.md            (skill /build)
   Design/Content/interview-script/         (script.yaml, gate-policy.yaml, shapes.yaml)
   Design/Content/doc-templates/            (templates docs đầu ra)
@@ -118,7 +121,7 @@ Cài đặt gồm:
 Cách test:
   1. cd "${targetRoot}"
   2. Mở phiên Claude Code MỚI (hooks chỉ nạp lúc khởi động phiên).
-  3. Gõ: /design  → trả lời phỏng vấn từng câu.
+  3. Gõ: /design-everything  → trả lời phỏng vấn từng câu.
   4. Thử bảo Claude viết code ngay → PreToolUse phải chặn với thông báo gate.
   5. Xong phỏng vấn → docs/ được sinh → gate mở.
   6. Gõ: /build   → bắt đầu chu trình thực thi các task và milestone.`);
