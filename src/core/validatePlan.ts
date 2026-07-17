@@ -148,6 +148,7 @@ export function validateExecutionPlan(input: PlanValidationInput): PlanValidatio
         ...shapeObj.release_docs,
         '08-build-plan.md',
         '09-execution-plan.md',
+        'decisions.md',
         '.design-everything/execution-plan.json',
         'README.md',
       ];

@@ -14,6 +14,21 @@ Must: Đăng nhập, Xem công thức, Tạo công thức, Tìm kiếm. Should: 
 Done-when của mỗi milestone: bước tương ứng trong 04-flows.md chạy được thật (không mock), và các milestone trước vẫn chạy.
 <!-- anchor: id=08-build-plan/milestones  src=src/features/build/plan.ts::buildMilestones  rev=  status=planned -->
 
+## Lịch Theo Tuần
+Deadline bạn khai ở `06-constraints.md` quy ra khoảng **3 tuần**. Lịch dưới đây là ước lượng để giữ nhịp, không phải cam kết — thứ tự phụ thuộc mới là nguồn sự thật. Trượt một tuần thì dồn lịch, đừng bỏ Done-when.
+
+> **Cảnh báo:** Deadline khoảng 3 tuần nhưng có 5 milestone bắt buộc — trung bình dưới một tuần cho mỗi milestone. Hoặc cắt bớt Must trong 02-scope.md xuống 2 mục, hoặc chấp nhận lùi hạn. Lịch dưới đây là phương án nhồi sát nhất có thể, KHÔNG phải cam kết an toàn.
+
+| Tuần | Milestone |
+|---|---|
+| Tuần 1 | M0 — Khung xương biết đi (lát cắt mỏng nhất của flow chính) |
+| Tuần 1 | Đăng nhập |
+| Tuần 1 | Xem công thức |
+| Tuần 2 | Tạo công thức |
+| Tuần 2 | Tìm kiếm |
+| Tuần 3 | Đệm: sửa lỗi còn lại, chạy lại flow chính, chuẩn bị phát hành. |
+<!-- anchor: id=08-build-plan/weekly-schedule  src=src/features/build/plan.ts::buildWeeklySchedule  rev=  status=planned -->
+
 ## Kiểm Tra Sau Mỗi Milestone
 Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: Mở web -> xem công thức -> chọn món -> tích nguyên liệu
 <!-- anchor: id=08-build-plan/verification  src=src/features/build/plan.ts::buildVerificationNotes  rev=  status=planned -->

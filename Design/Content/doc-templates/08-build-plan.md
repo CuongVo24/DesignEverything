@@ -11,6 +11,10 @@ File này là cầu nối giữa tài liệu nền móng và dòng code đầu t
 {{build_milestones}}
 <!-- anchor: id=08-build-plan/milestones  src={{planned_src_build_milestones}}::{{planned_symbol_build_milestones}}  rev=  status=planned -->
 
+## Lịch Theo Tuần
+{{build_weekly_schedule}}
+<!-- anchor: id=08-build-plan/weekly-schedule  src={{planned_src_build_weekly_schedule}}::{{planned_symbol_build_weekly_schedule}}  rev=  status=planned -->
+
 ## Kiểm Tra Sau Mỗi Milestone
 {{build_verification_notes}}
 <!-- anchor: id=08-build-plan/verification  src={{planned_src_build_verification}}::{{planned_symbol_build_verification}}  rev=  status=planned -->

@@ -15,10 +15,10 @@ const taxonomyPath = join(__dirname, '../../Design/Content/taxonomy.md');
 const gatePolicyMdPath = join(__dirname, '../../Design/Core/Schemas/gate-policy.md');
 
 describe('Content Integrity (Tầng 1)', () => {
-  test('script.yaml must load successfully and contain exactly 17 questions with unique IDs', () => {
+  test('script.yaml must load successfully and contain exactly 26 questions with unique IDs', () => {
     const script = loadScript(scriptPath);
     expect(script.version).toBe('2.0.0');
-    expect(script.questions.length).toBe(25);
+    expect(script.questions.length).toBe(26);
 
     const questionIds = script.questions.map((q) => q.id);
     const uniqueIds = new Set(questionIds);

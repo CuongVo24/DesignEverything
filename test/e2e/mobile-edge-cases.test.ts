@@ -141,7 +141,7 @@ describe('E2E Mobile Edge Cases Flow', () => {
     };
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
     const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
-    expect(docFilesOnly).toHaveLength(11);
+    expect(docFilesOnly).toHaveLength(12);
 
     const fileNames = docFilesOnly.map(d => d.file);
     expect(fileNames).toContain('07-release.md');

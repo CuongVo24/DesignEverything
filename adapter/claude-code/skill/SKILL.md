@@ -74,6 +74,7 @@ Bảng slot theo câu hỏi:
 | S4 | `core_entities`, `entity_relationships`, `deferred_data_notes` |
 | S5 | `main_flow_summary`, `main_flow_steps`, `main_flow_risks_or_edge_cases` |
 | S6 | `team_and_ownership_constraints`, `timeline_constraints`, `budget_constraints`, `constraint_impact_on_scope` |
+| S8 | `data_sensitivity_and_security`, `expected_scale_and_performance` |
 | W1/W2 | `client_and_rendering_strategy`, `architecture_overview` |
 | W3 | `hosting_strategy`, `deployment_goal`, `domain_and_access_strategy` |
 | W4 | `auth_and_access_strategy` |
@@ -88,7 +89,16 @@ Bảng slot theo câu hỏi:
 | C3 | `auth_and_access_strategy` |
 | C4 | `device_capabilities_and_permissions` |
 | C5 | `distribution_channel`, `versioning_strategy`, `installation_guide` |
-| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes`, `allowed_dependencies`, `docs_readme_glossary` |
+| *(lúc emit, dẫn xuất)* | `build_plan_principles`, `build_milestones`, `build_verification_notes`, `allowed_dependencies`, `docs_readme_glossary`, `architecture_decision_rationale`, `architecture_alternatives_considered` |
+
+**S6 — ghi deadline cho rõ.** Nếu người dùng có hạn thật, `timeline_constraints` phải chứa khoảng
+thời gian tường minh ("3 tuần", "2 tháng") — engine đọc chỗ này để cắt milestone thành lịch tuần
+trong `08-build-plan.md`. Không có hạn thì ghi đúng là không có; đừng bịa một con số, kế hoạch sẽ
+đi theo thứ tự phụ thuộc như thường.
+
+**S8 — hai yêu cầu phi chức năng.** Tách câu trả lời thành hai slot: dữ liệu nhạy cảm (quyết định
+mức bảo mật) và quy mô năm đầu (quyết định mức tối ưu). Nêu rõ mức "đủ dùng" cho từng cái — người
+mới hay làm thừa (bày microservice cho 50 user) hoặc làm thiếu (để mật khẩu thô).
 
 ## Kết thúc phỏng vấn
 
@@ -111,13 +121,23 @@ Khi `commit` trả về `interview_done: true`:
      `"yt-dlp, python-mpv, platformdirs, click"`. Đây là danh sách KHÓA: engine ghi vào
      `docs/conventions/allowed-dependencies.md`, khi build không được thêm lib ngoài danh sách
      nếu chưa cập nhật conventions trước.
+   - `architecture_decision_rationale`: **vì sao** chọn từng quyết định kỹ thuật đã chốt (W/M/C).
+     Mỗi quyết định 1-3 dòng, PHẢI nối ngược về một câu trả lời cụ thể của người dùng — nhu cầu,
+     ràng buộc, hoặc rủi ro. Không nối được về câu nào tức là đang chọn theo trend, phải nêu ra.
+     Đây là thứ biến bộ docs từ "danh sách công nghệ" thành tài liệu kiến trúc thật.
+   - `architecture_alternatives_considered`: các phương án đã cân nhắc và **vì sao loại**, kèm
+     điều kiện nào sẽ khiến quyết định đảo lại (VD: "chọn SQLite; đổi sang Postgres nếu cần
+     nhiều người ghi đồng thời"). Một quyết định không có phương án thay thế thường chỉ là mặc
+     định chưa ai xét.
    - `docs_readme_glossary`: bảng thuật ngữ markdown 2 cột (Thuật ngữ | Nghĩa) gồm (a) 4-5
      thuật ngữ của phương pháp (Must/Should/Could/Won't, M0, Done-when, allowed_paths,
      verify/evidence) và (b) các thuật ngữ NGHIỆP VỤ riêng của dự án — mỗi thực thể chính
      trong data model (S4) và khái niệm đặc thù người mới dễ hiểu sai, mỗi cái một dòng
      nghĩa ngắn đúng theo cách dự án này dùng.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json"` — sinh cây `docs/`
-   (10 file, gồm `08-build-plan.md`) + `docs/conventions/` (khóa stack + dependency) + cập nhật gates.
+   (11 file, gồm `08-build-plan.md` và `decisions.md`) + `docs/conventions/` (khóa stack +
+   dependency) + cập nhật gates. `decisions.md` (sổ quyết định), sơ đồ mermaid trong `03`/`04`,
+   và lịch tuần trong `08` đều được dẫn xuất tự động từ slot đã chốt — không viết tay.
 4. Nếu output emit có `consistency_warnings` không rỗng: đây là các chỗ docs TỰ MÂU THUẪN
    (thường do câu phỏng vấn sau sửa quyết định của câu trước — VD chốt Windows ở C4 nhưng
    slot C3 còn ghi đường dẫn Linux). Trình bày từng cảnh báo cho người dùng, cập nhật slot

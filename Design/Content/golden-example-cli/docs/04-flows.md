@@ -9,6 +9,21 @@ Mở terminal -> gõ lệnh search -> xem công thức -> xuất file
 Mở terminal -> gõ lệnh search -> xem công thức -> xuất file
 <!-- anchor: id=04-flows/main-flow-steps  src=src/features/flows/flows.ts::mainFlowSteps  rev=  status=planned -->
 
+## Sơ Đồ Luồng Chính
+```mermaid
+graph LR
+  S0["Mở terminal"]
+  S1["gõ lệnh search"]
+  S2["xem công thức"]
+  S3["xuất file"]
+  S0 --> S1
+  S1 --> S2
+  S2 --> S3
+```
+
+Đây là luồng chính — cũng chính là thứ phải chạy được end-to-end ở milestone M0 (xem `08-build-plan.md`). Mỗi lần xong một milestone, chạy lại đúng luồng này như một người dùng thật.
+<!-- anchor: id=04-flows/diagram  src=src/features/flows/flows.ts::flowDiagram  rev=  status=planned -->
+
 ## Điểm Dễ Vỡ Hoặc Cần Làm Rõ
 Mở terminal -> gõ lệnh search -> xem công thức -> xuất file
 <!-- anchor: id=04-flows/flow-risks  src=src/features/flows/flows.ts::flowRisks  rev=  status=planned -->

@@ -112,6 +112,7 @@ describe('validateExecutionPlan core logic', () => {
       { file: '07-distribution.md', content: 'distribution' },
       { file: '08-build-plan.md', content: 'build plan' },
       { file: '09-execution-plan.md', content: `# Plan\n\n<!-- plan-digest: ${planDigest} -->` },
+      { file: 'decisions.md', content: 'decisions' },
       { file: '.design-everything/execution-plan.json', content: planJsonStr },
       {
         file: 'README.md',
@@ -126,6 +127,7 @@ describe('validateExecutionPlan core logic', () => {
 - 07-distribution.md
 - 08-build-plan.md
 - 09-execution-plan.md
+- decisions.md
 - .design-everything/execution-plan.json
 - README.md
 `,

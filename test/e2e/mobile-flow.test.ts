@@ -71,6 +71,7 @@ describe('E2E Mobile Interview & Gating Flow', () => {
       S5: 'Mở app -> xem công thức -> chọn món -> tích nguyên liệu',
       S6: 'Solo, 3 tuần',
       S7: 'mobile',
+      S8: 'Chỉ email đăng nhập, không có dữ liệu thanh toán; vài trăm người dùng năm đầu.',
       M1: 'React Native cross-platform',
       M2: 'Offline-first với SQLite sync',
       M3: 'Camera và Photo Library access',
@@ -108,6 +109,19 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
     progress = loadProgress(progressPath);
     progress = commitStep(progress, script, { userTurnId: 'turn-core-R1' });
+    saveProgress(progressPath, progress);
+
+    // S8 — yêu cầu phi chức năng (dữ liệu nhạy cảm + quy mô), câu lõi cuối trước khi rẽ nhánh.
+    progress = loadProgress(progressPath);
+    expect(progress.current_step).toBe('S8');
+
+    // onUserPromptSubmit đóng dấu lượt và GHI progress; phải load lại sau nó,
+    // nếu không commit sẽ ghi đè mất dấu và lượt kế bị rate-limit chặn oan.
+    const s8PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-core-S8' });
+    expect(s8PromptResult.decision).toBe('allow');
+
+    progress = loadProgress(progressPath);
+    progress = commitStep(progress, script, { userTurnId: 'turn-core-S8' });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
@@ -169,7 +183,7 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
     // --- PHASE 5: Docs Scaffolding / Emission ---
     const emittedDocs = emitTree(answers, 'mobile', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(12);
+    expect(emittedDocs).toHaveLength(13);
 
     const fileNames = emittedDocs.map((d) => d.file);
     expect(fileNames).toContain('07-release.md');

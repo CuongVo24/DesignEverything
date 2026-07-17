@@ -22,3 +22,19 @@ File này chốt các quyết định kỹ thuật đủ để build mà không 
 ## Năng Lực Thiết Bị Hoặc Quyền Đặc Biệt
 {{device_capabilities_and_permissions}}
 <!-- anchor: id=05-architecture/device-capabilities  src={{planned_src_device_capabilities}}::{{planned_symbol_device_capabilities}}  rev=  status=planned -->
+
+## Dữ Liệu Nhạy Cảm Và Bảo Mật
+{{data_sensitivity_and_security}}
+<!-- anchor: id=05-architecture/data-sensitivity  src={{planned_src_data_sensitivity}}::{{planned_symbol_data_sensitivity}}  rev=  status=planned -->
+
+## Quy Mô Dự Kiến Và Hiệu Năng
+{{expected_scale_and_performance}}
+<!-- anchor: id=05-architecture/expected-scale  src={{planned_src_expected_scale}}::{{planned_symbol_expected_scale}}  rev=  status=planned -->
+
+## Vì Sao Chọn Hướng Này
+{{architecture_decision_rationale}}
+<!-- anchor: id=05-architecture/decision-rationale  src={{planned_src_decision_rationale}}::{{planned_symbol_decision_rationale}}  rev=  status=planned -->
+
+## Phương Án Đã Cân Nhắc Và Loại
+{{architecture_alternatives_considered}}
+<!-- anchor: id=05-architecture/alternatives-considered  src={{planned_src_alternatives_considered}}::{{planned_symbol_alternatives_considered}}  rev=  status=planned -->

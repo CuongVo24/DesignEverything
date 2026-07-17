@@ -7,6 +7,10 @@ import { createHash } from 'crypto';
 import { loadProjectProfile, saveProjectProfile } from './projectProfileState.js';
 import { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspectProjectProfile.js';
 import { synthesizeExecutionPlan } from './synthesizeExecutionPlan.js';
+import { planWeeklySchedule, renderWeeklySchedule } from './planWeeklySchedule.js';
+import { entityDiagramFromSlots, flowDiagramFromSlots } from './renderMermaid.js';
+import { renderDecisionTable } from './renderDecisionLog.js';
+import { extractMustFeatures, extractWontFeatures } from './validatePlan.js';
 import type { ProjectProfile } from './schemas/index.js';
 
 /**
@@ -131,6 +135,7 @@ export function emitTree(
     ...releaseDocs,
     '08-build-plan.md',
     '09-execution-plan.md',
+    'decisions.md',
     'README.md',
   ];
 
@@ -231,6 +236,46 @@ export function emitTree(
     filledSlots['monetization_strategy'] = answers['monetization_strategy'] || answers['M3'] || '';
   }
 
+  // Sơ đồ dẫn xuất từ chính slot đã chốt — người mới đọc hình nhanh hơn đọc
+  // danh sách, và sơ đồ lệch text là không thể vì cả hai sinh từ một nguồn.
+  filledSlots['data_model_diagram'] =
+    answers['data_model_diagram'] ||
+    entityDiagramFromSlots({
+      coreEntities: filledSlots['core_entities'],
+      entityRelationships: filledSlots['entity_relationships'],
+    });
+  filledSlots['flow_diagram'] =
+    answers['flow_diagram'] ||
+    flowDiagramFromSlots({ mainFlowSteps: filledSlots['main_flow_steps'] });
+
+  // S8 — yêu cầu phi chức năng. Đây là hai thứ đổi kiến trúc nhiều nhất mà người
+  // mới không biết để tự nêu: dữ liệu nhạy cảm (quyết định mức bảo mật) và quy mô
+  // (quyết định mức tối ưu). Fallback là mức mặc định của S8, KHÔNG bịa cam kết.
+  filledSlots['data_sensitivity_and_security'] =
+    answers['data_sensitivity_and_security'] ||
+    answers['S8'] ||
+    'Chưa khai báo dữ liệu nhạy cảm ngoài thông tin đăng nhập cơ bản. Mức bảo mật tương ứng: băm mật khẩu, không log thông tin đăng nhập, không commit khóa bí mật vào repo. Nếu sau này có thêm dữ liệu cá nhân/thanh toán/sức khỏe, phải cập nhật lại mục này TRƯỚC khi code phần đó.';
+  filledSlots['expected_scale_and_performance'] =
+    answers['expected_scale_and_performance'] ||
+    answers['S8'] ||
+    'Quy mô dự kiến năm đầu ở mức nhỏ (vài chục tới vài trăm người dùng). Ở mức này KHÔNG cần cache, queue, sharding hay microservice — làm sớm chỉ tốn thời gian. Khi nào đo được nghẽn thật thì mới tối ưu, và ghi lại số đo vào mục này.';
+
+  // Quyết định kiến trúc mà không ghi lý do và phương án đã loại thì 6 tháng sau
+  // không ai (kể cả tác giả) biết vì sao chọn vậy — và người mới không học được
+  // gì ngoài một cái tên công nghệ. Đây là phần đưa doc lên mức kiến-trúc-sư.
+  filledSlots['architecture_decision_rationale'] =
+    answers['architecture_decision_rationale'] ||
+    'Chưa ghi lý do cho các quyết định ở trên. Mỗi lựa chọn kỹ thuật cần nối ngược về một câu trả lời phỏng vấn cụ thể (nhu cầu người dùng, ràng buộc, hoặc rủi ro) — nếu không nối được thì đó là chọn theo trend, nên xem lại.';
+  filledSlots['architecture_alternatives_considered'] =
+    answers['architecture_alternatives_considered'] ||
+    'Chưa ghi phương án nào bị loại. Một quyết định không có phương án thay thế thường là chưa quyết định — chỉ là mặc định. Ghi rõ đã cân nhắc gì và vì sao loại, để sau này đổi ý còn biết điều kiện nào đã thay đổi.';
+
+  // Sổ quyết định — PHẢI dựng sau khi mọi slot kiến trúc (gồm S8 và rationale) đã
+  // điền xong, nếu không bảng sẽ ghi "(chưa chốt)" cho chính thứ vừa chốt. Dựng
+  // từ cùng bộ slot với 05-architecture nên hai file không thể lệch nhau.
+  filledSlots['decision_table'] =
+    answers['decision_table'] || renderDecisionTable({ branch, slots: filledSlots });
+
   // 08-build-plan.md — file dẫn xuất (D28): slot do skill điền lúc emit;
   // fallback deterministic dựng từ answers thô S3 (Must) + S5 (flow) nếu skill không cung cấp.
   filledSlots['build_plan_principles'] =
@@ -242,6 +287,23 @@ export function emitTree(
   filledSlots['build_verification_notes'] =
     answers['build_verification_notes'] ||
     `Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: ${filledSlots['main_flow_risks_or_edge_cases'] || '(xem 04-flows.md mục Điểm Dễ Vỡ)'}`;
+
+  // Lịch tuần dẫn xuất từ deadline S6 + Must-list S3. Không khai deadline thì
+  // không sinh lịch — kế hoạch vẫn chạy theo thứ tự phụ thuộc như cũ.
+  filledSlots['build_weekly_schedule'] =
+    answers['build_weekly_schedule'] ||
+    renderWeeklySchedule(
+      planWeeklySchedule({
+        timelineText: filledSlots['timeline_constraints'] || answers['S6'] || '',
+        milestones: [
+          'M0 — Khung xương biết đi (lát cắt mỏng nhất của flow chính)',
+          ...extractMustFeatures(answers)
+            .filter((m) => !extractWontFeatures(answers).includes(m))
+            // Mục Must cuối câu hay dính dấu chấm của câu S3.
+            .map((m) => m.replace(/\.$/, '').trim()),
+        ],
+      })
+    );
 
   // Compute README slots
   filledSlots['docs_readme_project_summary'] =
@@ -279,6 +341,9 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── decisions.md          # Sổ quyết định: chốt gì, từ câu hỏi nào, chi tiết ở đâu
+├── progress-log.md       # (engine sinh lúc build) Nhật ký đã làm gì, vấp ở đâu
+├── break-tasks/          # (engine sinh lúc review) Việc phải sửa sau mỗi feature
 ├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
@@ -294,6 +359,9 @@ export function emitTree(
 ├── 07-deployment.md      # Quy trình CI/CD và cấu hình Hosting (Vercel)
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── decisions.md          # Sổ quyết định: chốt gì, từ câu hỏi nào, chi tiết ở đâu
+├── progress-log.md       # (engine sinh lúc build) Nhật ký đã làm gì, vấp ở đâu
+├── break-tasks/          # (engine sinh lúc review) Việc phải sửa sau mỗi feature
 ├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
@@ -309,6 +377,9 @@ export function emitTree(
 ├── 07-release.md         # Kế hoạch phát hành & Phân phối cửa hàng
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── decisions.md          # Sổ quyết định: chốt gì, từ câu hỏi nào, chi tiết ở đâu
+├── progress-log.md       # (engine sinh lúc build) Nhật ký đã làm gì, vấp ở đâu
+├── break-tasks/          # (engine sinh lúc review) Việc phải sửa sau mỗi feature
 ├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
@@ -323,6 +394,9 @@ export function emitTree(
 ├── 07-distribution.md    # Hướng dẫn đóng gói, phân phối và cài đặt
 ├── 08-build-plan.md      # Kế hoạch build theo milestone (đọc trước khi code)
 ├── 09-execution-plan.md  # Kế hoạch thực thi chi tiết & quản lý rủi ro kỹ thuật
+├── decisions.md          # Sổ quyết định: chốt gì, từ câu hỏi nào, chi tiết ở đâu
+├── progress-log.md       # (engine sinh lúc build) Nhật ký đã làm gì, vấp ở đâu
+├── break-tasks/          # (engine sinh lúc review) Việc phải sửa sau mỗi feature
 ├── conventions/          # Khóa stack, allowed paths, dependencies
 ├── .design-everything/execution-plan.json # File cấu hình thực thi máy-đọc
 └── README.md             # Mục lục tài liệu (File này)`
@@ -432,14 +506,20 @@ export function emitTree(
     core_entities: { file: 'features/data-model/dataModel.ts', symbol: 'coreEntities' },
     entity_relationships: { file: 'features/data-model/dataModel.ts', symbol: 'entityRelationships' },
     deferred_data: { file: 'features/data-model/dataModel.ts', symbol: 'deferredDataNotes' },
+    data_model_diagram: { file: 'features/data-model/dataModel.ts', symbol: 'dataModelDiagram' },
     main_flow_summary: { file: 'features/flows/flows.ts', symbol: 'mainFlowSummary' },
     main_flow_steps: { file: 'features/flows/flows.ts', symbol: 'mainFlowSteps' },
+    flow_diagram: { file: 'features/flows/flows.ts', symbol: 'flowDiagram' },
     flow_risks: { file: 'features/flows/flows.ts', symbol: 'flowRisks' },
     architecture_overview: { file: 'features/architecture/architecture.ts', symbol: 'architectureOverview' },
     client_rendering: { file: 'features/architecture/architecture.ts', symbol: 'clientAndRenderingStrategy' },
     auth_access: { file: 'features/architecture/architecture.ts', symbol: 'authAndAccessStrategy' },
     realtime_sync: { file: 'features/architecture/architecture.ts', symbol: 'realtimePushOrSyncStrategy' },
     device_capabilities: { file: 'features/architecture/architecture.ts', symbol: 'deviceCapabilitiesAndPermissions' },
+    data_sensitivity: { file: 'features/architecture/architecture.ts', symbol: 'dataSensitivityAndSecurity' },
+    expected_scale: { file: 'features/architecture/architecture.ts', symbol: 'expectedScaleAndPerformance' },
+    decision_rationale: { file: 'features/architecture/architecture.ts', symbol: 'architectureDecisionRationale' },
+    alternatives_considered: { file: 'features/architecture/architecture.ts', symbol: 'architectureAlternativesConsidered' },
     team_ownership: { file: 'features/constraints/constraints.ts', symbol: 'teamAndOwnershipConstraints' },
     timeline: { file: 'features/constraints/constraints.ts', symbol: 'timelineConstraints' },
     budget: { file: 'features/constraints/constraints.ts', symbol: 'budgetConstraints' },
@@ -457,7 +537,10 @@ export function emitTree(
     installation_guide: { file: 'features/distribution/dist.ts', symbol: 'installationGuide' },
     build_principles: { file: 'features/build/plan.ts', symbol: 'buildPlanPrinciples' },
     build_milestones: { file: 'features/build/plan.ts', symbol: 'buildMilestones' },
+    build_weekly_schedule: { file: 'features/build/plan.ts', symbol: 'buildWeeklySchedule' },
     build_verification: { file: 'features/build/plan.ts', symbol: 'buildVerificationNotes' },
+    decision_table: { file: 'features/decisions/decisions.ts', symbol: 'decisionTable' },
+    decision_change_policy: { file: 'features/decisions/decisions.ts', symbol: 'decisionChangePolicy' },
     docs_readme_order: { file: 'features/docs/readme.ts', symbol: 'readingOrder' },
     docs_readme_summary: { file: 'features/docs/readme.ts', symbol: 'projectSummary' },
     docs_readme_glossary: { file: 'features/docs/readme.ts', symbol: 'projectGlossary' },

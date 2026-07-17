@@ -21,8 +21,25 @@ describe('loadScript', () => {
     const realScriptPath = join(__dirname, '../../Design/Content/interview-script/script.yaml');
     const script = loadScript(realScriptPath);
     expect(script.version).toBe('2.0.0');
-    expect(script.questions.length).toBe(25);
+    expect(script.questions.length).toBe(26);
     expect(script.questions[0].id).toBe('CAL0');
+  });
+
+  // Một câu phụ thuộc chính nó (hoặc phụ thuộc câu chưa tồn tại/đứng sau) sẽ
+  // không bao giờ đủ điều kiện → phỏng vấn kẹt cứng giữa chừng mà không báo lỗi.
+  test('đồ thị depends_on của script thật phải hợp lệ và không tự phụ thuộc', () => {
+    const realScriptPath = join(__dirname, '../../Design/Content/interview-script/script.yaml');
+    const script = loadScript(realScriptPath);
+    const seen = new Set<string>();
+
+    for (const q of script.questions) {
+      expect(q.depends_on).not.toContain(q.id);
+      for (const dep of q.depends_on) {
+        // Mọi dependency phải là câu có thật và ĐỨNG TRƯỚC trong script.
+        expect(seen.has(dep)).toBe(true);
+      }
+      seen.add(q.id);
+    }
   });
 
   test('should throw error when file is missing', () => {

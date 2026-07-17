@@ -187,7 +187,7 @@ describe('E2E Web Edge Cases Flow', () => {
     };
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
     const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
-    expect(docFilesOnly).toHaveLength(11);
+    expect(docFilesOnly).toHaveLength(12);
 
     const fileNames = docFilesOnly.map(d => d.file);
     expect(fileNames).toContain('07-deployment.md');

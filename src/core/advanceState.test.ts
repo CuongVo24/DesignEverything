@@ -41,12 +41,15 @@ describe('advanceState engine', () => {
     const progressWeb = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
     expect(progressWeb.branch).toBe('web');
     expect(progressWeb.current_step).toBe('R1');
+    // R1 (rủi ro) rồi S8 (yêu cầu phi chức năng) đều là câu lõi, chạy trước khi rẽ nhánh.
     const progressWebR1 = commitStep(progressWeb, script, { userTurnId: 'turn-R1' });
-    expect(progressWebR1.current_step).toBe('W1');
+    expect(progressWebR1.current_step).toBe('S8');
+    const progressWebS8 = commitStep(progressWebR1, script, { userTurnId: 'turn-S8' });
+    expect(progressWebS8.current_step).toBe('W1');
 
     // Try changing branch -> should throw
     expect(() =>
-      commitStep(progressWebR1, script, { userTurnId: 'turn-8', branchChoice: 'mobile' })
+      commitStep(progressWebS8, script, { userTurnId: 'turn-8', branchChoice: 'mobile' })
     ).toThrow(/Cannot change branch once set/);
 
     // Commit S7 with mobile branch
@@ -54,7 +57,9 @@ describe('advanceState engine', () => {
     expect(progressMobile.branch).toBe('mobile');
     expect(progressMobile.current_step).toBe('R1');
     const progressMobileR1 = commitStep(progressMobile, script, { userTurnId: 'turn-R1' });
-    expect(progressMobileR1.current_step).toBe('M1');
+    expect(progressMobileR1.current_step).toBe('S8');
+    const progressMobileS8 = commitStep(progressMobileR1, script, { userTurnId: 'turn-S8' });
+    expect(progressMobileS8.current_step).toBe('M1');
   });
 
   test('should throw error on duplicate turn ID commit', () => {
@@ -100,8 +105,9 @@ describe('advanceState engine', () => {
     }
     // S7 -> Web branch
     progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
-    // R1 -> Core branch
+    // R1 (rủi ro) và S8 (yêu cầu phi chức năng) — câu lõi cuối trước khi rẽ nhánh
     progress = commitStep(progress, script, { userTurnId: 'turn-R1' });
+    progress = commitStep(progress, script, { userTurnId: 'turn-S8' });
 
     // W1 -> W4
     for (let i = 1; i <= 4; i++) {
@@ -140,6 +146,8 @@ describe('advanceState engine', () => {
     expect(progress.branch).toBe('hybrid');
     expect(progress.current_step).toBe('R1');
     progress = commitStep(progress, script, { userTurnId: 'turn-R1' });
+    expect(progress.current_step).toBe('S8');
+    progress = commitStep(progress, script, { userTurnId: 'turn-S8' });
 
     // The next questions must include both Web and Mobile questions.
     const expectedQuestions = [

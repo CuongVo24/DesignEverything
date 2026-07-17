@@ -23,7 +23,24 @@ export {
 } from './advanceExecutionState.js';
 export { reviewFeatureOutput } from './reviewFeatureOutput.js';
 export type { ReviewSignal } from './reviewFeatureOutput.js';
+export { runFeatureReview, reviewCommandsFor, extractIssues } from './runFeatureReview.js';
 export { runTaskVerification } from './runTaskVerification.js';
+export { renderProgressLog } from './renderProgressLog.js';
+export { planWeeklySchedule, renderWeeklySchedule, parseDeadlineWeeks } from './planWeeklySchedule.js';
+export {
+  renderEntityDiagram,
+  renderFlowDiagram,
+  entityDiagramFromSlots,
+  flowDiagramFromSlots,
+} from './renderMermaid.js';
+export { renderDecisionTable, collectDecisions } from './renderDecisionLog.js';
+export type { DecisionSpec } from './renderDecisionLog.js';
+export {
+  renderBreakTaskDoc,
+  renderBreakTaskIndex,
+  breakTaskFileName,
+} from './renderBreakTasks.js';
+export type { BreakTaskIndexEntry } from './renderBreakTasks.js';
 export {
   assertValidatedSnapshot,
   loadEmittedDocs,

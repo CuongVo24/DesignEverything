@@ -71,6 +71,7 @@ describe('E2E Web Interview & Gating Flow', () => {
       S5: 'Mở web -> xem công thức -> chọn món -> tích nguyên liệu',
       S6: 'Solo, 3 tuần',
       S7: 'web',
+      S8: 'Chỉ email đăng nhập, không có dữ liệu thanh toán; vài trăm người dùng năm đầu.',
       W1: 'Next.js SSR cho SEO',
       W2: 'Responsive mobile-first',
       W3: 'Triển khai lên Vercel',
@@ -108,6 +109,19 @@ describe('E2E Web Interview & Gating Flow', () => {
 
     progress = loadProgress(progressPath);
     progress = commitStep(progress, script, { userTurnId: 'turn-core-R1' });
+    saveProgress(progressPath, progress);
+
+    // S8 — yêu cầu phi chức năng (dữ liệu nhạy cảm + quy mô), câu lõi cuối trước khi rẽ nhánh.
+    progress = loadProgress(progressPath);
+    expect(progress.current_step).toBe('S8');
+
+    // onUserPromptSubmit đóng dấu lượt và GHI progress; phải load lại sau nó,
+    // nếu không commit sẽ ghi đè mất dấu và lượt kế bị rate-limit chặn oan.
+    const s8PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-core-S8' });
+    expect(s8PromptResult.decision).toBe('allow');
+
+    progress = loadProgress(progressPath);
+    progress = commitStep(progress, script, { userTurnId: 'turn-core-S8' });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
@@ -160,7 +174,7 @@ describe('E2E Web Interview & Gating Flow', () => {
 
     // --- PHASE 5: Docs Scaffolding / Emission ---
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
-    expect(emittedDocs).toHaveLength(12);
+    expect(emittedDocs).toHaveLength(13);
 
     // Write emitted docs to docs/ folder
     mkdirSync(docsDir, { recursive: true });
