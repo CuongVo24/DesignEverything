@@ -10,6 +10,121 @@ export interface SynthesizeFeatureContractsInput {
   conventionsRef: string;
 }
 
+/** Bỏ dấu tiếng Việt để tên thực thể thành định danh code hợp lệ. */
+function toAscii(s: string): string {
+  return s
+    .normalize('NFD')
+    // Dấu tổ hợp (combining diacritical marks) tách ra sau NFD.
+    .replace(/[̀-ͯ]/g, '')
+    // đ/Đ không tách được bằng NFD, phải thay tay.
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+}
+
+function words(s: string): string[] {
+  return toAscii(s)
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/** 'Người dùng' → 'NguoiDung' */
+export function pascalCase(s: string): string {
+  return words(s)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join('');
+}
+
+/** 'Thêm sách' → 'themSach' */
+export function camelCase(s: string): string {
+  const p = pascalCase(s);
+  return p.charAt(0).toLowerCase() + p.slice(1);
+}
+
+/** 'Thêm sách' → 'them_sach' */
+export function snakeCase(s: string): string {
+  return words(s)
+    .map((w) => w.toLowerCase())
+    .join('_');
+}
+
+/**
+ * Tên kiểu/hàm KHÓA cho một hợp đồng, suy từ thực thể trong 03-data-model và
+ * tên Must trong 02-scope.
+ *
+ * Đây là phần biến hợp đồng từ "sửa file nào" thành "khai đúng cái gì": tên kiểu
+ * được chốt ngay ở hợp đồng, nên executor không tự đặt `BookItem`, `BookData`,
+ * `IBook` mỗi chỗ một kiểu rồi docs và code gọi cùng một thứ bằng ba cái tên.
+ */
+export function lockedSignature(input: {
+  type: 'data' | 'logic' | 'surface';
+  must: string;
+  entities: string[];
+  language: string;
+}): string {
+  const { type, must, entities, language } = input;
+  const isPython = language === 'python';
+  const isTs = language === 'typescript';
+
+  if (type === 'data') {
+    // Không khớp được entity nào → khóa theo chính tên Must, còn hơn để trống.
+    const names = entities.length > 0 ? entities : [must];
+    return names
+      .map((e) => {
+        const t = pascalCase(e);
+        if (isPython) return `class ${t}`;
+        if (isTs) return `export interface ${t}`;
+        return `@typedef {object} ${t}`;
+      })
+      .join('; ');
+  }
+
+  if (type === 'logic') {
+    const fn = isPython ? snakeCase(must) : camelCase(must);
+    const arg = entities.length > 0 ? pascalCase(entities[0]) : 'Input';
+    if (isPython) return `def ${fn}(payload: ${arg})`;
+    if (isTs) return `export function ${fn}(input: ${arg})`;
+    return `export function ${fn}(input)`;
+  }
+
+  // surface — màn hình/điểm chạm của feature.
+  const view = `${pascalCase(must)}View`;
+  if (isPython) return `def render_${snakeCase(must)}()`;
+  return `export function ${view}()`;
+}
+
+/**
+ * Checklist nghiệm thu của hợp đồng. Nêu đích danh tên đã khóa để "xong" là thứ
+ * kiểm được, không phải "code xong thì thôi".
+ */
+export function buildChecklist(input: {
+  type: 'data' | 'logic' | 'surface';
+  signature: string;
+  entities: string[];
+  conventionsRef: string;
+}): string[] {
+  const items = [`Khai đúng tên đã khóa: ${input.signature}`];
+
+  if (input.entities.length > 0) {
+    items.push(
+      `Tên thực thể khớp 03-data-model.md (${input.entities.join(', ')}) — không đặt tên khác cho cùng một thứ`
+    );
+  }
+  if (input.type === 'data') {
+    items.push('Chỉ khai field mà tính năng Must này thực sự dùng; chưa dùng thì chưa thêm');
+  }
+  if (input.type === 'logic') {
+    items.push('Xử lý được cả nhánh lỗi, không chỉ nhánh chạy đúng');
+  }
+  if (input.type === 'surface') {
+    items.push('Bước tương ứng trong 04-flows.md bấm được thật, không phải mock');
+  }
+
+  items.push(`Không thêm dependency ngoài danh sách khóa tại ${input.conventionsRef}`);
+  return items;
+}
+
 export function synthesizeFeatureContracts(input: SynthesizeFeatureContractsInput): Contract[] {
   const { answers, profile, docs, conventionsRef } = input;
   const musts = extractMustFeatures(answers).filter(
@@ -71,11 +186,20 @@ export function synthesizeFeatureContracts(input: SynthesizeFeatureContractsInpu
       if (type === 'data') estLines = 100 + matchedEntities.length * 45;
       if (type === 'logic') estLines = 150 + complexity * 30;
 
+      // Tên kiểu/hàm được KHÓA ngay tại hợp đồng, suy từ thực thể đã chốt ở
+      // 03-data-model — không để executor tự đặt tên mỗi chỗ một kiểu.
+      const signature = lockedSignature({
+        type,
+        must,
+        entities: matchedEntities,
+        language: lang,
+      });
+
       const interfaces = [
         {
           path: `src/${pathPrefix}/${slug}.${ext}`,
           change: changeType,
-          signature: `${slug}_${type}_entry()`,
+          signature,
           est_lines: estLines,
         },
       ];
@@ -104,12 +228,12 @@ export function synthesizeFeatureContracts(input: SynthesizeFeatureContractsInpu
             in: [interfaces[0].path],
             out: [],
           },
-          checklist: [`Verify ${type} part A works`],
+          checklist: buildChecklist({ type, signature, entities: matchedEntities, conventionsRef }),
           interfaces: [
             {
               path: interfaces[0].path,
               change: changeType,
-              signature: `${slug}_${type}_a()`,
+              signature,
               est_lines: halfLines,
             },
           ],
@@ -133,12 +257,15 @@ export function synthesizeFeatureContracts(input: SynthesizeFeatureContractsInpu
             in: [`src/${pathPrefix}/${slug}-helper.${ext}`],
             out: [],
           },
-          checklist: [`Verify ${type} part B works`],
+          checklist: [
+            `Phần phụ trợ cho ${signature} — không khai lại kiểu đã khóa ở Part A`,
+            `Không thêm dependency ngoài danh sách khóa tại ${conventionsRef}`,
+          ],
           interfaces: [
             {
               path: `src/${pathPrefix}/${slug}-helper.${ext}`,
               change: changeType,
-              signature: `${slug}_${type}_b()`,
+              signature: `${lang === 'python' ? snakeCase(must) + '_helper' : camelCase(must) + 'Helper'}()`,
               est_lines: totalEstLines - halfLines,
             },
           ],
@@ -171,7 +298,7 @@ export function synthesizeFeatureContracts(input: SynthesizeFeatureContractsInpu
             in: interfaces.map((i) => i.path),
             out: [],
           },
-          checklist: [`Verify ${type} contract works`],
+          checklist: buildChecklist({ type, signature, entities: matchedEntities, conventionsRef }),
           interfaces,
           risks: [],
           verification,
