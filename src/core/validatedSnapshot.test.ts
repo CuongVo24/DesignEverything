@@ -32,6 +32,45 @@ describe('validatedSnapshot checks', () => {
     expect(d1).toBe(d2);
   });
 
+  // Nhật ký/break-task là projection của state: chúng đổi mỗi lần verify. Nếu
+  // lọt vào docs digest thì chính việc ghi nhật ký sẽ làm snapshot stale và
+  // khóa cứng vòng thực thi ngay sau task đầu tiên.
+  test('should ignore state projections (progress-log, break-tasks) in docs digest', () => {
+    const base = calculateDocsDigest(docs);
+
+    const withLog = calculateDocsDigest([
+      ...docs,
+      { file: 'progress-log.md', content: 'lần verify #1' },
+    ]);
+    expect(withLog).toBe(base);
+
+    const withChangedLog = calculateDocsDigest([
+      ...docs,
+      { file: 'progress-log.md', content: 'lần verify #2 — nội dung đã khác' },
+    ]);
+    expect(withChangedLog).toBe(base);
+
+    const withBreakTasks = calculateDocsDigest([
+      ...docs,
+      { file: 'break-tasks/M4-login.md', content: 'break task mới mở' },
+    ]);
+    expect(withBreakTasks).toBe(base);
+  });
+
+  test('should keep execution loop unblocked after a progress-log write', () => {
+    const state = initExecutionState();
+    state.validated_plan_digest = calculatePlanDigest(plan);
+    state.validated_docs_digest = calculateDocsDigest(docs);
+
+    // Mô phỏng: verify chạy xong và engine ghi lại docs/progress-log.md.
+    const docsAfterVerify = [...docs, { file: 'progress-log.md', content: 'PASS T1 lúc 12:30' }];
+
+    expect(() => {
+      assertValidatedSnapshot({ docs: docsAfterVerify, plan, state });
+    }).not.toThrow();
+    expect(state.phase).not.toBe('blocked');
+  });
+
   test('should pass assertValidatedSnapshot when digests match', () => {
     const state = initExecutionState();
     state.validated_plan_digest = calculatePlanDigest(plan);

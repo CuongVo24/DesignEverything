@@ -20,8 +20,24 @@ export function calculatePlanDigest(plan: any): string {
   return createHash('sha256').update(stableStringify(plan).trim()).digest('hex');
 }
 
+/**
+ * File do engine sinh ra như PROJECTION của execution state, không phải tài liệu
+ * thiết kế. Chúng đổi mỗi lần verify (đó là mục đích của chúng), nên không được
+ * tham gia snapshot "docs đã bị sửa kể từ lần validate chưa" — nếu tham gia,
+ * chính hành động ghi nhật ký sẽ làm digest lệch và khóa cứng vòng thực thi.
+ */
+function isStateProjection(file: string): boolean {
+  return (
+    file === '.design-everything/execution-state.json' ||
+    file === 'progress-log.md' ||
+    file.endsWith('/progress-log.md') ||
+    file === 'break-tasks/README.md' ||
+    file.startsWith('break-tasks/')
+  );
+}
+
 export function calculateDocsDigest(docs: Array<{ file: string; content: string }>): string {
-  const filtered = docs.filter((d) => d.file !== '.design-everything/execution-state.json');
+  const filtered = docs.filter((d) => !isStateProjection(d.file));
   const sorted = [...filtered].sort((a, b) => a.file.localeCompare(b.file));
   const payload = sorted.map((d) => `${d.file}:${d.content.trim()}`).join('\n');
   return createHash('sha256').update(payload).digest('hex');

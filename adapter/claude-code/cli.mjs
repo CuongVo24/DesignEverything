@@ -6,6 +6,7 @@
 //   node cli.mjs commit --turn <id> [--answer "<text>"] [--branch <shape>]
 //                       [--calibrate deep|fast] [--slots-file <file.json>]
 //   node cli.mjs emit [--slots-file <file.json>]
+//   node cli.mjs review --milestone <M4-...>   (engine tự chạy lint/test, sinh break-task)
 //
 // Chạy với cwd = workspace của dự án đích (hoặc đặt CLAUDE_PROJECT_DIR).
 import { pathToFileURL } from 'url';
@@ -32,6 +33,37 @@ function fail(msg) {
   process.exit(1);
 }
 
+
+/**
+ * Nhật ký tiến độ người-đọc-được. Render lại toàn bộ từ execution state (không
+ * append) nên chạy bao nhiêu lần cũng ra một kết quả, và không thể lệch state.
+ */
+function writeProgressLog(plan, state) {
+  try {
+    const md = core.renderProgressLog({ plan, state });
+    mkdirSync(join(workspaceRoot, 'docs'), { recursive: true });
+    writeFileSync(join(workspaceRoot, 'docs', 'progress-log.md'), md, 'utf8');
+    return 'docs/progress-log.md';
+  } catch {
+    // Nhật ký là phụ trợ: hỏng thì không được kéo theo verify/validate fail.
+    return null;
+  }
+}
+
+/**
+ * Đọc lại số liệu từ file break-task của lần review TRƯỚC (dòng bảng dạng
+ * `| Còn mở | 2 |`). Chỉ dùng để dựng mục lục; không đọc được thì trả 0 chứ
+ * không đoán, vì mục lục sai số còn tệ hơn mục lục trống.
+ */
+function readBreakCount(filePath, label) {
+  try {
+    const content = readFileSync(filePath, 'utf8');
+    const match = content.match(new RegExp(`\\|\\s*${label}\\s*\\|\\s*(\\d+)\\s*\\|`));
+    return match ? Number(match[1]) : 0;
+  } catch {
+    return 0;
+  }
+}
 
 function loadAnswers() {
   if (!existsSync(answersPath)) return {};
@@ -400,6 +432,7 @@ switch (command) {
       nextState.block_reason = `Validation failed: ${valResult.issues.map(i => i.message).join('; ')}`;
     }
     core.saveExecutionState(execStatePath, nextState);
+    const validateProgressLog = writeProgressLog(v3Plan, nextState);
 
     console.log(
       JSON.stringify(
@@ -408,6 +441,7 @@ switch (command) {
           issues: valResult.issues,
           phase: nextState.phase,
           block_reason: nextState.block_reason,
+          progress_log: validateProgressLog,
         },
         null,
         2
@@ -567,6 +601,7 @@ switch (command) {
     }
 
     core.saveExecutionState(execStatePath, nextState);
+    const progressLog = writeProgressLog(v3Plan, nextState);
 
     console.log(
       JSON.stringify(
@@ -577,6 +612,115 @@ switch (command) {
           block_reason: nextState.block_reason,
           completed_tasks: nextState.completed_tasks,
           evidence_count: nextState.evidence.length,
+          progress_log: progressLog,
+        },
+        null,
+        2
+      )
+    );
+    break;
+  }
+
+  case 'review': {
+    // B17a — đóng vòng review của một feature-milestone. Engine TỰ chạy lint/test
+    // của stack đã khóa; agent không được tự khai "sạch rồi".
+    if (!args.milestone || args.milestone === true) {
+      fail('Thiếu --milestone <M4-...>.');
+    }
+    if (!existsSync(execStatePath)) fail('Chưa có execution-state.json. Chạy "validate" trước.');
+    if (!existsSync(execPlanPath)) fail('Không thấy execution-plan.json.');
+
+    let reviewState = core.loadExecutionState(execStatePath);
+    const reviewPlan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
+    const milestoneId = String(args.milestone);
+
+    const milestone = (reviewPlan.milestones || []).find((m) => m.id === milestoneId);
+    if (!milestone) fail(`Không tìm thấy milestone ${milestoneId} trong execution plan.`);
+
+    // Vào pha reviewing (core gác điều kiện: phải xong hết task build của feature).
+    if (reviewState.phase !== 'reviewing') {
+      try {
+        reviewState = core.transitionToReview(reviewState, milestoneId, reviewPlan);
+      } catch (e) {
+        fail(e.message);
+      }
+    }
+
+    // Phạm vi feature = allowed_paths của chính các task thuộc milestone này.
+    const changedPaths = [
+      ...new Set(
+        (milestone.tasks || []).flatMap((tid) => reviewPlan.tasks?.[tid]?.allowed_paths ?? [])
+      ),
+    ];
+
+    const conventions = core.loadProjectConventionsFromCwd(workspaceRoot);
+    const signal = await core.runFeatureReview({
+      workspace: workspaceRoot,
+      featureMilestone: milestoneId,
+      changedPaths,
+      conventions,
+      conventionsRef: 'docs/conventions/',
+    });
+
+    const breakTasks = core.reviewFeatureOutput(signal);
+
+    let outcomeState;
+    try {
+      outcomeState = core.applyReviewOutcome(
+        reviewState,
+        milestoneId,
+        breakTasks.map((t) => t.id)
+      );
+    } catch (e) {
+      fail(e.message);
+    }
+    core.saveExecutionState(execStatePath, outcomeState);
+
+    // Ghi break-task ra markdown: state chỉ giữ ID, người đọc cần câu chữ.
+    const breakDir = join(workspaceRoot, 'docs', 'break-tasks');
+    mkdirSync(breakDir, { recursive: true });
+    const docFile = core.breakTaskFileName(milestoneId);
+    writeFileSync(
+      join(breakDir, docFile),
+      core.renderBreakTaskDoc({ featureMilestone: milestoneId, breakTasks, state: outcomeState }),
+      'utf8'
+    );
+
+    // Dựng lại mục lục từ các file đã có, để nó phản ánh toàn cảnh nợ hiện tại.
+    const entries = readdirSync(breakDir)
+      .filter((f) => f.endsWith('.md') && f !== 'README.md')
+      .map((f) => {
+        const isCurrent = f === docFile;
+        const total = isCurrent ? breakTasks.length : null;
+        const open = isCurrent
+          ? breakTasks.filter((t) => !outcomeState.completed_tasks.includes(t.id)).length
+          : null;
+        return {
+          featureMilestone: f.replace(/\.md$/, ''),
+          file: f,
+          // File của lần review trước: đọc lại số liệu từ chính nội dung đã ghi.
+          total: total ?? readBreakCount(join(breakDir, f), 'Break-task sinh ra'),
+          open: open ?? readBreakCount(join(breakDir, f), 'Còn mở'),
+        };
+      });
+    writeFileSync(join(breakDir, 'README.md'), core.renderBreakTaskIndex({ entries }), 'utf8');
+
+    writeProgressLog(reviewPlan, outcomeState);
+
+    console.log(
+      JSON.stringify(
+        {
+          reviewed: milestoneId,
+          lint_ok: signal.lint.ok,
+          test_ok: signal.test.ok,
+          break_tasks: breakTasks.map((t) => t.id),
+          phase: outcomeState.phase,
+          block_reason: outcomeState.block_reason,
+          break_task_doc: `docs/break-tasks/${docFile}`,
+          note:
+            breakTasks.length === 0
+              ? 'Review sạch: feature đã đóng, được phép mở feature kế.'
+              : 'Feature CHƯA done: làm xong break-task (verify pass) rồi chạy lại review.',
         },
         null,
         2
@@ -766,5 +910,5 @@ switch (command) {
   }
 
   default:
-    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | verify | repair | next-step | amend.`);
+    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | verify | review | repair | next-step | amend.`);
 }

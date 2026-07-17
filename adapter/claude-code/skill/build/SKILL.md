@@ -16,6 +16,7 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" validate
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" start --task <task_id> --milestone <milestone_id>
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" verify --task <task_id> --command <command_id>
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" review --milestone <M4-...>
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" repair
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|fast]
 ```
@@ -49,6 +50,7 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|f
 1. Với MỖI command trong Task Card, gọi `verify --task <task_id> --command <command_id>`. Engine TỰ chạy lệnh kiểm chứng đó và tự ghi nhận bằng chứng — bạn KHÔNG tự khai exit-code, không tự viết evidence.
    - **Nếu pass**: khi mọi command của task đã verify pass, task vào `completed_tasks`, giải phóng `active_task`, pha về `ready-to-execute`. Lúc này bạn mới được phép sang task tiếp theo.
    - **Nếu fail**: pha chuyển sang `repairing`.
+2. Mỗi lần `verify` chạy, engine tự ghi lại `docs/progress-log.md` — nhật ký người-đọc-được dựng từ evidence (đã làm gì, lệnh nào, vấp ở đâu). File này do engine sinh: KHÔNG sửa tay, và không cần tự viết báo cáo tiến độ song song với nó.
 
 ### Bước 5: Sửa lỗi trong pha `repairing`
 1. Khi verify fail, tuyệt đối không được bỏ qua hoặc bấm chuyển sang task tiếp theo.
@@ -59,10 +61,11 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|f
 
 Sau khi mọi task build của một feature-milestone (`M4-*`) đã pass, pha chuyển sang `reviewing` — **không** đi thẳng sang feature kế.
 
-1. Chạy manager-check (lint/test/diff của feature vừa xong).
+1. Chạy `review --milestone <M4-...>`. Engine TỰ chạy lint/test của stack đã khóa trong `docs/conventions/` — bạn KHÔNG được tự khai "lint sạch, test xanh".
 2. **Output sạch** → review đóng, feature vào `reviewed_milestones`, pha về `ready-to-execute` để mở feature kế.
-3. **Output bẩn** → hệ thống sinh **break-task** (`fix_*` cho bug, `polish_*` cho nợ kỹ thuật). Feature **CHƯA được coi là done** (fail-closed): phải làm xong mọi break-task (verify pass) rồi mới đóng được review.
+3. **Output bẩn** → engine sinh **break-task** (`fix_*` cho bug, `polish_*` cho nợ kỹ thuật) và ghi ra `docs/break-tasks/<milestone>.md` kèm mục lục. Feature **CHƯA được coi là done** (fail-closed): phải làm xong mọi break-task (verify pass) rồi chạy lại `review` mới đóng được.
 4. **Feature-done gate**: không được mở feature-milestone mới khi còn feature cũ đã xong task build nhưng chưa đóng review.
+5. File trong `docs/break-tasks/` do engine sinh — trình bày cho người dùng, KHÔNG sửa tay.
 
 ## Điều cấm kỵ
 
