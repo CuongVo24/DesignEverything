@@ -71,13 +71,19 @@ docs/
   00-vision.md
   01-personas.md
   02-scope.md
-  03-data-model.md
-  04-flows.md
-  05-architecture.md
+  03-data-model.md      # kèm sơ đồ quan hệ (mermaid)
+  04-flows.md           # kèm sơ đồ luồng chính (mermaid)
+  05-architecture.md    # kèm bảo mật/quy mô, lý do chọn, phương án đã loại
   06-constraints.md
   07-deployment.md hoặc 07-release.md (hoặc 07-distribution.md cho CLI)
-  08-build-plan.md
+  08-build-plan.md      # kèm lịch theo tuần nếu có deadline
+  09-execution-plan.md
+  decisions.md          # sổ quyết định: chốt gì, từ câu hỏi nào
   README.md
+
+  # engine sinh trong lúc build, không có lúc emit:
+  progress-log.md       # nhật ký: đã làm gì, vấp ở đâu
+  break-tasks/          # nợ kỹ thuật review bắt được, theo từng feature
 ```
 
 Điều này giúp người dùng thấy rõ: trả lời câu này để tạo phần nào của nền móng dự án.
@@ -92,6 +98,8 @@ Ví dụ:
 - `03-data-model.md` giúp agent không tự bịa entity và quan hệ dữ liệu.
 - `04-flows.md` giúp kiểm tra tính năng theo hành trình người dùng thật.
 - `05-architecture.md` giúp quyết định kỹ thuật dựa trên nhu cầu, không dựa trên trend.
+- `decisions.md` giúp sáu tháng sau còn trả lời được "vì sao hồi đó chọn cái này?".
+- `progress-log.md` giúp nhìn lại đã làm được gì và vấp ở đâu — do engine ghi từ bằng chứng, không viết tay.
 
 Đây là lợi thế khó copy hơn một tool sinh doc generic.
 

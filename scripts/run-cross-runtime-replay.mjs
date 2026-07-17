@@ -1,4 +1,3 @@
-/* global console, process */
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, cpSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

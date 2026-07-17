@@ -14,6 +14,23 @@ Must: Đăng nhập, Tạo công việc, Giao việc, Thay đổi trạng thái 
 Done-when của mỗi milestone: bước tương ứng trong 04-flows.md chạy được thật (không mock), và các milestone trước vẫn chạy.
 <!-- anchor: id=08-build-plan/milestones  src=apps/mobile/src/features/build/plan.ts::buildMilestones  rev=  status=planned -->
 
+## Lịch Theo Tuần
+Deadline bạn khai ở `06-constraints.md` quy ra khoảng **6 tuần**. Lịch dưới đây là ước lượng để giữ nhịp, không phải cam kết — thứ tự phụ thuộc mới là nguồn sự thật. Trượt một tuần thì dồn lịch, đừng bỏ Done-when.
+
+> **Cảnh báo:** Deadline khoảng 6 tuần nhưng có 7 milestone bắt buộc — trung bình dưới một tuần cho mỗi milestone. Hoặc cắt bớt Must trong 02-scope.md xuống 5 mục, hoặc chấp nhận lùi hạn. Lịch dưới đây là phương án nhồi sát nhất có thể, KHÔNG phải cam kết an toàn.
+
+| Tuần | Milestone |
+|---|---|
+| Tuần 1 | M0 — Khung xương biết đi (lát cắt mỏng nhất của flow chính) |
+| Tuần 1 | Đăng nhập |
+| Tuần 2 | Tạo công việc |
+| Tuần 3 | Giao việc |
+| Tuần 3 | Thay đổi trạng thái công việc (To Do |
+| Tuần 4 | In Progress |
+| Tuần 5 | Done) |
+| Tuần 6 | Đệm: sửa lỗi còn lại, chạy lại flow chính, chuẩn bị phát hành. |
+<!-- anchor: id=08-build-plan/weekly-schedule  src=apps/mobile/src/features/build/plan.ts::buildWeeklySchedule  rev=  status=planned -->
+
 ## Kiểm Tra Sau Mỗi Milestone
 Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: Minh tạo task -> Giao cho Sơn -> Sơn nhận thông báo trên điện thoại -> Sơn mở app làm và bấm hoàn thành task.
 <!-- anchor: id=08-build-plan/verification  src=apps/mobile/src/features/build/plan.ts::buildVerificationNotes  rev=  status=planned -->

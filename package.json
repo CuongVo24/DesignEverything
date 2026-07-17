@@ -8,7 +8,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dogfood:regen": "npm run build && node scripts/regen-dogfood.mjs"
   },
   "dependencies": {
     "yaml": "2.4.5",

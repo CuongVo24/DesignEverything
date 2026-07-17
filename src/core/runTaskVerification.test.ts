@@ -6,7 +6,10 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs';
 
-describe('runTaskVerification core engine', () => {
+// Mỗi test spawn ít nhất một process node thật (test đầu spawn 3 lệnh tuần tự).
+// 5s mặc định của vitest không đủ trên Windows/máy chậm — timeout ở cấp describe
+// để cả file không flaky.
+describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
   let testWorkspace: string;
 
   beforeAll(() => {

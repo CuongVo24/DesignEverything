@@ -3,20 +3,13 @@ import { emitTree } from '../../src/core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, existsSync } from 'fs';
+import { getStructure } from './docStructure.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '../..');
 const realTemplatesDir = join(projectRoot, 'Design/Content/doc-templates');
 const goldenWebDocsDir = join(projectRoot, 'Design/Content/golden-example-web/docs');
-
-function getStructure(content: string) {
-  const headings = (content.match(/^##\s+.+$/gm) || []).map((h) => h.trim());
-  const anchors = (content.match(/<!-- anchor:\s*id=[\S]+/g) || []).map((a) =>
-    a.replace(/<!-- anchor:\s*id=/, '').trim()
-  );
-  return { headings, anchors };
-}
 
 describe('Golden Web Regression Check', () => {
   test('should generate docs matching the golden web structure and anchors exactly', () => {
@@ -37,7 +30,7 @@ describe('Golden Web Regression Check', () => {
 
     const emittedDocs = emitTree(answers, 'web', realTemplatesDir);
     const docFilesOnly = emittedDocs.filter(d => !d.file.startsWith('.design-everything/'));
-    expect(docFilesOnly).toHaveLength(11);
+    expect(docFilesOnly).toHaveLength(12);
 
     const fileNames = docFilesOnly.map((d) => d.file);
     expect(fileNames).toContain('07-deployment.md');
