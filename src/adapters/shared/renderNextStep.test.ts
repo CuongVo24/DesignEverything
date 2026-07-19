@@ -114,7 +114,24 @@ describe('renderNextStep Adapter Renderer', () => {
   test('should return ready state when phase is ready-to-execute', () => {
     const card = renderNextStep(mockPlan, mockState, mockProfile);
     expect(card.state).toBe('ready');
-    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs start T0-discovery');
+    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs start --task T0-discovery');
+  });
+
+  test('ready-to-execute after promotion points at the first incomplete feature task', () => {
+    const promotedPlan: ExecutionPlanV3 = {
+      ...mockPlan,
+      milestones: [
+        { id: 'M0', title: 'Discovery', tasks: ['T0-discovery'] },
+        { id: 'M4-search-recipe', title: 'Feature: search recipe', tasks: ['T4-search-recipe'] },
+      ],
+    };
+    const promotedState: ExecutionState = {
+      ...mockState,
+      completed_tasks: ['T0-discovery'],
+    };
+    const card = renderNextStep(promotedPlan, promotedState, mockProfile);
+    expect(card.state).toBe('ready');
+    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs start --task T4-search-recipe');
   });
 
   test('should return executing state and details when phase is executing', () => {
@@ -140,7 +157,7 @@ describe('renderNextStep Adapter Renderer', () => {
 
     const card = renderNextStep(mockPlan, verifyingState, mockProfile);
     expect(card.state).toBe('verifying');
-    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs verify T0-discovery');
+    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs verify --task T0-discovery --command node-version');
     expect(card.enforcement).toBe('hard');
   });
 
@@ -178,7 +195,7 @@ describe('renderNextStep Adapter Renderer', () => {
     expect(card.state).toBe('reviewing');
     expect(card.enforcement).toBe('hard');
     expect(card.allowedScope).toContain('C-search-recipe-fix-failing-tests');
-    expect(card.nextCommand).toContain('start C-search-recipe-fix-failing-tests');
+    expect(card.nextCommand).toContain('start --task C-search-recipe-fix-failing-tests');
   });
 
   test('reviewing phase: no break-tasks prompts manager-check to close review', () => {
@@ -190,7 +207,16 @@ describe('renderNextStep Adapter Renderer', () => {
     };
     const card = renderNextStep(mockPlan, reviewingState, mockProfile);
     expect(card.state).toBe('reviewing');
-    expect(card.nextCommand).toContain('review M4-search-recipe');
+    expect(card.nextCommand).toContain('review --milestone M4-search-recipe');
+  });
+
+  test('confirmed greenfield profile proceeds beyond needs-profile', () => {
+    const greenfield: ProjectProfile = {
+      ...mockProfile,
+      workspace_kind: 'empty',
+      target: 'node-cli',
+    };
+    expect(renderNextStep(mockPlan, mockState, greenfield).state).not.toBe('needs-profile');
   });
 
   test('should render markdown next-step card in deep and fast modes', () => {

@@ -1,6 +1,6 @@
 {
   "name": "design-everything-plugin",
-  "version": "4.0.0",
+  "version": "6.0.0",
   "description": "DesignEverything protection and verification plugin for Codex CLI and Desktop",
   "author": "Antigravity",
   "hooks": "./hooks/hooks.json"

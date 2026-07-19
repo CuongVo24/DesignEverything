@@ -47,7 +47,7 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|f
 2. **CẢNH BÁO**: Mọi hành động ghi/sửa tệp nằm ngoài `allows_paths` của task sẽ bị hook `PreToolUse` từ chối thẳng thừng (Bậc A). Đừng cố gắng chỉnh sửa các tệp không được chỉ định trong task card hiện tại.
 
 ### Bước 4: Kiểm chứng bằng máy (`verify`)
-1. Với MỖI command trong Task Card, gọi `verify --task <task_id> --command <command_id>`. Engine TỰ chạy lệnh kiểm chứng đó và tự ghi nhận bằng chứng — bạn KHÔNG tự khai exit-code, không tự viết evidence.
+1. Với MỖI command trong Task Card, gọi `verify --task <task_id> --command <command_id>`. Engine TỰ chạy lệnh kiểm chứng đó và tự ghi nhận bằng chứng — bạn KHÔNG tự khai exit-code, không tự viết evidence. Nếu command có `requires_user_confirmation: true`, agent PHẢI hỏi người dùng thật trước; chỉ sau khi họ đồng ý trong chat mới được thêm `--confirm`. Không bao giờ tự thêm cờ này.
    - **Nếu pass**: khi mọi command của task đã verify pass, task vào `completed_tasks`, giải phóng `active_task`, pha về `ready-to-execute`. Lúc này bạn mới được phép sang task tiếp theo.
    - **Nếu fail**: pha chuyển sang `repairing`.
 2. Mỗi lần `verify` chạy, engine tự ghi lại `docs/progress-log.md` — nhật ký người-đọc-được dựng từ evidence (đã làm gì, lệnh nào, vấp ở đâu). File này do engine sinh: KHÔNG sửa tay, và không cần tự viết báo cáo tiến độ song song với nó.

@@ -67,6 +67,30 @@ describe('Codex PreToolUse & PostToolUse Hook Adapter', () => {
     expect(output.hookSpecificOutput.permissionDecision).toBe('allow');
   });
 
+  test('PreToolUse hook is invisible for Read and Write outside an initialized workspace', () => {
+    const hookPath = resolve(__dirname, '../../../adapter/codex-plugin/hooks/pre-tool-use.mjs');
+    const uninitializedWorkspace = mkdtempSync(join(tmpdir(), 'codex-hook-uninitialized-'));
+    try {
+      for (const payload of [
+        { tool_name: 'Read', tool_input: { path: 'notes.md' }, cwd: uninitializedWorkspace },
+        { tool_name: 'Write', tool_input: { path: 'notes.md', content: 'x' }, cwd: uninitializedWorkspace },
+      ]) {
+        const child = spawnSync('node', [hookPath], { input: JSON.stringify(payload), encoding: 'utf8' });
+        expect(child.status).toBe(0);
+        expect(JSON.parse(child.stdout.trim()).hookSpecificOutput.permissionDecision).toBe('allow');
+      }
+    } finally {
+      rmSync(uninitializedWorkspace, { recursive: true, force: true });
+    }
+  });
+
+  test('PreToolUse hook remains fail-closed for a malformed payload in an initialized workspace', () => {
+    const hookPath = resolve(__dirname, '../../../adapter/codex-plugin/hooks/pre-tool-use.mjs');
+    const child = spawnSync('node', [hookPath], { input: '', encoding: 'utf8', cwd: testWorkspace });
+    expect(child.status).toBe(0);
+    expect(JSON.parse(child.stdout.trim()).hookSpecificOutput.permissionDecision).toBe('deny');
+  });
+
   test('PreToolUse hook should deny path traversal', () => {
     const hookPath = resolve(__dirname, '../../../adapter/codex-plugin/hooks/pre-tool-use.mjs');
 

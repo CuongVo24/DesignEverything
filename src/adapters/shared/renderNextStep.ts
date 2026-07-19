@@ -40,7 +40,7 @@ export function renderNextStep(
   }
 
   // 1. Check Profile
-  if (!profile || profile.workspace_kind === 'empty' || !profile.confirmation.confirmed) {
+  if (!profile || !profile.confirmation.confirmed || (profile.workspace_kind === 'empty' && !profile.target)) {
     if (profile && (profile.workspace_kind === 'existing-unsupported' || profile.target === 'unsupported')) {
       return {
         state: 'unsupported',
@@ -56,7 +56,7 @@ export function renderNextStep(
 
     return {
       state: 'needs-profile',
-      now: 'Xác nhận cấu hình dự án (project profile) qua bước doctor của build skill.',
+      now: 'Xác nhận cấu hình dự án: trả lời target/package manager khi build skill hỏi để sinh project-profile.json có confirmed = true.',
       whyNow: 'Hệ thống chưa nhận diện hoặc chưa được xác nhận cấu hình stack của thư mục làm việc.',
       allowedScope: [],
       proof: 'Tệp project-profile.json tồn tại và có confirmed = true.',
@@ -95,15 +95,28 @@ export function renderNextStep(
 
   // 4. Phase: Ready to execute
   if (state.phase === 'ready-to-execute') {
+    // After plan promotion the skeleton tasks are already completed; the card
+    // must point at the first task without evidence (e.g. the first M4-*
+    // feature task), not unconditionally back to T0-discovery.
+    const orderedTaskIds = plan.milestones.flatMap((milestone) => milestone.tasks);
+    const nextTaskId =
+      orderedTaskIds.find((taskId) => !state.completed_tasks.includes(taskId)) ?? 'T0-discovery';
+    const isDiscovery = nextTaskId === 'T0-discovery';
     return {
       state: 'ready',
-      now: 'Khởi chạy task kiểm thử môi trường T0-discovery.',
-      whyNow: 'Kế hoạch đã hợp lệ, cần kiểm tra runtime môi trường cục bộ trước khi phát triển mã nguồn.',
+      now: isDiscovery
+        ? 'Khởi chạy task kiểm thử môi trường T0-discovery.'
+        : `Khởi chạy task kế tiếp trong kế hoạch: ${nextTaskId}.`,
+      whyNow: isDiscovery
+        ? 'Kế hoạch đã hợp lệ, cần kiểm tra runtime môi trường cục bộ trước khi phát triển mã nguồn.'
+        : 'Các task trước đã hoàn thành và có evidence; task kế tiếp trong kế hoạch đã sẵn sàng.',
       allowedScope: [],
-      proof: 'Task T0-discovery hoàn thành và tạo ra log evidence.',
-      ifItFails: 'Kiểm tra phiên bản cài đặt Node.js/npm hoặc python/pip trên máy.',
+      proof: `Task ${nextTaskId} hoàn thành và tạo ra log evidence.`,
+      ifItFails: isDiscovery
+        ? 'Kiểm tra phiên bản cài đặt Node.js/npm hoặc python/pip trên máy.'
+        : 'Đọc Task Card của task này và kiểm tra preconditions trước khi chạy lại.',
       enforcement: 'hard',
-      nextCommand: `${CLI} start T0-discovery`,
+      nextCommand: `${CLI} start --task ${nextTaskId}`,
     };
   }
 
@@ -139,7 +152,18 @@ export function renderNextStep(
       proof: `Lệnh kiểm chứng: ${cmds}`,
       ifItFails: 'Nếu lệnh thất bại, trạng thái sẽ tự động chuyển sang repairing.',
       enforcement: 'hard',
-      nextCommand: `${CLI} verify ${activeTask}`,
+      nextCommand: (() => {
+        const command = task?.commands.find(
+          (candidate) => !state.evidence.some(
+            (e) => e.task_id === activeTask && e.command_id === candidate.id && e.exit_code === 0
+          )
+        ) ?? task?.commands[0];
+        const commandId = command?.id ?? '<command_id>';
+        const confirmationHint = command?.requires_user_confirmation
+          ? ' (cần người dùng đồng ý → thêm --confirm)'
+          : '';
+        return `${CLI} verify --task ${activeTask} --command ${commandId}${confirmationHint}`;
+      })(),
     };
   }
 
@@ -174,7 +198,7 @@ export function renderNextStep(
         proof: `Mọi break-task (${openBreaks.join(', ')}) verify pass và review được đóng.`,
         ifItFails: 'Sửa đúng điểm bẩn trong break-task; không nhảy sang feature kế khi review chưa đóng.',
         enforcement: 'hard',
-        nextCommand: `${CLI} start ${openBreaks[0]}`,
+        nextCommand: `${CLI} start --task ${openBreaks[0]}`,
       };
     }
     return {
@@ -185,7 +209,7 @@ export function renderNextStep(
       proof: `Review đóng: ${milestone} vào reviewed_milestones, không phát sinh break-task chưa xử lý.`,
       ifItFails: 'Nếu review phát hiện bẩn, hệ thống sinh break-task và giữ feature ở trạng thái chưa done.',
       enforcement: 'hard',
-      nextCommand: `${CLI} review ${milestone}`,
+      nextCommand: `${CLI} review --milestone ${milestone}`,
     };
   }
 

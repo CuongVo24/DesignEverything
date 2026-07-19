@@ -610,14 +610,46 @@ switch (command) {
         plan: v3Plan,
         state: execState,
         task_id: args.task,
-        command_id: args.command
+        command_id: args.command,
+        user_confirmed: args.confirm === true,
       });
     } catch (e) {
+      if (e.message.includes('user_confirmed=true')) {
+        console.error('Hỏi người dùng thật; nếu họ đồng ý, chạy lại kèm --confirm.');
+      }
       fail(e.message);
     }
 
+    let outputPlan = v3Plan;
+    let promoted = false;
+    let promotedMilestones = [];
+    if (
+      v3Plan.no_features !== true &&
+      nextState.completed_tasks.includes('T3-verify') &&
+      !v3Plan.milestones.some((m) => m.id.startsWith('M4-'))
+    ) {
+      const answers = loadAnswers();
+      try {
+        if (Object.keys(answers).length === 0) throw new Error('missing Design/.interview/answers.json');
+        outputPlan = core.promoteExecutionPlan({ workspace: workspaceRoot, answers, currentPlan: v3Plan, state: nextState });
+        promotedMilestones = outputPlan.milestones.filter((m) => m.id.startsWith('M4-')).map((m) => m.id);
+        writeFileSync(execPlanPath, JSON.stringify(outputPlan, null, 2), 'utf8');
+        nextState = {
+          ...nextState,
+          phase: 'ready-to-execute',
+          block_reason: null,
+          validated_plan_digest: core.calculatePlanDigest(outputPlan),
+          validated_docs_digest: core.calculateDocsDigest(core.loadEmittedDocs(workspaceRoot, execPlanPath)),
+          updated_at: new Date().toISOString(),
+        };
+        promoted = true;
+      } catch (e) {
+        nextState = { ...nextState, phase: 'blocked', block_reason: `Plan promotion failed: ${e.message}`, updated_at: new Date().toISOString() };
+      }
+    }
+
     core.saveExecutionState(execStatePath, nextState);
-    const progressLog = writeProgressLog(v3Plan, nextState);
+    const progressLog = writeProgressLog(outputPlan, nextState);
 
     console.log(
       JSON.stringify(
@@ -628,6 +660,8 @@ switch (command) {
           block_reason: nextState.block_reason,
           completed_tasks: nextState.completed_tasks,
           evidence_count: nextState.evidence.length,
+          promoted,
+          promoted_milestones: promotedMilestones,
           progress_log: progressLog,
         },
         null,

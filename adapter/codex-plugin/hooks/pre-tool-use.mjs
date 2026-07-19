@@ -94,7 +94,24 @@ async function main() {
   }
 
   try {
+    const workspace = payload.cwd || process.cwd();
+    // Be invisible outside a DesignEverything workspace. Once either state
+    // marker exists, all subsequent failures remain fail-closed below.
+    if (
+      !existsSync(join(workspace, 'progress.json')) &&
+      !existsSync(join(workspace, '.design-everything', 'execution-state.json'))
+    ) {
+      allow();
+      return;
+    }
+
     const tool_name = payload.tool_name || '';
+    // Reading must never be gated. Only writes and shell execution enter the
+    // enforcement core, mirroring the Claude hook contract.
+    if (!['Bash', 'apply_patch', 'Write', 'Edit'].includes(tool_name)) {
+      allow();
+      return;
+    }
     const toolInput = payload.tool_input || {};
     let action_kind = 'external';
     let target_paths = [];
@@ -117,10 +134,6 @@ async function main() {
       action_kind = 'write';
       const path = toolInput.path || toolInput.file_path || '';
       if (path) target_paths = [path];
-    } else if (tool_name === 'Read') {
-      action_kind = 'read';
-      const path = toolInput.path || toolInput.file_path || '';
-      if (path) target_paths = [path];
     }
 
     const corePath = resolveCorePath();
@@ -138,7 +151,7 @@ async function main() {
       action_kind,
       target_paths,
       command_argv,
-      workspace: payload.cwd || process.cwd(),
+      workspace,
       session_id: payload.session_id || 'unknown',
     };
 

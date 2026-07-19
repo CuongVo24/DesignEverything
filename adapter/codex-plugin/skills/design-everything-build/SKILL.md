@@ -59,6 +59,7 @@ Khi người dùng gõ slash command, Codex dịch thành lệnh CLI tương ứ
     ```bash
     node "<pluginRoot>/cli.mjs" verify --task <task_id> --command <command_id>
     ```
+    Nếu command có `requires_user_confirmation: true`, phải hỏi người dùng thật trước; chỉ thêm `--confirm` sau khi họ đồng ý trong chat. Không bao giờ tự thêm cờ này.
 *   **`/repair`**: Báo cáo lỗi và mở pha sửa đổi (repair) cho task.
     ```bash
     node "<pluginRoot>/cli.mjs" repair
