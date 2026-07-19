@@ -2,15 +2,18 @@
   "name": "design-everything",
   "version": "6.0.0",
   "description": "Portable foundational documentation design method for AI coding agents",
-  "main": "dist/index.js",
+  "license": "MIT",
+  "main": "dist/src/core/index.js",
+  "exports": "./dist/src/core/index.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "node scripts/check-version-sync.mjs && vitest run",
     "dogfood:regen": "npm run build && node scripts/regen-dogfood.mjs"
   },
+  "files": ["dist/src", "dist/adapter", "adapter", "Design/Content", "docs/quickstart.md", "RUNBOOK-web.md", "RUNBOOK-mobile.md", "README.md", "FirstIdea.md", "LICENSE", "!**/*.test.*"],
   "dependencies": {
     "yaml": "2.4.5",
     "zod": "3.23.8"
