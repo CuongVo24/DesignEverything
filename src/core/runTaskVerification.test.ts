@@ -75,6 +75,9 @@ describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
       }
     ],
     discovery_status: 'pass',
+    // Skeleton-only fixture: without this flag the feature gate keeps the
+    // phase at ready-to-execute until an M4-* milestone is reviewed.
+    no_features: true,
   };
 
   test('should pass verification and capture evidence correctly', async () => {

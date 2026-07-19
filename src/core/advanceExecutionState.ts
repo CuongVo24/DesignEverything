@@ -379,9 +379,14 @@ export function recordEvidence(
         allCompleted = allTaskIds.every((id: string) => completedTasks.includes(id));
       }
 
+      const featureMilestones = (plan.milestones || []).filter((milestone: any) => String(milestone.id).startsWith('M4-'));
+      const featureGateSatisfied = plan.no_features === true || featureMilestones.some(
+        (milestone: any) => state.reviewed_milestones.includes(milestone.id)
+      );
+
       return {
         ...state,
-        phase: allCompleted ? 'ready-to-ship' : 'ready-to-execute',
+        phase: allCompleted && featureGateSatisfied ? 'ready-to-ship' : 'ready-to-execute',
         active_task: null,
         active_milestone: null,
         completed_tasks: completedTasks,

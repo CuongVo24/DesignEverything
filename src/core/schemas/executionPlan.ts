@@ -76,5 +76,6 @@ export const executionPlanSchemaV3 = z.object({
   tasks: z.record(z.string(), taskCardSchema).default({}), // Map of task ID to TaskCard
   capabilities_evidence: z.array(capabilityEvidenceSchema).default([]),
   discovery_status: z.enum(['blocked', 'pass']).default('pass'),
+  no_features: z.boolean().optional(),
 });
 export type ExecutionPlanV3 = z.infer<typeof executionPlanSchemaV3>;

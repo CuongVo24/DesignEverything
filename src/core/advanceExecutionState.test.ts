@@ -80,6 +80,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
       }
     ],
     discovery_status: 'pass',
+    no_features: true,
   };
 
   test('should initialize and transition state correctly', () => {

@@ -57,6 +57,7 @@ export {
   saveProjectProfile,
 } from './projectProfileState.js';
 export { synthesizeExecutionPlan } from './synthesizeExecutionPlan.js';
+export { promoteExecutionPlan } from './promoteExecutionPlan.js';
 export { renderNextStep, renderNextStepMarkdown } from '../adapters/shared/renderNextStep.js';
 export {
   proposePlanAmendment,
