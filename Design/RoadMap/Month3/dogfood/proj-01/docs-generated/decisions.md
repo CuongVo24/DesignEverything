@@ -2,7 +2,7 @@
 Sáu tháng nữa, khi bạn (hoặc người mới vào dự án) hỏi "vì sao hồi đó chọn cái này?", đây là chỗ trả lời. Mỗi quyết định kỹ thuật trong bảng đều nối ngược về một câu bạn đã trả lời lúc phỏng vấn — nên không có quyết định nào từ trên trời rơi xuống. Không có file này, các lựa chọn ban đầu dần biến thành luật bất thành văn mà không ai dám sửa, vì không ai còn biết nó dựa trên điều gì.
 
 ## Bảng Quyết Định
-Chốt ngày 2026-07-17, tại thời điểm sinh bộ tài liệu nền móng.
+Chốt ngày 2026-07-18, tại thời điểm sinh bộ tài liệu nền móng.
 
 | Mã | Quyết định | Đã chốt là | Nối từ câu | Chi tiết tại |
 |---|---|---|---|---|

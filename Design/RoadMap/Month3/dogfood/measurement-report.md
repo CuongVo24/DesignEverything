@@ -10,9 +10,9 @@ Dưới đây là bảng tổng hợp các số liệu thô thu được từ [m
 
 | Dự án | Phân loại nguồn | Nhánh chạy | Tổng thời gian (phút) | Thời gian/giai đoạn (S0-S2 / S3-S6 / Tech) | Số lần dừng giải thích | Ước lượng % sửa tay |
 |---|---|---|:---:|---|:---:|:---:|
-| **proj-01** (HabitBuilder) | Thật (Real) | `mobile` | 35 phút | 8 / 12 / 15 phút | 2 lần | ~35% |
-| **proj-02** (BookRegistry) | Bán-thật (Semi-Real) | `web` | 20 phút | 5 / 7 / 8 phút | 0 lần | ~20% |
-| **proj-03** (TaskFlow) | Thật (Real) | `mobile` | 45 phút | 10 / 15 / 20 phút | 3 lần | ~45% |
+| **proj-01** (HabitBuilder) | Thật (Real) | `mobile` | 35 phút | 8 / 12 / 15 phút | 2 lần | ~25% (toàn bộ) / ~45% (core specs) |
+| **proj-02** (BookRegistry) | Bán-thật (Semi-Real) | `web` | 20 phút | 5 / 7 / 8 phút | 0 lần | ~15% (toàn bộ) / ~25% (core specs) |
+| **proj-03** (TaskFlow) | Thật (Real) | `mobile` | 45 phút | 10 / 15 / 20 phút | 3 lần | ~30% (toàn bộ) / ~50% (core specs) |
 
 ---
 

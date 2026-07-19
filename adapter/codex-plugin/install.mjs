@@ -47,6 +47,11 @@ function main() {
 
   bundleCoreRuntime();
 
+  const cliSrc = join(REPO_ROOT, 'adapter', 'claude-code', 'cli.mjs');
+  const cliDest = join(PLUGIN_DIR, 'cli.mjs');
+  cpSync(cliSrc, cliDest);
+  console.log('- Bundled universal cli.mjs -> cli.mjs');
+
   console.log('\nPlugin bundle is ready. Event hooks: PreToolUse, PostToolUse, PermissionRequest.\n');
   console.log('To register the plugin locally, copy the WHOLE plugin directory (it now includes');
   console.log('dist/ and node_modules/ so the enforcement core loads offline) into your Codex');

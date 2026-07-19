@@ -8,7 +8,13 @@ export default tseslint.config(
   eslintConfigPrettier,
   {
     // .claude/worktrees/ chứa bản sao repo của agent worktree — lint bản chính là đủ.
-    ignores: ['dist/**', 'node_modules/**', '.claude/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.claude/**',
+      'adapter/codex-plugin/dist/**',
+      'adapter/codex-plugin/node_modules/**',
+    ],
   },
   {
     rules: {
