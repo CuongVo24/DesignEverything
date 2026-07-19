@@ -68,7 +68,7 @@ echo '{"tool_name":"Read","tool_input":{"path":"x.md"},"cwd":"."}' | node adapte
 # → JSON permissionDecision: "allow"
 ```
 
-### Status: `TODO`
+### Status: `DONE` (2026-07-19 — guard init + chỉ gate ghi/shell, tái hiện tay pass, 2 unit test mới)
 
 ---
 
@@ -105,7 +105,7 @@ Thêm cờ `--confirm` cho subcommand `verify` ở cả hai CLI, truyền xuốn
 npm run build && npm test
 ```
 
-### Status: `TODO`
+### Status: `DONE` (2026-07-19) — nợ: 2 ca e2e `--confirm` trong `test/e2e/execution-flow.test.ts` chưa thêm
 
 ---
 
@@ -151,7 +151,7 @@ npm run build && npm test
 grep -ri "doctor" src/adapters/shared/renderNextStep.ts   # → 0 match
 ```
 
-### Status: `TODO`
+### Status: `DONE` (2026-07-19 — kèm fix bổ sung: phase ready-to-execute trỏ task chưa xong đầu tiên thay vì hardcode T0-discovery, phục vụ luồng sau promote RB-05)
 
 ---
 
@@ -193,7 +193,7 @@ npm run build && npm test
 node -e "process.exit(require('fs').existsSync('index.html') ? 0 : 1)"; echo $?   # trong dir không có index.html → 1
 ```
 
-### Status: `TODO`
+### Status: `DONE` (2026-07-19 — kèm guard test chống tái phạm cho cả 3 recipe trong `stackRecipes.test.ts`) — nợ: smoke run chưa ghi vào RUNBOOK-web.md
 
 ---
 
@@ -237,7 +237,7 @@ npm run build && npm test
 npx vitest run test/e2e/skeleton-to-feature.test.ts
 ```
 
-### Status: `TODO`
+### Status: `IN_PROGRESS` (2026-07-19 — core `promoteExecutionPlan` + CLI wiring + feature gate + unit test promote 5 ca xong; fix 2 bug review: CLI bỏ qua promote khi `no_features: true`, card post-promote trỏ đúng task M4) — còn thiếu: e2e `skeleton-to-feature.test.ts`
 
 ---
 
@@ -279,7 +279,7 @@ npx vitest run test/e2e/skeleton-to-feature.test.ts
 npm run build && npm pack --dry-run && node scripts/check-version-sync.mjs && npm test
 ```
 
-### Status: `TODO`
+### Status: `IN_PROGRESS` (2026-07-19 — bước 1–2 xong: main/exports/files/license đúng, version-sync quét cả plugin.json lẫn claim "mốc X.Y.Z" trong README và wire vào `npm test`, loại `*.test.*` khỏi pack: 1803 → 475 file / 2.9 MB) — còn lại: RB-06b installer self-contained; mục tiêu <300 file chờ RB-06b vì 281 file còn lại là `node_modules` vendored của codex plugin (esbuild bundle sẽ xoá)
 
 ---
 
@@ -327,7 +327,7 @@ SOFTWARE.
 - [ ] README có mục License.
 - [ ] `npm test` xanh (không có lý do đỏ, nhưng vẫn chạy theo DoD chung).
 
-### Status: `TODO`
+### Status: `DONE` (2026-07-19 — LICENSE MIT + field license + mục README + CONTRIBUTING.md)
 
 ---
 
