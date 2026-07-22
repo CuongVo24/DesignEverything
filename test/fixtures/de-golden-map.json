@@ -1,0 +1,32 @@
+{
+  "_readme": "Ánh xạ mục tài liệu tay Design/ ↔ khối docs/design/ sinh tự động, cho eval B21b. Duyệt tay TRƯỚC khi viết test. Chỉ map cái CÓ tương đương; cái cố ý không map ghi ở `unmapped`.",
+  "ref_sha": "676925ee48a5f857c67442fa01d23fa3ae7d9a0b",
+  "ref_note": "Commit của cây Design/ tay dùng làm reference, freeze TRƯỚC lần đo eval đầu (protocol 02 §Nguyên tắc 1). Đổi map = đo lại từ đầu.",
+  "mappings": [
+    {
+      "golden": "Design/Glossary.md §Kiến trúc (bảng thuật ngữ)",
+      "generated": "design/glossary.md",
+      "expected_anchors": ["design-glossary/entities", "design-glossary/terms", "design-glossary/definitions"]
+    },
+    {
+      "golden": "Design/ProductPRD.md §Tính năng Must-have",
+      "generated": "design/features/*.md",
+      "expected_anchors": ["design-feature-spec/goal", "design-feature-spec/edge-cases", "design-feature-spec/acceptance"]
+    },
+    {
+      "golden": "Design/DecisionLog.md §Quyết định kiến trúc",
+      "generated": "design/adr/*.md",
+      "expected_anchors": ["design-adr/decision/ADR-001", "design-adr/alternatives/ADR-001", "design-adr/decision/ADR-002"]
+    },
+    {
+      "golden": "Design/Conventions/TestStrategy.md",
+      "generated": "design/test-strategy.md",
+      "expected_anchors": ["design-test-strategy/priority-cases", "design-test-strategy/fragile-areas", "design-test-strategy/e2e"]
+    }
+  ],
+  "unmapped": [
+    { "golden": "Design/ProductPRD.md (toàn bộ tài liệu)", "reason": "PRD là tài liệu sản phẩm cấp cao; chỉ mục Tính năng Must có tương đương tầng 2, phần còn lại không sinh tự động." },
+    { "golden": "Design/RoadMap/**", "reason": "Lộ trình/kế hoạch phát hành — ngoài phạm vi docs/design/ (tầng 2)." },
+    { "golden": "Design/Guideline.md, Design/VibeCode.md", "reason": "Hướng dẫn quy trình nội bộ, không phải tài liệu thiết kế sản phẩm." }
+  ]
+}
