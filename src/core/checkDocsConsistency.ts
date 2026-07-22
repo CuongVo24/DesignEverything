@@ -1,5 +1,9 @@
 import type { EmittedDoc } from './emit.js';
 import type { ProjectProfile } from './schemas/index.js';
+import type { RenderedArtifact, ConsistencyIssue } from './schemas/tier2Render.js';
+import { extractMustFeatures } from './validatePlan.js';
+import { slugifyList } from './slugify.js';
+import { parseDataModel } from './parseDataModel.js';
 
 export interface ConsistencyWarning {
   id: string;
@@ -82,4 +86,60 @@ export function checkDocsConsistency(
   }
 
   return warnings;
+}
+
+function findDoc(tier1Docs: Record<string, string>, name: string): string | undefined {
+  for (const [path, content] of Object.entries(tier1Docs || {})) {
+    if (path.replace(/\\/g, '/').endsWith(name)) return content;
+  }
+  return undefined;
+}
+
+/**
+ * Consistency cho bản render tầng 2 (in-memory, CHƯA ghi đĩa). Trả issue có severity:
+ *  - feature-spec cho tính năng KHÔNG thuộc Must của 02-scope → `error` (chặn emit ở B20b);
+ *  - glossary nhắc entity KHÔNG có trong 03-data-model → `warning` (không chặn).
+ */
+export function checkTier2Consistency(
+  renders: RenderedArtifact[],
+  tier1Docs: Record<string, string>,
+  answers: Record<string, string>
+): ConsistencyIssue[] {
+  const issues: ConsistencyIssue[] = [];
+
+  const mustSlugs = new Set(slugifyList(extractMustFeatures(answers)));
+  for (const art of renders) {
+    const m = art.path.replace(/\\/g, '/').match(/^design\/features\/(.+)\.md$/);
+    if (m && !mustSlugs.has(m[1])) {
+      issues.push({
+        severity: 'error',
+        code: 'feature-not-in-must',
+        path: art.path,
+        message: `Feature spec "${m[1]}" không nằm trong danh sách Must của 02-scope.`,
+      });
+    }
+  }
+
+  const dataModelDoc = findDoc(tier1Docs, '03-data-model.md');
+  if (dataModelDoc) {
+    const known = new Set(parseDataModel(dataModelDoc).entities.map((e) => e.toLowerCase().trim()));
+    for (const art of renders) {
+      if (!art.path.replace(/\\/g, '/').endsWith('design/glossary.md')) continue;
+      const block = art.content.match(/## Thực Thể Từ Data Model\n([^\n]*)/);
+      if (!block) continue;
+      for (const raw of block[1].split(',')) {
+        const entity = raw.trim();
+        if (entity && !known.has(entity.toLowerCase())) {
+          issues.push({
+            severity: 'warning',
+            code: 'entity-not-in-data-model',
+            path: art.path,
+            message: `Glossary nhắc entity "${entity}" không có trong 03-data-model.`,
+          });
+        }
+      }
+    }
+  }
+
+  return issues;
 }

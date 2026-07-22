@@ -22,6 +22,11 @@ export const preActionDecisionSchema = z.object({
   user_message: z.string(),
   enforcement: z.enum(['hard', 'soft', 'unsupported']),
   matched_task_id: z.string().optional(),
+  /**
+   * Cảnh báo MỀM (B20a): danh sách module deepen đã opt-in nhưng chưa emit.
+   * Thuần thông tin — không bao giờ đổi `decision`/`enforcement`; vắng khi không có gì dở.
+   */
+  deepen_pending: z.array(z.string()).optional(),
 });
 export type PreActionDecision = z.infer<typeof preActionDecisionSchema>;
 

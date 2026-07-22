@@ -5,6 +5,19 @@ export { loadProgress, saveProgress } from './loadProgress.js';
 export { commitStep, checkRate, stampTurn } from './advanceState.js';
 export { evaluateGate, isBlocked, passedGates, checkExecutionGate } from './evaluateGate.js';
 export { evaluatePreAction } from './evaluatePreAction.js';
+export { loadDeepenScript } from './loadDeepenScript.js';
+export { slugify, slugifyList } from './slugify.js';
+export {
+  loadDeepenState,
+  saveDeepenState,
+  listDeepenSubjects,
+  expandQuestionInstances,
+  optInModule,
+  commitDeepenAnswer,
+  canEmitModule,
+  computeSourceDigest,
+} from './deepenState.js';
+export type { QuestionInstance } from './deepenState.js';
 export { emitDoc, emitTree } from './emit.js';
 export { generateAgentsMd } from '../adapters/agents/generateAgentsMd.js';
 export { validateExecutionPlan } from './validatePlan.js';
@@ -49,8 +62,15 @@ export {
   calculateValidationResultDigest,
 } from './validatedSnapshot.js';
 export { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspectProjectProfile.js';
-export { checkDocsConsistency } from './checkDocsConsistency.js';
+export { checkDocsConsistency, checkTier2Consistency } from './checkDocsConsistency.js';
 export type { ConsistencyWarning } from './checkDocsConsistency.js';
+export { renderGlossary } from './renderGlossary.js';
+export { renderFeatureSpec } from './renderFeatureSpec.js';
+export { renderAdr } from './renderAdr.js';
+export { renderTestStrategy } from './renderTestStrategy.js';
+export { emitTier2 } from './emitTier2.js';
+export type { EmitTier2Result } from './emitTier2.js';
+export type { Tier2RenderInput, RenderedArtifact, ConsistencyIssue } from './schemas/tier2Render.js';
 export {
   calculateProfileDigest,
   loadProjectProfile,

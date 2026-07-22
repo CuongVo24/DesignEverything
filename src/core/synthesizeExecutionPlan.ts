@@ -5,6 +5,7 @@ import { getRecipe } from './stackRecipes.js';
 import { extractMustFeatures, extractWontFeatures } from './validatePlan.js';
 import { synthesizeFeatureContracts } from './synthesizeFeatureContracts.js';
 import { compileContractToTaskCard } from './compileContractToTaskCard.js';
+import { slugify } from './slugify.js';
 
 // Risk keywords that, when present in the interview answers, must be represented
 // as an unresolved (spike-required) risk so the plan validator forces a spike.
@@ -264,12 +265,7 @@ export function synthesizeExecutionPlan(options: {
     const completedMusts: string[] = [];
 
     for (const must of musts) {
-      const slug = must
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
+      const slug = slugify(must);
       const milestoneId = `M4-${slug}`;
 
       const mustContracts = synthesizedContracts.filter((c) => c.feature_milestone === milestoneId);
@@ -290,12 +286,7 @@ export function synthesizeExecutionPlan(options: {
     // Now, construct the plan milestones and tasks
     // 1. Add completed musts
     for (const must of completedMusts) {
-      const slug = must
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
+      const slug = slugify(must);
       const milestoneId = `M4-${slug}`;
       const mustContracts = synthesizedContracts.filter((c) => c.feature_milestone === milestoneId);
 
@@ -327,12 +318,7 @@ export function synthesizeExecutionPlan(options: {
     // Active & completed musts map to their feature tasks.
     // Unopened musts map to T0-T3 skeleton tasks.
     const updatedTraceLinks = mustFeatures.map((must) => {
-      const slug = must
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
+      const slug = slugify(must);
       const milestoneId = `M4-${slug}`;
 
       const isCompleted = completedMusts.includes(must);

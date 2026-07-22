@@ -46,6 +46,16 @@ import {
   contractSchema,
   projectConventionsSchema,
 } from './contract.js';
+import {
+  deepenModuleIdSchema,
+  deepenQuestionSchema,
+  deepenScriptSchema,
+} from './deepenScript.js';
+import {
+  deepenAnswerRefSchema,
+  deepenModuleStateSchema,
+  deepenStateSchema,
+} from './deepenState.js';
 
 export {
   questionSchema,
@@ -84,6 +94,12 @@ export {
   contractStatusSchema,
   contractSchema,
   projectConventionsSchema,
+  deepenModuleIdSchema,
+  deepenQuestionSchema,
+  deepenScriptSchema,
+  deepenAnswerRefSchema,
+  deepenModuleStateSchema,
+  deepenStateSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -127,6 +143,13 @@ export type ContractInterface = z.infer<typeof contractInterfaceSchema>;
 export type ContractRisk = z.infer<typeof contractRiskSchema>;
 export type ContractStatus = z.infer<typeof contractStatusSchema>;
 export type ProjectConventions = z.infer<typeof projectConventionsSchema>;
+
+export type DeepenModuleId = z.infer<typeof deepenModuleIdSchema>;
+export type DeepenQuestion = z.infer<typeof deepenQuestionSchema>;
+export type DeepenScript = z.infer<typeof deepenScriptSchema>;
+export type DeepenAnswerRef = z.infer<typeof deepenAnswerRefSchema>;
+export type DeepenModuleState = z.infer<typeof deepenModuleStateSchema>;
+export type DeepenState = z.infer<typeof deepenStateSchema>;
 
 
 

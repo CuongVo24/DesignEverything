@@ -5,13 +5,41 @@ import { loadGatePolicy } from './loadGatePolicy.js';
 import { evaluateGate, isBlocked } from './evaluateGate.js';
 import { loadExecutionState } from './advanceExecutionState.js';
 import { assertValidatedSnapshot, loadEmittedDocs } from './validatedSnapshot.js';
+import { loadDeepenState } from './deepenState.js';
 import {
   PreActionRequest,
   PreActionDecision,
   AdapterCapability,
 } from './schemas/index.js';
 
+/**
+ * Cảnh báo mềm B20a: module deepen đã opt-in nhưng chưa emit. Best-effort, không
+ * bao giờ throw (deepen-state hỏng/thiếu → []). KHÔNG đổi decision/enforcement.
+ */
+function collectDeepenPending(workspace: string): string[] {
+  try {
+    const state = loadDeepenState(workspace);
+    return (Object.keys(state.modules) as (keyof typeof state.modules)[]).filter(
+      (m) => state.modules[m].opted_in && state.modules[m].emitted_at === null
+    );
+  } catch {
+    return [];
+  }
+}
+
 export function evaluatePreAction(
+  request: PreActionRequest,
+  capability?: AdapterCapability
+): PreActionDecision {
+  const decision = evaluatePreActionInner(request, capability);
+  if (decision.decision === 'allow') {
+    const pending = collectDeepenPending(request.workspace);
+    if (pending.length > 0) return { ...decision, deepen_pending: pending };
+  }
+  return decision;
+}
+
+function evaluatePreActionInner(
   request: PreActionRequest,
   capability?: AdapterCapability
 ): PreActionDecision {
