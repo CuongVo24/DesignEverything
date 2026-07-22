@@ -37,6 +37,7 @@ const core = await import(pathToFileURL(corePath).href);
 
 const progressPath = join(workspaceRoot, 'progress.json');
 const scriptPath = join(workspaceRoot, 'Design/Content/interview-script/script.yaml');
+const deepenScriptPath = join(workspaceRoot, 'Design/Content/interview-script/deepen-script.yaml');
 const policyPath = join(workspaceRoot, 'Design/Content/interview-script/gate-policy.yaml');
 const templatesDir = join(workspaceRoot, 'Design/Content/doc-templates');
 const answersDir = join(workspaceRoot, 'Design', '.interview');
@@ -93,6 +94,32 @@ function loadAnswers() {
 function saveAnswers(answers) {
   mkdirSync(answersDir, { recursive: true });
   writeFileSync(answersPath, JSON.stringify(answers, null, 2), 'utf8');
+}
+
+const DEEPEN_MODULES = ['glossary', 'feature-spec', 'adr', 'test-strategy'];
+
+// Đọc docs/ tầng 1 đã emit thành map path→content (key 'docs/<rel>').
+function loadTier1Docs() {
+  const root = join(workspaceRoot, 'docs');
+  const out = {};
+  if (!existsSync(root)) return out;
+  const walk = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const fp = join(dir, name);
+      if (statSync(fp).isDirectory()) walk(fp);
+      else if (name.endsWith('.md')) {
+        out[relative(workspaceRoot, fp).replace(/\\/g, '/')] = readFileSync(fp, 'utf8');
+      }
+    }
+  };
+  walk(root);
+  return out;
+}
+
+// Suy default gợi ý cho một câu DS từ các answers tầng 1 trong default_from.
+function deepenDefault(question, answers) {
+  const parts = (question.default_from || []).map((id) => answers[id]).filter(Boolean);
+  return parts.length > 0 ? parts.join(' | ') : null;
 }
 
 function questionInfo(script, qid) {
@@ -828,7 +855,16 @@ switch (command) {
       }
     }
 
-    const card = core.renderNextStep(execPlan, execState, profile);
+    let deepenPending = [];
+    try {
+      const dstate = core.loadDeepenState(workspaceRoot);
+      deepenPending = Object.keys(dstate.modules).filter(
+        (m) => dstate.modules[m].opted_in && dstate.modules[m].emitted_at === null
+      );
+    } catch {
+      // deepen là tuỳ chọn — không có/hỏng state thì bỏ qua card deepen.
+    }
+    const card = core.renderNextStep(execPlan, execState, profile, deepenPending);
     const mode = args.calibrate || progress.calibrate_mode || 'fast';
     const text = core.renderNextStepMarkdown(card, mode);
     console.log(text);
@@ -959,6 +995,117 @@ switch (command) {
     break;
   }
 
+  case 'deepen': {
+    // Lane tầng 2 (opt-in). KÊNH RIÊNG: không đụng progress.json/script.yaml tầng 1.
+    if (!existsSync(deepenScriptPath)) fail(`Không thấy ${deepenScriptPath}. Chạy lại installer.`);
+    const deepenScript = core.loadDeepenScript(deepenScriptPath);
+    const answers = loadAnswers();
+    const tier1Docs = loadTier1Docs();
+    let state = core.loadDeepenState(workspaceRoot);
+
+    const subjectsOf = (m) => core.listDeepenSubjects(m, { answers, tier1Docs });
+    const digestOf = (m) => core.computeSourceDigest(m, { deepenAnswers: answers, tier1Docs });
+
+    // Không có --module → in trạng thái 4 module.
+    if (!args.module || args.module === true) {
+      const modules = {};
+      for (const m of DEEPEN_MODULES) {
+        const subs = subjectsOf(m);
+        const can = core.canEmitModule(state, deepenScript, m, subs, digestOf(m));
+        modules[m] = {
+          opted_in: state.modules[m].opted_in,
+          activation: state.modules[m].activation,
+          answered: state.modules[m].answered.length,
+          missing: can.missing.length,
+          ok: can.ok,
+          stale: can.stale,
+          emitted_at: state.modules[m].emitted_at,
+        };
+      }
+      console.log(JSON.stringify({ modules }, null, 2));
+      break;
+    }
+
+    const module = String(args.module);
+    if (!DEEPEN_MODULES.includes(module)) fail(`Module deepen không hợp lệ: ${module}. Dùng: ${DEEPEN_MODULES.join(' | ')}.`);
+
+    if (args['opt-in']) {
+      const activation = args.activation === 'condition' ? 'condition' : 'explicit';
+      state = core.optInModule(state, module, activation);
+      core.saveDeepenState(workspaceRoot, state);
+      console.log(JSON.stringify({ opted_in: module, activation: state.modules[module].activation }, null, 2));
+      break;
+    }
+
+    if (args.next) {
+      if (!state.modules[module].opted_in) fail(`Module ${module} chưa opt-in. Chạy: deepen --module ${module} --opt-in trước.`);
+      const subs = subjectsOf(module);
+      const instances = core.expandQuestionInstances(deepenScript, module, subs);
+      const answered = state.modules[module].answered;
+      const nextInst = instances.find(
+        (inst) => !answered.some((a) => a.question_id === inst.question_id && a.subject_id === inst.subject_id)
+      );
+      if (!nextInst) {
+        console.log(JSON.stringify({ complete: true }, null, 2));
+        break;
+      }
+      const q = deepenScript.questions.find((x) => x.id === nextInst.question_id);
+      const ask = nextInst.subject_id ? q.ask.replace(/\{subject\}/g, nextInst.subject_id) : q.ask;
+      console.log(
+        JSON.stringify(
+          {
+            question_id: nextInst.question_id,
+            subject_id: nextInst.subject_id,
+            target_doc: nextInst.target_doc,
+            ask,
+            default: deepenDefault(q, answers),
+            translate_back: q.translate_back,
+          },
+          null,
+          2
+        )
+      );
+      break;
+    }
+
+    if (args.commit) {
+      if (!args.turn || args.turn === true) fail('Thiếu --turn <TURN_ID>.');
+      if (!args.question || args.question === true) fail('Thiếu --question <qid>.');
+      if (!args.answer || args.answer === true) fail('Thiếu --answer "<câu trả lời đã dịch ngược>".');
+      const subjectId = typeof args.subject === 'string' ? args.subject : null;
+      try {
+        state = core.commitDeepenAnswer(state, deepenScript, {
+          module,
+          questionId: String(args.question),
+          subjectId,
+          userTurnId: String(args.turn),
+        });
+      } catch (e) {
+        fail(e.message);
+      }
+      const key = subjectId ? `${args.question}@${subjectId}` : String(args.question);
+      answers[key] = String(args.answer);
+      saveAnswers(answers);
+      core.saveDeepenState(workspaceRoot, state);
+      console.log(JSON.stringify({ committed: key, module }, null, 2));
+      break;
+    }
+
+    if (args.emit) {
+      const res = core.emitTier2({ workspace: workspaceRoot, modules: [module], script: deepenScript, state });
+      const skipped = res.skipped.find((s) => s.module === module);
+      if (skipped) {
+        console.log(JSON.stringify(res, null, 2));
+        process.exit(1);
+      }
+      console.log(JSON.stringify(res, null, 2));
+      break;
+    }
+
+    fail('Thiếu hành động cho deepen. Dùng: --opt-in | --next | --commit | --emit (kèm --module <id>).');
+    break;
+  }
+
   default:
-    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | verify | review | repair | next-step | amend.`);
+    fail(`Lệnh không hợp lệ: "${command ?? ''}". Dùng: status | commit | emit | validate | next | start | verify | review | repair | next-step | amend | deepen.`);
 }

@@ -149,6 +149,32 @@ Khi `commit` trả về `interview_done: true`:
    milestone trong 08-build-plan.md**, bắt đầu từ M0.
    Mỗi file docs có mục "Tại sao cần file này" — nhắc người dùng đọc, đó là phần học nghề.
 
+## Đào sâu thiết kế (tuỳ chọn — tầng 2)
+
+Sau khi docs nền móng đã emit, người dùng CÓ THỂ đào sâu 4 module thiết kế chi tiết dưới
+`docs/design/`: `glossary`, `feature-spec`, `adr`, `test-strategy`. Đây là **kênh riêng, hoàn
+toàn tuỳ chọn** — không đụng luồng phỏng vấn/gate tầng 1.
+
+```bash
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen                                  # trạng thái 4 module
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --opt-in [--activation explicit|condition]
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --next             # câu DS kế tiếp
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --commit --turn <TURN_ID> --question <qid> [--subject <sid>] --answer "..."
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --emit             # sinh docs/design/ khi đủ câu
+```
+
+Quy tắc (bắt buộc):
+
+1. **Chỉ chào mời deepen khi NGƯỜI DÙNG hỏi**, hoặc khi điều kiện kích hoạt §3 taxonomy-decision
+   xuất hiện trong answers (vd `adr` ↔ team ≥2 dev, `test-strategy` ↔ có CI/CD). KHÔNG tự opt-in hộ.
+2. **Chỉ opt-in sau khi người dùng đồng ý.** `--opt-in` là hành động của người dùng, không phải mặc định.
+3. Hỏi từng câu `--next` một; mỗi câu vẫn **dịch ngược + chờ người dùng xác nhận** rồi mới `--commit`.
+   KHÔNG auto-answer, KHÔNG commit hàng loạt.
+4. `--emit` fail-closed: thiếu câu → in `missing` và exit ≠ 0; consistency error → in `issues` và exit ≠ 0.
+   Trả lời nốt câu thiếu rồi emit lại; không lách.
+5. Mỗi khối trong `docs/design/` phải cite nguồn theo grammar SourceRef (taxonomy-tier2.md);
+   khối không truy được nguồn mang cờ `⚠ unknown — cần hỏi người`, KHÔNG bịa.
+
 ## Điều cấm
 
 - Không tự bịa câu hỏi ngoài script; không đổi thứ tự; không bỏ câu vì "đoán được".

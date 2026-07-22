@@ -6,7 +6,7 @@ import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/sche
 const CLI = 'node adapter/claude-code/cli.mjs';
 
 export interface NextStepCard {
-  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported';
+  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported' | 'deepen';
   now: string;
   whyNow: string;
   allowedScope: string[];
@@ -20,7 +20,9 @@ export interface NextStepCard {
 export function renderNextStep(
   plan: ExecutionPlanV3 | null,
   state: ExecutionState | null,
-  profile: ProjectProfile | null
+  profile: ProjectProfile | null,
+  // B21a: module deepen đã opt-in nhưng chưa emit. Card mềm, KHÔNG hiện khi không opt-in.
+  deepenPending: string[] = []
 ): NextStepCard {
   // 0. Check for pending proposed amendments
   if (state && state.amendment_history) {
@@ -37,6 +39,24 @@ export function renderNextStep(
         nextCommand: `node adapter/claude-code/cli.mjs amend approve ${proposed.id}`,
       };
     }
+  }
+
+  // 0b. Card mềm deepen (B21a): nhắc hoàn tất module tầng 2 đã opt-in nhưng chưa
+  // emit. Chỉ hiện khi KHÔNG đang thực thi/blocked (execution ưu tiên; lúc đó
+  // deepen được nhắc qua evaluatePreAction.deepen_pending). KHÔNG bao giờ hiện khi
+  // deepenPending rỗng (chưa opt-in gì).
+  const busyPhases = ['executing', 'verifying', 'repairing', 'reviewing', 'blocked'];
+  if (deepenPending.length > 0 && !(state && busyPhases.includes(state.phase))) {
+    return {
+      state: 'deepen',
+      now: `Hoàn tất (tuỳ chọn) module thiết kế chi tiết đã bật: ${deepenPending.join(', ')}.`,
+      whyNow: 'Bạn đã opt-in module deepen nhưng chưa emit. Đây là bước TUỲ CHỌN, không chặn luồng chính.',
+      allowedScope: ['docs/design/**'],
+      proof: 'File docs/design/ của module được sinh; deepen-state ghi emitted_at.',
+      ifItFails: `Trả lời nốt câu DS còn thiếu (deepen --module ${deepenPending[0]} --next) rồi emit lại.`,
+      enforcement: 'soft',
+      nextCommand: `${CLI} deepen --module ${deepenPending[0]} --emit`,
+    };
   }
 
   // 1. Check Profile
