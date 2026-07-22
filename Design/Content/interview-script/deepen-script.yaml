@@ -1,0 +1,179 @@
+# Kịch bản phỏng vấn đào sâu tầng 2 (Deepening Interview Script)
+# Mỗi khối câu hỏi bắt buộc chứa đúng một dòng SourceRef tương ứng cho tài liệu tầng 2.
+version: 1.0.0
+questions:
+  # =========================================================================
+  # DS0 SERIES: META & OPT-IN GATES
+  # =========================================================================
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 tập trung khảo sát scope thô của MVP, chưa hỏi nhu cầu xây từ điển thuật ngữ.
+  # (2) Cách suy default: Nếu người dùng đã trả lời S4 (Data Model), đề xuất kích hoạt Glossary để làm rõ các thực thể.
+  - id: DS0-glossary
+    module: glossary
+    per_subject: none
+    ask: "Bạn có muốn kích hoạt và xây dựng Từ điển Thuật ngữ (Glossary) để chuẩn hóa danh nghĩa thực thể trong mã nguồn không?"
+    kind: meta
+    target_doc: null
+    default_from: [S4]
+    depends_on_tier1: [S4]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 chỉ hỏi tính năng ở mức gộp (S3), chưa xác định nhu cầu viết spec chi tiết cho từng tính năng.
+  # (2) Cách suy default: Nếu người dùng đã trả lời S3 (Must Have), đề xuất kích hoạt Đặc tả Tính năng (Feature Spec) để tránh phình scope.
+  - id: DS0-feature-spec
+    module: feature-spec
+    per_subject: none
+    ask: "Bạn có muốn kích hoạt việc lập Đặc tả Tính năng chi tiết cho từng tính năng Must-have để chốt các ca biên sớm không?"
+    kind: meta
+    target_doc: null
+    default_from: [S3]
+    depends_on_tier1: [S3]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 chỉ hỏi solo hay nhóm ở câu ràng buộc (S6), chưa tính toán số lượng dev để kích hoạt ADR.
+  # (2) Cách suy default: Mặc định lấy từ câu S6. Nếu có >= 2 người tham gia, đề xuất kích hoạt ADR.
+  - id: DS0-adr
+    module: adr
+    per_subject: none
+    ask: "Quy mô nhân sự của dự án là bao nhiêu (số lượng nhà phát triển trực tiếp)?"
+    kind: meta
+    target_doc: null
+    default_from: [S6]
+    depends_on_tier1: [S6]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 chỉ hỏi tech stack thô (M1/W1), chưa hỏi về hạ tầng CI/CD và chiến lược kiểm thử.
+  # (2) Cách suy default: Mặc định lấy từ câu S8 (quy mô) hoặc M1/W1. Đề xuất kích hoạt nếu dự án cần tự động hóa cao.
+  - id: DS0-test-strategy
+    module: test-strategy
+    per_subject: none
+    ask: "Dự án của bạn có yêu cầu tích hợp CI/CD hoặc chạy kiểm thử tự động không?"
+    kind: meta
+    target_doc: null
+    default_from: [S8]
+    depends_on_tier1: [S8]
+    translate_back: true
+
+  # =========================================================================
+  # DS1 SERIES: GLOSSARY MODULE
+  # =========================================================================
+
+  # (1) Vì sao tầng 1 chưa hỏi: S4 chỉ liệt kê tên thực thể dữ liệu dạng danh sách thô, chưa đi sâu vào các thuật ngữ dễ nhầm lẫn.
+  # (2) Cách suy default: Đề xuất các thuật ngữ lõi dựa trên danh sách thực thể đã nhập ở câu S4.
+  - id: DS1a
+    module: glossary
+    per_subject: none
+    ask: "Có những thực thể hoặc thuật ngữ nghiệp vụ nào đặc thù trong dự án cần được định nghĩa nhất quán để tránh hiểu nhầm?"
+    kind: anchored
+    target_doc: design/glossary.md
+    default_from: [S4]
+    depends_on_tier1: [S4]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: S4 không yêu cầu viết định nghĩa, lập trình viên thường tự diễn dịch dẫn đến code bị lệch.
+  # (2) Cách suy default: Đề xuất định nghĩa chuẩn dựa trên nghiệp vụ của từng thực thể được trích xuất từ câu S4.
+  - id: DS1b
+    module: glossary
+    per_subject: none
+    ask: "Hãy cung cấp định nghĩa ngắn gọn cho các thuật ngữ/thực thể đã liệt kê ở trên."
+    kind: anchored
+    target_doc: design/glossary.md
+    default_from: [S4]
+    depends_on_tier1: [S4]
+    translate_back: true
+
+  # =========================================================================
+  # DS2 SERIES: FEATURE SPEC MODULE
+  # =========================================================================
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 chỉ khảo sát flow điển hình (S5), hoàn toàn bỏ qua các lỗi hoặc tình huống đặc biệt.
+  # (2) Cách suy default: Đề xuất ca biên phổ biến như mất kết nối mạng hoặc nhập liệu rỗng dựa trên Must-have ở S3.
+  - id: DS2a
+    module: feature-spec
+    per_subject: must
+    ask: "Với tính năng {subject}, có những ca biên (edge cases) hoặc trạng thái lỗi nào hệ thống bắt buộc phải xử lý một cách tin cậy?"
+    kind: anchored
+    target_doc: design/features/{subject-slug}.md
+    default_from: [S3, S5]
+    depends_on_tier1: [S3]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: S5 chỉ tập trung mô tả luồng thành công chính (happy path), chưa xét luồng thất bại.
+  # (2) Cách suy default: Gợi ý hành vi thông báo lỗi cho người dùng hoặc lưu tạm dữ liệu offline dựa vào flow ở S5.
+  - id: DS2b
+    module: feature-spec
+    per_subject: must
+    ask: "Với tính năng {subject}, hệ thống sẽ phản hồi và hướng dẫn người dùng thế nào khi xảy ra lỗi lưu trữ tạm thời?"
+    kind: anchored
+    target_doc: design/features/{subject-slug}.md
+    default_from: [S5]
+    depends_on_tier1: [S3]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: S3 chỉ chốt danh sách tính năng, chưa có thước đo thế nào là tính năng đã "xong thật".
+  # (2) Cách suy default: Đề xuất tiêu chí nghiệm thu tự động (vd: dữ liệu lưu thành công, hiển thị đúng màn hình) từ S3.
+  - id: DS2c
+    module: feature-spec
+    per_subject: must
+    ask: "Với tính năng {subject}, những tiêu chí nghiệm thu (acceptance criteria) cụ thể nào cần thỏa mãn để tính năng được coi là hoàn thành đúng?"
+    kind: anchored
+    target_doc: design/features/{subject-slug}.md
+    default_from: [S3]
+    depends_on_tier1: [S3]
+    translate_back: true
+
+  # =========================================================================
+  # DS3 SERIES: ADR MODULE
+  # =========================================================================
+
+  # (1) Vì sao tầng 1 chưa hỏi: 05-architecture chỉ lưu quyết định cuối cùng, không ghi nhận các phương án bị loại bỏ.
+  # (2) Cách suy default: Đề xuất các phương án thay thế thông dụng dựa vào tech stack đã chọn (vd: chọn React Native loại Flutter).
+  - id: DS3a
+    module: adr
+    per_subject: adr
+    ask: "Với quyết định {subject}, những phương án thay thế nào đã được đưa ra cân nhắc và lý do cụ thể vì sao chúng bị loại bỏ?"
+    kind: anchored
+    target_doc: design/adr/ADR-{NNN}-{subject-slug}.md
+    default_from: [S8]
+    depends_on_tier1: [S8]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 chỉ chốt thiết kế tĩnh tại thời điểm phỏng vấn, chưa tính đến các thay đổi nâng cấp tương lai.
+  # (2) Cách suy default: Đề xuất ngưỡng chịu tải hoặc giới hạn kỹ thuật cần xem xét lại quyết định dựa vào quy mô ở S8.
+  - id: DS3b
+    module: adr
+    per_subject: adr
+    ask: "Với quyết định {subject}, điều kiện hoặc yếu tố nào trong tương lai sẽ bắt buộc chúng ta phải xem xét lại quyết định này?"
+    kind: anchored
+    target_doc: design/adr/ADR-{NNN}-{subject-slug}.md
+    default_from: [S8]
+    depends_on_tier1: [S8]
+    translate_back: true
+
+  # =========================================================================
+  # DS4 SERIES: TEST STRATEGY MODULE
+  # =========================================================================
+
+  # (1) Vì sao tầng 1 chưa hỏi: Tầng 1 chỉ hỏi về tech stack tổng quan, chưa xác định rủi ro hỏng hóc để phân loại độ ưu tiên của test.
+  # (2) Cách suy default: Đề xuất phần lõi quan trọng nhất (như thanh toán, bảo mật) dựa vào nỗi đau ở S1 và Must ở S3.
+  - id: DS4a
+    module: test-strategy
+    per_subject: none
+    ask: "Trong hệ thống này, kịch bản lỗi hoặc tính năng nào nếu hỏng sẽ gây ảnh hưởng nghiêm trọng nhất cho người dùng?"
+    kind: anchored
+    target_doc: design/test-strategy.md
+    default_from: [S1, S3]
+    depends_on_tier1: [S3]
+    translate_back: true
+
+  # (1) Vì sao tầng 1 chưa hỏi: S8 chỉ thu thập thông tin quy mô thô, chưa khảo sát các vùng code nhạy cảm dễ gây regression.
+  # (2) Cách suy default: Đề xuất các module xử lý dữ liệu dùng chung hoặc đồng bộ API dựa trên S8.
+  - id: DS4b
+    module: test-strategy
+    per_subject: none
+    ask: "Phần nào trong mã nguồn hoặc kiến trúc mà bạn lo ngại nhất mỗi khi có người chỉnh sửa hoặc refactor?"
+    kind: anchored
+    target_doc: design/test-strategy.md
+    default_from: [S8]
+    depends_on_tier1: [S8]
+    translate_back: true

@@ -63,4 +63,13 @@
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-07-21) — số liệu đạt ngưỡng; chờ manager điền nhận xét tay ≥5 khối vào evidence.
+
+### Kết quả thực thi (2026-07-21)
+- [NEW] `test/fixtures/de-self-answers.json` — DE tự thiết kế DE (shape cli), answers tầng 1 + DS* theo key instance `<qid>@<sid>`, kèm map `sources` chú nguồn FirstIdea/README/Design.
+- [NEW] `test/fixtures/de-golden-map.json` — map mục tay Design/ ↔ khối sinh, có `ref_sha` = `676925e` (freeze TRƯỚC lần đo đầu), ghi rõ phần cố ý không map (PRD toàn bộ, RoadMap, Guideline/VibeCode) + lý do.
+- [NEW] `test/eval/tier2-golden-corpus.test.ts` — chạy `emitTree`(cli) → renderer B20b → đo 5 số liệu, ngưỡng KHOÁ trong test; đo grounding/hallucinated TRỰC TIẾP trên nội dung (không tin số renderer tự khai).
+- [NEW] `Design/RoadMap/evidence/v6-tier2-eval.md` — báo cáo sinh mỗi lần chạy.
+- **Kết quả đo** (deterministic, chạy 2 lần y hệt): Structural coverage **100%** (≥70%), Grounding **100%** (=100%), Hallucinated-rationale **0** (=0), Unknown rate **3.7%** (≤30%), Substance floor **6/6 file** (≥3 khối nguồn thật/file). Tổng 27 khối, 1 unknown.
+- Verify: `npx vitest run test/eval/tier2-golden-corpus` → 7 pass (gồm ca determinism). `npm run lint`/`build` sạch, `npm test` → **334 pass / 63 file**.
+- **Còn lại (governance, không phải code)**: manager điền "Nhận xét tay ≥5 khối" vào evidence theo rubric B19a trước khi coi eval là đã review đủ.

@@ -59,4 +59,12 @@ Người dùng gọi được `deepen` từ cả hai harness thành vòng khép 
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-07-21)
+
+### Kết quả thực thi (2026-07-21)
+- [MODIFY] `adapter/claude-code/cli.mjs` + `adapter/codex-plugin/cli.mjs` — thêm lệnh `deepen` (`--opt-in`/`--next`/`--commit`/`--emit` + không-arg in trạng thái 4 module). Hai file **byte-identical** (verify bằng `diff`, exit 0). Adapter chỉ INJECT/GATE/EMIT: mọi luật do core gác (`commitDeepenAnswer`, `emitTier2`).
+- [MODIFY] `src/adapters/shared/renderNextStep.ts` — thêm tham số `deepenPending: string[]` + card mềm `state:'deepen'` (`enforcement:'soft'`, `nextCommand: deepen --module <id> --emit`); chỉ hiện khi có module opted_in dở dang và KHÔNG đang execution/blocked. CLI `next-step` tính `deepenPending` từ `loadDeepenState`.
+- [MODIFY] SKILL.md hai adapter — mục "Đào sâu thiết kế (tuỳ chọn)": chỉ chào mời khi user hỏi/điều kiện §3, hỏi từng câu + dịch ngược + xác nhận, cấm auto-opt-in/auto-answer, emit fail-closed.
+- [NEW] `test/e2e/deepen-flow.test.ts` (in-process, theo pattern e2e repo): happy path opt-in→commit đủ 2 Must→emit ra đúng 2 file slug; thiếu câu→chặn; không opt-in→không sinh docs/design; card deepen 2 chiều.
+- **Smoke tay CLI thật** (workspace tạm): `deepen` (status 4 module, adr missing=12=6 quyết định×2), `--opt-in`, `--next`, `--emit` khi thiếu → exit≠0 + `missing`, `--commit` ×2, `--emit` → file `docs/design/glossary.md` đúng grammar SourceRef; reject "thiếu subjectId" và "duplicate turn" đúng message core; `next-step` in card deepen soft.
+- Verify: `npx vitest run test/e2e/deepen-flow renderNextStep` → 17 pass (13 renderNextStep cũ không hồi quy). `npm run lint`/`build` sạch, `npm test` → **327 pass / 62 file**.

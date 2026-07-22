@@ -24,6 +24,7 @@ docs/
     allowed-paths.md
     coding-standards.md
     test-tiers.md
+  design/               ← tài liệu thiết kế chi tiết (tầng 2) (v6.1.0 - xem taxonomy-tier2.md)
   README.md             ← mục lục + "đọc theo thứ tự này"
 
   # Hai mục dưới KHÔNG có lúc emit — engine sinh trong lúc build, là projection
@@ -70,6 +71,7 @@ contracts/              ← các hợp đồng per-micro-task máy đọc lưu t
 | W1, W2, W4, W5 / M1, M2, M3, M4 | `05-architecture.md` |
 | W3 / M5 | `07-deployment.md` / `07-release.md` |
 | C-series (cli, định nghĩa ở B4) | `05-architecture.md` + `07-distribution.md` |
+| DS1, DS2, DS3, DS4 (phỏng sâu tầng 2) | `docs/design/` (xem taxonomy-tier2.md) |
 | *(dẫn xuất — không có câu hỏi riêng)* | `08-build-plan.md` ← suy từ S3 (Must) + S5 (flow), xem [DecisionLog D28](../DecisionLog.md) |
 | *(dẫn xuất — không có câu hỏi riêng)* | `decisions.md` ← gom quyết định từ S7/S8 + câu nhánh; `progress-log.md`, `break-tasks/` ← sinh lúc build từ execution state |
 

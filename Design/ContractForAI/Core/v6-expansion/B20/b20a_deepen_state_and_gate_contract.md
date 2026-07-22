@@ -121,4 +121,18 @@ Lõi biết một dự án đã opt-in module deepen nào, từng question-insta
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-07-21) — chờ review manager trước khi sang B20b.
+
+### Amendment khi thực thi (2026-07-21)
+- **`canEmitModule` đổi chữ ký** thành `(state, script, module, subjects, currentDigest?)`. Chữ ký gốc thiếu 2 thứ không thể bù: (1) không có `module` nên không phân biệt được `glossary` vs `test-strategy` (cùng subjects `[]`); (2) không có nguồn để tính `stale`. `currentDigest` tuỳ chọn do caller tính bằng `computeSourceDigest`; vắng → `stale=false` (không kết luận). B20b/B21a phải gọi theo chữ ký mới.
+- **Câu `kind: meta` (DS0-*) bị loại khỏi completeness/instance**: đó là cổng opt-in, `target_doc: null`, không sinh nội dung. `expandQuestionInstances` chỉ trả câu `anchored`. Opt-in đi qua `optInModule`/CLI `--opt-in` (B21a), không qua `commitDeepenAnswer` completeness.
+- **Cảnh báo mềm ở `evaluatePreAction`** hiện thực dạng nhẹ: gắn `deepen_pending` (danh sách module `opted_in && emitted_at===null`) lên MỌI quyết định `allow`, best-effort (state hỏng/thiếu → bỏ qua), không bao giờ đổi decision. Đây là proxy rẻ cho "module dở dang"; phần completeness/`missing` chính xác nằm ở CLI `deepen` + `renderNextStep` (B21a). Không thêm gate, không đụng `policy.gates`.
+
+### Kết quả verify (2026-07-21)
+- `npx vitest run slugify loadDeepenScript deepenState` → 31 pass (gồm: 5 ca throw `commitDeepenAnswer`, per-subject completeness A≠B, stale theo digest, digest 1-ký-tự, save atomic không để `.tmp`, slug byte-identical).
+- `npx vitest run evaluatePreAction synthesizeExecutionPlan test/regression` → 17 pass, golden/dogfood không đổi byte sau refactor `slugify`.
+- `npm run lint` sạch, `npm run build` sạch, `npm test` → **310 pass / 59 file**.
+
+### File thêm/sửa
+- [NEW] `src/core/slugify.ts`, `src/core/schemas/deepenScript.ts`, `src/core/loadDeepenScript.ts`, `src/core/schemas/deepenState.ts`, `src/core/deepenState.ts` + 3 test (`slugify`, `loadDeepenScript`, `deepenState`).
+- [MODIFY] `src/core/synthesizeExecutionPlan.ts` (3 chỗ inline → `slugify`), `src/core/evaluatePreAction.ts` (wrapper `deepen_pending`), `src/core/schemas/preActionGate.ts` (field `deepen_pending`), `src/core/schemas/index.ts`, `src/core/index.ts` (export).

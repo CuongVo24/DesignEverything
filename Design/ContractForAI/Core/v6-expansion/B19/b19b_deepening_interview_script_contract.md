@@ -80,4 +80,7 @@ Viết kịch bản phỏng vấn deepen thành file nội dung MỚI `deepen-sc
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-07-21)
+
+### Kết quả review manager (2026-07-21)
+`deepen-script.yaml` parse OK (lib `yaml`), 13 câu, không trùng id, mọi ref tầng 1 (`S1,S3,S4,S5,S6,S8`) đều tồn tại trong `script.yaml`; mỗi module ≤4 câu/lượt; placeholder `{subject}`/`{subject-slug}` đúng ràng buộc `per_subject`. `git diff` của `script.yaml`/`gate-policy.yaml` rỗng. Mục deepen trong `S0-S6-core.md` mô tả đúng kênh opt-in độc lập. Không phát hiện lỗi cần sửa ở B19b.

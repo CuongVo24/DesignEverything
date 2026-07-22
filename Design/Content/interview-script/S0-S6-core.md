@@ -318,3 +318,14 @@ Người mới thường bỏ qua rủi ro hoặc xem giả định kỹ thuật
 - Mỗi câu có bẫy thường gặp và cách agent gỡ.
 - S3 thể hiện rõ agent là người phân loại scope, không đẩy việc ưu tiên lại cho người mới.
 - Toàn bộ nội dung bám taxonomy và không mâu thuẫn schema Batch 1.
+
+## Nhánh phỏng vấn đào sâu (Deepening Interview Branch)
+
+Nhánh phỏng vấn đào sâu (định nghĩa trong `deepen-script.yaml`) được thiết kế như một kênh phỏng vấn độc lập, nâng cao và ở chế độ tự chọn (opt-in) sau khi người dùng đã kết thúc phỏng vấn tầng 1 và tài liệu cơ bản được sinh ra.
+
+### Nguyên tắc hoạt động:
+1. **Hoàn toàn độc lập**: Không can thiệp hay sửa đổi cấu trúc kịch bản chính `script.yaml` và `gate-policy.yaml`.
+2. **Kích hoạt linh hoạt (Opt-in)**: Người dùng quyết định kích hoạt từng module nâng cao (Glossary, Feature Spec, ADR, Test Strategy) thông qua các câu hỏi meta `DS0-*`.
+3. **Phỏng vấn theo chủ đề (Per-subject)**: Hỗ trợ nhân bản câu hỏi phỏng vấn riêng biệt cho từng đối tượng (ví dụ: hỏi ca biên/tiêu chí nghiệm thu riêng cho từng tính năng Must-have đã chốt, hoặc hỏi phương án loại bỏ riêng cho từng quyết định kiến trúc).
+4. **Kế thừa thông tin**: Sử dụng dữ liệu câu trả lời tầng 1 (thông qua `default_from`) để đưa ra các đề xuất mặc định thông minh, giúp giảm thiểu thời gian nhập liệu cho người dùng.
+

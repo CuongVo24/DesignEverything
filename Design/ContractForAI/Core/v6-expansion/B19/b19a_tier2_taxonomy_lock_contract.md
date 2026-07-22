@@ -59,4 +59,12 @@ Khoá cây `docs/design/` (4 module: `glossary`, `feature-spec`, `adr`, `test-st
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-07-21)
+
+### Kết quả review manager (2026-07-21)
+Đã rà soát toàn bộ output B19 theo rubric mục E. Sửa các lỗi phát hiện:
+- **Golden ADR sai dự án + ngược quyết định**: bản cũ (`ADR-001-single-page-app.md`) viết về "BookRegistry" và chọn SPA/loại SSR, trong khi tầng 1 (`05-architecture.md#05-architecture/client-rendering`) chọn **Next.js SSR cho SEO**. Đã viết lại thành `ADR-001-nextjs-ssr.md` cho đúng app công thức + đúng quyết định; lý do/phương-án-loại lấy nguồn từ deepen (`answers:DS3a/DS3b`) vì tầng 1 để trống 2 mục này.
+- **Anchor `doc:` không resolve**: golden + template + ví dụ grammar dùng id thiếu tiền tố số (`data-model/entities`, `scope/must-have`, `flows/typical-flow`, `architecture/decisions|alternatives`). Đã sửa về id thật (`03-data-model/core-entities`, `02-scope/must-have`, `04-flows/main-flow-steps`, `05-architecture/decision-rationale|alternatives-considered|client-rendering`).
+- **Nguồn bịa**: golden `test-strategy.md` mục Scope trỏ `docs/conventions/test-tiers.md` (không tồn tại trong golden web) → chuyển sang cờ fail-closed `⚠ unknown — cần hỏi người`.
+
+Verify: `npx vitest run contentIntegrity loadShapes loadScript` (16 pass), `run-dogfood.test.ts` (pass), `git diff` của `script.yaml`/`gate-policy.yaml` rỗng, cross-check mọi `doc:` ref trong golden resolve đúng anchor tầng 1.
