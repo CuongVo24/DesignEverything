@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { answerContractSchema } from './answerContract.js';
 
 export const questionSchema = z.object({
   id: z.string().regex(/^[A-Z][A-Za-z0-9-]*$/),
@@ -10,6 +11,7 @@ export const questionSchema = z.object({
   gate: z.string().nullable(),
   translate_back: z.string().min(1),
   depends_on: z.array(z.string()),
+  answer_contract: answerContractSchema.optional(),
 }).refine(
   (q) => {
     if (q.kind === 'meta') {
