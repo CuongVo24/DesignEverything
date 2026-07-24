@@ -1,0 +1,166 @@
+import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, unlinkSync } from 'fs';
+import { join, dirname } from 'path';
+import type { StagedGeneration } from './emitTransactionStage.js';
+import { emitManifestSchema, type EmitManifest, type EmitJournal } from './schemas/emitManifest.js';
+
+export type ActivateEmitResult =
+  | { status: 'activated'; manifest: EmitManifest }
+  | { status: 'blocked'; reason: 'revision-mismatch' | 'user-file-collision'; details: string[] };
+
+export type EmitChannel = 'tier1' | 'tier2';
+
+/**
+ * Tier-1 and tier-2 (deepen) each get their own manifest/journal/backup
+ * namespace so re-emitting one never treats the other's managed files as
+ * stale. `tier1` keeps the original unscoped paths for backward compat.
+ */
+export function manifestPath(root: string, channel: EmitChannel = 'tier1'): string {
+  return channel === 'tier1'
+    ? join(root, '.design-everything/emit-manifest.json')
+    : join(root, `.design-everything/emit-manifest-${channel}.json`);
+}
+
+export function journalPath(root: string, channel: EmitChannel = 'tier1'): string {
+  return channel === 'tier1'
+    ? join(root, '.design-everything/emit-journal.json')
+    : join(root, `.design-everything/emit-journal-${channel}.json`);
+}
+
+function backupDirFor(channel: EmitChannel, generationId: string): string {
+  return channel === 'tier1'
+    ? `.design-everything/backups/${generationId}`
+    : `.design-everything/backups/${channel}/${generationId}`;
+}
+
+function readActiveManifest(root: string, channel: EmitChannel): EmitManifest | null {
+  const p = manifestPath(root, channel);
+  if (!existsSync(p)) return null;
+  const parsed = emitManifestSchema.safeParse(JSON.parse(readFileSync(p, 'utf8')));
+  if (!parsed.success) {
+    throw new Error(`Active emit manifest at ${p} is corrupt: ${JSON.stringify(parsed.error.format())}`);
+  }
+  return parsed.data;
+}
+
+function writeJournal(root: string, channel: EmitChannel, journal: EmitJournal): void {
+  const p = journalPath(root, channel);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, JSON.stringify(journal, null, 2), 'utf8');
+}
+
+function backupFile(root: string, backupDir: string, relPath: string): void {
+  const live = join(root, relPath);
+  if (!existsSync(live)) return;
+  const dest = join(root, backupDir, relPath);
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(live, dest);
+}
+
+/**
+ * Promotes a validated staged generation into the live tree with a
+ * backup-then-promote journal: nothing is overwritten or deleted before its
+ * current content is copied into `.design-everything/backups/<generation_id>/`,
+ * so a crash mid-promotion can always be undone by recoverEmit. Unknown
+ * user-owned files at a target path abort the whole activation before any
+ * mutation happens — never silently adopted or overwritten.
+ */
+export function activateEmit(
+  root: string,
+  generation: StagedGeneration,
+  expectedRevision: string | null,
+  channel: EmitChannel = 'tier1'
+): ActivateEmitResult {
+  const current = readActiveManifest(root, channel);
+  const currentGenerationId = current?.generation_id ?? null;
+  if (expectedRevision !== currentGenerationId) {
+    return {
+      status: 'blocked',
+      reason: 'revision-mismatch',
+      details: [`expected active generation ${expectedRevision ?? '(none)'}, found ${currentGenerationId ?? '(none)'}`],
+    };
+  }
+
+  const oldManagedByPath = new Map(
+    (current?.artifacts ?? []).filter((a) => a.ownership === 'managed').map((a) => [a.path, a])
+  );
+  const newPaths = new Set(generation.manifest.artifacts.map((a) => a.path));
+
+  const collisions: string[] = [];
+  for (const artifact of generation.manifest.artifacts) {
+    const live = join(root, artifact.path);
+    if (existsSync(live) && !oldManagedByPath.has(artifact.path)) {
+      collisions.push(artifact.path);
+    }
+  }
+  if (collisions.length > 0) {
+    return { status: 'blocked', reason: 'user-file-collision', details: collisions };
+  }
+
+  const staleManagedPaths = [...oldManagedByPath.keys()].filter((p) => !newPaths.has(p));
+  const backupDir = backupDirFor(channel, generation.generation_id);
+  const manifestRelPath = manifestPath(root, channel).slice(root.length + 1).replace(/\\/g, '/');
+
+  writeJournal(root, channel, {
+    generation_id: generation.generation_id,
+    step: 'backing-up',
+    backup_dir: backupDir,
+    previous_generation_id: currentGenerationId,
+    started_at: new Date().toISOString(),
+  });
+
+  if (existsSync(manifestPath(root, channel))) {
+    const dest = join(root, backupDir, manifestRelPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(manifestPath(root, channel), dest);
+  }
+  for (const artifact of generation.manifest.artifacts) {
+    backupFile(root, backupDir, artifact.path);
+  }
+  for (const path of staleManagedPaths) {
+    backupFile(root, backupDir, path);
+  }
+
+  writeJournal(root, channel, {
+    generation_id: generation.generation_id,
+    step: 'promoting',
+    backup_dir: backupDir,
+    previous_generation_id: currentGenerationId,
+    started_at: new Date().toISOString(),
+  });
+
+  for (const artifact of generation.manifest.artifacts) {
+    const src = join(generation.stagingDir, artifact.path);
+    const dest = join(root, artifact.path);
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(src, dest);
+  }
+  for (const path of staleManagedPaths) {
+    const live = join(root, path);
+    if (existsSync(live)) unlinkSync(live);
+  }
+
+  writeJournal(root, channel, {
+    generation_id: generation.generation_id,
+    step: 'writing-manifest',
+    backup_dir: backupDir,
+    previous_generation_id: currentGenerationId,
+    started_at: new Date().toISOString(),
+  });
+
+  const activatedManifest: EmitManifest = {
+    ...generation.manifest,
+    activated_at: new Date().toISOString(),
+  };
+  mkdirSync(dirname(manifestPath(root, channel)), { recursive: true });
+  writeFileSync(manifestPath(root, channel), JSON.stringify(activatedManifest, null, 2), 'utf8');
+
+  writeJournal(root, channel, {
+    generation_id: generation.generation_id,
+    step: 'done',
+    backup_dir: backupDir,
+    previous_generation_id: currentGenerationId,
+    started_at: new Date().toISOString(),
+  });
+
+  return { status: 'activated', manifest: activatedManifest };
+}

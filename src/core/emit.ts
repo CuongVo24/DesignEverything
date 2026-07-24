@@ -2,7 +2,24 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadShapes } from './loadShapes.js';
+import { loadScript } from './loadScript.js';
+import { loadArtifactCatalog } from './loadArtifactCatalog.js';
+import { compileRuntimeCatalog, listArtifacts } from './compileRuntimeCatalog.js';
 import { createHash } from 'crypto';
+
+/**
+ * Resolves a file under Design/Content across both the monorepo layout and
+ * the published package layout (dist sits at different nesting depths).
+ */
+function resolveDesignContentPath(relativeFromDesignContent: string): string {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    join(process.cwd(), 'Design/Content', relativeFromDesignContent),
+    join(__dirname, '../../Design/Content', relativeFromDesignContent),
+    join(__dirname, '../../../Design/Content', relativeFromDesignContent),
+  ];
+  return candidates.find((p) => existsSync(p)) ?? candidates[0];
+}
 
 import { loadProjectProfile, saveProjectProfile } from './projectProfileState.js';
 import { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspectProjectProfile.js';
@@ -91,53 +108,31 @@ export function emitTree(
   templatesDir: string,
   options?: { srcPrefix?: string; workspaceDir?: string }
 ): EmittedDoc[] {
-  // 1. Determine release docs from shapes.yaml registry
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  let shapesPath = join(process.cwd(), 'Design/Content/interview-script/shapes.yaml');
+  // 1. Determine the exact tier-1 doc set for this shape from the authoritative
+  // artifact catalog (B3c) — never a hand-copied literal file list, so adding/
+  // removing a doc only requires editing artifact-catalog.yaml.
+  const shapesPath = resolveDesignContentPath('interview-script/shapes.yaml');
   if (!existsSync(shapesPath)) {
-    shapesPath = join(__dirname, '../../Design/Content/interview-script/shapes.yaml');
+    throw new Error(`shapes.yaml not found at any resolved location: ${shapesPath}`);
   }
-  if (!existsSync(shapesPath)) {
-    shapesPath = join(__dirname, '../../../Design/Content/interview-script/shapes.yaml');
-  }
-  let releaseDocs: string[] = [];
-
-  if (existsSync(shapesPath)) {
-    const registry = loadShapes(shapesPath);
-    const shape = registry.shapes.find((s) => s.id === branch);
-    if (!shape) {
-      throw new Error(`Invalid branch/shape: ${branch}`);
-    }
-    releaseDocs = shape.release_docs;
-  } else {
-    // Fallback if shapes.yaml does not exist
-    if (branch === 'hybrid') {
-      releaseDocs = ['07-deployment.md', '07-release.md'];
-    } else if (branch === 'web') {
-      releaseDocs = ['07-deployment.md'];
-    } else if (branch === 'mobile') {
-      releaseDocs = ['07-release.md'];
-    } else if (branch === 'cli') {
-      releaseDocs = ['07-distribution.md'];
-    } else {
-      throw new Error(`Invalid branch/shape: ${branch}`);
-    }
+  const shapesRegistry = loadShapes(shapesPath);
+  if (!shapesRegistry.shapes.some((s) => s.id === branch)) {
+    throw new Error(`Invalid branch/shape: ${branch}`);
   }
 
-  const files = [
-    '00-vision.md',
-    '01-personas.md',
-    '02-scope.md',
-    '03-data-model.md',
-    '04-flows.md',
-    '05-architecture.md',
-    '06-constraints.md',
-    ...releaseDocs,
-    '08-build-plan.md',
-    '09-execution-plan.md',
-    'decisions.md',
-    'README.md',
-  ];
+  const scriptPath = resolveDesignContentPath('interview-script/script.yaml');
+  const catalogPath = resolveDesignContentPath('artifact-catalog.yaml');
+  const script = loadScript(scriptPath);
+  const artifactCatalog = loadArtifactCatalog(catalogPath);
+  const runtimeCatalog = compileRuntimeCatalog({
+    catalog: artifactCatalog,
+    script,
+    shapes: shapesRegistry,
+  });
+
+  const files = listArtifacts(runtimeCatalog, { shape: branch, tier: 1 })
+    .filter((a) => a.kind === 'doc')
+    .map((a) => a.path!.replace(/^docs\//, ''));
 
   // 2. Prepare filledSlots mapping
   const cwd = options?.workspaceDir ?? process.cwd();
