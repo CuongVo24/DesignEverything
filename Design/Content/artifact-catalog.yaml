@@ -1,0 +1,282 @@
+version: 1.0.0
+# B3c — Authoritative machine-readable artifact catalog.
+# Single source for exact output path/tier/shape/ownership. CLI/adapter/tests
+# read counts and paths from here via compileRuntimeCatalog(), never from a
+# hand-copied literal list. `shapes: [core]` means "every shape"; a shape id
+# (web/mobile/hybrid/cli) restricts the artifact to that shape only.
+artifacts:
+  - id: doc-00-vision
+    path: docs/00-vision.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S0, S1]
+      recipe_ids: []
+
+  - id: doc-01-personas
+    path: docs/01-personas.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S2]
+      recipe_ids: []
+
+  - id: doc-02-scope
+    path: docs/02-scope.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S3]
+      recipe_ids: []
+
+  - id: doc-03-data-model
+    path: docs/03-data-model.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S4]
+      recipe_ids: []
+
+  - id: doc-04-flows
+    path: docs/04-flows.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S5]
+      recipe_ids: [mermaid-flow-diagram]
+
+  - id: doc-05-architecture
+    path: docs/05-architecture.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S8, W1, W2, W3, W4, W5, M1, M2, M3, M4, M5, C1, C2, C3, C4, C5]
+      recipe_ids: [architecture-rationale]
+
+  - id: doc-06-constraints
+    path: docs/06-constraints.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S6, S7]
+      recipe_ids: []
+
+  - id: doc-07-deployment
+    path: docs/07-deployment.md
+    tier: 1
+    shapes: [web, hybrid]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [W3]
+      recipe_ids: []
+
+  - id: doc-07-release
+    path: docs/07-release.md
+    tier: 1
+    shapes: [mobile, hybrid]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [M5]
+      recipe_ids: []
+
+  - id: doc-07-distribution
+    path: docs/07-distribution.md
+    tier: 1
+    shapes: [cli]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [C5]
+      recipe_ids: []
+
+  - id: doc-08-build-plan
+    path: docs/08-build-plan.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S3, S5]
+      recipe_ids: [build-plan]
+
+  - id: doc-09-execution-plan
+    path: docs/09-execution-plan.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [R1]
+      recipe_ids: [execution-plan-risk-classification]
+
+  - id: doc-decisions
+    path: docs/decisions.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: []
+      recipe_ids: [architecture-rationale]
+
+  - id: doc-readme
+    path: docs/README.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: []
+      recipe_ids: [readme-glossary]
+
+  - id: convention-tech-stack
+    path: docs/conventions/tech-stack.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: convention
+    media_type: text/markdown
+    source:
+      question_ids: []
+      recipe_ids: []
+
+  - id: convention-allowed-paths
+    path: docs/conventions/allowed-paths.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: convention
+    media_type: text/markdown
+    source:
+      question_ids: []
+      recipe_ids: []
+
+  - id: convention-coding-standards
+    path: docs/conventions/coding-standards.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: convention
+    media_type: text/markdown
+    source:
+      question_ids: []
+      recipe_ids: []
+
+  - id: convention-test-tiers
+    path: docs/conventions/test-tiers.md
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: convention
+    media_type: text/markdown
+    source:
+      question_ids: []
+      recipe_ids: []
+
+  - id: state-execution-plan-json
+    path: .design-everything/execution-plan.json
+    tier: 1
+    shapes: [core]
+    required: true
+    ownership: managed
+    kind: state
+    media_type: application/json
+    source:
+      question_ids: []
+      recipe_ids: [build-plan]
+
+  - id: tier2-glossary
+    path: docs/design/glossary.md
+    tier: 2
+    shapes: [core]
+    required: false
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S2, S4]
+      recipe_ids: [readme-glossary]
+
+  - id: tier2-test-strategy
+    path: docs/design/test-strategy.md
+    tier: 2
+    shapes: [core]
+    required: false
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S5]
+      recipe_ids: []
+
+  - id: tier2-adr
+    path_pattern: "docs/design/adr/ADR-{seq}.md"
+    tier: 2
+    shapes: [core]
+    required: false
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S8]
+      recipe_ids: [architecture-rationale]
+
+  - id: tier2-feature-spec
+    path_pattern: "docs/design/features/{feature-slug}.md"
+    tier: 2
+    shapes: [core]
+    required: false
+    ownership: managed
+    kind: doc
+    media_type: text/markdown
+    source:
+      question_ids: [S3]
+      recipe_ids: []

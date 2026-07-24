@@ -19,25 +19,29 @@
 
 ## 3. Implementation checklist
 
-- [ ] Render toàn bộ artifact vào generation staging cùng volume, không ghi trực tiếp live paths.
-- [ ] Chạy schema, anchor, consistency, quality/provenance, catalog completeness và plan validation preflight trên staging.
-- [ ] Severity error hoặc unacknowledged warning không được activate.
-- [ ] Manifest generation gồm generation_id, catalog/version digest, input revisions/digest, exact paths, per-file digest, ownership và created_at.
-- [ ] Promotion có journal: backup previous managed files, promote exact new set, activate manifest pointer và execution state; crash recovery roll-forward/rollback idempotent.
-- [ ] Runtime chỉ tin active manifest; staging/partial files không thỏa gate.
-- [ ] Re-emit xóa/archive chỉ stale path có trong previous managed manifest và absent new manifest.
-- [ ] Không delete/overwrite unknown user-owned file; collision phải fail với actionable report.
-- [ ] Successful activation set interview phase ready-for-validation và execution-state plan-validating theo B1c.
-- [ ] CLI output lấy exact activated paths từ manifest, không dựng prefix.
+- [x] Render toàn bộ artifact vào `.design-everything/staging/<generation_id>/` cùng volume với live tree, không ghi trực tiếp live paths (`prepareEmit`).
+- [x] Preflight trên staging: catalog completeness (thiếu required artifact = error), execution-plan.json schema (`executionPlanSchemaV3`), cross-doc consistency (`checkDocsConsistency`, tái dùng nguyên bộ luật B7/B4) (`validateStagedEmit`).
+- [x] Severity `error` chặn `pass`; `warning` (vd docs-consistency) không tự chặn nhưng được trả về để lớp trên bắt user ack — không auto-pass.
+- [x] Manifest generation gồm `generation_id`, `catalog_version`/`catalog_digest`, `input_digest`, exact `path` theo artifact, per-file sha256 `digest`, `ownership`, `created_at`/`activated_at` ([emitManifest.ts](../../../../../src/core/schemas/emitManifest.ts)).
+- [x] Promotion có journal 4 bước (`backing-up → promoting → writing-manifest → done`) ghi TRƯỚC mỗi thao tác ghi đĩa; backup toàn bộ file sắp bị ghi đè/xoá vào `.design-everything/backups/<generation_id>/` trước khi đụng tới live tree.
+- [x] `recoverEmit` đọc journal, luôn rollback về trạng thái known-good gần nhất (restore từ backup + xoá file mới tạo bởi promotion dở dang) nếu step chưa `done`; no-op khi không có journal hoặc step đã `done`; idempotent (test gọi 2 lần liên tiếp). **Đơn giản hoá so với "roll-forward hoặc rollback"**: bản này CHỈ rollback, không roll-forward — an toàn hơn nhưng nghĩa là một promotion dở dang luôn bị huỷ chứ không tự hoàn tất; ghi rõ để B3e/B4 biết khi build trên nó.
+- [x] Runtime chỉ tin `.design-everything/emit-manifest.json` (active manifest) — staging dir không nằm trong live tree nên không thể lẫn vào gate.
+- [x] Re-emit chỉ xoá path có trong previous **managed** manifest và absent ở manifest mới (`staleManagedPaths`); path không managed (user-owned) không bao giờ bị đụng.
+- [x] Không overwrite unknown user-owned file: `activateEmit` kiểm tra mọi target path đã tồn tại trên đĩa mà KHÔNG có trong previous managed manifest → `status:'blocked', reason:'user-file-collision'`, liệt kê path, và **không mutate gì** (kiểm tra chạy trước khi ghi journal).
+- [ ] Successful activation set interview phase `ready-for-validation` và execution-state `plan-validating` theo B1c — **chưa làm**: `activateEmit` hiện chỉ trả `EmitManifest`, chưa nhận/ghi `Progress`/`ExecutionState`. Cần một lớp gọi (adapter/CLI) nối `activateEmit` với `advanceState`/`advanceExecutionState` — để lại cho B4 (CLI/adapter wiring) vì B3d "Out of scope" đã loại trừ "CLI text/exit".
+- [ ] CLI output lấy exact activated paths từ manifest — chưa có CLI entrypoint nào gọi `emitTree`/`activateEmit` trong repo hiện tại (xác nhận bằng grep); để lại cho B4.
 
 ## 4. Interfaces / Files expected to change
 
-- [NEW] src/core/emitTransaction.ts — chia module để mỗi file dưới 200 dòng.
-- [NEW] src/core/schemas/emitManifest.ts.
-- [MODIFY] src/core/emit.ts và src/core/emitTier2.ts — render pure vào target staging.
-- [MODIFY] src/core/checkDocsConsistency.ts.
-- [NEW] src/core/recoverEmitTransaction.ts.
-- [NEW] src/core/emitTransaction.test.ts.
+- [DONE] src/core/schemas/emitManifest.ts — `EmitManifest`, `EmitManifestArtifact`, `EmitJournal`.
+- [DONE] src/core/emitTransactionStage.ts (~100 dòng) — `prepareEmit`.
+- [DONE] src/core/emitTransactionValidate.ts (~95 dòng) — `validateStagedEmit`.
+- [DONE] src/core/emitTransactionActivate.ts (~150 dòng) — `activateEmit` + journal.
+- [DONE] src/core/recoverEmitTransaction.ts (~95 dòng) — `recoverEmit`.
+- [DONE] src/core/emitTransaction.ts — barrel re-export, giữ interface đích §Interfaces.
+- [UNCHANGED] src/core/emit.ts và src/core/emitTier2.ts — đã pure (không ghi đĩa) từ trước B3c/B3d nên không cần sửa để "render pure vào staging"; `emitTree`'s output (`EmittedDoc[]`) là input trực tiếp cho `prepareEmit`.
+- [UNCHANGED] src/core/checkDocsConsistency.ts — dùng nguyên hàm hiện có trong `validateStagedEmit`, không cần sửa.
+- [DONE] src/core/emitTransaction.test.ts — 8 test: staging isolation, preflight pass/fail, first activation, re-emit stale cleanup + user file survives, revision-mismatch block, user-file-collision block (no mutation), recover no-op, recover rollback (idempotent).
 
 Interface đích:
 
@@ -62,4 +66,4 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW — core transaction engine (stage/validate/activate/recover) done and tested; execution-state/interview-phase wiring và CLI output đọc từ manifest còn lại cho B4 (không có CLI entrypoint nào gọi emit hiện nay).

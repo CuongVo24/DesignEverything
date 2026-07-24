@@ -41,6 +41,7 @@ Top-level bắt buộc có:
 | `gate` | string \| null | ✓ | `id` của gate liên quan trong [gate-policy.md](gate-policy.md), hoặc `null` nếu câu này không nối gate. |
 | `translate_back` | string | ✓ | Mẫu/ghi chú dịch ngược để agent tóm trả lời đời thường thành ngôn ngữ chuẩn rồi xác nhận. Không được rỗng. |
 | `depends_on` | array\<string\> | ✓ | Danh sách `id` phải hoàn tất trước khi câu này được hỏi. Có thể rỗng. |
+| `answer_contract` | object | — (optional) | Contract khai báo để [validateAnswer](../../../src/core/validateAnswer.ts) chấm câu trả lời của đúng `id` này: `required`, `min_trimmed_chars`, `min_items`, `required_fields`, `enum_values`, `pattern`, `warning_rules` (mảng `{code, pattern?, message}` — khớp thì outcome thành `needs_user_ack`, KHÔNG tự pass). Thiếu field này = chỉ áp luật rỗng/placeholder mặc định của validator. Nội dung rule cụ thể theo từng câu do B3b sở hữu ở `Content/interview-script/*`; schema này chỉ khoá hình dạng generic, không hardcode ý nghĩa từng câu ([answerContract.ts](../../../src/core/schemas/answerContract.ts)). |
 
 ## 3. Bốn quy tắc vàng (agent PHẢI tuân khi chạy script)
 1. **Hỏi từng câu một** — không bắn nhiều câu cùng lúc.

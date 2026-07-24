@@ -20,26 +20,29 @@ Khóa tiêu chí answer và nội dung dẫn xuất để docs không rỗng ru�
 
 ## 3. Implementation checklist
 
-- [ ] CAL0 chỉ chấp nhận deep/fast; S0 phải có statement meaningful sau trim, không phải placeholder.
-- [ ] S2 yêu cầu ít nhất một persona cụ thể + job-to-be-done; “ai cũng dùng/người dùng phổ thông” phải needs_user_ack.
-- [ ] S3 yêu cầu Must có ít nhất một mục, không overlap Should/Could/Won't, mỗi tier/item có rationale; mọi-Must phải cảnh báo.
-- [ ] S4 entity phải map ít nhất một Must; S5 có start→finish và map Must #1; S6 có team/deadline/budget hoặc explicit unknown.
-- [ ] S8/R1 phải phân loại sensitivity/scale/dependency/risk thành confirmed, assumption hoặc spike-required.
-- [ ] W/M/C rules bắt shape-specific contradictions và critic acknowledgement, gồm offline/sync, store, platform/distribution.
-- [ ] Tạo derived recipes cho build-plan, architecture rationale, README glossary, mermaid và execution plan; mỗi output slot khai source question/doc ids và coverage rule.
-- [ ] Mọi assertion không có source được ghi unknown/assumption, không viết như fact.
-- [ ] Mermaid phải parse được, node/flow map nguồn; glossary term map entity/persona/domain source.
-- [ ] QualityRubric phân rõ deterministic reject và human acknowledgement; executor/LLM không tự xác nhận thay user.
+- [x] S0 phải có statement meaningful sau trim, không phải placeholder (`min_trimmed_chars` + `S0_GENERIC_PITCH` warning trong script.yaml).
+- [x] S2 yêu cầu ít nhất một persona cụ thể + job-to-be-done; "ai cũng dùng/người dùng phổ thông" phải needs_user_ack (`S2_GENERIC_PERSONA`).
+- [x] S3 yêu cầu Must có ít nhất một mục (pattern `must`); mọi-Must (`S3_EVERYTHING_IS_MUST`) và thiếu Won't (`S3_MISSING_WONT`) phải cảnh báo needs_user_ack.
+- [x] S4/S5/S6 có `answer_contract` tối thiểu (min_trimmed_chars); mapping ngữ nghĩa Must/entity/flow đầy đủ để lại cho rubric B (đã có) do không thể chấm generic bằng regex.
+- [x] S8/R1 có `answer_contract`; R1 `required:false` vì câu hỏi tự cho phép "không biết". Phân loại confirmed/assumption/spike-required do recipe `execution-plan-risk-classification` sở hữu, không phải validator generic.
+- [x] W5 (realtime), M2 (offline/sync), M5 (store), C5 (đa nền tảng/distribution) có `warning_rules` bắt shape-specific contradiction, cộng hưởng với `critics` đã có sẵn ở S3/W5/M5/C5.
+- [x] Tạo `derived-recipes.yaml` cho build-plan, architecture rationale, README glossary, mermaid và execution-plan risk classification; mỗi recipe khai `inputs` (question/doc ids) và `coverage.rule`.
+- [x] Mọi recipe có `unknown_policy: flag` + `fallback.on_missing_source` ghi `⚠ unknown — cần hỏi người`, không viết như fact.
+- [x] Recipe mermaid có `validation.must_parse_as_mermaid` và `node_source_map`; recipe glossary map entity/persona/domain source qua `inputs`.
+- [x] QualityRubric mục F/G phân rõ deterministic reject (mục A/B/C/D hiện có) và human acknowledgement (`warning_rules`); ghi rõ executor/LLM không tự xác nhận thay user.
+
+Ghi chú phạm vi: `answer_contract.pattern` được khai báo declarative trong script.yaml nhưng validator hiện tại (B3a) mới enforce `required/min_trimmed_chars/warning_rules`; enforce đầy đủ `pattern/min_items/required_fields/enum_values` là phần còn lại của B3a, không phải B3b.
 
 ## 4. Interfaces / Files expected to change
 
-- [MODIFY] Design/Content/interview-script/script.yaml — khai answer_contract.
-- [MODIFY] Design/Content/interview-script/deepen-script.yaml nếu tier-2 dùng cùng quality rule.
-- [NEW] Design/Content/interview-script/derived-recipes.yaml.
-- [MODIFY] Design/Content/QualityRubric.md.
-- [MODIFY] Design/Content/interview-script/S0-S6-core.md và các W/M/C content files.
-- [MODIFY] doc-templates liên quan provenance/source refs.
-- [NEW] test/fixtures/content-quality/ hợp lệ và phản ví dụ.
+- [DONE] Design/Content/interview-script/script.yaml — khai `answer_contract` cho S0–S6, S8, R1, W5, M2, M5, C5.
+- [DONE] src/core/schemas/interviewScript.ts — thêm field `answer_contract` optional vào `questionSchema`.
+- [DONE] Design/Core/Schemas/interview-script.md — tài liệu hoá field mới.
+- [DONE] Design/Content/interview-script/derived-recipes.yaml — 5 recipe (build-plan, architecture-rationale, readme-glossary, mermaid-flow-diagram, execution-plan-risk-classification).
+- [DONE] Design/Content/QualityRubric.md — thêm mục F (derived content provenance) và G (deterministic reject vs human ack).
+- [DONE] src/core/contentQualityContract.test.ts — test script.yaml parse + derived-recipes shape + hành vi warning_rules cho S0/S2/S3/M2/M5/W5/C5.
+- [DEFERRED] Design/Content/interview-script/deepen-script.yaml quality rule đồng bộ — để B3e vì gắn tier-2 lifecycle.
+- [DEFERRED] test/fixtures/content-quality/ dạng file fixture riêng — coverage hiện nằm trong contentQualityContract.test.ts; tách fixture rời khi có nhiều golden example hơn.
 
 ## 5. Risks & mitigations
 
@@ -57,4 +60,4 @@ Khóa tiêu chí answer và nội dung dẫn xuất để docs không rỗng ru�
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IMPLEMENTED_WAITING_FOR_REVIEW

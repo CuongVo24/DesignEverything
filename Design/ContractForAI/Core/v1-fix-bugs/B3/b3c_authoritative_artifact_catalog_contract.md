@@ -19,24 +19,28 @@ Loại số file/path/journey viết tay bằng một catalog máy đọc duy nh
 
 ## 3. Implementation checklist
 
-- [ ] Catalog mỗi artifact gồm id, exact relative path, tier, shapes, required, ownership, source questions/recipes và media type.
-- [ ] Catalog phân biệt docs files, docs/conventions, .design-everything/execution-plan.json, state và manifests; không gắn docs/ theo thói quen.
-- [ ] Journey catalog compile thứ tự CAL0, S0–S8, R1 và W/M/C theo branch; hybrid union theo rule explicit.
-- [ ] Artifact count luôn tính từ filtered catalog; không lưu magic number 10/11/12/13 trong CLI/docs tests.
-- [ ] Compiler validate duplicate path/id, missing target_doc, shape không tồn tại, case collision và path ngoài managed roots.
-- [ ] Emit trả danh sách exact paths từ activated manifest.
-- [ ] Public docs có thể nhúng generated table/count hoặc test assertion từ catalog.
-- [ ] Catalog version/digest nằm trong install và emit manifests.
-- [ ] Tier-2/deepen artifacts mở rộng cùng schema, không lập danh sách riêng trong adapter.
+- [x] Catalog mỗi artifact gồm id, exact relative path (hoặc `path_pattern` cho tier-2 dynamic), tier, shapes, required, ownership, source questions/recipes và media type ([artifact-catalog.yaml](../../../../Content/artifact-catalog.yaml)).
+- [x] Catalog phân biệt docs files (`kind: doc`), docs/conventions (`kind: convention`), `.design-everything/execution-plan.json` (`kind: state`, không gắn `docs/`); `loadArtifactCatalog` reject state path nằm dưới `docs/`.
+- [x] Journey catalog compile theo branch từ chính `script.yaml` (loại `kind=meta` như CAL0); hybrid = union web+mobile theo cùng rule `isQuestionCompatible` đã dùng ở `advanceState.ts`.
+- [x] Artifact count luôn tính từ filtered catalog (`listArtifacts(rt,{shape,tier}).filter(kind==='doc').length`); test khẳng định 12 (web/mobile/cli) / 13 (hybrid) đọc trực tiếp từ catalog, không copy con số vào code.
+- [x] Compiler (`compileRuntimeCatalog`) validate: duplicate id/path (ở loader), unknown question id, shape không tồn tại trong registry, case-collision path, path ngoài `docs/`/`.design-everything/`; 07-* phải khớp `shapes.yaml.release_docs` (chống drift hai nguồn).
+- [x] `emit.ts` (tier-1) không còn hardcode literal file list — `emitTree` build `files` từ `listArtifacts(runtimeCatalog, {shape: branch, tier: 1})`, giữ nguyên hành vi (13 tests emit.test.ts/emitGreenfieldStack.test.ts pass không đổi assertion).
+- [x] Catalog version/digest tính bằng sha256 trên `{version, artifacts}` đã sort ổn định (`RuntimeCatalog.digest`); sẵn sàng cho manifest ở B3d.
+- [x] Tier-2/deepen artifacts (`glossary`, `test-strategy`, `adr` bằng `path_pattern`, `feature-spec` bằng `path_pattern`) khai trong cùng schema catalog, không lập danh sách riêng trong adapter.
+
+Đã deferred sang B3d/B3e (không thuộc phạm vi B3c theo "Out of scope"):
+- Wiring `emitTier2.ts` để dùng `path_pattern` sinh path ADR/feature-spec thật (tier-2 lifecycle thuộc B3e).
+- Nhúng generated table/count vào public docs (README/skill wording) — cosmetic, không chặn runtime correctness.
 
 ## 4. Interfaces / Files expected to change
 
-- [NEW] Design/Content/artifact-catalog.yaml hoặc generated source tương đương.
-- [NEW] src/core/loadArtifactCatalog.ts — khoảng 100–160 dòng.
-- [NEW] src/core/compileRuntimeCatalog.ts — khoảng 100–170 dòng.
-- [MODIFY] src/core/emit.ts và src/core/emitTier2.ts để nhận catalog.
-- [MODIFY] src/core/schemas/index.ts.
-- [NEW] src/core/artifactCatalog.test.ts.
+- [DONE] Design/Content/artifact-catalog.yaml — 23 artifact records (12 core-shape docs, 3 shape-specific 07-*, 4 conventions, 1 state, 4 tier-2).
+- [DONE] src/core/schemas/artifactCatalog.ts — artifactSourceSchema/artifactRecordSchema/artifactCatalogSchema.
+- [DONE] src/core/loadArtifactCatalog.ts — load + duplicate/case-collision/outside-root/state-under-docs validation.
+- [DONE] src/core/compileRuntimeCatalog.ts — compileRuntimeCatalog/listArtifacts/listJourney, digest, shape/question/release-doc drift validation.
+- [DONE] src/core/emit.ts — `emitTree` build tier-1 `files` từ catalog thay vì literal array; giữ nguyên `emitTier2.ts` (deferred, xem ghi chú §3).
+- [DONE] src/core/schemas/index.ts — export schema/type mới.
+- [DONE] src/core/artifactCatalog.test.ts — 9 test (load/compile, count snapshot, state path, journey, 4 mutation-reject case).
 
 Interface đích:
 
@@ -60,4 +64,4 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IMPLEMENTED_WAITING_FOR_REVIEW

@@ -8,14 +8,28 @@ GATE không đọc được "ý định" hay chất lượng câu trả lời �
 ## 1. Top-level shape
 ```json
 {
-  "version": "0.1.0",
+  "version": "7.0.0",
   "phase": "interview",
+  "session_id": "sess-8f3a921d",
+  "state_revision": 4,
   "branch": null,
   "calibrate_mode": null,
   "current_step": "S4",
   "answered": ["S0", "S1", "S2", "S3"],
   "emitted_docs": ["00-vision.md", "01-personas.md", "02-scope.md"],
   "gates_passed": ["scope-locked"],
+  "pending_turn_capability": {
+    "token_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "session_id": "sess-8f3a921d",
+    "operation_kind": "interview",
+    "question_id": "S4",
+    "subject_id": null,
+    "expected_revision": 4,
+    "issued_at": "2026-07-22T00:00:00Z",
+    "expires_at": "2026-07-22T00:30:00Z",
+    "consumed_at": null,
+    "status": "active"
+  },
   "last_user_turn_id": "turn-0004",
   "answered_len_at_last_turn": 4,
   "updated_at": "2026-06-25T00:00:00Z"
@@ -26,16 +40,19 @@ GATE không đọc được "ý định" hay chất lượng câu trả lời �
 
 | Field | Kiểu | Bắt buộc | Ý nghĩa |
 |---|---|---|---|
-| `version` | string | ✓ | Phiên bản schema state. Batch 1 khoá ở `0.1.0`. |
+| `version` | string | ✓ | Phiên bản schema state. V7.0.0 khoá capability token. |
 | `phase` | `interview` \| `docs-emitted` \| `ready-to-build` | ✓ | Pha hiện tại của phiên. |
+| `session_id` | string | ✓ | ID phiên phỏng vấn định danh duy nhất cho khoá capability. |
+| `state_revision` | number | ✓ | Số revision tăng tự động sau mỗi giao dịch state commit. |
 | `branch` | `<shape-id>` \| null | ✓ | `null` trước khi chốt câu chọn hình-hài (S7); sau S7 phải là một `<shape-id>` có thật trong registry [taxonomy.md](../../Content/taxonomy.md) (vd `web`, `mobile`, `hybrid`, `cli`). |
 | `calibrate_mode` | `deep` \| `fast` \| null | ✓ | Chế độ giải thích do câu meta `CAL0` set: `deep` (giải thích kỹ, người mới) vs `fast` (đi nhanh, có kinh nghiệm); cũng quyết định độ gắt critic. `null` trước khi trả `CAL0`. |
 | `current_step` | string \| null | ✓ | `id` câu đang chờ câu trả lời người thật. `null` khi đã hoàn tất phỏng vấn và chuyển pha. |
 | `answered` | array\<string\> | ✓ | Các `id` đã nhận câu trả lời người thật và đã được xác nhận. |
 | `emitted_docs` | array\<string\> | ✓ | Danh sách file doc đã được EMIT ra theo taxonomy. |
 | `gates_passed` | array\<string\> | ✓ | Các gate đã mở vì artifact yêu cầu đã có. |
-| `last_user_turn_id` | string \| null | ✓ | `id` lượt người thật đã uỷ quyền cho lần commit gần nhất. Một `id` chỉ gắn với đúng một lần append `answered`. |
-| `answered_len_at_last_turn` | number | ✓ | Độ dài `answered` ghi nhận ở lần `UserPromptSubmit` gần nhất. Hook dùng để kiểm "mỗi lượt người thật chỉ tiến tối đa 1 bước". Khởi tạo `0`. |
+| `pending_turn_capability` | capability_record \| null | ✓ | Thẻ ủy quyền capability lượt dùng duy nhất (single-use turn capability). |
+| `last_user_turn_id` | string \| null | ✓ | `id` lượt người thật đã uỷ quyền cho lần commit gần nhất. |
+| `answered_len_at_last_turn` | number | ✓ | Độ dài `answered` ghi nhận ở lần `UserPromptSubmit` gần nhất. |
 | `updated_at` | string (ISO-8601 UTC) | ✓ | Timestamp lần cập nhật state gần nhất. |
 
 ## 3. Mô hình hai lớp: ai được mutate state
@@ -93,6 +110,10 @@ Enforcement chia làm hai lớp tách bạch — **đây là điểm cốt lõi 
 ## V3 Execution Expansion — target 4.0.0
 
 Trong khuôn khổ mở rộng thực thi V3, tệp `progress.json` giữ nguyên mục đích quản lý lịch sử phỏng vấn. Toàn bộ thông tin thực thi được theo dõi độc lập qua tệp `.design-everything/execution-state.json`.
+
+## B3d/B3e — quan hệ với emit manifest và deepen (2026-07-24)
+
+Từ B3d, tier-1 doc set không còn được coi là "đã emit" chỉ vì `progress.emitted_docs` khớp danh sách — nguồn xác thực là `.design-everything/emit-manifest.json` (`activated_at !== null`), xem [emitManifest.ts](../../../src/core/schemas/emitManifest.ts). `progress.json` vẫn là state phỏng vấn; nó không tự chứa manifest, nhưng bất kỳ luồng nào cần biết "tier-1 đã sẵn sàng để mở deepen chưa" phải đọc cả hai: `progress.current_step === null` (phỏng vấn xong) VÀ `emit-manifest.json.activated_at` (đã activate) — xem [`canStartDeepen`](../../../src/core/deepenLifecycle.ts) và [taxonomy-tier2.md](../../Content/taxonomy-tier2.md#vòng-đời-deepen-và-ảnh-hưởng-lên-execution-state-b3e). Tier-2 dùng manifest riêng (`emit-manifest-tier2.json`) qua cùng cơ chế transaction ở B3d, không lẫn với manifest tier-1.
 
 Cấu trúc chi tiết của `execution-state.json`:
 - `version`: string (e.g. "4.0.0")

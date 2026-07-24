@@ -1,0 +1,105 @@
+version: 1.0.0
+# B3b — Derived content provenance recipes.
+# Mỗi recipe khai báo: input (question_id/doc_id được phép trích nguồn),
+# output_schema (hình dạng slot kết quả), coverage (luật bắt buộc mỗi phần tử
+# output phải trỏ được về ít nhất một input), và unknown_policy (xử lý khi
+# thiếu nguồn — luôn là "flag", không bao giờ "invent").
+recipes:
+  - id: build-plan
+    target_doc: 09-execution-plan.md
+    description: >
+      Sinh execution plan (task/milestone) từ Must đã chốt ở S3, flow ở S5
+      và rủi ro phân loại ở R1/S8.
+    inputs:
+      question_ids: [S3, S4, S5, S6, S7, R1, S8]
+    output_schema:
+      type: array
+      item:
+        required_fields: [task_id, title, source_refs, tier]
+    coverage:
+      rule: every_item_has_source_refs
+      min_source_refs_per_item: 1
+      allowed_source_kinds: [question_id, doc_id]
+    unknown_policy: flag
+    fallback:
+      on_missing_source: "> ⚠ unknown — cần hỏi người"
+
+  - id: architecture-rationale
+    target_doc: 05-architecture.md
+    description: >
+      Sinh phần "vì sao chọn X" cho mỗi quyết định kiến trúc, map trực tiếp
+      tới câu trả lời nhánh W/M/C và S8 (sensitivity/scale).
+    inputs:
+      question_ids: [S8, W1, W2, W3, W4, W5, M1, M2, M3, M4, M5, C1, C2, C3, C4, C5]
+    output_schema:
+      type: array
+      item:
+        required_fields: [decision, rationale, source_refs]
+    coverage:
+      rule: every_item_has_source_refs
+      min_source_refs_per_item: 1
+      allowed_source_kinds: [question_id]
+    unknown_policy: flag
+    fallback:
+      on_missing_source: "> ⚠ unknown — cần hỏi người"
+
+  - id: readme-glossary
+    target_doc: glossary.md
+    description: >
+      Sinh bảng thuật ngữ từ entity ở S4, persona ở S2 và domain terms xuất
+      hiện trong 03-data-model.md.
+    inputs:
+      question_ids: [S2, S4]
+      doc_ids: [03-data-model.md]
+    output_schema:
+      type: array
+      item:
+        required_fields: [term, definition, source_refs]
+    coverage:
+      rule: every_item_has_source_refs
+      min_source_refs_per_item: 1
+      allowed_source_kinds: [question_id, doc_id]
+    unknown_policy: flag
+    fallback:
+      on_missing_source: "> ⚠ unknown — cần hỏi người"
+
+  - id: mermaid-flow-diagram
+    target_doc: 04-flows.md
+    description: >
+      Sinh sơ đồ mermaid từ luồng điển hình ở S5; mỗi node/edge map về
+      đúng bước đã kể ở S5.
+    inputs:
+      question_ids: [S5]
+    output_schema:
+      type: object
+      required_fields: [mermaid_source, node_source_map]
+    coverage:
+      rule: every_node_has_source_refs
+      min_source_refs_per_item: 1
+      allowed_source_kinds: [question_id]
+    unknown_policy: flag
+    fallback:
+      on_missing_source: "> ⚠ unknown — cần hỏi người"
+    validation:
+      must_parse_as_mermaid: true
+
+  - id: execution-plan-risk-classification
+    target_doc: 09-execution-plan.md
+    description: >
+      Phân loại từng rủi ro ở R1/S8 thành confirmed, assumption hoặc
+      spike-required; không bao giờ trình bày assumption như fact.
+    inputs:
+      question_ids: [R1, S8]
+    output_schema:
+      type: array
+      item:
+        required_fields: [risk, classification, source_refs]
+        enum_fields:
+          classification: [confirmed, assumption, spike-required]
+    coverage:
+      rule: every_item_has_source_refs
+      min_source_refs_per_item: 1
+      allowed_source_kinds: [question_id]
+    unknown_policy: flag
+    fallback:
+      on_missing_source: "> ⚠ unknown — cần hỏi người"

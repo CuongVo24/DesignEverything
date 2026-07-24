@@ -18,6 +18,13 @@ questions:
     gate: null
     translate_back: "Để mình tóm lại thành 1 câu ngắn kiểu elevator pitch: `<bản tóm lại>`. Mình hiểu vậy đúng chưa?"
     depends_on: []
+    answer_contract:
+      required: true
+      min_trimmed_chars: 12
+      warning_rules:
+        - code: S0_GENERIC_PITCH
+          pattern: "^(nền tảng|ứng dụng|hệ thống|app)\\s+(kết nối|quản lý|hỗ trợ)\\s+(mọi người|mọi thứ|tất cả)\\.?$"
+          message: "Pitch nghe chung chung kiểu \"nền tảng kết nối mọi người\" — thiếu nỗi đau cụ thể, cần mô tả rõ hơn."
   - id: S1
     ask: "Hiện giờ mọi người đang khổ vì chuyện gì, và đang xoay xở kiểu nào khi chưa có sản phẩm này?"
     default: "Suy từ câu S0 rồi đề xuất 1 cách hiểu cụ thể nhất để người dùng xác nhận hoặc sửa."
@@ -27,6 +34,10 @@ questions:
     gate: null
     translate_back: "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`. Hiện tại họ giải quyết tạm bằng: `<cách xoay xở hiện nay>`. Đúng ý bạn chứ?"
     depends_on: [S0]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 8
+      warning_rules: []
   - id: S2
     ask: "Kể cho mình 1-2 người sẽ dùng nó đầu tiên. Họ là ai, và họ muốn xong việc gì khi mở sản phẩm ra?"
     default: "Người dùng phổ thông trực tiếp thao tác + 1 vai trò admin hoặc người quản lý nếu dự án có phối hợp nhóm."
@@ -36,6 +47,13 @@ questions:
     gate: null
     translate_back: "Mình tóm lại có các nhóm người dùng chính sau: `<persona 1>` muốn `<job-to-be-done 1>`; `<persona 2>` muốn `<job-to-be-done 2>`. Ổn chưa?"
     depends_on: [S0, S1]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 10
+      warning_rules:
+        - code: S2_GENERIC_PERSONA
+          pattern: "(ai cũng|mọi người|người dùng phổ thông|tất cả mọi người|anyone|everyone)"
+          message: "Persona đang nói \"ai cũng dùng\"/\"người dùng phổ thông\" — cần một nhóm người cụ thể và job-to-be-done rõ ràng."
   - id: S3
     ask: "Cứ kể lộn xộn những việc bạn muốn người dùng làm được trong phiên bản đầu. Không cần tự sắp ưu tiên, mình sẽ giúp nhóm lại."
     default: |
@@ -54,6 +72,17 @@ questions:
     gate: scope-locked
     translate_back: "Mình đã nhóm lại thành 4 tầng: Must / Should / Could / Won't. Bản MVP nhỏ nhất mình đề xuất là: `<danh sách Must>`. Phần này để sau là: `<danh sách còn lại>`. Bạn xác nhận giúp mình nhé."
     depends_on: [S0, S1, S2]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 15
+      pattern: "must"
+      warning_rules:
+        - code: S3_EVERYTHING_IS_MUST
+          pattern: "(mọi (tính năng|thứ)|tất cả (đều|các tính năng)|toàn bộ (tính năng|danh sách))\\s*(là |đều |)must"
+          message: "Có vẻ toàn bộ danh sách đang được xếp vào Must — cần xác nhận đây thật sự là bộ MVP nhỏ nhất, không phải mọi thứ đều bắt buộc."
+        - code: S3_MISSING_WONT
+          pattern: "^(?:(?!won)[\\s\\S])*$"
+          message: "Danh sách chưa thấy phần Won't — xác nhận bạn thật sự chưa muốn loại trừ gì ở MVP này."
   - id: S4
     ask: "Để làm được những việc ở trên, sản phẩm cần nhớ những gì? Cứ kể kiểu đời thường như người dùng, nhóm, khoản chi, ảnh, lịch sử..."
     default: "Suy entity trực tiếp từ nhóm Must; chỉ giữ những thứ có ít nhất một tính năng dùng tới."
@@ -63,6 +92,10 @@ questions:
     gate: null
     translate_back: "Mình tóm lại các dữ liệu lõi là: `<danh sách entity>` cùng quan hệ chính giữa chúng. Mỗi loại dữ liệu này phục vụ trực tiếp cho các tính năng Must. Đúng chứ?"
     depends_on: [S0, S1, S2, S3]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 8
+      warning_rules: []
   - id: S5
     ask: "Kể thử một lần dùng điển hình từ lúc mở app đến lúc xong việc. Mình chỉ cần một luồng thật nhất thôi."
     default: "Dựng luồng từ tính năng Must quan trọng nhất đã chốt ở S3."
@@ -72,6 +105,10 @@ questions:
     gate: null
     translate_back: "Mình viết lại luồng chuẩn như sau: `<các bước mở đến xong việc>`. Luồng này sẽ là ví dụ chính để kiểm tra MVP có thật sự dùng được hay không."
     depends_on: [S0, S1, S2, S3, S4]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 12
+      warning_rules: []
   - id: S6
     ask: "Bạn làm một mình hay có nhóm, deadline thế nào, ngân sách đến đâu?"
     default: "Solo, không deadline cứng, ưu tiên free-tier."
@@ -81,6 +118,10 @@ questions:
     gate: null
     translate_back: "Mình tóm lại ràng buộc hiện tại là: `<nguồn lực>`, `<deadline>`, `<ngân sách>`. Mình sẽ dùng phần này để giới hạn scope."
     depends_on: [S0, S1, S2, S3, S4, S5]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 6
+      warning_rules: []
   - id: S7
     ask: "Hệ thống hỗ trợ các hình-hài dự án sau: Ứng dụng web (web), App di động (mobile), Web + Mobile (hybrid), Công cụ dòng lệnh (cli). Bạn chọn hình-hài nào?"
     default: "web"
@@ -99,6 +140,10 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận các điểm bất định/rủi ro kỹ thuật cần khảo sát: `<rủi ro của bạn>`. Mình sẽ tự động phân loại chúng thành confirmed (đã xác thực), assumption (giả định), hoặc spike-required (cần nghiên cứu trước)."
     depends_on: [S7]
+    answer_contract:
+      required: false
+      min_trimmed_chars: 0
+      warning_rules: []
   - id: S8
     ask: "Một câu nữa trước khi vào phần kỹ thuật, hỏi gộp hai ý: (1) Sản phẩm có giữ dữ liệu gì nhạy cảm không — thông tin cá nhân, thanh toán, sức khỏe, hay nội dung riêng tư của người dùng? (2) Năm đầu bạn hình dung khoảng bao nhiêu người dùng — vài chục người quen, vài trăm, hay hàng nghìn? Cứ đoán, không cần chính xác."
     default: "Không giữ dữ liệu nhạy cảm ngoài thông tin đăng nhập cơ bản; quy mô vài chục tới vài trăm người dùng trong năm đầu."
@@ -108,6 +153,10 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận hai yêu cầu phi chức năng: dữ liệu nhạy cảm gồm `<danh sách hoặc 'không có'>`, và quy mô dự kiến năm đầu khoảng `<số người dùng>`. Hai điều này quyết định mức bảo mật và mức tối ưu **đủ dùng** cho dự án — để không làm thừa (tốn thời gian) mà cũng không làm thiếu (vỡ khi có người dùng thật)."
     depends_on: [R1]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 6
+      warning_rules: []
   - id: W1
     ask: "Người chưa đăng nhập, thậm chí chưa biết sản phẩm, có cần tìm thấy nội dung này trên Google không? Hay đây gần như là chỗ chỉ dùng sau khi vào tài khoản?"
     default: "Nếu cần người lạ tìm thấy nội dung hoặc trang công khai, ưu tiên SSR/SSG với Next.js. Nếu gần như chỉ dùng sau đăng nhập, ưu tiên SPA để đơn giản hóa."
@@ -153,6 +202,13 @@ questions:
     gate: null
     translate_back: "Mình tóm lại mức tương tác thời gian thực là `<không cần / cần ở chỗ nào>`, và nhu cầu quản trị là `<có / chưa cần admin riêng>`. Vì vậy kiến trúc nên `<giữ đơn giản không realtime / bổ sung realtime có phạm vi rõ>`."
     depends_on: [R1, S8, W1, W2, W3, W4]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 4
+      warning_rules:
+        - code: W5_REALTIME_REQUESTED
+          pattern: "(realtime|thời gian thực|live|đồng bộ tức thì)"
+          message: "Bạn vừa yêu cầu realtime — chi phí hạ tầng và độ phức tạp sẽ tăng đáng kể, cần xác nhận đã cân nhắc đánh đổi này."
   - id: M1
     ask: "App di động này trước mắt chạy trên hệ điều hành nào (iOS hoặc Android) mà bạn đang có thiết bị thật để test? Bạn có muốn giới hạn ở một bên để đơn giản hóa MVP, hay bắt buộc phải chạy cả hai ngay từ đầu?"
     default: "Một nền tảng duy nhất mà bạn đang dùng thiết bị thật để thử nghiệm (Android hoặc iOS) để tránh phức tạp hóa việc build/test cả hai môi trường ở MVP."
@@ -171,6 +227,13 @@ questions:
     gate: null
     translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn có đồng ý đánh đổi chi phí này để lấy trải nghiệm offline không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 4
+      warning_rules:
+        - code: M2_OFFLINE_SYNC_REQUESTED
+          pattern: "(offline|mất mạng|đồng bộ|sync)"
+          message: "Bạn vừa chọn offline/sync — chi phí và thời gian phát triển sẽ tăng gấp đôi (lưu trữ cục bộ, hàng đợi, giải quyết xung đột). Cần xác nhận đồng ý đánh đổi này."
   - id: M3
     ask: "App có cần đụng tới phần cứng hay dữ liệu trong máy như camera, vị trí, danh bạ, micro, hay thư viện ảnh không?"
     default: "Chỉ xin đúng những quyền thật sự phục vụ tính năng Must; không xin 'để danh'."
@@ -198,6 +261,13 @@ questions:
     gate: null
     translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer (Apple App Store: $99/năm, Google Play Store: $25 một lần), và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn có đồng ý chuẩn bị các thủ tục và chi phí này không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1, M2, M3, M4]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 4
+      warning_rules:
+        - code: M5_STORE_RELEASE_REQUESTED
+          pattern: "(store|lên store|app store|play store|phát hành thật)"
+          message: "Bạn vừa chọn lên store thật — cần chuẩn bị App Signing, phí Developer (Apple $99/năm, Google $25 một lần) và chờ review. Cần xác nhận đã hiểu rõ chi phí/quy trình này."
   - id: C1
     ask: "Bạn muốn viết công cụ dòng lệnh này bằng ngôn ngữ hay môi trường nào (ví dụ Node.js, Python, Go, Rust, hay Bash script)?"
     default: "Node.js (TypeScript) để tận dụng hệ sinh thái phong phú và dễ đóng gói."
@@ -243,6 +313,13 @@ questions:
     gate: null
     translate_back: "Mình xác nhận cơ chế phân phối ban đầu: `<cục bộ qua node/npx / npm link / NPM registry>`."
     depends_on: [R1, S8, C1, C2, C3, C4]
+    answer_contract:
+      required: true
+      min_trimmed_chars: 4
+      warning_rules:
+        - code: C5_MULTIPLATFORM_DISTRIBUTION_REQUESTED
+          pattern: "(github releases|homebrew|scoop|binary biên dịch sẵn)"
+          message: "Bạn vừa chọn phân phối binary đa nền tảng — cần xác nhận đã cân nhắc rủi ro tương thích path/CRLF và quy trình build/ký cho từng hệ điều hành."
 critics:
   S3:
     challenge: |

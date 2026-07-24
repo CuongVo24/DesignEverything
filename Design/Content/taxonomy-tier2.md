@@ -30,6 +30,15 @@ docs/
 | **test-strategy** | `docs/design/test-strategy.md` | 1 file duy nhất | Kích hoạt khi dự án sử dụng CI/CD hoặc yêu cầu kiểm thử tự động. |
 | **contract-lane** | *N/A* | *N/A* | **HOÃN** (Deferred) sang phiên bản sau do các điều kiện multi-agent chưa được sản phẩm hoá. |
 
+## Vòng đời deepen và ảnh hưởng lên execution state (B3e)
+
+Mở (opt-in) một module tầng 2 chỉ được phép khi cả ba điều kiện đúng — kiểm bằng [`canStartDeepen`](../../src/core/deepenLifecycle.ts):
+1. Tier-1 đã có manifest **activated** (không phải staging dở dang) — xem [emitManifest.ts](../../src/core/schemas/emitManifest.ts).
+2. Phỏng vấn lõi không còn câu bắt buộc (`progress.current_step === null` và `phase !== 'interview'`).
+3. Execution không ở pha bận: `executing`, `verifying`, `repairing`, `reviewing`, `blocked` đều bị deny.
+
+`adr` và `test-strategy` là hai module **plan-affecting** — chúng mô tả lại chính architecture/test-strategy mà một execution plan đã validate dựa vào. Emit lại một trong hai module này khi execution đã đi qua khỏi `plan-validating` sẽ đánh dấu snapshot stale (`invalidateSnapshotForTier2`): state chuyển `blocked` với `block_reason.kind = 'snapshot-stale'`, `recoverable_by = '/build validate'`. `glossary` và `feature-spec` không bao giờ invalidate theo cách này.
+
 ## Ngữ pháp SourceRef (Nguồn gốc thông tin)
 
 Mỗi khối nội dung (heading hoặc block thông tin quan trọng) trong tài liệu tầng 2 bắt buộc phải kết thúc bằng **đúng một dòng** chỉ định nguồn gốc thông tin theo ngữ pháp chuẩn dưới đây. Không tự ý viết biến thể khác để hỗ trợ parser tự động đọc:
