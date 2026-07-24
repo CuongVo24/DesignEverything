@@ -2,9 +2,25 @@ export * from './schemas/index.js';
 export { loadScript } from './loadScript.js';
 export { loadGatePolicy } from './loadGatePolicy.js';
 export { loadProgress, saveProgress } from './loadProgress.js';
+export { loadInterviewStore, transactInterviewStore, computePayloadChecksum } from './interviewStore.js';
+export { migrateInterviewStore } from './migrateInterviewStore.js';
 export { commitStep, checkRate, stampTurn } from './advanceState.js';
+export { issueTurnCapability, verifyTurnCapability, hashToken } from './turnCapability.js';
+export type { TurnCapabilityRecord, IssueCapabilityInput, IssueCapabilityResult, VerifyTurnResult } from './turnCapability.js';
 export { evaluateGate, isBlocked, passedGates, checkExecutionGate } from './evaluateGate.js';
+export { buildGateSnapshot } from './gateSnapshot.js';
+export type { GateSnapshot, GateArtifactInfo } from './gateSnapshot.js';
 export { evaluatePreAction } from './evaluatePreAction.js';
+export { validateAnswer } from './validateAnswer.js';
+export type { AnswerValidationOutcome, AnswerValidationResult } from './validateAnswer.js';
+export { loadQuestionSlots } from './loadQuestionSlots.js';
+export type { LoadSlotsResult } from './loadQuestionSlots.js';
+export { inspectRuntimeHealth, authorizeRecovery } from './runtimeHealth.js';
+export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
+export type { ArtifactClass } from './artifactOwnership.js';
+export { classifyCommand } from './classifyCommand.js';
+export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';
+export { canonicalizeWorkspacePath, matchesPathPattern, isContainedRealPath } from './pathPolicy.js';
 export { loadDeepenScript } from './loadDeepenScript.js';
 export { slugify, slugifyList } from './slugify.js';
 export {
@@ -33,6 +49,11 @@ export {
   applyReviewOutcome,
   closeFeatureReview,
   assertNoUnreviewedFeature,
+  completeTier1Emit,
+  evaluateBuildReadiness,
+  blockExecution,
+  recoverBlockedExecution,
+  allowedRemediation,
 } from './advanceExecutionState.js';
 export { reviewFeatureOutput } from './reviewFeatureOutput.js';
 export type { ReviewSignal } from './reviewFeatureOutput.js';
@@ -94,6 +115,31 @@ export { validateContract } from './validateContract.js';
 export { parseDataModel } from './parseDataModel.js';
 export { parseFlows } from './parseFlows.js';
 export { synthesizeFeatureContracts } from './synthesizeFeatureContracts.js';
+export { loadArtifactCatalog } from './loadArtifactCatalog.js';
+export { compileRuntimeCatalog, listArtifacts, listJourney } from './compileRuntimeCatalog.js';
+export type { RuntimeCatalog } from './compileRuntimeCatalog.js';
+export {
+  prepareEmit,
+  stagingDirFor,
+  isStaged,
+  validateStagedEmit,
+  activateEmit,
+  recoverEmit,
+} from './emitTransaction.js';
+export type {
+  StagedGeneration,
+  StageValidationResult,
+  StageValidationIssue,
+  ActivateEmitResult,
+  RecoverEmitResult,
+  EmitChannel,
+} from './emitTransaction.js';
+export {
+  canStartDeepen,
+  isPlanAffectingModule,
+  invalidateSnapshotForTier2,
+} from './deepenLifecycle.js';
+export type { DeepenRuntimeSnapshot, CanStartDeepenDecision } from './deepenLifecycle.js';
 
 
 

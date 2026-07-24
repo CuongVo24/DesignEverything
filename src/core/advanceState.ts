@@ -26,30 +26,59 @@ function isQuestionCompatible(qBranch: string, progressBranch: string | null): b
   return qBranch === progressBranch;
 }
 
+import { verifyTurnCapability } from './turnCapability.js';
+
 export function commitStep(
   progress: Progress,
   script: Script,
-  args: { userTurnId: string; branchChoice?: string }
+  args: { userTurnId?: string; capabilityToken?: string; branchChoice?: string }
 ): Progress {
   const currentStepId = progress.current_step;
   if (currentStepId === null) {
     throw new Error('Interview is already completed; no active step to commit');
   }
 
-  // 1. Check duplicate commit
-  if (progress.last_user_turn_id !== null && args.userTurnId === progress.last_user_turn_id) {
-    throw new Error('Duplicate commit: this turn ID has already been committed');
+  // Capability Verification (B1a)
+  if (args.capabilityToken) {
+    const verifyRes = verifyTurnCapability(
+      progress.pending_turn_capability,
+      args.capabilityToken,
+      {
+        sessionId: progress.session_id || 'default-session',
+        operationKind: 'interview',
+        questionId: currentStepId,
+        currentRevision: progress.state_revision || 0,
+      }
+    );
+    if (!verifyRes.valid) {
+      throw new Error(`Commit failed (${verifyRes.reason_code}): ${verifyRes.message}`);
+    }
+  } else if (args.userTurnId) {
+    // Legacy fallback check if capabilityToken is not provided
+    if (progress.last_user_turn_id !== null && args.userTurnId === progress.last_user_turn_id) {
+      throw new Error('Duplicate commit: this turn ID has already been committed');
+    }
   }
 
   const nextProgress: Progress = {
     ...progress,
+    state_revision: (progress.state_revision || 0) + 1,
     answered: [...progress.answered],
     emitted_docs: [...progress.emitted_docs],
     gates_passed: [...progress.gates_passed],
+    pending_turn_capability: progress.pending_turn_capability
+      ? {
+          ...progress.pending_turn_capability,
+          consumed_at: new Date().toISOString(),
+          status: 'consumed',
+        }
+      : null,
   };
 
   // 2. Set last_user_turn_id
-  nextProgress.last_user_turn_id = args.userTurnId;
+  if (args.userTurnId) {
+    nextProgress.last_user_turn_id = args.userTurnId;
+  }
 
   // 3. Append current_step to answered
   nextProgress.answered.push(currentStepId);

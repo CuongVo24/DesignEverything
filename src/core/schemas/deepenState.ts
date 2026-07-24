@@ -17,8 +17,13 @@ export const deepenModuleStateSchema = z.object({
   artifacts: z.array(z.string()),
 });
 
+import { turnCapabilityRecordSchema } from '../turnCapability.js';
+
 export const deepenStateSchema = z.object({
   version: z.string(),
+  session_id: z.string().default('default-session'),
+  state_revision: z.number().int().min(0).default(0),
+  pending_turn_capability: turnCapabilityRecordSchema.nullable().default(null),
   modules: z.object({
     glossary: deepenModuleStateSchema,
     'feature-spec': deepenModuleStateSchema,
@@ -46,6 +51,9 @@ export function defaultDeepenState(): DeepenState {
   });
   return {
     version: DEEPEN_STATE_VERSION,
+    session_id: 'default-session',
+    state_revision: 0,
+    pending_turn_capability: null,
     modules: {
       glossary: emptyModule(),
       'feature-spec': emptyModule(),

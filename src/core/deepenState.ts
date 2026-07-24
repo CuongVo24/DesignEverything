@@ -11,6 +11,7 @@ import type { DeepenScript, DeepenQuestion } from './schemas/deepenScript.js';
 import { extractMustFeatures } from './validatePlan.js';
 import { slugifyList } from './slugify.js';
 import { collectDecisions } from './renderDecisionLog.js';
+import { verifyTurnCapability } from './turnCapability.js';
 
 const STATE_REL_PATH = '.design-everything/deepen-state.json';
 
@@ -159,7 +160,13 @@ export function optInModule(
 export function commitDeepenAnswer(
   state: DeepenState,
   script: DeepenScript,
-  args: { module: DeepenModuleId; questionId: string; subjectId: string | null; userTurnId: string }
+  args: {
+    module: DeepenModuleId;
+    questionId: string;
+    subjectId: string | null;
+    userTurnId?: string;
+    capabilityToken?: string;
+  }
 ): DeepenState {
   const mod = state.modules[args.module];
   if (!mod.opted_in) {
@@ -182,14 +189,36 @@ export function commitDeepenAnswer(
   if (already) {
     throw new Error(`Instance ${args.questionId}@${args.subjectId ?? '-'} đã được commit trước đó.`);
   }
-  if (args.userTurnId === mod.last_user_turn_id) {
+  if (args.capabilityToken) {
+    const verifyRes = verifyTurnCapability(
+      state.pending_turn_capability,
+      args.capabilityToken,
+      {
+        sessionId: state.session_id || 'default-session',
+        operationKind: 'deepen',
+        questionId: args.questionId,
+        subjectId: args.subjectId,
+        currentRevision: state.state_revision || 0,
+      }
+    );
+    if (!verifyRes.valid) {
+      throw new Error(`Commit deepen failed (${verifyRes.reason_code}): ${verifyRes.message}`);
+    }
+  } else if (args.userTurnId === mod.last_user_turn_id) {
     throw new Error(`Duplicate turn: ${args.userTurnId} đã dùng cho lượt trước của module ${args.module}.`);
   }
 
   const next: DeepenState = structuredClone(state);
+  next.state_revision = (next.state_revision || 0) + 1;
+  if (next.pending_turn_capability) {
+    next.pending_turn_capability.consumed_at = new Date().toISOString();
+    next.pending_turn_capability.status = 'consumed';
+  }
   const nmod = next.modules[args.module];
   nmod.answered.push({ question_id: args.questionId, subject_id: args.subjectId });
-  nmod.last_user_turn_id = args.userTurnId;
+  if (args.userTurnId) {
+    nmod.last_user_turn_id = args.userTurnId;
+  }
   return next;
 }
 

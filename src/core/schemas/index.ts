@@ -13,7 +13,22 @@ import {
   executionPhaseSchema,
   evidenceRecordSchema,
   executionStateSchema,
+  blockKindSchema,
+  blockRecordSchema,
 } from './executionState.js';
+import {
+  internalMutationOperationSchema,
+  internalMutationCapabilitySchema,
+} from './internalMutationCapability.js';
+import {
+  healthStatusSchema,
+  healthIssueSchema,
+  healthReportSchema,
+} from './runtimeHealth.js';
+import {
+  warningRuleSchema,
+  answerContractSchema,
+} from './answerContract.js';
 import {
   taskTypeSchema,
   taskCardSchema,
@@ -55,7 +70,26 @@ import {
   deepenAnswerRefSchema,
   deepenModuleStateSchema,
   deepenStateSchema,
+  defaultDeepenState,
 } from './deepenState.js';
+import {
+  slotProvenanceRecordSchema,
+  interviewStorePayloadSchema,
+  interviewStoreEnvelopeSchema,
+  INTERVIEW_STORE_VERSION,
+} from './interviewStore.js';
+import {
+  artifactSourceSchema,
+  artifactKindSchema,
+  artifactRecordSchema,
+  artifactCatalogSchema,
+} from './artifactCatalog.js';
+import {
+  emitManifestArtifactSchema,
+  emitManifestSchema,
+  emitJournalStepSchema,
+  emitJournalSchema,
+} from './emitManifest.js';
 
 export {
   questionSchema,
@@ -100,6 +134,28 @@ export {
   deepenAnswerRefSchema,
   deepenModuleStateSchema,
   deepenStateSchema,
+  defaultDeepenState,
+  slotProvenanceRecordSchema,
+  interviewStorePayloadSchema,
+  interviewStoreEnvelopeSchema,
+  INTERVIEW_STORE_VERSION,
+  blockKindSchema,
+  blockRecordSchema,
+  internalMutationOperationSchema,
+  internalMutationCapabilitySchema,
+  healthStatusSchema,
+  healthIssueSchema,
+  healthReportSchema,
+  warningRuleSchema,
+  answerContractSchema,
+  artifactSourceSchema,
+  artifactKindSchema,
+  artifactRecordSchema,
+  artifactCatalogSchema,
+  emitManifestArtifactSchema,
+  emitManifestSchema,
+  emitJournalStepSchema,
+  emitJournalSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -117,6 +173,15 @@ export type PlanValidationInput = z.infer<typeof planValidationInputSchema>;
 export type ExecutionPhase = z.infer<typeof executionPhaseSchema>;
 export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;
 export type ExecutionState = z.infer<typeof executionStateSchema>;
+export type BlockKind = z.infer<typeof blockKindSchema>;
+export type BlockRecord = z.infer<typeof blockRecordSchema>;
+export type InternalMutationOperation = z.infer<typeof internalMutationOperationSchema>;
+export type InternalMutationCapability = z.infer<typeof internalMutationCapabilitySchema>;
+export type HealthStatus = z.infer<typeof healthStatusSchema>;
+export type HealthIssue = z.infer<typeof healthIssueSchema>;
+export type HealthReport = z.infer<typeof healthReportSchema>;
+export type WarningRule = z.infer<typeof warningRuleSchema>;
+export type AnswerContract = z.infer<typeof answerContractSchema>;
 
 export type TaskType = z.infer<typeof taskTypeSchema>;
 export type TaskCard = z.infer<typeof taskCardSchema>;
@@ -150,6 +215,20 @@ export type DeepenScript = z.infer<typeof deepenScriptSchema>;
 export type DeepenAnswerRef = z.infer<typeof deepenAnswerRefSchema>;
 export type DeepenModuleState = z.infer<typeof deepenModuleStateSchema>;
 export type DeepenState = z.infer<typeof deepenStateSchema>;
+
+export type SlotProvenanceRecord = z.infer<typeof slotProvenanceRecordSchema>;
+export type InterviewStorePayload = z.infer<typeof interviewStorePayloadSchema>;
+export type InterviewStoreEnvelope = z.infer<typeof interviewStoreEnvelopeSchema>;
+
+export type ArtifactSource = z.infer<typeof artifactSourceSchema>;
+export type ArtifactKind = z.infer<typeof artifactKindSchema>;
+export type ArtifactRecord = z.infer<typeof artifactRecordSchema>;
+export type ArtifactCatalog = z.infer<typeof artifactCatalogSchema>;
+
+export type EmitManifestArtifact = z.infer<typeof emitManifestArtifactSchema>;
+export type EmitManifest = z.infer<typeof emitManifestSchema>;
+export type EmitJournalStep = z.infer<typeof emitJournalStepSchema>;
+export type EmitJournal = z.infer<typeof emitJournalSchema>;
 
 
 
