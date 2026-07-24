@@ -25,9 +25,13 @@ if (existsSync(shapesPath)) {
   }
 }
 
+import { turnCapabilityRecordSchema } from '../turnCapability.js';
+
 export const progressSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
-  phase: z.enum(['interview', 'docs-emitted', 'ready-to-build']),
+  phase: z.enum(['interview', 'docs-emitted', 'ready-to-build', 'ready-for-validation']),
+  session_id: z.string().default('default-session'),
+  state_revision: z.number().int().min(0).default(0),
   branch: z.string().nullable().refine(
     (val) => val === null || validBranchIds.includes(val),
     {
@@ -38,6 +42,7 @@ export const progressSchema = z.object({
   answered: z.array(z.string()),
   emitted_docs: z.array(z.string()),
   gates_passed: z.array(z.string()),
+  pending_turn_capability: turnCapabilityRecordSchema.nullable().default(null),
   last_user_turn_id: z.string().nullable(),
   answered_len_at_last_turn: z.number().int().min(0),
   updated_at: z.string().datetime(),

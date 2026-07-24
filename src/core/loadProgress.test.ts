@@ -36,7 +36,7 @@ describe('loadProgress & saveProgress', () => {
       unlinkSync(tempJsonPath);
     }
     const defaultProgress = loadProgress(tempJsonPath);
-    expect(defaultProgress.version).toBe('0.1.0');
+    expect(defaultProgress.version).toBe('7.0.0');
     expect(defaultProgress.phase).toBe('interview');
     expect(defaultProgress.branch).toBeNull();
     expect(defaultProgress.current_step).toBe('CAL0');

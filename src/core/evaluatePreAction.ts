@@ -1,4 +1,4 @@
-import { join, resolve, relative, normalize } from 'path';
+import { join } from 'path';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { loadProgress } from './loadProgress.js';
 import { loadGatePolicy } from './loadGatePolicy.js';
@@ -6,6 +6,10 @@ import { evaluateGate, isBlocked } from './evaluateGate.js';
 import { loadExecutionState } from './advanceExecutionState.js';
 import { assertValidatedSnapshot, loadEmittedDocs } from './validatedSnapshot.js';
 import { loadDeepenState } from './deepenState.js';
+import { authorizeMutation } from './artifactOwnership.js';
+import { classifyCommand } from './classifyCommand.js';
+import { canonicalizeWorkspacePath } from './pathPolicy.js';
+import { inspectRuntimeHealth } from './runtimeHealth.js';
 import {
   PreActionRequest,
   PreActionDecision,
@@ -45,6 +49,18 @@ function evaluatePreActionInner(
 ): PreActionDecision {
   const workspace = request.workspace;
 
+  // 0. Fail-closed Runtime Health Check
+  const health = inspectRuntimeHealth(workspace);
+  if (health.status === 'broken' && request.action_kind === 'write') {
+    const issue = health.issues[0];
+    return {
+      decision: 'deny',
+      reason_code: issue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
+      user_message: `Runtime state is broken: ${issue?.detail || 'State corrupted'}. Run "${issue?.safe_next_command || '/build'}" to recover.`,
+      enforcement: 'hard',
+    };
+  }
+
   // 1. Check capability interception early
   if (capability && !capability.intercepts.includes(request.tool_name)) {
     return {
@@ -56,30 +72,19 @@ function evaluatePreActionInner(
   }
 
   // 2. Path normalization & traversal check
-  const normalizeDrive = (p: string): string => {
-    const norm = normalize(p).replace(/\\/g, '/');
-    if (norm.length >= 2 && norm[1] === ':') {
-      return norm[0].toLowerCase() + norm.slice(1);
-    }
-    return norm;
-  };
-
   const resolvedPaths: string[] = [];
   if (request.target_paths && request.target_paths.length > 0) {
-    const normWorkspace = normalizeDrive(workspace);
     for (const targetPath of request.target_paths) {
-      const absPath = normalizeDrive(resolve(workspace, targetPath));
-      const relPath = relative(normWorkspace, absPath).replace(/\\/g, '/');
-
-      if (relPath.startsWith('..') || relPath.startsWith('/') || absPath === normWorkspace) {
+      const canon = canonicalizeWorkspacePath(workspace, targetPath);
+      if (!canon.ok) {
         return {
           decision: 'deny',
-          reason_code: 'traversal-attempt',
-          user_message: `Đường dẫn không hợp lệ hoặc cố gắng path traversal ngoài workspace: ${targetPath}`,
+          reason_code: canon.reason_code,
+          user_message: canon.message,
           enforcement: 'hard',
         };
       }
-      resolvedPaths.push(relPath);
+      resolvedPaths.push(canon.canonicalPath);
     }
   }
 
@@ -166,13 +171,30 @@ function evaluatePreActionInner(
     }
   }
 
-  if (!execState && progress && progress.phase !== 'interview' && progress.phase !== 'docs-emitted') {
+  if (!execState && progress && progress.phase !== 'interview' && progress.phase !== 'docs-emitted' && progress.phase !== 'ready-for-validation') {
     return {
       decision: 'deny',
-      reason_code: 'state-missing',
-      user_message: 'Thiếu tệp trạng thái thực thi (execution-state.json). Vui lòng phỏng vấn hoàn tất và chạy lệnh "validate" trước.',
+      reason_code: 'EXECUTION_STATE_REQUIRED',
+      user_message: 'Thiếu tệp trạng thái thực thi (execution-state.json). Vui lòng hoàn tất phỏng vấn và chạy /build để validate kế hoạch trước khi viết code.',
       enforcement: 'hard',
     };
+  }
+
+  // Deny code write when in plan-validating phase
+  if (execState && execState.phase === 'plan-validating') {
+    if (request.action_kind === 'write') {
+      const isDocWrite = resolvedPaths.every(
+        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p === 'progress.json'
+      );
+      if (!isDocWrite) {
+        return {
+          decision: 'deny',
+          reason_code: 'PLAN_VALIDATION_REQUIRED',
+          user_message: 'Kế hoạch thi công chưa được validate. Vui lòng chạy lệnh /build trước khi viết code.',
+          enforcement: 'hard',
+        };
+      }
+    }
   }
 
   // 6. Handle Interview / Docs-Emitted phase
@@ -187,26 +209,45 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'write') {
-      const isAllDocs = resolvedPaths.every(
-        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p === 'progress.json'
-      );
-      if (isAllDocs) {
-        return {
-          decision: 'allow',
-          reason_code: 'interview-doc-write-allowed',
-          user_message: 'Ghi tài liệu được phép.',
-          enforcement: 'hard',
-        };
+      for (const targetPath of resolvedPaths) {
+        const auth = authorizeMutation('write', 'agent-host', targetPath);
+        if (auth.decision === 'deny') {
+          return {
+            decision: 'deny',
+            reason_code: auth.reason_code,
+            user_message: auth.user_message,
+            enforcement: 'hard',
+          };
+        }
       }
+      return {
+        decision: 'allow',
+        reason_code: 'interview-doc-write-allowed',
+        user_message: 'Ghi tài liệu được phép.',
+        enforcement: 'hard',
+      };
     }
 
     if (request.action_kind === 'shell') {
-      const safeCmds = ['cat', 'less', 'more', 'tail', 'head', 'ls', 'dir', 'find', 'pwd', 'git', 'grep', 'rg', 'echo'];
-      if (safeCmds.includes(baseCmd)) {
+      const classification = classifyCommand({
+        shell: request.shell_kind,
+        raw: request.command,
+        argv: request.command_argv,
+        cwd: request.workspace,
+      });
+
+      if (classification.outcome === 'proven_read_only') {
         return {
           decision: 'allow',
-          reason_code: 'read-only-allowed',
-          user_message: 'Lệnh shell đọc thông tin được phép.',
+          reason_code: classification.reason_code,
+          user_message: classification.message,
+          enforcement: 'hard',
+        };
+      } else {
+        return {
+          decision: 'deny',
+          reason_code: classification.reason_code,
+          user_message: classification.message,
           enforcement: 'hard',
         };
       }

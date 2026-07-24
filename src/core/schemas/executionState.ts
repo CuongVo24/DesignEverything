@@ -27,6 +27,27 @@ export const evidenceRecordSchema = z.object({
 });
 export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;
 
+export const blockKindSchema = z.enum([
+  'validation',
+  'artifact-integrity',
+  'snapshot-stale',
+  'policy-corrupt',
+  'verification-failed',
+  'verification-aborted',
+]);
+export type BlockKind = z.infer<typeof blockKindSchema>;
+
+export const blockRecordSchema = z.object({
+  kind: blockKindSchema,
+  reason_code: z.string(),
+  origin_phase: executionPhaseSchema,
+  task_id: z.string().nullable(),
+  recoverable_by: z.string(),
+  detail: z.string(),
+  created_at: z.string().datetime(),
+});
+export type BlockRecord = z.infer<typeof blockRecordSchema>;
+
 export const executionStateSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
   phase: executionPhaseSchema,
@@ -34,7 +55,7 @@ export const executionStateSchema = z.object({
   active_milestone: z.string().nullable(),
   completed_tasks: z.array(z.string()),
   evidence: z.array(evidenceRecordSchema),
-  block_reason: z.string().nullable(),
+  block_reason: z.union([z.string(), blockRecordSchema]).nullable(),
   validated_plan_digest: z.string(),
   validated_docs_digest: z.string(),
   validation_result_digest: z.string(),

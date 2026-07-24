@@ -101,15 +101,23 @@ export function renderNextStep(
 
   // 3. Phase: Blocked
   if (state.phase === 'blocked') {
+    const block = typeof state.block_reason === 'object' && state.block_reason ? state.block_reason : null;
+    const detail = block ? block.detail : String(state.block_reason || 'Không rõ nguyên nhân');
+    const nextCmd = block ? block.recoverable_by : `${CLI} validate`;
+    const allowedScope = block && (block.kind === 'verification-failed' || block.kind === 'verification-aborted')
+      ? ['src/**', 'test/**']
+      : ['Design/**', 'docs/**'];
+
     return {
       state: 'blocked',
-      now: 'Khắc phục nguyên nhân bị chặn được chỉ định.',
-      whyNow: `Trạng thái thực thi bị chặn do: ${state.block_reason || 'Không rõ nguyên nhân'}.`,
-      allowedScope: [],
-      proof: 'Chạy lại lệnh validate để gỡ bỏ trạng thái chặn.',
+      now: `Khắc phục lỗi (${block?.reason_code ?? 'BLOCKED'}): ${detail}`,
+      whyNow: `Trạng thái thực thi bị chặn do: ${detail}.`,
+      allowedScope,
+      proof: `Chạy lệnh ${nextCmd} để gỡ bỏ trạng thái chặn.`,
       ifItFails: 'Kiểm tra lại cấu hình thư mục dự án và các tệp tin manifest.',
       enforcement: 'hard',
-      warning: `WARNING: Quy trình thực thi đang BỊ CHẶN: ${state.block_reason}`,
+      nextCommand: nextCmd,
+      warning: `WARNING: Quy trình thực thi đang BỊ CHẶN: ${detail}`,
     };
   }
 

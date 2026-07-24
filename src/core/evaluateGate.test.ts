@@ -62,4 +62,11 @@ describe('evaluateGate engine', () => {
       'scope-locked',
     ]);
   });
+
+  test('buildGateSnapshot builds snapshot and computes input_digest', () => {
+    const gate = policy.gates[0];
+    const res = evaluateGate(gate, ['00-vision.md', '01-personas.md', '02-scope.md']);
+    expect(res.input_digest).toBeDefined();
+    expect(typeof res.input_digest).toBe('string');
+  });
 });

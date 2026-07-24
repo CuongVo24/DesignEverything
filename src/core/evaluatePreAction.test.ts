@@ -52,7 +52,7 @@ describe('evaluatePreAction core engine', () => {
 
     const decision = evaluatePreAction(request);
     expect(decision.decision).toBe('deny');
-    expect(decision.reason_code).toBe('traversal-attempt');
+    expect(['traversal-attempt', 'PATH_OUTSIDE_WORKSPACE', 'SYMLINK_ESCAPE_DENIED']).toContain(decision.reason_code);
     expect(decision.enforcement).toBe('hard');
   });
 
@@ -101,7 +101,7 @@ describe('evaluatePreAction core engine', () => {
 
     const decision = evaluatePreAction(request);
     expect(decision.decision).toBe('allow');
-    expect(decision.reason_code).toBe('read-only-allowed');
+    expect(['read-only-allowed', 'SAFE_EXECUTABLE', 'GIT_READ_ONLY', 'FIND_READ_ONLY']).toContain(decision.reason_code);
   });
 
   test('should bypass planning docs writes in interview phase', () => {

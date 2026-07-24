@@ -5,6 +5,8 @@ import {
   ExecutionState,
   EvidenceRecord,
   executionStateSchema,
+  BlockRecord,
+  BlockKind,
 } from './schemas/index.js';
 
 export function initExecutionState(): ExecutionState {
@@ -68,18 +70,33 @@ export function transitionToReadyToExecute(
     validation_digest: string;
   }
 ): ExecutionState {
-  // Re-validate hợp lệ từ các pha CHƯA thực thi: plan-validating (lần đầu/sau
-  // amend), blocked (sửa docs xong chạy lại validate — luồng tài liệu hóa trong
-  // build SKILL), ready-to-execute (revalidate idempotent, VD kiểm profile
-  // drift). Đang executing/repairing/reviewing thì không được revalidate.
   if (state.phase !== 'plan-validating' && state.phase !== 'blocked' && state.phase !== 'ready-to-execute') {
     throw new Error(`Cannot transition to ready-to-execute from phase: ${state.phase}`);
   }
+
+  // B1d: If blocked due to verification failure or abort, validate does NOT clear the block or active_task!
+  if (state.phase === 'blocked' && state.block_reason && typeof state.block_reason === 'object') {
+    const kind = (state.block_reason as any).kind;
+    if (kind === 'verification-failed' || kind === 'verification-aborted' || kind === 'policy-corrupt') {
+      // Keep active task & block, cannot unblock via validate pass
+      return state;
+    }
+  }
+
   if (!validationPass) {
+    const blockRec: BlockRecord = {
+      kind: 'validation',
+      reason_code: 'SEMANTIC_VALIDATION_FAILED',
+      origin_phase: state.phase,
+      task_id: state.active_task,
+      recoverable_by: '/build',
+      detail: 'Semantic plan validation failed.',
+      created_at: new Date().toISOString(),
+    };
     return {
       ...state,
       phase: 'blocked',
-      block_reason: 'Semantic plan validation failed.',
+      block_reason: blockRec,
       updated_at: new Date().toISOString(),
     };
   }
@@ -439,4 +456,134 @@ export function recordEvidence(
       };
     }
   }
+}
+
+export function completeTier1Emit(workspaceRoot: string): ExecutionState {
+  const execStatePath = `${workspaceRoot}/.design-everything/execution-state.json`;
+  const state = initExecutionState();
+  saveExecutionState(execStatePath, state);
+  return state;
+}
+
+export function evaluateBuildReadiness(
+  progress: { phase: string; branch: string | null },
+  execState: ExecutionState | null
+): { ready: boolean; reason_code: string; next_command: string; message: string } {
+  if (!execState) {
+    return {
+      ready: false,
+      reason_code: 'EXECUTION_STATE_REQUIRED',
+      next_command: '/build',
+      message: 'Execution state missing. Run /build to validate plan before coding.',
+    };
+  }
+
+  if (execState.phase === 'plan-validating') {
+    return {
+      ready: false,
+      reason_code: 'PLAN_VALIDATION_REQUIRED',
+      next_command: '/build',
+      message: 'Design documents emitted, but execution plan requires validation before coding. Run /build.',
+    };
+  }
+
+  if (execState.phase === 'blocked') {
+    return {
+      ready: false,
+      reason_code: 'EXECUTION_STATE_BLOCKED',
+      next_command: '/build',
+      message: `Execution state is blocked: ${execState.block_reason ?? 'unknown reason'}. Run /build to retry.`,
+    };
+  }
+
+  if (execState.phase === 'ready-to-execute' || execState.phase === 'executing' || execState.phase === 'verifying' || execState.phase === 'repairing' || execState.phase === 'ready-to-ship') {
+    return {
+      ready: true,
+      reason_code: 'READY_TO_EXECUTE',
+      next_command: execState.active_task ? `node adapter/claude-code/cli.mjs verify --task ${execState.active_task}` : 'node adapter/claude-code/cli.mjs build',
+      message: 'Execution state is ready for build tasks.',
+    };
+  }
+
+  return {
+    ready: false,
+    reason_code: 'EXECUTION_STATE_NOT_READY',
+    next_command: '/build',
+    message: `Current execution phase is ${execState.phase}, which is not ready for coding.`,
+  };
+}
+
+export function blockExecution(state: ExecutionState, blockRecord: BlockRecord): ExecutionState {
+  return {
+    ...state,
+    phase: 'blocked',
+    block_reason: blockRecord,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function recoverBlockedExecution(
+  state: ExecutionState,
+  proof: { kind: BlockKind; pass: boolean }
+): { ok: boolean; state: ExecutionState; reason_code: string } {
+  if (state.phase !== 'blocked') {
+    return { ok: false, state, reason_code: 'NOT_BLOCKED' };
+  }
+
+  const currentBlock = typeof state.block_reason === 'object' && state.block_reason ? state.block_reason : null;
+  if (currentBlock && currentBlock.kind !== proof.kind) {
+    return { ok: false, state, reason_code: 'BLOCK_KIND_MISMATCH' };
+  }
+
+  if (!proof.pass) {
+    return { ok: false, state, reason_code: 'RECOVERY_PROOF_FAILED' };
+  }
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      phase: state.active_task ? 'repairing' : 'ready-to-execute',
+      block_reason: null,
+      updated_at: new Date().toISOString(),
+    },
+    reason_code: 'RECOVERED',
+  };
+}
+
+export function allowedRemediation(state: ExecutionState): {
+  allowed_actions: string[];
+  allowed_paths: string[];
+  next_command: string;
+} {
+  if (state.phase !== 'blocked' || !state.block_reason) {
+    return { allowed_actions: ['*'], allowed_paths: ['*'], next_command: '' };
+  }
+
+  const block = typeof state.block_reason === 'object' ? state.block_reason : null;
+  if (!block) {
+    return { allowed_actions: ['read'], allowed_paths: ['Design/**', 'docs/**'], next_command: '/build' };
+  }
+
+  if (block.kind === 'validation' || block.kind === 'artifact-integrity' || block.kind === 'snapshot-stale') {
+    return {
+      allowed_actions: ['read', 'write-docs'],
+      allowed_paths: ['Design/**', 'docs/**', 'progress.json'],
+      next_command: block.recoverable_by || '/build',
+    };
+  }
+
+  if (block.kind === 'verification-failed' || block.kind === 'verification-aborted') {
+    return {
+      allowed_actions: ['read', 'write-task-scope', 'verify'],
+      allowed_paths: ['src/**', 'test/**'],
+      next_command: block.recoverable_by || `node adapter/claude-code/cli.mjs verify --task ${block.task_id ?? ''}`,
+    };
+  }
+
+  return {
+    allowed_actions: ['read'],
+    allowed_paths: [],
+    next_command: block.recoverable_by || '/build',
+  };
 }

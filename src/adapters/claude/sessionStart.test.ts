@@ -28,7 +28,7 @@ describe('onSessionStart hook', () => {
 
     expect(existsSync(progressPath)).toBe(true);
     const content = JSON.parse(readFileSync(progressPath, 'utf8'));
-    expect(content.version).toBe('0.1.0');
+    expect(content.version).toBe('7.0.0');
     expect(content.current_step).toBe('CAL0');
     expect(content.phase).toBe('interview');
     expect(content.answered).toEqual([]);
