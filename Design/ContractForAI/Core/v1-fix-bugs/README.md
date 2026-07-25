@@ -20,34 +20,50 @@
 
 Không code B4 trước khi các contract Core mà nó phụ thuộc được duyệt và merge.
 
+## Mô hình trạng thái (3 trục — bắt buộc từ 2026-07-25)
+
+Một cột `Trạng thái` duy nhất không đủ diễn đạt approval, implementation và proof độc lập. Từ
+plan-v1-fix.md §3, mỗi contract có ba trục:
+
+- **Spec**: `DRAFT` → `WAITING_FOR_APPROVAL` → `APPROVED`. Ý định đã được người duyệt hay chưa.
+- **Implementation**: `NOT_STARTED` → `PARTIAL` → `IMPLEMENTED`. Code tồn tại và đạt checklist nội bộ.
+- **Proof**: `MISSING` → `UNIT_ONLY` → `SEAM_PARTIAL` → `VERIFIED` (hoặc `INVALID_FOR_CLAIM` khi
+  evidence hiện có sai seam/không map đúng finding). Bằng chứng đang ở đâu trên trục unit→installed seam.
+
+**Quy tắc khóa:** một contract chỉ được ghi `DONE` khi cả ba trục đạt `APPROVED + IMPLEMENTED +
+VERIFIED`. Không dùng `DONE` để che việc chưa approve hoặc chưa có seam evidence. `DONE` không được
+gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
+
 ## Danh sách contract
 
-| Batch | Contract | Layer | Depends on | Trạng thái |
-|---|---|---|---|---|
-| B1 | B1a — Interview turn capability | Core | — | WAITING_FOR_APPROVAL |
-| B1 | B1b — Atomic interview persistence | Core | B1a | WAITING_FOR_APPROVAL |
-| B1 | B1c — Design/build handoff state | Core | B1b | WAITING_FOR_APPROVAL |
-| B1 | B1d — Block reason transition | Core | B1c | WAITING_FOR_APPROVAL |
-| B2 | B2a — Protected artifact policy | Core | B1b | WAITING_FOR_APPROVAL |
-| B2 | B2b — Shell command classifier | Core | — | WAITING_FOR_APPROVAL |
-| B2 | B2c — Canonical path matcher | Core | — | WAITING_FOR_APPROVAL |
-| B2 | B2d — Gate evidence recomputation | Core | B2c | WAITING_FOR_APPROVAL |
-| B2 | B2e — Runtime health and recovery | Core | B1d, B2a, B2d | WAITING_FOR_APPROVAL |
-| B3 | B3a — Answer and slot validation | Core | B1a, B2c | WAITING_FOR_APPROVAL |
-| B3 | B3b — Derived content provenance | Content | B3a | WAITING_FOR_APPROVAL |
-| B3 | B3c — Authoritative artifact catalog | Core | B2c | WAITING_FOR_APPROVAL |
-| B3 | B3d — Transactional emit | Core | B2d, B3b, B3c | WAITING_FOR_APPROVAL |
-| B3 | B3e — Deepen lifecycle | Core | B1a, B3a, B3d | WAITING_FOR_APPROVAL |
-| B4 | B4a — Claude hook policy integration | Adapter | B1–B3 | WAITING_FOR_APPROVAL |
-| B4 | B4b — Exact wrapper invocation | Adapter | B2b, B4a | WAITING_FOR_APPROVAL |
-| B4 | B4c — CLI exit/output/health protocol | Adapter | B2e, B3d, B3e | WAITING_FOR_APPROVAL |
-| B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | WAITING_FOR_APPROVAL |
-| B4 | B4e — Codex parity and shared runtime | Adapter | B4c, B4d | WAITING_FOR_APPROVAL |
-| B4 | B4f — Skill handoff and wording truth | Adapter | B1c, B3e, B4c | WAITING_FOR_APPROVAL |
-| B5 | B5a — Adversarial installed-runtime integration | QA | B4a–B4f | WAITING_FOR_APPROVAL |
-| B5 | B5b — Transaction fault injection | QA | B1b, B3d, B4c | WAITING_FOR_APPROVAL |
-| B5 | B5c — Newbie journey and quality evaluation | QA | B3a–B4f | WAITING_FOR_APPROVAL |
-| B5 | B5d — Docs, version and release truth sync | QA | B5a–B5c | WAITING_FOR_APPROVAL |
+| Batch | Contract | Layer | Depends on | Spec | Implementation | Proof |
+|---|---|---|---|---|---|---|
+| B1 | B1a — Interview turn capability | Core | — | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
+| B1 | B1b — Atomic interview persistence | Core | B1a | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B1 | B1c — Design/build handoff state | Core | B1b | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B1 | B1d — Block reason transition | Core | B1c | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B2 | B2a — Protected artifact policy | Core | B1b | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B2 | B2b — Shell command classifier | Core | — | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B2 | B2c — Canonical path matcher | Core | — | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B2 | B2d — Gate evidence recomputation | Core | B2c | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B2 | B2e — Runtime health and recovery | Core | B1d, B2a, B2d | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B3 | B3a — Answer and slot validation | Core | B1a, B2c | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B3 | B3b — Derived content provenance | Content | B3a | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B3 | B3c — Authoritative artifact catalog | Core | B2c | WAITING_FOR_APPROVAL | IMPLEMENTED | UNIT_ONLY |
+| B3 | B3d — Transactional emit | Core | B2d, B3b, B3c | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B3 | B3e — Deepen lifecycle | Core | B1a, B3a, B3d | WAITING_FOR_APPROVAL | PARTIAL | UNIT_ONLY |
+| B4 | B4a — Claude hook policy integration | Adapter | B1–B3 | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
+| B4 | B4b — Exact wrapper invocation | Adapter | B2b, B4a | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
+| B4 | B4c — CLI exit/output/health protocol | Adapter | B2e, B3d, B3e | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
+| B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | WAITING_FOR_APPROVAL | NOT_STARTED/PARTIAL | MISSING |
+| B4 | B4e — Codex parity and shared runtime | Adapter | B4c, B4d | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
+| B4 | B4f — Skill handoff and wording truth | Adapter | B1c, B3e, B4c | WAITING_FOR_APPROVAL | PARTIAL | SNAPSHOT_ONLY |
+| B5 | B5a — Adversarial installed-runtime integration | QA | B4a–B4f | WAITING_FOR_APPROVAL | PARTIAL | INVALID_FOR_CLAIM |
+| B5 | B5b — Transaction fault injection | QA | B1b, B3d, B4c | WAITING_FOR_APPROVAL | PARTIAL | INVALID_FOR_PRODUCTION_SEAM |
+| B5 | B5c — Newbie journey and quality evaluation | QA | B3a–B4f | WAITING_FOR_APPROVAL | PARTIAL | INVALID_FOR_CLAIM |
+| B5 | B5d — Docs, version and release truth sync | QA | B5a–B5c | WAITING_FOR_APPROVAL | PARTIAL | INVALID_FOR_CLAIM |
+
+Chi tiết lý do từng dòng: xem `plan-v1-fix.md` §1.3 và §3.1. Kế hoạch sửa theo phase: `plan-v1-fix.md` §5–§6.
 
 ## Release gate chung
 
@@ -61,4 +77,7 @@ Không code B4 trước khi các contract Core mà nó phụ thuộc được du
 
 ## Trạng thái
 
-WAITING_FOR_APPROVAL — đây là bộ đặc tả sửa lỗi, chưa cho phép code.
+WAITING_FOR_APPROVAL (spec) — đặc tả gốc chưa được duyệt chính thức, dù implementation đã bắt đầu
+trước khi approval hoàn tất (ghi nhận như một sai lệch quy trình, không hồi tố thành approved).
+Không contract nào trong 24 contract được coi là `DONE` cho tới khi đạt cả ba trục ở bảng trên.
+Xem `plan-v1-fix.md` cho kế hoạch đưa từng contract tới `APPROVED + IMPLEMENTED + VERIFIED`.

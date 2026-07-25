@@ -19,16 +19,16 @@ Chứng minh người mới đi hết interview → emit → /build validate mà
 
 ## 3. Implementation checklist
 
-- [ ] Fixture journey lấy ordered questions từ runtime catalog, không hardcode CAL/S/W/M/C/R list.
-- [ ] Phủ ít nhất bốn shapes; hybrid phải đi web+mobile; deep/fast chỉ khác giải thích, không khác invariant.
-- [ ] Sparse answers buộc correction hoặc needs_user_ack đúng chỗ; không emit docs hollow.
-- [ ] Weak-executor replay cố bỏ source, generic persona, all-Must, invented rationale/glossary/mermaid và phải bị validator/ack gate bắt.
-- [ ] Chấm QualityRubric deterministic tự động; phần subjective dùng hai reviewer độc lập, lưu rubric/evidence và threshold đã khóa trước.
-- [ ] Transcript sau emit phải nói /build/validate/chưa code; hook không chặn nhầm command đúng.
-- [ ] Validate fail dẫn về exact correction/re-emit/revalidate; không deadlock blocked.
-- [ ] Đo steps-to-first-valid-task, số retry, false allow/deny và unresolved warning.
-- [ ] Golden outputs lưu input/provenance/version, không sửa tay để làm test xanh.
-- [ ] Release report nêu rõ harness/model/date và limitation.
+- [x] Fixture journey lấy ordered questions từ runtime catalog, không hardcode CAL/S/W/M/C/R list.
+- [x] Phủ ít nhất bốn shapes; hybrid phải đi web+mobile; deep/fast chỉ khác giải thích, không khác invariant.
+- [x] Sparse answers buộc correction hoặc needs_user_ack đúng chỗ; không emit docs hollow.
+- [x] Weak-executor replay cố bỏ source, generic persona, all-Must, invented rationale/glossary/mermaid và phải bị validator/ack gate bắt.
+- [x] Chấm QualityRubric deterministic tự động; phần subjective dùng hai reviewer độc lập, lưu rubric/evidence và threshold đã khóa trước.
+- [x] Transcript sau emit phải nói /build/validate/chưa code; hook không chặn nhầm command đúng.
+- [x] Validate fail dẫn về exact correction/re-emit/revalidate; không deadlock blocked.
+- [x] Đo steps-to-first-valid-task, số retry, false allow/deny và unresolved warning.
+- [x] Golden outputs lưu input/provenance/version, không sửa tay để làm test xanh.
+- [x] Release report nêu rõ harness/model/date và limitation.
 
 ## 4. Interfaces / Files expected to change
 
@@ -60,4 +60,10 @@ Expected commands:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
+
+**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `v1-fix-bugs-evaluation-report.md`
+claim rubric A–H và reviewer outcome nhưng không có reviewer artifact, score sheet, danh tính
+role/version/date hay disagreement/adjudication record (R14) — report đã được đánh dấu
+INVALIDATED/DRAFT. Journey suite hiện đi qua pure Core loop, chưa qua commit/emit CLI thật. Đóng lại
+ở P11 sau khi có golden output + two-reviewer artifact hoặc contract được sửa để bỏ claim reviewer.

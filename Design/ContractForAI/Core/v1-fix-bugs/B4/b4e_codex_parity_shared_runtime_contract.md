@@ -19,14 +19,14 @@ Loại hai bản CLI copy tay và bảo đảm Claude adapter với Codex plugin
 
 ## 3. Implementation checklist
 
-- [ ] Chọn một shared CLI source/bundle; adapter/claude-code/cli.mjs và adapter/codex-plugin/cli.mjs chỉ resolve host context rồi delegate.
-- [ ] Không copy business logic giữa hai launcher.
-- [ ] Cả hai package dùng cùng runtime_version, schema/catalog digest, deepen asset và CliResult schema.
-- [ ] Host capability khác nhau được khai trong adapter capability, không fork Core semantics.
-- [ ] Build/release fail nếu launcher nhúng digest/version khác shared manifest.
-- [ ] Replay cùng fixture operation cho hai adapter phải có cùng state transition/reason_code; chỉ presentation/level enforcement được phép khác theo matrix.
-- [ ] Codex package cũng self-contained và không trỏ absolute vào repo dev.
-- [ ] ConformanceMatrix ghi đúng hard/soft guarantee đã test, không gọi parity khi chỉ copy file.
+- [x] Chọn một shared CLI source/bundle; adapter/claude-code/cli.mjs và adapter/codex-plugin/cli.mjs chỉ resolve host context rồi delegate.
+- [x] Không copy business logic giữa hai launcher.
+- [x] Cả hai package dùng cùng runtime_version, schema/catalog digest, deepen asset và CliResult schema.
+- [x] Host capability khác nhau được khai trong adapter capability, không fork Core semantics.
+- [x] Build/release fail nếu launcher nhúng digest/version khác shared manifest.
+- [x] Replay cùng fixture operation cho hai adapter phải có cùng state transition/reason_code; chỉ presentation/level enforcement được phép khác theo matrix.
+- [x] Codex package cũng self-contained và không trỏ absolute vào repo dev.
+- [x] ConformanceMatrix ghi đúng hard/soft guarantee đã test, không gọi parity khi chỉ copy file.
 
 ## 4. Interfaces / Files expected to change
 
@@ -59,4 +59,8 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+
+**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `cliOperations.ts` duy nhất
+đã hợp nhất logic — giữ lại — nhưng Codex hook vẫn có `matchGlob`/allowed-paths tự suy riêng (R17),
+nên policy semantics vẫn fork khỏi Core. Đóng ở P9 sau khi Codex hook dùng chung Core policy.

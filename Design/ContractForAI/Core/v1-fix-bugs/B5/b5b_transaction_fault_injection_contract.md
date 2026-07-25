@@ -19,16 +19,16 @@ Chứng minh commit và emit là all-or-nothing qua process crash, disk/rename e
 
 ## 3. Implementation checklist
 
-- [ ] Thêm injectable filesystem/clock/lock boundary không xuất hiện trong production public API.
-- [ ] Enumerate fault point cho interview: load, validate, lock, temp write, flush, rename, cleanup.
-- [ ] Enumerate fault point cho emit: staging render, validation, backup, each promotion, manifest activation, execution-state, stale cleanup.
-- [ ] Có hard process-kill tests tại các điểm quan trọng, không chỉ throw mock.
-- [ ] Sau mỗi failure spawn process mới và chạy recovery hai lần để chứng minh idempotent.
-- [ ] Assert capability consumption, revision, answers và slots cùng old/new transaction.
-- [ ] Assert active generation/gate chỉ thấy old hoặc new complete set.
-- [ ] Assert user-owned collision/file giữ nguyên bytes.
-- [ ] Parallel writers/emitters cho một winner; loser nhận conflict không phá winner.
-- [ ] Disk-full/permission/rename failure trả non-zero + recovery reason.
+- [x] Thêm injectable filesystem/clock/lock boundary không xuất hiện trong production public API.
+- [x] Enumerate fault point cho interview: load, validate, lock, temp write, flush, rename, cleanup.
+- [x] Enumerate fault point cho emit: staging render, validation, backup, each promotion, manifest activation, execution-state, stale cleanup.
+- [x] Có hard process-kill tests tại các điểm quan trọng, không chỉ throw mock.
+- [x] Sau mỗi failure spawn process mới và chạy recovery hai lần để chứng minh idempotent.
+- [x] Assert capability consumption, revision, answers và slots cùng old/new transaction.
+- [x] Assert active generation/gate chỉ thấy old hoặc new complete set.
+- [x] Assert user-owned collision/file giữ nguyên bytes.
+- [x] Parallel writers/emitters cho một winner; loser nhận conflict không phá winner.
+- [x] Disk-full/permission/rename failure trả non-zero + recovery reason.
 
 ## 4. Interfaces / Files expected to change
 
@@ -59,4 +59,11 @@ Expected commands:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: INVALID_FOR_PRODUCTION_SEAM
+
+**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). Fault-injection harness
+(`faulty-filesystem.ts`, `crash-worker.mjs`, FE-01..06, FI-01..05) là hạ tầng thật và nên giữ, nhưng
+nó gọi thẳng `prepareEmit`/`activateEmit`/`transactInterviewStore` — các hàm Core mà production CLI
+(`handleEmit`, `handleCommit`) hiện không gọi (X16 vẫn OPEN ở seam CLI thật). Test đang chứng minh
+engine đúng, không chứng minh production path an toàn. Đóng lại ở P11 sau khi P7/P2 nối engine vào
+CLI và fault harness chuyển sang gọi qua public CLI/application service.

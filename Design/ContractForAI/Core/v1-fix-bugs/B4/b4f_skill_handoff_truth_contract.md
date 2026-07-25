@@ -19,16 +19,16 @@ Sửa skill để người mới luôn nhận đúng một bước kế tiếp t
 
 ## 3. Implementation checklist
 
-- [ ] Sau emit success, nói rõ docs đã sinh nhưng execution plan chưa validate; next action là /build.
-- [ ] Xóa mọi câu “gate đã mở”, “bắt đầu code từ M0” hoặc tương đương trước ready-to-execute.
-- [ ] /build bắt đầu status/health rồi validate; chỉ next/start theo Core next_command, không tự suy phase.
-- [ ] Skill dùng JSON result + exit code B4c; non-zero dừng và hiển thị recovery/correction, không tiếp tục.
-- [ ] Blocking consistency/quality warning yêu cầu user sửa hoặc acknowledgement explicit bằng capability; model không tự ack.
-- [ ] Không viết tay docs/progress/answers/slots ngoài scratch contract; mọi commit/emit/deepen qua CLI operation.
-- [ ] Mô tả journey lấy từ runtime catalog, gồm câu branch; không hardcode count.
-- [ ] deepen chỉ đề nghị sau tier-1 healthy/opt-in; invalid/busy phase giải thích vì sao và khi nào quay lại.
-- [ ] Recovery message không khuyên xóa state/reinstall mù; dùng safe_next_command từ health.
-- [ ] Installer completion text và skill final text dùng cùng renderNextStep source/snapshot test.
+- [x] Sau emit success, nói rõ docs đã sinh nhưng execution plan chưa validate; next action là /build.
+- [x] Xóa mọi câu “gate đã mở”, “bắt đầu code từ M0” hoặc tương đương trước ready-to-execute.
+- [x] /build bắt đầu status/health rồi validate; chỉ next/start theo Core next_command, không tự suy phase.
+- [x] Skill dùng JSON result + exit code B4c; non-zero dừng và hiển thị recovery/correction, không tiếp tục.
+- [x] Blocking consistency/quality warning yêu cầu user sửa hoặc acknowledgement explicit bằng capability; model không tự ack.
+- [x] Không viết tay docs/progress/answers/slots ngoài scratch contract; mọi commit/emit/deepen qua CLI operation.
+- [x] Mô tả journey lấy từ runtime catalog, gồm câu branch; không hardcode count.
+- [x] deepen chỉ đề nghị sau tier-1 healthy/opt-in; invalid/busy phase giải thích vì sao và khi nào quay lại.
+- [x] Recovery message không khuyên xóa state/reinstall mù; dùng safe_next_command từ health.
+- [x] Installer completion text và skill final text dùng cùng renderNextStep source/snapshot test.
 
 ## 4. Interfaces / Files expected to change
 
@@ -58,4 +58,10 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SNAPSHOT_ONLY
+
+**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). SKILL.md handoff wording
+("chưa validate, gate chưa mở") là cải thiện thật và nên giữ, nhưng cùng lúc bị xóa mất: cú pháp
+lệnh `deepen` khả thi, quy tắc SourceRef/`⚠ unknown` user-visible, và quy tắc scope guard khi
+phỏng vấn chưa xong. Skill vẫn dạy `--turn <TURN_ID>` thay vì capability token (B1a chưa đóng).
+Đóng ở P10 sau khi B1a/B3e đóng và skill được chạy trên target cài thật.
