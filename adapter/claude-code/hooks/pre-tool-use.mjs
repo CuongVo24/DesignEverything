@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 // PreToolUse — ép cứng "chưa đủ doc thì chưa code" theo gate-policy.
-// Chuẩn hoá input của Claude Code (file_path, MultiEdit...) về hợp đồng của onPreToolUse.
+// Chuẩn hoá input của Claude Code về hợp đồng của onPreToolUse.
 import { pathToFileURL } from 'url';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { ENGINE_ROOT, readStdinJson, workspaceRootFrom, emitJson } from './_shared.mjs';
+import { readStdinJson, workspaceRootFrom, emitJson, resolveModule } from './_shared.mjs';
+import { resolveCliInvocation, authorizeCliOperation } from './resolve-cli-invocation.mjs';
 
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
 
-// Dự án chưa có state DesignEverything → không can thiệp.
-if (!existsSync(join(workspaceRoot, 'progress.json'))) {
+// Dự án chưa có state DesignEverything -> không can thiệp.
+if (!existsSync(join(workspaceRoot, 'progress.json')) && !existsSync(join(workspaceRoot, '.design-everything/install-manifest.json'))) {
   process.exit(0);
 }
 
@@ -24,11 +25,34 @@ else if (toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'Notebo
 else if (toolName === 'Bash') coreTool = 'Bash';
 if (!coreTool) process.exit(0);
 
-// Bash gọi chính CLI của DesignEverything (commit/emit/status) là thao tác của phương pháp,
-// luôn được phép — nếu không, skill không thể commit bước phỏng vấn nào.
+// Phân tích và xác thực chính xác câu lệnh CLI nếu tool là Bash
 if (coreTool === 'Bash') {
-  const cmd = String(toolInput.command || '');
-  if (/adapter[\\/]claude-code[\\/]cli\.mjs/.test(cmd)) process.exit(0);
+  const cliResolution = resolveCliInvocation(input, null, null);
+  if (cliResolution.outcome === 'rejection') {
+    emitJson({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: `[DesignEverything CLI protection] ${cliResolution.message}`,
+      },
+    });
+    process.exit(0);
+  }
+  if (cliResolution.outcome === 'exact-operation') {
+    const auth = authorizeCliOperation(cliResolution, null);
+    if (auth.decision === 'deny') {
+      emitJson({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'deny',
+          permissionDecisionReason: `[DesignEverything CLI authorization] ${auth.message}`,
+        },
+      });
+      process.exit(0);
+    }
+    // Lệnh CLI chính xác và hợp lệ -> cho phép thực thi
+    process.exit(0);
+  }
 }
 
 // Chuẩn hoá tool_input về shape mà onPreToolUse hiểu (path / command).
@@ -43,7 +67,7 @@ if (coreTool === 'Bash') {
 
 try {
   const { onPreToolUse } = await import(
-    pathToFileURL(join(ENGINE_ROOT, 'dist/src/adapters/claude/preToolUse.js')).href
+    pathToFileURL(resolveModule('adapters/claude/preToolUse.js')).href
   );
   const result = onPreToolUse({ workspaceRoot, tool: coreTool, toolInput: normalizedInput });
 
@@ -56,7 +80,6 @@ try {
       },
     });
   }
-  // allow → im lặng, để permission flow bình thường của Claude Code quyết.
   process.exit(0);
 } catch (err) {
   console.error(`[DesignEverything PreToolUse] ${err.message}`);

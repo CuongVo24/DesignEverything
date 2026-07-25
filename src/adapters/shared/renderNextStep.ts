@@ -60,7 +60,7 @@ export function renderNextStep(
   }
 
   // 1. Check Profile
-  if (!profile || !profile.confirmation.confirmed || (profile.workspace_kind === 'empty' && !profile.target)) {
+  if (!profile || !profile.confirmation?.confirmed || (profile.workspace_kind === 'empty' && !profile.target)) {
     if (profile && (profile.workspace_kind === 'existing-unsupported' || profile.target === 'unsupported')) {
       return {
         state: 'unsupported',

@@ -27,10 +27,6 @@ function allow() {
   );
 }
 
-// Resolve the compiled core runtime. When the plugin is installed under
-// ~/.codex/plugins/... the repo-local dist/ is not available, so the installer
-// bundles the compiled core into <plugin>/core. Try bundled locations first,
-// then fall back to the repo-local dist for in-repo development.
 function resolveCorePath() {
   const roots = [
     process.env.CLAUDE_PLUGIN_ROOT,
@@ -42,9 +38,10 @@ function resolveCorePath() {
   for (const root of roots) {
     candidates.push(join(root, 'core', 'index.js'));
     candidates.push(join(root, 'dist', 'src', 'core', 'index.js'));
+    candidates.push(join(root, 'dist', 'core', 'index.js'));
   }
-  // Repo-local development fallback: adapter/codex-plugin/hooks -> repo root/dist
   candidates.push(resolve(__dirname, '../../../dist/src/core/index.js'));
+  candidates.push(resolve(__dirname, '../../../dist/core/index.js'));
 
   for (const candidate of candidates) {
     if (existsSync(candidate)) {
@@ -54,9 +51,6 @@ function resolveCorePath() {
   return null;
 }
 
-// Extract target file paths from an apply_patch envelope. Codex sends the patch
-// text via tool_input.command (NOT tool_input.path). The envelope uses the
-// `*** Add/Update/Delete File:` and `*** Move to:` markers.
 function extractApplyPatchPaths(patchText) {
   const paths = [];
   if (!patchText) return paths;
@@ -83,7 +77,6 @@ async function main() {
   try {
     const inputStr = readFileSync(0, 'utf8');
     if (!inputStr || !inputStr.trim()) {
-      // Fail closed: an empty/unknown payload must not silently allow actions.
       deny('DesignEverything hook received an empty payload; blocking to fail closed.');
       return;
     }
@@ -95,8 +88,6 @@ async function main() {
 
   try {
     const workspace = payload.cwd || process.cwd();
-    // Be invisible outside a DesignEverything workspace. Once either state
-    // marker exists, all subsequent failures remain fail-closed below.
     if (
       !existsSync(join(workspace, 'progress.json')) &&
       !existsSync(join(workspace, '.design-everything', 'execution-state.json'))
@@ -106,8 +97,6 @@ async function main() {
     }
 
     const tool_name = payload.tool_name || '';
-    // Reading must never be gated. Only writes and shell execution enter the
-    // enforcement core, mirroring the Claude hook contract.
     if (!['Bash', 'apply_patch', 'Write', 'Edit'].includes(tool_name)) {
       allow();
       return;
@@ -123,10 +112,8 @@ async function main() {
       command_argv = cmd.trim().length ? cmd.trim().split(/\s+/) : [];
     } else if (tool_name === 'apply_patch') {
       action_kind = 'write';
-      // Codex provides the patch body in tool_input.command.
       const patchText = toolInput.command || toolInput.input || toolInput.patch || '';
       target_paths = extractApplyPatchPaths(patchText);
-      // Fall back to an explicit path field only if the envelope had none.
       if (target_paths.length === 0 && (toolInput.path || toolInput.file_path)) {
         target_paths = [toolInput.path || toolInput.file_path];
       }
@@ -138,7 +125,6 @@ async function main() {
 
     const corePath = resolveCorePath();
     if (!corePath) {
-      // Fail closed: if we cannot load the enforcement core, do not allow.
       deny('DesignEverything core runtime was not found next to the plugin; reinstall the plugin (installer bundles core/). Blocking to fail closed.');
       return;
     }
@@ -163,7 +149,6 @@ async function main() {
       deny(decision.user_message);
     }
   } catch (error) {
-    // Fail closed on any runtime error inside enforcement.
     deny(`DesignEverything hook failed while evaluating the action (${error.message}); blocking to fail closed.`);
   }
 }

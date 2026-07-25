@@ -2,19 +2,19 @@
 // SessionStart — khởi tạo/validate progress.json trong workspace của dự án đích.
 import { pathToFileURL } from 'url';
 import { join } from 'path';
-import { ENGINE_ROOT, readStdinJson, workspaceRootFrom, emitJson } from './_shared.mjs';
+import { readStdinJson, workspaceRootFrom, emitJson, resolveModule } from './_shared.mjs';
 
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
 
 try {
   const { onSessionStart } = await import(
-    pathToFileURL(join(ENGINE_ROOT, 'dist/src/adapters/claude/sessionStart.js')).href
+    pathToFileURL(resolveModule('adapters/claude/sessionStart.js')).href
   );
   onSessionStart({ workspaceRoot });
 
   const { loadProgress } = await import(
-    pathToFileURL(join(ENGINE_ROOT, 'dist/src/core/index.js')).href
+    pathToFileURL(resolveModule('core/index.js')).href
   );
   const progress = loadProgress(join(workspaceRoot, 'progress.json'));
 

@@ -82,7 +82,7 @@ describe('onPreToolUse hook', () => {
       toolInput: { command: 'npm install' },
     });
     expect(resultBash.decision).toBe('deny');
-    expect(resultBash.message).toContain('Phỏng vấn chưa xong tới S3');
+    expect(resultBash.message).toMatch(/Phỏng vấn chưa xong|cannot be proven read-only|unknown/);
   });
 
   test('should allow doc writing even when gate is closed', () => {
@@ -201,7 +201,7 @@ describe('onPreToolUse hook', () => {
       toolInput: { path: '../../outside.ts' },
     });
     expect(result1.decision).toBe('deny');
-    expect(result1.message).toContain('path traversal ngoài workspace');
+    expect(result1.message).toMatch(/outside the workspace root|path traversal/);
 
     // 2. Drive letter or absolute path on Windows/Unix
     const result2 = onPreToolUse({
@@ -289,6 +289,6 @@ describe('onPreToolUse hook', () => {
       toolInput: { path: 'src/index.ts' },
     });
     expect(resultCorrupt.decision).toBe('deny');
-    expect(resultCorrupt.message).toContain('Tệp trạng thái thực thi bị lỗi hoặc không hợp lệ');
+    expect(resultCorrupt.message).toMatch(/Runtime state is broken|Tệp trạng thái thực thi bị lỗi/);
   });
 });

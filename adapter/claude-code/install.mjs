@@ -28,7 +28,7 @@ if (resolve(targetRoot) === ENGINE_ROOT) {
 }
 mkdirSync(targetRoot, { recursive: true });
 
-if (!existsSync(join(ENGINE_ROOT, 'dist/src/core/index.js'))) {
+if (!existsSync(join(ENGINE_ROOT, 'dist/src/core/index.js')) && !existsSync(join(ENGINE_ROOT, 'dist/core/index.js'))) {
   console.error('Chưa có dist/. Chạy "npm run build" trong repo DesignEverything trước.');
   process.exit(1);
 }

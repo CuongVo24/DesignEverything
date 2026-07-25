@@ -11,8 +11,8 @@ const RUNTIME_DEPS = ['zod', 'yaml'];
 
 function bundleCoreRuntime() {
   const distSrc = join(REPO_ROOT, 'dist');
-  if (!existsSync(join(distSrc, 'src', 'core', 'index.js'))) {
-    console.error('ERROR: compiled core not found at dist/src/core/index.js.');
+  if (!existsSync(join(distSrc, 'src', 'core', 'index.js')) && !existsSync(join(distSrc, 'core', 'index.js'))) {
+    console.error('ERROR: compiled core not found at dist/core/index.js.');
     console.error('Run "npm run build" at the repo root first, then re-run this installer.');
     process.exit(1);
   }

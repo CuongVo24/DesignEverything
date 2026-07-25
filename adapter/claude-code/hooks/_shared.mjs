@@ -2,9 +2,21 @@
 // Hooks nhận JSON qua stdin theo giao thức hook của Claude Code và trả JSON qua stdout.
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 // Engine root = repo DesignEverything (nơi chứa dist/ + node_modules).
 export const ENGINE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+export function resolveModule(subpath) {
+  const candidates = [
+    join(ENGINE_ROOT, 'dist', 'src', subpath),
+    join(ENGINE_ROOT, 'dist', subpath),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return join(ENGINE_ROOT, 'dist', subpath);
+}
 
 export function readStdinJson() {
   return new Promise((resolve) => {

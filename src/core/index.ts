@@ -16,13 +16,14 @@ export type { AnswerValidationOutcome, AnswerValidationResult } from './validate
 export { loadQuestionSlots } from './loadQuestionSlots.js';
 export type { LoadSlotsResult } from './loadQuestionSlots.js';
 export { inspectRuntimeHealth, authorizeRecovery } from './runtimeHealth.js';
+export { runCliOperation } from '../adapters/shared/cliOperations.js';
+export { exitCodeFor, cliResultEnvelopeSchema, type CliResultEnvelope } from '../adapters/shared/cliResult.js';
 export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
 export type { ArtifactClass } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
 export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';
 export { canonicalizeWorkspacePath, matchesPathPattern, isContainedRealPath } from './pathPolicy.js';
 export { loadDeepenScript } from './loadDeepenScript.js';
-export { slugify, slugifyList } from './slugify.js';
 export {
   loadDeepenState,
   saveDeepenState,
@@ -34,7 +35,7 @@ export {
   computeSourceDigest,
 } from './deepenState.js';
 export type { QuestionInstance } from './deepenState.js';
-export { emitDoc, emitTree } from './emit.js';
+export { emitDoc, emitTree, generateExecutionPlanJson } from './emit.js';
 export { generateAgentsMd } from '../adapters/agents/generateAgentsMd.js';
 export { validateExecutionPlan } from './validatePlan.js';
 export {
