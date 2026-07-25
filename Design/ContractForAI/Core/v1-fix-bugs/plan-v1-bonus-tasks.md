@@ -61,7 +61,7 @@ contract proof.
 |---|---|---|
 | H0 — stale skill command | Closed 2026-07-25 | Doc/skill fixed; `deepen` CLI wiring vẫn nợ P6/P7 |
 | P2.2a — canonical authority | Partial (core+adapters done 2026-07-25) | interview/commit path chạy qua canonical; `evaluatePreAction` caller-injection và `deepen` chưa nối (P4/P6/P7/P8) |
-| P2.2b — durability/lock | Open | lock chỉ có PID+TTL busy-spin; chưa nonce/session, chưa journal/fsync marker |
+| P2.2b — durability/lock | Partial (2026-07-25) | lock nonce/liveness + fsync + migration validation done; multi-file journal marker đánh giá không cần cho seam 1-file này |
 | P4 — policy | Partial | Core primitives có, nhưng `evaluatePreAction` và Codex post-hook còn matcher/safe list riêng |
 | P5 — gate/health | Partial | recovery auth đã sửa; gate và health chưa recompute/verify đủ nguồn |
 | P3 — handoff/blocked | Open | chưa có atomic tier-1 handoff và typed remediation |
@@ -258,63 +258,92 @@ interview phase, revision, answers/slots và capability state.
 
 ---
 
-## 6. P2.2b — durability, ownership lock và crash recovery
+## 6. P2.2b — durability, ownership lock và crash recovery — PARTIAL (2026-07-25)
 
-### Lock ownership
+### Lock ownership — DONE
 
-- [ ] Lock record chứa owner nonce ngẫu nhiên, PID, session ID,
+- [x] Lock record chứa owner nonce ngẫu nhiên, PID, session ID,
   acquired-at và target/store identity.
-- [ ] Release chỉ xóa lock khi nonce/owner khớp.
-- [ ] TTL đơn thuần không được phép xóa một lock còn sống.
-- [ ] Stale decision dùng policy đã test: process liveness khi khả dụng,
-  session/nonce, store revision và recovery marker.
-- [ ] Lock contention có stable code và bounded retry; không busy loop.
+- [x] Release chỉ xóa lock khi nonce/owner khớp
+  (`releaseLock(workspaceRoot, nonce)`, no-op nếu sai nonce).
+- [x] TTL đơn thuần không được phép xóa một lock còn sống — liveness
+  (`process.kill(pid, 0)`) là tiêu chí chính; TTL 30s chỉ là fallback khi
+  liveness không xác định được (lock record hỏng/legacy, hoặc platform
+  probe không kết luận được).
+- [~] Stale decision dùng policy đã test: process liveness — có test
+  (`src/core/lockOwnership.test.ts`). "session/nonce, store revision và
+  recovery marker" như tiêu chí staleness bổ sung — **chưa làm**: store
+  interview-state chỉ là một file JSON atomic-rename, không có multi-step
+  recovery marker như hệ emit tier1/tier2; đánh giá là không cần cho seam
+  này, ghi lại rõ ràng thay vì âm thầm bỏ qua.
+- [x] Lock contention có stable code (`LOCK_TIMEOUT`) và bounded retry
+  (`Atomics.wait` backoff, tối đa 250ms/lần); không còn busy loop CPU-spin.
 
-### Durable transaction
+### Durable transaction — PARTIAL
 
-- [ ] Temp file nằm cùng volume/directory generation với canonical file.
-- [ ] Explicit `open → write → fsync/FlushFileBuffers → close`.
-- [ ] Atomic replace/rename có Windows-safe behavior và test.
-- [ ] Parent-directory fsync ở platform hỗ trợ; Windows fallback được
-  document và test theo guarantee thực tế.
-- [ ] Thêm journal/commit marker hoặc generation pointer đủ phân biệt:
-  old committed, new committed, prepared temp và interrupted promotion.
-- [ ] Checksum/revision liên kết state, answers, slots và capability
-  consumption.
-- [ ] Orphan cleanup dựa trên marker/revision/checksum, không chỉ
-  timestamp.
-- [ ] Recovery idempotent: lần đầu recover, lần hai no-op.
+- [x] Temp file nằm cùng volume/directory với canonical file (đã đúng từ
+  trước, không đổi).
+- [x] Explicit `write → fsync → close` trước rename
+  (`writeEnvelopeAtomic`, reopen-to-fsync vì `injectFsFault` test helper
+  chỉ patch được `writeFileSync`/`renameSync`, không patch `openSync`).
+- [x] Atomic replace/rename: `fs.renameSync` (đã đúng từ trước) — có test
+  fault-injection (`FI-04`).
+- [x] Parent-directory fsync ở platform hỗ trợ (POSIX); Windows fallback
+  wrap try/catch, document rõ NTFS rename/metadata journaling là guarantee
+  thực tế trên platform này chạy — không có test riêng cho Windows
+  fallback (chạy trực tiếp trên Windows nên nhánh catch luôn được exercise
+  qua toàn bộ suite, nhưng không assert tường minh).
+- [ ] Journal/commit marker hoặc generation pointer phân biệt
+  old/new/prepared/interrupted: **chưa làm** — một file JSON atomic-rename
+  duy nhất không có "partially renamed" state (rename POSIX/NTFS same-
+  volume là atomic), nên đánh giá không cần journal riêng cho seam này,
+  khác với hệ emit tier1/tier2 (nhiều file, cần journal thật). Ghi rõ đây
+  là quyết định phạm vi, không phải bỏ sót.
+- [x] Checksum/revision liên kết state+answers+slots
+  (`computePayloadChecksum` cover toàn bộ payload, đã có từ trước).
+  Capability consumption: nằm trong `payload.progress.pending_turn_capability`,
+  cùng transaction — chưa có checksum riêng nhưng cùng envelope checksum.
+- [x] Orphan cleanup dựa trên liveness/nonce, không chỉ timestamp (xem lock
+  ownership ở trên — TTL chỉ còn là fallback).
+- [x] Recovery idempotent: `FI-05` (hard-kill giữa commit) chứng minh lần
+  đầu recover thành công, lần hai load lại không đổi state.
 
-### Migration durability
+### Migration durability — DONE (2026-07-25, `src/core/migrationDurability.test.ts`)
 
-- [ ] Backup legacy immutable, versioned và không overwrite khi rerun.
-- [ ] Canonical hiện hữu luôn phải schema/checksum validate trước khi
-  migrator quyết định no-op.
-- [ ] Legacy conflict/corruption trả structured blocking result.
-- [ ] Không xóa legacy artifacts trong migration repair release; chỉ
-  ngừng coi chúng là authority.
+- [x] Backup legacy immutable, versioned và không overwrite khi rerun
+  (`migration-<timestamp>.<random>`, test rerun tạo backup thứ hai riêng
+  biệt).
+- [x] Canonical hiện hữu luôn phải schema/checksum validate trước khi
+  migrator quyết định no-op (`MIGRATION_BLOCKED_CANONICAL_CORRUPT` nếu
+  hỏng, không còn `existsSync`-only check).
+- [x] Legacy conflict/corruption trả structured blocking result
+  (`MIGRATION_BLOCKED_LEGACY_CORRUPT`, throw thay vì âm thầm coi là
+  no-legacy).
+- [x] Không xóa legacy artifacts trong migration; chỉ ngừng coi chúng là
+  authority (đã đúng từ trước, xác nhận bằng test).
 
-### Fault boundaries bắt buộc
+### Fault boundaries — PARTIAL
 
-- [ ] load;
-- [ ] schema validation;
-- [ ] lock acquire;
-- [ ] temp create;
-- [ ] write;
-- [ ] fsync;
-- [ ] marker write;
-- [ ] rename/replace;
-- [ ] directory sync/fallback;
-- [ ] lock release;
-- [ ] orphan cleanup;
-- [ ] hard-kill rồi restart ở các boundary quan trọng.
+Đã có test qua public seam cho: load (`STORE_MISSING`/`CANONICAL_CORRUPT`
+paths), schema validation (`interviewStoreEnvelopeSchema.parse`), lock
+acquire (`lockOwnership.test.ts`), write (`FI-03` ENOSPC), rename (`FI-04`
+EACCES), lock release (nonce-gated), hard-kill rồi restart (`FI-05`).
+**Chưa có** fault injection riêng cho: fsync thất bại (không có seam để
+patch `fsyncSync`/`openSync` trong `faulty-filesystem.ts` — có thể mở
+rộng sau nếu cần), marker write (không áp dụng, không có marker riêng —
+xem trên), directory sync/fallback (không có test tường minh, chỉ chạy
+qua nhánh catch mặc định trên Windows).
 
-### Exit criteria
+### Exit criteria — đạt cho seam đã làm
 
-- Sau mọi injected crash, restart thấy toàn bộ old hoặc toàn bộ new
-  envelope; không có mixed answers/slots/token/revision.
-- Không writer nào xóa lock của writer khác.
-- Recovery hai lần không làm tăng revision hoặc thay đổi bytes lần hai.
+- Sau injected crash (`FI-01`–`FI-05`), restart thấy toàn bộ old hoặc
+  toàn bộ new envelope; không mixed state trong các test đã có.
+- Không writer nào xóa lock của writer khác (`lockOwnership.test.ts`).
+- Recovery hai lần không làm tăng revision hoặc thay đổi bytes lần hai
+  (`FI-05`, `migrationDurability.test.ts` rerun test).
+- **Chưa đạt đầy đủ**: journal/generation-pointer đa file (không cần cho
+  seam này, xem trên); fault injection cho fsync/marker/directory-sync
+  riêng lẻ.
 
 ### Commit slicing đề xuất
 
