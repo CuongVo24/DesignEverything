@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { progressSchema, type Progress } from './schemas/index.js';
-import { loadInterviewStore, transactInterviewStore } from './interviewStore.js';
+import { loadInterviewStore } from './interviewStore.js';
 
 export function loadProgress(path: string): Progress {
   const workspaceRoot = dirname(path);
@@ -57,6 +57,17 @@ export function loadProgress(path: string): Progress {
   return parsed.data;
 }
 
+/**
+ * Legacy-only writer (P2.2a §5.4): writes progress.json and nothing else.
+ * No longer mirrors into the canonical store — that mirror used to call
+ * transactInterviewStore with expectedRevision=null (a CAS bypass explicitly
+ * forbidden by P2.2a) and swallowed the transaction error on failure, which
+ * could silently desync the legacy projection from canonical state. Canonical
+ * writes now happen exclusively through issuePromptCapability/
+ * commitInterviewAnswer with a real expected revision. Production adapters
+ * and Core policy must not call this — it exists only for migration/legacy
+ * fixtures.
+ */
 export function saveProgress(path: string, p: Progress): void {
   const parsed = progressSchema.safeParse(p);
   if (!parsed.success) {
@@ -64,29 +75,6 @@ export function saveProgress(path: string, p: Progress): void {
   }
 
   const workspaceRoot = dirname(path);
-  const canonicalPath = join(workspaceRoot, '.design-everything/interview-state.json');
-
-  if (existsSync(canonicalPath)) {
-    try {
-      // Mirror into the canonical store as a best-effort debug projection.
-      // Must be a deep clone: transactInterviewStore stamps its own
-      // (independently-incrementing) revision onto payload.progress in
-      // place, and aliasing `p` here let that stamp silently overwrite the
-      // caller's real progress object — desyncing state_revision from the
-      // capability that had just been issued against it (found while wiring
-      // B1a's mandatory capability check end-to-end; see plan-v1-fix.md R02).
-      transactInterviewStore(workspaceRoot, null, (envelope) => ({
-        ...envelope,
-        payload: {
-          ...envelope.payload,
-          progress: structuredClone(p),
-        },
-      }));
-    } catch {
-      // Fallback write
-    }
-  }
-
   try {
     mkdirSync(workspaceRoot, { recursive: true });
     writeFileSync(path, JSON.stringify(p, null, 2), 'utf8');

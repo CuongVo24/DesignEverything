@@ -1,6 +1,6 @@
 import { join } from 'path';
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
-import { loadProgress } from './loadProgress.js';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { loadInterviewStore, transactInterviewStore } from './interviewStore.js';
 import { loadGatePolicy } from './loadGatePolicy.js';
 import { evaluateGate, isBlocked } from './evaluateGate.js';
 import { loadExecutionState } from './advanceExecutionState.js';
@@ -14,6 +14,7 @@ import {
   PreActionRequest,
   PreActionDecision,
   AdapterCapability,
+  type Progress,
 } from './schemas/index.js';
 
 /**
@@ -139,34 +140,43 @@ function evaluatePreActionInner(
     }
   }
 
-  // 5. Load progress state
-  let progress = null;
-  const progressPath = join(workspace, 'progress.json');
-  if (!execState) {
-    if (!existsSync(progressPath)) {
-      return {
-        decision: 'deny',
-        reason_code: 'progress-missing',
-        user_message: 'Thiếu tệp tiến trình progress.json trong thư mục.',
-        enforcement: 'hard',
-      };
-    }
-    try {
-      progress = loadProgress(progressPath);
-    } catch (error: unknown) {
-      return {
-        decision: 'deny',
-        reason_code: 'progress-invalid',
-        user_message: `Không thể nạp progress.json: ${(error as Error).message}`,
-        enforcement: 'hard',
-      };
-    }
-  } else {
-    if (existsSync(progressPath)) {
+  // 5. Load progress state from the canonical interview store (P2.2a) — no
+  // progress.json read here anymore. A caller may supply a pre-loaded
+  // snapshot via request.progress (mirrors request.state); when absent this
+  // loads canonical directly rather than fabricating or falling back to
+  // legacy state.
+  let progress: Progress | null = (request.progress as Progress | undefined) ?? null;
+  let canonicalRevision: number | null = null;
+  if (!progress) {
+    if (!execState) {
       try {
-        progress = loadProgress(progressPath);
+        const envelope = loadInterviewStore(workspace);
+        progress = envelope.payload.progress;
+        canonicalRevision = envelope.state_revision;
+      } catch (error: unknown) {
+        const msg = (error as Error).message;
+        if (msg.startsWith('STORE_MISSING')) {
+          return {
+            decision: 'deny',
+            reason_code: 'progress-missing',
+            user_message: 'Thiếu trạng thái phỏng vấn (canonical interview store) trong thư mục.',
+            enforcement: 'hard',
+          };
+        }
+        return {
+          decision: 'deny',
+          reason_code: 'progress-invalid',
+          user_message: `Không thể nạp canonical interview store: ${msg}`,
+          enforcement: 'hard',
+        };
+      }
+    } else {
+      try {
+        const envelope = loadInterviewStore(workspace);
+        progress = envelope.payload.progress;
+        canonicalRevision = envelope.state_revision;
       } catch {
-        // ignore
+        // ignore — matches prior best-effort behavior once execState exists
       }
     }
   }
@@ -315,11 +325,16 @@ function evaluatePreActionInner(
       }
     }
 
-    if (progressModified && progress) {
+    if (progressModified && progress && canonicalRevision !== null) {
       try {
-        writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf8');
+        const passedGates = progress.gates_passed;
+        transactInterviewStore(workspace, canonicalRevision, (env) => ({
+          ...env,
+          payload: { ...env.payload, progress: { ...env.payload.progress, gates_passed: passedGates } },
+        }));
       } catch {
-        // ignore
+        // best-effort — a concurrent writer already advanced the revision;
+        // gates_passed is recomputed on the next evaluatePreAction call.
       }
     }
 

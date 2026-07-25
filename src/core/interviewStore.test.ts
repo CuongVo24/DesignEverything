@@ -6,6 +6,7 @@ import {
   loadInterviewStore,
   transactInterviewStore,
   computePayloadChecksum,
+  initializeInterviewStore,
   CANONICAL_STORE_REL_PATH,
 } from './interviewStore.js';
 import { migrateInterviewStore } from './migrateInterviewStore.js';
@@ -27,15 +28,39 @@ describe('B1b — Atomic interview persistence', () => {
     };
   });
 
-  test('migrateInterviewStore creates a fresh envelope when no legacy files exist', () => {
+  test('migrateInterviewStore never fabricates state when no legacy files exist (P2.2a)', () => {
     const res = migrateInterviewStore(tempDir);
-    expect(res).toBe('fresh');
+    expect(res).toBe('no-legacy');
+    expect(existsSync(join(tempDir, CANONICAL_STORE_REL_PATH))).toBe(false);
+  });
 
-    const envelope = loadInterviewStore(tempDir);
+  test('initializeInterviewStore is the sole path that creates fresh state from nothing', () => {
+    const envelope = initializeInterviewStore(tempDir);
     expect(envelope.schema_version).toBe('7.0.0');
     expect(envelope.state_revision).toBe(0);
     expect(envelope.payload.progress.current_step).toBe('CAL0');
     expect(envelope.checksum).toBe(computePayloadChecksum(envelope.payload));
+
+    const reloaded = loadInterviewStore(tempDir);
+    expect(reloaded.state_revision).toBe(0);
+  });
+
+  test('initializeInterviewStore refuses to run when a canonical store already exists', () => {
+    initializeInterviewStore(tempDir);
+    expect(() => initializeInterviewStore(tempDir)).toThrow(/STORE_ALREADY_EXISTS/);
+  });
+
+  test('initializeInterviewStore refuses to run when legacy state exists (must migrate instead)', () => {
+    writeFileSync(
+      join(tempDir, 'progress.json'),
+      JSON.stringify({ version: '0.1.0', phase: 'interview', current_step: 'S1' })
+    );
+    expect(() => initializeInterviewStore(tempDir)).toThrow(/MIGRATION_REQUIRED/);
+  });
+
+  test('loadInterviewStore throws typed STORE_MISSING for a truly uninvolved workspace, not a fabricated fresh store', () => {
+    expect(() => loadInterviewStore(tempDir)).toThrow(/STORE_MISSING/);
+    expect(existsSync(join(tempDir, CANONICAL_STORE_REL_PATH))).toBe(false);
   });
 
   test('migrateInterviewStore migrates legacy progress.json and answers.json with backup', () => {
@@ -71,7 +96,7 @@ describe('B1b — Atomic interview persistence', () => {
   });
 
   test('transactInterviewStore increments revision, computes checksum, and writes atomically', () => {
-    migrateInterviewStore(tempDir);
+    initializeInterviewStore(tempDir);
     const initial = loadInterviewStore(tempDir);
     expect(initial.state_revision).toBe(0);
 
@@ -91,7 +116,7 @@ describe('B1b — Atomic interview persistence', () => {
   });
 
   test('transactInterviewStore rejects revision conflict (CAS failure)', () => {
-    migrateInterviewStore(tempDir);
+    initializeInterviewStore(tempDir);
 
     expect(() =>
       transactInterviewStore(tempDir, 999, (env) => env)
@@ -99,7 +124,7 @@ describe('B1b — Atomic interview persistence', () => {
   });
 
   test('loadInterviewStore rejects corrupt or tampered canonical files (checksum mismatch)', () => {
-    migrateInterviewStore(tempDir);
+    initializeInterviewStore(tempDir);
     const canonicalPath = join(tempDir, CANONICAL_STORE_REL_PATH);
     const raw = JSON.parse(readFileSync(canonicalPath, 'utf8'));
 

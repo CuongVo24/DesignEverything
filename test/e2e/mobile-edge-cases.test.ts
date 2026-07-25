@@ -3,14 +3,14 @@ import { onSessionStart } from '../../src/adapters/claude/sessionStart.js';
 import { onUserPromptSubmit } from '../../src/adapters/claude/userPromptSubmit.js';
 import { onPreToolUse } from '../../src/adapters/claude/preToolUse.js';
 import {
-  loadProgress,
-  saveProgress,
   loadScript,
   commitStep,
   stampTurn,
   emitTree,
   issueTurnCapability,
+  initializeInterviewStore,
 } from '../../src/core/index.js';
+import { loadCanonicalProgress, commitViaCanonical, mutateCanonicalProgress } from '../helpers/canonicalProgress.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, rmSync, copyFileSync, writeFileSync } from 'fs';
@@ -19,7 +19,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '../..');
 const testWorkspaceRoot = join(__dirname, '../../test/fixtures/progress/e2e-mobile-edge-workspace');
-const progressPath = join(testWorkspaceRoot, 'progress.json');
 const docsDir = join(testWorkspaceRoot, 'docs');
 const realTemplatesDir = join(projectRoot, 'Design/Content/doc-templates');
 
@@ -55,14 +54,15 @@ describe('E2E Mobile Edge Cases Flow', () => {
 
   test('Case (a): Trả lời lan man chưa xác nhận ở Mobile -> state đứng yên', () => {
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
+    let progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
 
     const result1 = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-verbose-m-1' });
     expect(result1.decision).toBe('allow');
 
-    progress = loadProgress(progressPath);
+    progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
   });
@@ -70,12 +70,12 @@ describe('E2E Mobile Edge Cases Flow', () => {
   test('Case (b): Cố đổi nhánh sang web sau S7 -> bị chặn throw error', () => {
     const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
+    let progress = loadCanonicalProgress(testWorkspaceRoot);
 
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (const step of steps) {
       const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
-      progress = loadProgress(progressPath);
 
       const opts: { capabilityToken: string; branchChoice?: string } = {
         capabilityToken: promptResult.capabilityToken!,
@@ -83,15 +83,11 @@ describe('E2E Mobile Edge Cases Flow', () => {
       if (step === 'S7') {
         opts.branchChoice = 'mobile';
       }
-      progress = commitStep(progress, script, opts);
-      saveProgress(progressPath, progress);
+      progress = commitViaCanonical(testWorkspaceRoot, script, opts);
 
-      progress = loadProgress(progressPath);
-      progress = stampTurn(progress, progress.answered.length);
-      saveProgress(progressPath, progress);
+      progress = mutateCanonicalProgress(testWorkspaceRoot, (p) => stampTurn(p, p.answered.length));
     }
 
-    progress = loadProgress(progressPath);
     expect(progress.branch).toBe('mobile');
     expect(progress.current_step).toBe('R1');
 
@@ -109,14 +105,16 @@ describe('E2E Mobile Edge Cases Flow', () => {
 
   test('Case (c): Gating edge cases - thiếu/đủ/thừa doc và emit anchor check', () => {
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    const progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
 
     // Fast-forward progress to docs-emitted phase
-    progress.phase = 'docs-emitted';
-    progress.branch = 'mobile';
-    progress.current_step = null;
-    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'M1', 'M2', 'M3', 'M4', 'M5'];
-    saveProgress(progressPath, progress);
+    mutateCanonicalProgress(testWorkspaceRoot, (p) => ({
+      ...p,
+      phase: 'docs-emitted',
+      branch: 'mobile',
+      current_step: null,
+      answered: ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'M1', 'M2', 'M3', 'M4', 'M5'],
+    }));
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)
     mkdirSync(docsDir, { recursive: true });
@@ -174,16 +172,13 @@ describe('E2E Mobile Edge Cases Flow', () => {
   test('Case (d): Double-commit and capability replay edge cases', () => {
     const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
 
     // Answer CAL0
     const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
-    progress = loadProgress(progressPath);
     const usedToken = promptResult.capabilityToken!;
-    progress = commitStep(progress, script, { capabilityToken: usedToken });
-    saveProgress(progressPath, progress);
+    const progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
 
-    progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('S0');
 
     expect(() => {

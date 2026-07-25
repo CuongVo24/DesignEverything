@@ -1,12 +1,4 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
-import {
-  loadProgress,
-  saveProgress,
-  recoverEmit,
-  migrateInterviewStore,
-  inspectRuntimeHealth,
-} from '../../core/index.js';
+import { recoverEmit, migrateInterviewStore, inspectRuntimeHealth } from '../../core/index.js';
 
 export function onSessionStart(ctx: { workspaceRoot: string }): void {
   // 1. Recover any interrupted emit transactions (tier1 and tier2)
@@ -17,26 +9,17 @@ export function onSessionStart(ctx: { workspaceRoot: string }): void {
     // Graceful recovery attempt
   }
 
-  // 2. Migrate interview store to canonical format if needed
+  // 2. Migrate legacy interview state into the canonical store if legacy
+  // state exists. Never fabricates fresh state (P2.2a) — a truly uninvolved
+  // workspace stays uninvolved until an explicit `init`, which is the sole
+  // legitimate initializer.
   try {
     migrateInterviewStore(ctx.workspaceRoot);
   } catch {
     // Graceful migration attempt
   }
 
-  // 3. Inspect runtime health
+  // 3. Inspect runtime health (surfaced to callers via health-aware entry
+  // points; SessionStart itself no longer creates or repairs state).
   inspectRuntimeHealth(ctx.workspaceRoot);
-
-  // 4. Load or initialize progress state
-  const progressPath = join(ctx.workspaceRoot, 'progress.json');
-
-  if (!existsSync(progressPath)) {
-    const defaultProgress = loadProgress(progressPath);
-    saveProgress(progressPath, defaultProgress);
-  } else {
-    const progress = loadProgress(progressPath);
-    if (progress.version !== '0.1.0' && progress.version !== '7.0.0') {
-      throw new Error(`Unsupported progress schema version: ${progress.version}. Expected 0.1.0.`);
-    }
-  }
 }

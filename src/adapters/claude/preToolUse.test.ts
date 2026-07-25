@@ -1,6 +1,7 @@
 import { expect, test, describe, afterEach, beforeEach } from 'vitest';
 import { onPreToolUse } from './preToolUse.js';
-import { loadProgress } from '../../core/index.js';
+import { loadInterviewStore } from '../../core/index.js';
+import { seedCanonicalProgress } from '../../../test/helpers/canonicalProgress.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs';
@@ -9,7 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '../../..');
 const testWorkspaceRoot = join(__dirname, '../../../test/fixtures/progress/pre-tool-use-workspace');
-const projectProgressPath = join(testWorkspaceRoot, 'progress.json');
 const docsDir = join(testWorkspaceRoot, 'docs');
 
 describe('onPreToolUse hook', () => {
@@ -48,19 +48,7 @@ describe('onPreToolUse hook', () => {
 
   test('should deny code writing when gate is closed (missing doc S2/S3)', () => {
     // Create closed gate progress state
-    const mockProgress = {
-      version: '0.1.0',
-      phase: 'interview',
-      branch: null,
-      current_step: 'S0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(projectProgressPath, JSON.stringify(mockProgress, null, 2), 'utf8');
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
 
     // Create empty docs dir
     mkdirSync(docsDir, { recursive: true });
@@ -86,19 +74,7 @@ describe('onPreToolUse hook', () => {
   });
 
   test('should allow doc writing even when gate is closed', () => {
-    const mockProgress = {
-      version: '0.1.0',
-      phase: 'interview',
-      branch: null,
-      current_step: 'S0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(projectProgressPath, JSON.stringify(mockProgress, null, 2), 'utf8');
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
     mkdirSync(docsDir, { recursive: true });
 
     // Writing to docs/ area should be allowed
@@ -119,19 +95,7 @@ describe('onPreToolUse hook', () => {
   });
 
   test('should allow safe read-only Bash commands when gate is closed', () => {
-    const mockProgress = {
-      version: '0.1.0',
-      phase: 'interview',
-      branch: null,
-      current_step: 'S0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(projectProgressPath, JSON.stringify(mockProgress, null, 2), 'utf8');
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
     mkdirSync(docsDir, { recursive: true });
 
     // ls command -> allow
@@ -160,19 +124,7 @@ describe('onPreToolUse hook', () => {
   });
 
   test('should allow code writing, updates gates_passed and opens gate when all required docs exist', () => {
-    const mockProgress = {
-      version: '0.1.0',
-      phase: 'interview',
-      branch: null,
-      current_step: 'S0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(projectProgressPath, JSON.stringify(mockProgress, null, 2), 'utf8');
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
 
     // Create docs dir and write all 3 required files
     mkdirSync(docsDir, { recursive: true });
@@ -188,9 +140,9 @@ describe('onPreToolUse hook', () => {
     });
     expect(result.decision).toBe('allow');
 
-    // Verify progress.json gates_passed now contains scope-locked
-    const updated = loadProgress(projectProgressPath);
-    expect(updated.gates_passed).toContain('scope-locked');
+    // Verify canonical gates_passed now contains scope-locked
+    const updated = loadInterviewStore(testWorkspaceRoot);
+    expect(updated.payload.progress.gates_passed).toContain('scope-locked');
   });
 
   test('should deny path traversal and drives on Write/Edit tools', () => {
@@ -255,19 +207,7 @@ describe('onPreToolUse hook', () => {
 
   test('should deny when execution-state.json is missing or corrupted outside interview phase', () => {
     // Phase is ready-to-build, but no execution-state.json exists
-    const mockProgress = {
-      version: '0.1.0',
-      phase: 'ready-to-build',
-      branch: 'web',
-      current_step: null,
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(projectProgressPath, JSON.stringify(mockProgress, null, 2), 'utf8');
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'ready-to-build', branch: 'web', current_step: null });
 
     // No execution-state.json file -> deny
     const resultMissing = onPreToolUse({

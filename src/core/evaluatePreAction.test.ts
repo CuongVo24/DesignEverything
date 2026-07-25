@@ -1,38 +1,27 @@
 import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 import { evaluatePreAction } from './evaluatePreAction.js';
 import { PreActionRequest, AdapterCapability } from './schemas/index.js';
+import { initializeInterviewStore, transactInterviewStore } from './interviewStore.js';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, rmSync } from 'fs';
 
 describe('evaluatePreAction core engine', () => {
   let testWorkspace: string;
-  let progressPath: string;
 
   beforeAll(() => {
     testWorkspace = mkdtempSync(join(tmpdir(), 'pre-action-test-'));
-    progressPath = join(testWorkspace, 'progress.json');
 
-    // Create progress.json in interview phase
-    writeFileSync(
-      progressPath,
-      JSON.stringify(
-        {
-          version: '2.0.0',
-          phase: 'interview',
-          branch: null,
-          current_step: 'S0',
-          answered: [],
-          emitted_docs: [],
-          gates_passed: [],
-          last_user_turn_id: null,
-          answered_len_at_last_turn: 0,
-          updated_at: new Date().toISOString(),
-        },
-        null,
-        2
-      )
-    );
+    // Seed the canonical interview store in interview phase (P2.2a: no
+    // progress.json — evaluatePreAction reads canonical only).
+    const base = initializeInterviewStore(testWorkspace).payload.progress;
+    transactInterviewStore(testWorkspace, 0, (env) => ({
+      ...env,
+      payload: {
+        ...env.payload,
+        progress: { ...base, phase: 'interview', current_step: 'S0' },
+      },
+    }));
   });
 
   afterAll(() => {

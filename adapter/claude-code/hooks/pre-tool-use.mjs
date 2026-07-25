@@ -10,8 +10,14 @@ import { resolveCliInvocation, authorizeCliOperation } from './resolve-cli-invoc
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
 
-// Dự án chưa có state DesignEverything -> không can thiệp.
-if (!existsSync(join(workspaceRoot, 'progress.json')) && !existsSync(join(workspaceRoot, '.design-everything/install-manifest.json'))) {
+// Dự án chưa có state DesignEverything -> không can thiệp. P2.2a: canonical
+// interview-state.json là nguồn thật; progress.json chỉ còn kiểm tra cho
+// tương thích ngược với workspace chưa migrate.
+if (
+  !existsSync(join(workspaceRoot, '.design-everything/interview-state.json')) &&
+  !existsSync(join(workspaceRoot, 'progress.json')) &&
+  !existsSync(join(workspaceRoot, '.design-everything/install-manifest.json'))
+) {
   process.exit(0);
 }
 

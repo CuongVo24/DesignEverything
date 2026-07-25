@@ -2,8 +2,19 @@ export * from './schemas/index.js';
 export { loadScript } from './loadScript.js';
 export { loadGatePolicy } from './loadGatePolicy.js';
 export { loadProgress, saveProgress } from './loadProgress.js';
-export { loadInterviewStore, transactInterviewStore, computePayloadChecksum } from './interviewStore.js';
+export { loadInterviewStore, transactInterviewStore, computePayloadChecksum, initializeInterviewStore } from './interviewStore.js';
 export { migrateInterviewStore } from './migrateInterviewStore.js';
+export type { MigrateInterviewStoreOutcome } from './migrateInterviewStore.js';
+export {
+  ensureCanonicalStore,
+  issuePromptCapability,
+  commitInterviewAnswer,
+} from './interviewApplicationServices.js';
+export type {
+  EnsureStoreOutcome,
+  IssuePromptCapabilityResult,
+  CommitInterviewAnswerResult,
+} from './interviewApplicationServices.js';
 export { commitStep, checkRate, stampTurn } from './advanceState.js';
 export { issueTurnCapability, verifyTurnCapability, hashToken } from './turnCapability.js';
 export type { TurnCapabilityRecord, IssueCapabilityInput, IssueCapabilityResult, VerifyTurnResult } from './turnCapability.js';

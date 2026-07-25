@@ -1,14 +1,5 @@
 import { join } from 'path';
-import { existsSync } from 'fs';
-import {
-  loadProgress,
-  saveProgress,
-  loadScript,
-  checkRate,
-  stampTurn,
-  issueTurnCapability,
-  inspectRuntimeHealth,
-} from '../../core/index.js';
+import { loadScript, issuePromptCapability, inspectRuntimeHealth } from '../../core/index.js';
 import { renderInject } from './skill/render-inject.js';
 
 export function onUserPromptSubmit(ctx: {
@@ -28,94 +19,52 @@ export function onUserPromptSubmit(ctx: {
     }
   }
 
-  const progressPath = join(ctx.workspaceRoot, 'progress.json');
+  // 1-3. Load canonical state, rate-check, stamp turn, and issue+persist a
+  // capability for the active step — all in one CAS transaction (P2.2a).
+  // There is no progress.json read here anymore: the canonical store is the
+  // sole authority.
+  const capRes = issuePromptCapability(ctx.workspaceRoot);
 
-  if (!existsSync(progressPath)) {
-    return {
-      decision: 'block',
-      message: 'Failed to load progress state: progress.json does not exist in workspace root',
-    };
+  if (!capRes.ok) {
+    if (capRes.reason_code === 'NO_ACTIVE_STEP') {
+      // Interview already complete — allow the turn, nothing to inject.
+      return { decision: 'allow' };
+    }
+    if (capRes.reason_code === 'RATE_LIMIT_VIOLATION') {
+      return { decision: 'block', message: `Rate limit violation: ${capRes.message}` };
+    }
+    if (capRes.reason_code === 'REVISION_CONFLICT') {
+      return { decision: 'block', message: `Trạng thái vừa thay đổi đồng thời, vui lòng thử lại: ${capRes.message}` };
+    }
+    // STORE_MISSING or STORE_CORRUPT
+    return { decision: 'block', message: `Failed to load progress state: ${capRes.message}` };
   }
 
-  // 1. Load state
-  let progress;
+  // 4. Inject context for the active question step
+  const scriptPath = join(ctx.workspaceRoot, 'Design/Content/interview-script/script.yaml');
+  let script;
   try {
-    progress = loadProgress(progressPath);
+    script = loadScript(scriptPath);
   } catch (error: unknown) {
     return {
       decision: 'block',
-      message: `Failed to load progress state: ${(error as Error).message}`,
+      message: `Failed to load interview script: ${(error as Error).message}`,
     };
   }
 
-  // 2. Check rate limit
-  const rateCheck = checkRate(progress, progress.answered.length);
-  if (!rateCheck.ok) {
-    return {
-      decision: 'block',
-      message: `Rate limit violation: ${rateCheck.reason ?? 'vi phạm một-bước-mỗi-lượt'}`,
-    };
-  }
-
-  // 3. Stamp turn and issue turn capability for active step
-  let stampedProgress = stampTurn(progress, progress.answered.length);
-  let capabilityToken: string | undefined;
-
-  if (stampedProgress.current_step !== null) {
-    const issueRes = issueTurnCapability(stampedProgress.state_revision || 0, {
-      sessionId: stampedProgress.session_id || 'default-session',
-      operationKind: 'interview',
-      questionId: stampedProgress.current_step,
-    });
-    stampedProgress = {
-      ...stampedProgress,
-      pending_turn_capability: issueRes.capability,
-    };
-    // Plaintext token is returned exactly once here for this turn; the
-    // persisted state only ever holds its hash (issueRes.capability).
-    capabilityToken = issueRes.token;
-  }
-
+  let injectedContext = '';
   try {
-    saveProgress(progressPath, stampedProgress);
+    injectedContext = renderInject(capRes.progress, script, capRes.token);
   } catch (error: unknown) {
     return {
       decision: 'block',
-      message: `Failed to save progress state: ${(error as Error).message}`,
-    };
-  }
-
-  // 4. Inject context if active question step
-  if (stampedProgress.current_step !== null) {
-    const scriptPath = join(ctx.workspaceRoot, 'Design/Content/interview-script/script.yaml');
-    let script;
-    try {
-      script = loadScript(scriptPath);
-    } catch (error: unknown) {
-      return {
-        decision: 'block',
-        message: `Failed to load interview script: ${(error as Error).message}`,
-      };
-    }
-
-    let injectedContext = '';
-    try {
-      injectedContext = renderInject(stampedProgress, script, capabilityToken);
-    } catch (error: unknown) {
-      return {
-        decision: 'block',
-        message: `Failed to render inject context: ${(error as Error).message}`,
-      };
-    }
-
-    return {
-      decision: 'allow',
-      injectedContext,
-      capabilityToken,
+      message: `Failed to render inject context: ${(error as Error).message}`,
     };
   }
 
   return {
     decision: 'allow',
+    injectedContext,
+    capabilityToken: capRes.token,
   };
 }

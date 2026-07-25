@@ -62,7 +62,10 @@ if (action === 'commit') {
   const { transactInterviewStore } = await import(interviewStoreUrl);
 
   try {
-    transactInterviewStore(workspace, null, (env) => {
+    // P2.2a: transactInterviewStore requires a real expected revision — no
+    // null CAS-bypass sentinel. The fixture this worker runs against always
+    // seeds state_revision: 1.
+    transactInterviewStore(workspace, 1, (env) => {
       env.payload.answers['S1'] = 'Dự án test crash';
       return env;
     });

@@ -211,6 +211,11 @@ gates:
   });
 
   test('should execute full developer workflow (Validate -> Start -> Deny/Allow Path -> Record Evidence Fail -> Repair -> Record Evidence Pass)', async () => {
+    // Spawns two real child-process command verifications; under full-suite
+    // parallel load (many worker processes contending for CPU) the default
+    // 5000ms timeout is occasionally too tight even though the test itself
+    // completes in under 1s standalone. Not a correctness issue — the
+    // subprocess spawns are the actual work being verified.
     let state = initExecutionState();
     const plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
     const planDigest = calculatePlanDigest(plan);
@@ -288,5 +293,5 @@ gates:
     expect(state.phase).toBe('ready-to-execute');
     expect(state.completed_tasks).toContain('T1-scaffold');
     expect(state.active_task).toBeNull();
-  });
+  }, 20000);
 });

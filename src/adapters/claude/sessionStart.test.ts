@@ -1,63 +1,52 @@
 import { expect, test, describe, afterEach, beforeEach } from 'vitest';
 import { onSessionStart } from './sessionStart.js';
+import { loadInterviewStore, initializeInterviewStore, transactInterviewStore } from '../../core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, unlinkSync, writeFileSync, readFileSync, rmSync } from 'fs';
+import { existsSync, writeFileSync, rmSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const testWorkspaceRoot = join(__dirname, '../../../test/fixtures/progress');
 const progressPath = join(testWorkspaceRoot, 'progress.json');
+const canonicalPath = join(testWorkspaceRoot, '.design-everything/interview-state.json');
+
+function cleanup() {
+  try {
+    if (existsSync(progressPath)) {
+      rmSync(progressPath, { force: true });
+    }
+    const storePath = join(testWorkspaceRoot, '.design-everything');
+    if (existsSync(storePath)) {
+      rmSync(storePath, { recursive: true, force: true });
+    }
+  } catch {
+    // Ignore
+  }
+}
 
 describe('onSessionStart hook', () => {
-  beforeEach(() => {
-    try {
-      if (existsSync(progressPath)) {
-        unlinkSync(progressPath);
-      }
-      const storePath = join(testWorkspaceRoot, '.design-everything');
-      if (existsSync(storePath)) {
-        rmSync(storePath, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore
-    }
-  });
+  beforeEach(cleanup);
+  afterEach(cleanup);
 
-  afterEach(() => {
-    // Clean up progress.json and .design-everything if created in test folder
-    try {
-      if (existsSync(progressPath)) {
-        unlinkSync(progressPath);
-      }
-      const storePath = join(testWorkspaceRoot, '.design-everything');
-      if (existsSync(storePath)) {
-        rmSync(storePath, { recursive: true, force: true });
-      }
-    } catch {
-      // Ignore
-    }
-  });
-
-  test('should create progress.json with default S0 state when file is missing', () => {
-    expect(existsSync(progressPath)).toBe(false);
+  test('should never fabricate state for a truly uninvolved workspace (P2.2a)', () => {
+    expect(existsSync(canonicalPath)).toBe(false);
 
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
 
-    expect(existsSync(progressPath)).toBe(true);
-    const content = JSON.parse(readFileSync(progressPath, 'utf8'));
-    expect(content.version).toBe('7.0.0');
-    expect(content.current_step).toBe('CAL0');
-    expect(content.phase).toBe('interview');
-    expect(content.answered).toEqual([]);
-    expect(content.answered_len_at_last_turn).toBe(0);
+    // SessionStart is no longer the explicit initializer — nothing should
+    // have been created. `init` is the only legitimate path to fresh state.
+    expect(existsSync(progressPath)).toBe(false);
+    expect(existsSync(canonicalPath)).toBe(false);
   });
 
-  test('should not modify progress.json when it is already valid', () => {
-    const validState = {
+  test('should migrate legacy progress.json into the canonical store when legacy state exists', () => {
+    const legacyState = {
       version: '0.1.0',
       phase: 'interview',
       branch: 'web',
+      session_id: 'legacy-session',
+      state_revision: 0,
       current_step: 'W1',
       answered: ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'],
       emitted_docs: [],
@@ -65,55 +54,33 @@ describe('onSessionStart hook', () => {
       last_user_turn_id: 'turn-6',
       answered_len_at_last_turn: 7,
       updated_at: new Date().toISOString(),
+      calibrate_mode: null,
     };
-    writeFileSync(progressPath, JSON.stringify(validState, null, 2), 'utf8');
+    writeFileSync(progressPath, JSON.stringify(legacyState, null, 2), 'utf8');
 
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
 
-    const content = JSON.parse(readFileSync(progressPath, 'utf8'));
-    expect(content.current_step).toBe('W1');
-    expect(content.branch).toBe('web');
+    expect(existsSync(canonicalPath)).toBe(true);
+    const envelope = loadInterviewStore(testWorkspaceRoot);
+    expect(envelope.payload.progress.current_step).toBe('W1');
+    expect(envelope.payload.progress.branch).toBe('web');
+
+    // Legacy file itself is left in place (P2.2b: no destructive migration).
+    expect(existsSync(progressPath)).toBe(true);
   });
 
-  test('should throw error and not repair progress.json when file has invalid schema', () => {
-    const invalidState = {
-      version: '0.1.0',
-      phase: 'invalid-phase', // invalid enum
-      branch: null,
-      current_step: 'S0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(progressPath, JSON.stringify(invalidState, null, 2), 'utf8');
+  test('should leave an already-current canonical store untouched (idempotent)', () => {
+    initializeInterviewStore(testWorkspaceRoot);
+    transactInterviewStore(testWorkspaceRoot, 0, (env) => ({
+      ...env,
+      payload: { ...env.payload, progress: { ...env.payload.progress, current_step: 'S3' } },
+    }));
+    const before = loadInterviewStore(testWorkspaceRoot);
 
-    expect(() => onSessionStart({ workspaceRoot: testWorkspaceRoot })).toThrow(/Invalid progress schema/);
+    onSessionStart({ workspaceRoot: testWorkspaceRoot });
 
-    // Verify it was not modified/repaired
-    const content = JSON.parse(readFileSync(progressPath, 'utf8'));
-    expect(content.phase).toBe('invalid-phase');
-  });
-
-  test('should throw error when progress.json has a version other than 0.1.0', () => {
-    const wrongVersionState = {
-      version: '0.0.9', // unsupported version
-      phase: 'interview',
-      branch: null,
-      current_step: 'S0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: new Date().toISOString(),
-    };
-    writeFileSync(progressPath, JSON.stringify(wrongVersionState, null, 2), 'utf8');
-
-    expect(() => onSessionStart({ workspaceRoot: testWorkspaceRoot })).toThrow(
-      /Unsupported progress schema version: 0.0.9\. Expected 0\.1\.0\./
-    );
+    const after = loadInterviewStore(testWorkspaceRoot);
+    expect(after.state_revision).toBe(before.state_revision);
+    expect(after.payload.progress.current_step).toBe('S3');
   });
 });

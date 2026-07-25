@@ -9,8 +9,14 @@ import { ENGINE_ROOT, readStdinJson, workspaceRootFrom, emitJson, resolveModule 
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
 
-// Nếu dự án chưa được SessionStart khởi tạo (vd hook mới cài giữa phiên) thì đứng ngoài.
-if (!existsSync(join(workspaceRoot, 'progress.json'))) {
+// Nếu dự án chưa được khởi tạo DesignEverything (canonical store chưa tồn
+// tại, và không còn legacy progress.json nào) thì đứng ngoài. P2.2a: canonical
+// interview-state.json là nguồn thật; progress.json chỉ còn kiểm tra cho
+// tương thích ngược với workspace chưa migrate.
+if (
+  !existsSync(join(workspaceRoot, '.design-everything/interview-state.json')) &&
+  !existsSync(join(workspaceRoot, 'progress.json'))
+) {
   process.exit(0);
 }
 
@@ -37,7 +43,7 @@ try {
         hookEventName: 'UserPromptSubmit',
         additionalContext:
           result.injectedContext +
-          `\n\n[Cách commit bước (bắt buộc dùng CLI, không tự sửa progress.json)]\n` +
+          `\n\n[Cách commit bước (bắt buộc dùng CLI, không tự sửa trạng thái)]\n` +
           `Sau khi người dùng xác nhận bản dịch ngược (và critic-pass nếu có), chạy:\n` +
           commitLine +
           `Token ở trên chỉ dùng được một lần cho đúng câu này; KHÔNG tự bịa token hoặc tái dùng token cũ.\n` +

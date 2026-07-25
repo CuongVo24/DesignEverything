@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 import { runCliOperation } from '../../../src/adapters/shared/cliOperations.js';
 import { calculatePlanDigest, calculateDocsDigest, loadEmittedDocs } from '../../../src/core/validatedSnapshot.js';
 import { ExecutionPlanV3 } from '../../../src/core/schemas/index.js';
+import { initializeInterviewStore } from '../../../src/core/interviewStore.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
 const PRE_TOOL_HOOK = join(REPO_ROOT, 'adapter/claude-code/hooks/pre-tool-use.mjs');
@@ -62,6 +63,62 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     });
     return raw && raw.trim() ? (JSON.parse(raw) as HookOutput) : null;
   }
+
+  // --- Category A0: canonical-only workspace must not bypass the hooks ---
+  // (P2.2a) The .mjs hook wrappers used to fast-exit whenever progress.json
+  // was absent — a real production regression once progress.json stops
+  // being written at all, since every unit test in this suite (and this
+  // file's own beforeEach) always seeds progress.json, masking the bug. A
+  // freshly `init`-ed project only ever has the canonical store.
+
+  it('should NOT bypass PreToolUse when only the canonical interview store exists (no progress.json)', () => {
+    const canonicalOnlyDir = join(tmpdir(), `de-canonical-only-${Date.now()}`);
+    mkdirSync(canonicalOnlyDir, { recursive: true });
+    const designDir = join(canonicalOnlyDir, 'Design/Content/interview-script');
+    mkdirSync(designDir, { recursive: true });
+    cpSync(join(REPO_ROOT, 'Design/Content/interview-script'), designDir, { recursive: true });
+    initializeInterviewStore(canonicalOnlyDir);
+    expect(existsSync(join(canonicalOnlyDir, 'progress.json'))).toBe(false);
+
+    try {
+      const raw = execSync(`node "${PRE_TOOL_HOOK}"`, {
+        input: JSON.stringify({
+          cwd: canonicalOnlyDir,
+          tool_name: 'Write',
+          tool_input: { file_path: 'src/index.ts' },
+        }),
+        encoding: 'utf8',
+      });
+      const result = raw && raw.trim() ? (JSON.parse(raw) as HookOutput) : null;
+      expect(result).not.toBeNull();
+      expect(result!.hookSpecificOutput.permissionDecision).toBe('deny');
+    } finally {
+      rmSync(canonicalOnlyDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should NOT bypass UserPromptSubmit when only the canonical interview store exists (no progress.json)', () => {
+    const canonicalOnlyDir = join(tmpdir(), `de-canonical-only-ups-${Date.now()}`);
+    mkdirSync(canonicalOnlyDir, { recursive: true });
+    const designDir = join(canonicalOnlyDir, 'Design/Content/interview-script');
+    mkdirSync(designDir, { recursive: true });
+    cpSync(join(REPO_ROOT, 'Design/Content/interview-script'), designDir, { recursive: true });
+    initializeInterviewStore(canonicalOnlyDir);
+
+    try {
+      const raw = execSync(`node "${USER_PROMPT_HOOK}"`, {
+        input: JSON.stringify({ cwd: canonicalOnlyDir, prompt: 'Hello' }),
+        encoding: 'utf8',
+      });
+      // A real, non-bypassed run injects the current question's capability
+      // context; a silently-bypassed run prints nothing at all.
+      expect(raw.trim().length).toBeGreaterThan(0);
+      const result = JSON.parse(raw) as { hookSpecificOutput?: { additionalContext?: string } };
+      expect(result.hookSpecificOutput?.additionalContext).toContain('Capability Token');
+    } finally {
+      rmSync(canonicalOnlyDir, { recursive: true, force: true });
+    }
+  });
 
   // --- Category A: TURN Token & Session Integrity ---
 

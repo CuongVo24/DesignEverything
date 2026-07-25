@@ -2,7 +2,8 @@ import { expect, test, describe, afterEach, beforeEach } from 'vitest';
 import { onSessionStart } from '../../src/adapters/claude/sessionStart.js';
 import { onUserPromptSubmit } from '../../src/adapters/claude/userPromptSubmit.js';
 import { onPreToolUse } from '../../src/adapters/claude/preToolUse.js';
-import { loadProgress, saveProgress, loadScript, commitStep, emitTree } from '../../src/core/index.js';
+import { loadScript, emitTree, initializeInterviewStore } from '../../src/core/index.js';
+import { loadCanonicalProgress, commitViaCanonical, mutateCanonicalProgress } from '../helpers/canonicalProgress.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs';
@@ -11,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '../..');
 const testWorkspaceRoot = join(__dirname, '../../test/fixtures/progress/e2e-web-workspace');
-const progressPath = join(testWorkspaceRoot, 'progress.json');
+const canonicalStorePath = join(testWorkspaceRoot, '.design-everything/interview-state.json');
 const docsDir = join(testWorkspaceRoot, 'docs');
 const realTemplatesDir = join(projectRoot, 'Design/Content/doc-templates');
 
@@ -54,9 +55,13 @@ describe('E2E Web Interview & Gating Flow', () => {
 
     // --- PHASE 1: SessionStart ---
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    expect(existsSync(progressPath)).toBe(true);
+    // SessionStart no longer fabricates state (P2.2a) — the real skill flow
+    // always calls `init` explicitly for an uninvolved workspace
+    // (status -> UNINVOLVED -> init) before the first question.
+    initializeInterviewStore(testWorkspaceRoot);
+    expect(existsSync(canonicalStorePath)).toBe(true);
 
-    let progress = loadProgress(progressPath);
+    let progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.current_step).toBe('CAL0');
     expect(progress.phase).toBe('interview');
 
@@ -90,18 +95,15 @@ describe('E2E Web Interview & Gating Flow', () => {
       expect(promptResult.capabilityToken).toBeTruthy();
 
       // Skill commits the step
-      progress = loadProgress(progressPath);
       const commitOpts: { capabilityToken: string; branchChoice?: string } = {
         capabilityToken: promptResult.capabilityToken!,
       };
       if (step === 'S7') {
         commitOpts.branchChoice = 'web';
       }
-      progress = commitStep(progress, script, commitOpts);
-      saveProgress(progressPath, progress);
+      progress = commitViaCanonical(testWorkspaceRoot, script, commitOpts);
     }
 
-    progress = loadProgress(progressPath);
     expect(progress.branch).toBe('web');
     expect(progress.current_step).toBe('R1');
 
@@ -109,12 +111,9 @@ describe('E2E Web Interview & Gating Flow', () => {
     const r1PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     expect(r1PromptResult.decision).toBe('allow');
 
-    progress = loadProgress(progressPath);
-    progress = commitStep(progress, script, { capabilityToken: r1PromptResult.capabilityToken! });
-    saveProgress(progressPath, progress);
+    progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: r1PromptResult.capabilityToken! });
 
     // S8 — yêu cầu phi chức năng (dữ liệu nhạy cảm + quy mô), câu lõi cuối trước khi rẽ nhánh.
-    progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('S8');
 
     // onUserPromptSubmit đóng dấu lượt và GHI progress; phải load lại sau nó,
@@ -122,11 +121,7 @@ describe('E2E Web Interview & Gating Flow', () => {
     const s8PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     expect(s8PromptResult.decision).toBe('allow');
 
-    progress = loadProgress(progressPath);
-    progress = commitStep(progress, script, { capabilityToken: s8PromptResult.capabilityToken! });
-    saveProgress(progressPath, progress);
-
-    progress = loadProgress(progressPath);
+    progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: s8PromptResult.capabilityToken! });
     expect(progress.current_step).toBe('W1');
 
     // --- PHASE 3: Gating verification (while gate is closed) ---
@@ -164,12 +159,9 @@ describe('E2E Web Interview & Gating Flow', () => {
       expect(promptResult.decision).toBe('allow');
       expect(promptResult.injectedContext).toContain(`ID câu hỏi: ${step}`);
 
-      progress = loadProgress(progressPath);
-      progress = commitStep(progress, script, { capabilityToken: promptResult.capabilityToken! });
-      saveProgress(progressPath, progress);
+      progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: promptResult.capabilityToken! });
     }
 
-    progress = loadProgress(progressPath);
     expect(progress.current_step).toBeNull();
     expect(progress.phase).toBe('docs-emitted');
 
@@ -195,13 +187,12 @@ describe('E2E Web Interview & Gating Flow', () => {
     expect(postToolResult.decision).toBe('allow');
 
     // Verify gates_passed contains scope-locked
-    progress = loadProgress(progressPath);
+    progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.gates_passed).toContain('scope-locked');
 
     // --- PHASE 7: Rate-limit checking ---
     // Manually push to answered to simulate double commit bypass attempt
-    progress.answered.push('ExtraStep');
-    saveProgress(progressPath, progress);
+    mutateCanonicalProgress(testWorkspaceRoot, (p) => ({ ...p, answered: [...p.answered, 'ExtraStep'] }));
 
     // Call submit prompt on same turn or next turn without stamping -> block
     const promptViolatedResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-violation' });

@@ -3,14 +3,14 @@ import { onSessionStart } from '../../src/adapters/claude/sessionStart.js';
 import { onUserPromptSubmit } from '../../src/adapters/claude/userPromptSubmit.js';
 import { onPreToolUse } from '../../src/adapters/claude/preToolUse.js';
 import {
-  loadProgress,
-  saveProgress,
   loadScript,
   commitStep,
   stampTurn,
   emitTree,
   issueTurnCapability,
+  initializeInterviewStore,
 } from '../../src/core/index.js';
+import { loadCanonicalProgress, commitViaCanonical, mutateCanonicalProgress } from '../helpers/canonicalProgress.js';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, rmSync, copyFileSync, writeFileSync } from 'fs';
@@ -19,7 +19,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '../..');
 const testWorkspaceRoot = join(__dirname, '../../test/fixtures/progress/e2e-edge-workspace');
-const progressPath = join(testWorkspaceRoot, 'progress.json');
 
 describe('E2E Web Edge Cases Flow', () => {
   beforeEach(() => {
@@ -54,7 +53,8 @@ describe('E2E Web Edge Cases Flow', () => {
   test('Case (a): Trả lời lan man chưa xác nhận -> state đứng yên', () => {
     // 1. Initialize session
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
+    let progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
 
@@ -63,7 +63,7 @@ describe('E2E Web Edge Cases Flow', () => {
     expect(result1.decision).toBe('allow');
 
     // State DOES NOT advance because commitStep is not called (user has not confirmed the translate-back)
-    progress = loadProgress(progressPath);
+    progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
 
@@ -71,7 +71,7 @@ describe('E2E Web Edge Cases Flow', () => {
     const result2 = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-verbose-2' });
     expect(result2.decision).toBe('allow');
 
-    progress = loadProgress(progressPath);
+    progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.current_step).toBe('CAL0');
     expect(progress.answered).toHaveLength(0);
   });
@@ -81,21 +81,21 @@ describe('E2E Web Edge Cases Flow', () => {
 
     // 1. Initialize session
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
+    initializeInterviewStore(testWorkspaceRoot);
 
     // 2. User answers CAL0
     const p1 = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
-    progress = commitStep(progress, script, { capabilityToken: p1.capabilityToken! });
-    saveProgress(progressPath, progress);
+    let progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: p1.capabilityToken! });
 
-    progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('S0');
     expect(progress.answered).toEqual(['CAL0']);
 
-    // 3. Simulate bypass attempt: manually modifying progress.json to answer S0 and S1 without new turn stamp
-    progress.answered.push('S0');
-    progress.answered.push('S1');
-    saveProgress(progressPath, progress);
+    // 3. Simulate bypass attempt: manually modifying canonical state to
+    // answer S0 and S1 without a new turn stamp.
+    progress = mutateCanonicalProgress(testWorkspaceRoot, (p) => ({
+      ...p,
+      answered: [...p.answered, 'S0', 'S1'],
+    }));
 
     // 4. Next prompt submit must be BLOCKED because answered jumped by 2 since last turn stamp
     const result = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
@@ -108,12 +108,12 @@ describe('E2E Web Edge Cases Flow', () => {
 
     // 1. Initialize session and answer CAL0 -> S7
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
+    let progress = loadCanonicalProgress(testWorkspaceRoot);
 
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (const step of steps) {
       const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
-      progress = loadProgress(progressPath);
 
       const opts: { capabilityToken: string; branchChoice?: string } = {
         capabilityToken: promptResult.capabilityToken!,
@@ -121,16 +121,14 @@ describe('E2E Web Edge Cases Flow', () => {
       if (step === 'S7') {
         opts.branchChoice = 'web';
       }
-      progress = commitStep(progress, script, opts);
-      saveProgress(progressPath, progress);
+      progress = commitViaCanonical(testWorkspaceRoot, script, opts);
 
-      // Stamp turn ID as normal CLI/skill interaction would do
-      progress = loadProgress(progressPath);
-      progress = stampTurn(progress, progress.answered.length);
-      saveProgress(progressPath, progress);
+      // Stamp turn ID as normal CLI/skill interaction would do, keeping
+      // answered_len_at_last_turn in sync so the next loop iteration's
+      // onUserPromptSubmit doesn't see a false rate-limit violation.
+      progress = mutateCanonicalProgress(testWorkspaceRoot, (p) => stampTurn(p, p.answered.length));
     }
 
-    progress = loadProgress(progressPath);
     expect(progress.branch).toBe('web');
     expect(progress.current_step).toBe('R1');
 
@@ -148,7 +146,7 @@ describe('E2E Web Edge Cases Flow', () => {
     }).toThrow('Cannot change branch once set. Current: web, New: mobile');
 
     // 3. Verify next step is still on web track and doesn't rollback
-    progress = loadProgress(progressPath);
+    progress = loadCanonicalProgress(testWorkspaceRoot);
     expect(progress.branch).toBe('web');
     expect(progress.current_step).toBe('R1');
   });
@@ -157,14 +155,16 @@ describe('E2E Web Edge Cases Flow', () => {
     const realTemplatesDir = join(projectRoot, 'Design/Content/doc-templates');
     const docsDir = join(testWorkspaceRoot, 'docs');
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    const progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
 
     // Fast-forward progress to docs-emitted phase
-    progress.phase = 'docs-emitted';
-    progress.branch = 'web';
-    progress.current_step = null;
-    progress.answered = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'W1', 'W2', 'W3', 'W4', 'W5'];
-    saveProgress(progressPath, progress);
+    mutateCanonicalProgress(testWorkspaceRoot, (p) => ({
+      ...p,
+      phase: 'docs-emitted',
+      branch: 'web',
+      current_step: null,
+      answered: ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'R1', 'W1', 'W2', 'W3', 'W4', 'W5'],
+    }));
 
     // 1. Missing docs (only write 00-vision and 01-personas, missing 02-scope)
     mkdirSync(docsDir, { recursive: true });
@@ -222,16 +222,13 @@ describe('E2E Web Edge Cases Flow', () => {
   test('Case (e): Double-commit and capability replay edge cases ở Web', () => {
     const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
-    let progress = loadProgress(progressPath);
+    initializeInterviewStore(testWorkspaceRoot);
 
     // Answer CAL0
     const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
-    progress = loadProgress(progressPath);
     const usedToken = promptResult.capabilityToken!;
-    progress = commitStep(progress, script, { capabilityToken: usedToken });
-    saveProgress(progressPath, progress);
+    const progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
 
-    progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('S0');
 
     // Re-using the already-consumed capability token for a second commit

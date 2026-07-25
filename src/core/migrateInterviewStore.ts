@@ -10,7 +10,16 @@ import {
   type InterviewStoreEnvelope,
 } from './schemas/interviewStore.js';
 
-export function migrateInterviewStore(workspaceRoot: string): 'migrated' | 'already-current' | 'fresh' {
+export type MigrateInterviewStoreOutcome = 'migrated' | 'already-current' | 'no-legacy';
+
+/**
+ * Migrates legacy progress.json/answers.json into the canonical store.
+ * Never fabricates fresh state — a workspace with no canonical store AND no
+ * legacy files is reported as 'no-legacy' and left untouched; only
+ * initializeInterviewStore() may create a store from nothing (P2.2a §5.2/5.4:
+ * "Missing cả hai ở workspace uninvolved chỉ đi qua explicit initializer").
+ */
+export function migrateInterviewStore(workspaceRoot: string): MigrateInterviewStoreOutcome {
   const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
   if (existsSync(canonicalPath)) {
     return 'already-current';
@@ -47,43 +56,8 @@ export function migrateInterviewStore(workspaceRoot: string): 'migrated' | 'alre
 
   const now = new Date().toISOString();
 
-  // Create initial fresh store if no legacy files
   if (!legacyProgress) {
-    const freshProgress: Progress = {
-      version: '7.0.0',
-      phase: 'interview',
-      session_id: `session-${Date.now()}`,
-      state_revision: 0,
-      branch: null,
-      current_step: 'CAL0',
-      answered: [],
-      emitted_docs: [],
-      gates_passed: [],
-      pending_turn_capability: null,
-      last_user_turn_id: null,
-      answered_len_at_last_turn: 0,
-      updated_at: now,
-      calibrate_mode: null,
-    };
-
-    const payload = {
-      progress: freshProgress,
-      answers: {},
-      slots: {},
-    };
-
-    const envelope: InterviewStoreEnvelope = {
-      schema_version: INTERVIEW_STORE_VERSION,
-      state_revision: 0,
-      session_id: freshProgress.session_id,
-      checksum: computePayloadChecksum(payload),
-      payload,
-      updated_at: now,
-    };
-
-    mkdirSync(dirname(canonicalPath), { recursive: true });
-    writeFileSync(canonicalPath, JSON.stringify(envelope, null, 2), 'utf8');
-    return 'fresh';
+    return 'no-legacy';
   }
 
   // Backup legacy files

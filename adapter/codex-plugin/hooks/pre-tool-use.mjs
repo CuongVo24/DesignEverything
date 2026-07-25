@@ -88,7 +88,10 @@ async function main() {
 
   try {
     const workspace = payload.cwd || process.cwd();
+    // P2.2a: canonical interview-state.json là nguồn thật; progress.json chỉ
+    // còn kiểm tra cho tương thích ngược với workspace chưa migrate.
     if (
+      !existsSync(join(workspace, '.design-everything', 'interview-state.json')) &&
       !existsSync(join(workspace, 'progress.json')) &&
       !existsSync(join(workspace, '.design-everything', 'execution-state.json'))
     ) {

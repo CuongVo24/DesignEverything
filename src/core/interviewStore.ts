@@ -96,13 +96,19 @@ export function releaseLock(workspaceRoot: string): void {
 export function loadInterviewStore(workspaceRoot: string): InterviewStoreEnvelope {
   const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
 
-  // Auto-migrate if canonical store does not exist yet
+  // Auto-migrate ONLY if legacy state exists — migrateInterviewStore never
+  // fabricates fresh state itself (that is initializeInterviewStore's sole
+  // job), so this is safe to call unconditionally: it is a no-op for a
+  // truly uninvolved workspace.
   if (!fs.existsSync(canonicalPath)) {
     migrateInterviewStore(workspaceRoot);
   }
 
   if (!fs.existsSync(canonicalPath)) {
-    throw new Error('INTERVIEW_STORE_NOT_FOUND: Canonical store does not exist and migration did not produce one.');
+    throw new Error(
+      'STORE_MISSING: Canonical interview store does not exist and there is no legacy state to migrate. ' +
+        'Call initializeInterviewStore() explicitly to create a fresh store.'
+    );
   }
 
   const content = fs.readFileSync(canonicalPath, 'utf8');
@@ -127,16 +133,29 @@ export function loadInterviewStore(workspaceRoot: string): InterviewStoreEnvelop
   return envelope;
 }
 
+/**
+ * The sole public mutation entrypoint for an EXISTING canonical store.
+ * `expectedRevision` is mandatory (B1b/P2.2a) — there is no sentinel that
+ * bypasses the CAS check. A caller that has no prior revision to compare
+ * against (creating a store for the first time) must use
+ * initializeInterviewStore() instead, which has its own no-conflict-possible
+ * write path.
+ */
 export function transactInterviewStore(
   workspaceRoot: string,
-  expectedRevision: number | null,
+  expectedRevision: number,
   mutator: (envelope: InterviewStoreEnvelope) => InterviewStoreEnvelope
 ): InterviewStoreEnvelope {
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    throw new Error(
+      `INVALID_EXPECTED_REVISION: expectedRevision must be a non-negative integer, got ${String(expectedRevision)}`
+    );
+  }
   acquireLock(workspaceRoot);
   try {
     const current = loadInterviewStore(workspaceRoot);
 
-    if (expectedRevision !== null && current.state_revision !== expectedRevision) {
+    if (current.state_revision !== expectedRevision) {
       throw new Error(`REVISION_CONFLICT: Expected state revision ${expectedRevision}, but found ${current.state_revision}`);
     }
 
@@ -164,6 +183,79 @@ export function transactInterviewStore(
     fs.renameSync(tmpPath, canonicalPath);
 
     return validated;
+  } finally {
+    releaseLock(workspaceRoot);
+  }
+}
+
+function writeEnvelopeAtomic(workspaceRoot: string, envelope: InterviewStoreEnvelope): void {
+  const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
+  const tmpPath = `${canonicalPath}.tmp.${Date.now()}.${Math.floor(Math.random() * 10000)}`;
+  fs.mkdirSync(dirname(canonicalPath), { recursive: true });
+  fs.writeFileSync(tmpPath, JSON.stringify(envelope, null, 2), 'utf8');
+  fs.renameSync(tmpPath, canonicalPath);
+}
+
+function buildFreshProgress(): InterviewStorePayload['progress'] {
+  const now = new Date().toISOString();
+  return {
+    version: '7.0.0',
+    phase: 'interview',
+    session_id: `session-${Date.now()}`,
+    state_revision: 0,
+    branch: null,
+    current_step: 'CAL0',
+    answered: [],
+    emitted_docs: [],
+    gates_passed: [],
+    pending_turn_capability: null,
+    last_user_turn_id: null,
+    answered_len_at_last_turn: 0,
+    updated_at: now,
+    calibrate_mode: null,
+  };
+}
+
+/**
+ * The ONLY function allowed to create a fresh canonical store from nothing
+ * (P2.2a §5.2). Explicit and single-purpose: refuses to run if a canonical
+ * store already exists (use transactInterviewStore to mutate it) and refuses
+ * to run if legacy state exists (use migrateInterviewStore so history isn't
+ * silently discarded). A truly uninvolved workspace is the only target this
+ * accepts.
+ */
+export function initializeInterviewStore(workspaceRoot: string): InterviewStoreEnvelope {
+  const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
+  const legacyProgressPath = join(workspaceRoot, 'progress.json');
+  const legacyAnswersPath = join(workspaceRoot, 'Design/.interview/answers.json');
+
+  acquireLock(workspaceRoot);
+  try {
+    if (fs.existsSync(canonicalPath)) {
+      throw new Error(
+        'STORE_ALREADY_EXISTS: Canonical interview store already exists; use transactInterviewStore to mutate it.'
+      );
+    }
+    if (fs.existsSync(legacyProgressPath) || fs.existsSync(legacyAnswersPath)) {
+      throw new Error(
+        'MIGRATION_REQUIRED: Legacy interview state exists in this workspace; call migrateInterviewStore instead of initializing fresh.'
+      );
+    }
+
+    const now = new Date().toISOString();
+    const progress = buildFreshProgress();
+    const payload: InterviewStorePayload = { progress, answers: {}, slots: {} };
+    const envelope: InterviewStoreEnvelope = {
+      schema_version: INTERVIEW_STORE_VERSION,
+      state_revision: 0,
+      session_id: progress.session_id,
+      checksum: computePayloadChecksum(payload),
+      payload,
+      updated_at: now,
+    };
+
+    writeEnvelopeAtomic(workspaceRoot, envelope);
+    return envelope;
   } finally {
     releaseLock(workspaceRoot);
   }

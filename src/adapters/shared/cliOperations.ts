@@ -3,9 +3,6 @@ import { join, relative, dirname } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
 import {
   inspectRuntimeHealth,
-  loadProgress,
-  saveProgress,
-  loadScript,
   loadExecutionState,
   saveExecutionState,
   initExecutionState,
@@ -27,10 +24,11 @@ import {
   calculateDocsDigest,
   loadEmittedDocs,
   assertValidatedSnapshot,
-  commitStep,
-  validateAnswer,
   recoverEmit,
   migrateInterviewStore,
+  initializeInterviewStore,
+  ensureCanonicalStore,
+  commitInterviewAnswer,
   emitTree,
   ExecutionState,
 } from '../../core/index.js';
@@ -122,8 +120,8 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
     };
   }
 
-  const progressPath = join(workspaceRoot, 'progress.json');
-  if (!existsSync(progressPath) && health.status === 'uninvolved') {
+  const canonicalOutcome = ensureCanonicalStore(workspaceRoot);
+  if (canonicalOutcome.status === 'uninvolved' && health.status === 'uninvolved') {
     return {
       ok: true,
       operation: 'status',
@@ -136,20 +134,18 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
   }
 
   let progress = null;
-  if (existsSync(progressPath)) {
-    try {
-      progress = loadProgress(progressPath);
-    } catch (err: unknown) {
-      return {
-        ok: false,
-        operation: 'status',
-        reason_code: 'CORRUPT_PROGRESS_STATE',
-        severity: 'error',
-        message: `Khong the nap progress.json: ${(err as Error).message}`,
-        next_command: 'node adapter/claude-code/cli.mjs repair --state progress',
-        runtime_version: '6.0.0',
-      };
-    }
+  if (canonicalOutcome.status === 'ready') {
+    progress = canonicalOutcome.envelope.payload.progress;
+  } else if (canonicalOutcome.status === 'corrupt') {
+    return {
+      ok: false,
+      operation: 'status',
+      reason_code: 'CORRUPT_PROGRESS_STATE',
+      severity: 'error',
+      message: `Khong the nap canonical interview store: ${canonicalOutcome.message}`,
+      next_command: 'node adapter/claude-code/cli.mjs repair --state progress',
+      runtime_version: '6.0.0',
+    };
   }
 
   let execState: ExecutionState | null = null;
@@ -182,10 +178,10 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
 
 function handleInit(workspaceRoot: string): CliResultEnvelope {
   try {
-    migrateInterviewStore(workspaceRoot);
-    const progressPath = join(workspaceRoot, 'progress.json');
-    const p = loadProgress(progressPath);
-    saveProgress(progressPath, p);
+    const migrated = migrateInterviewStore(workspaceRoot);
+    if (migrated === 'no-legacy') {
+      initializeInterviewStore(workspaceRoot);
+    }
     return {
       ok: true,
       operation: 'init',
@@ -208,49 +204,6 @@ function handleInit(workspaceRoot: string): CliResultEnvelope {
 }
 
 function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
-  const progressPath = join(workspaceRoot, 'progress.json');
-  if (!existsSync(progressPath)) {
-    return {
-      ok: false,
-      operation: 'commit',
-      reason_code: 'PROGRESS_MISSING',
-      severity: 'error',
-      message: 'Không tìm thấy progress.json để commit.',
-      next_command: 'node adapter/claude-code/cli.mjs init',
-      runtime_version: '6.0.0',
-    };
-  }
-
-  let progress;
-  try {
-    progress = loadProgress(progressPath);
-  } catch (err: unknown) {
-    return {
-      ok: false,
-      operation: 'commit',
-      reason_code: 'CORRUPT_PROGRESS_STATE',
-      severity: 'error',
-      message: `Khong the nap progress.json: ${(err as Error).message}`,
-      next_command: 'node adapter/claude-code/cli.mjs repair',
-      runtime_version: '6.0.0',
-    };
-  }
-
-  const scriptPath = join(workspaceRoot, 'Design/Content/interview-script/script.yaml');
-  let script;
-  try {
-    script = loadScript(scriptPath);
-  } catch (err: unknown) {
-    return {
-      ok: false,
-      operation: 'commit',
-      reason_code: 'SCRIPT_MISSING',
-      severity: 'error',
-      message: `Khong the nap script.yaml: ${(err as Error).message}`,
-      runtime_version: '6.0.0',
-    };
-  }
-
   const branchChoice = getArg(argv, '--branch');
   const capabilityToken = getArg(argv, '--capability-token');
   const answerText = getArg(argv, '--answer');
@@ -293,52 +246,54 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
     }
   }
 
-  if (answerText) {
-    const valRes = validateAnswer(null, answerText);
-    if (valRes.outcome === 'invalid') {
+  const result = commitInterviewAnswer(workspaceRoot, { capabilityToken, branchChoice, answerText });
+
+  if (!result.ok) {
+    if (result.reason_code === 'STORE_MISSING') {
       return {
         ok: false,
         operation: 'commit',
-        reason_code: valRes.reason_code,
+        reason_code: 'PROGRESS_MISSING',
         severity: 'error',
-        message: valRes.message,
+        message: `Không tìm thấy canonical interview store để commit: ${result.message}`,
+        next_command: 'node adapter/claude-code/cli.mjs init',
         runtime_version: '6.0.0',
       };
     }
-  }
-
-  try {
-    const updated = commitStep(progress, script, {
-      capabilityToken,
-      branchChoice,
-    });
-    saveProgress(progressPath, updated);
-
-    return {
-      ok: true,
-      operation: 'commit',
-      reason_code: 'COMMIT_SUCCESS',
-      severity: 'info',
-      message: `Đã commit bước phỏng vấn thành công. Bước tiếp theo: ${updated.current_step || 'hoàn tất'}.`,
-      data: { progress: updated },
-      next_command: 'node adapter/claude-code/cli.mjs status',
-      runtime_version: '6.0.0',
-    };
-  } catch (err: unknown) {
-    const msg = (err as Error).message;
-    // commitStep throws "Commit failed (<REASON_CODE>): <detail>" for every
-    // capability failure; surface that exact code instead of collapsing
-    // every rejection into one generic COMMIT_FAILED (B4c).
-    const codeMatch = msg.match(/^Commit failed \(([A-Z_]+)\):/);
+    if (result.reason_code === 'STORE_CORRUPT') {
+      return {
+        ok: false,
+        operation: 'commit',
+        reason_code: 'CORRUPT_PROGRESS_STATE',
+        severity: 'error',
+        message: `Khong the nap canonical interview store: ${result.message}`,
+        next_command: 'node adapter/claude-code/cli.mjs repair',
+        runtime_version: '6.0.0',
+      };
+    }
+    // SCRIPT_MISSING, answer-validation codes (EMPTY_ANSWER/PLACEHOLDER_ANSWER_DENIED/...),
+    // and commitStep's own capability reason codes (TURN_CAPABILITY_*) pass through as-is
+    // (B4c: surface the exact code instead of collapsing into one generic failure).
     return {
       ok: false,
       operation: 'commit',
-      reason_code: codeMatch ? codeMatch[1] : 'COMMIT_FAILED',
+      reason_code: result.reason_code,
       severity: 'error',
-      message: `Lỗi commit bước phỏng vấn: ${msg}`,
+      message: `Lỗi commit bước phỏng vấn: ${result.message}`,
       runtime_version: '6.0.0',
     };
   }
+
+  return {
+    ok: true,
+    operation: 'commit',
+    reason_code: 'COMMIT_SUCCESS',
+    severity: 'info',
+    message: `Đã commit bước phỏng vấn thành công. Bước tiếp theo: ${result.progress.current_step || 'hoàn tất'}.`,
+    data: { progress: result.progress },
+    next_command: 'node adapter/claude-code/cli.mjs status',
+    runtime_version: '6.0.0',
+  };
 }
 
 function handleValidate(workspaceRoot: string): CliResultEnvelope {
@@ -439,32 +394,30 @@ function handleRepair(workspaceRoot: string): CliResultEnvelope {
 }
 
 function handleEmit(workspaceRoot: string): CliResultEnvelope {
-  const progressPath = join(workspaceRoot, 'progress.json');
-  if (!existsSync(progressPath)) {
+  const canonicalOutcome = ensureCanonicalStore(workspaceRoot);
+  if (canonicalOutcome.status === 'uninvolved') {
     return {
       ok: false,
       operation: 'emit',
       reason_code: 'PROGRESS_MISSING',
       severity: 'error',
-      message: 'Không tìm thấy progress.json để emit.',
+      message: 'Không tìm thấy canonical interview store để emit.',
+      next_command: 'node adapter/claude-code/cli.mjs init',
       runtime_version: '6.0.0',
     };
   }
-
-  let progress;
-  try {
-    progress = loadProgress(progressPath);
-  } catch (err: unknown) {
+  if (canonicalOutcome.status === 'corrupt') {
     return {
       ok: false,
       operation: 'emit',
       reason_code: 'CORRUPT_PROGRESS_STATE',
       severity: 'error',
-      message: `Không thể nạp progress.json: ${(err as Error).message}`,
+      message: `Không thể nạp canonical interview store: ${canonicalOutcome.message}`,
       runtime_version: '6.0.0',
     };
   }
 
+  const progress = canonicalOutcome.envelope.payload.progress;
   const branch = progress.branch;
   if (!branch) {
     return {

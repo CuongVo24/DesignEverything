@@ -11,6 +11,10 @@ export const preActionRequestSchema = z.object({
   plan_digest: z.string().optional(),
   state_digest: z.string().optional(),
   state: z.any().optional(),
+  /** Pre-loaded canonical interview progress snapshot (P2.2a) — when the
+   * caller supplies this, evaluatePreAction skips its own canonical store
+   * load. Never populate from progress.json; canonical only. */
+  progress: z.any().optional(),
   plan: z.any().optional(),
   policy: z.any().optional(),
 });
