@@ -59,8 +59,9 @@ contract proof.
 
 | Track | Trạng thái hiện tại | Kết luận |
 |---|---|---|
-| H0 — stale skill command | Open | Codex build skill vẫn còn `deepen --commit --turn <TURN_ID>` |
-| P2.2 — canonical store | Partial | `progress.json` vẫn là production authority ở CLI, hooks, health và adapters |
+| H0 — stale skill command | Closed 2026-07-25 | Doc/skill fixed; `deepen` CLI wiring vẫn nợ P6/P7 |
+| P2.2a — canonical authority | Partial (core+adapters done 2026-07-25) | interview/commit path chạy qua canonical; `evaluatePreAction` caller-injection và `deepen` chưa nối (P4/P6/P7/P8) |
+| P2.2b — durability/lock | Open | lock chỉ có PID+TTL busy-spin; chưa nonce/session, chưa journal/fsync marker |
 | P4 — policy | Partial | Core primitives có, nhưng `evaluatePreAction` và Codex post-hook còn matcher/safe list riêng |
 | P5 — gate/health | Partial | recovery auth đã sửa; gate và health chưa recompute/verify đủ nguồn |
 | P3 — handoff/blocked | Open | chưa có atomic tier-1 handoff và typed remediation |
@@ -151,69 +152,93 @@ Chỉ canonical envelope dưới `.design-everything/` được quyết định
 interview phase, revision, answers/slots và capability state.
 `progress.json`/legacy answers chỉ được đọc bởi migrator.
 
-### 5.1. Red tests trước
+### 5.1. Red tests trước — DONE (2026-07-25, `src/core/canonicalAuthority.test.ts`)
 
-- [ ] `canonical-authority.test.ts`: canonical và `progress.json` bất
+- [x] `canonical-authority.test.ts`: canonical và `progress.json` bất
   đồng; mọi production consumer phải theo canonical.
-- [ ] Corrupt canonical + valid legacy phải fail closed, không fallback.
-- [ ] Valid canonical + corrupt legacy vẫn hoạt động và không đọc legacy.
-- [ ] Missing canonical + legacy hiện hữu phải chạy migrator đúng một
+- [x] Corrupt canonical + valid legacy phải fail closed, không fallback.
+- [x] Valid canonical + corrupt legacy vẫn hoạt động và không đọc legacy.
+- [x] Missing canonical + legacy hiện hữu phải chạy migrator đúng một
   lần, tạo immutable backup rồi dùng canonical.
-- [ ] Missing cả hai ở workspace uninvolved chỉ đi qua explicit
+- [x] Missing cả hai ở workspace uninvolved chỉ đi qua explicit
   initializer.
-- [ ] Hai writer cùng expected revision: đúng một success, loser nhận
+- [x] Hai writer cùng expected revision: đúng một success, loser nhận
   stable revision-conflict code.
-- [ ] `expectedRevision = null` bị từ chối ở mọi mutation public.
+- [x] `expectedRevision = null` bị từ chối ở mọi mutation public
+  (runtime guard, không chỉ static type).
 
-### 5.2. Application services
+### 5.2. Application services — PARTIAL (2026-07-25, `src/core/interviewApplicationServices.ts`)
 
-- [ ] Tạo service `initializeInterviewStore` dành riêng cho empty target.
-- [ ] Tạo service `issuePromptCapability`:
+- [x] Tạo service `initializeInterviewStore` dành riêng cho empty target.
+- [x] Tạo service `issuePromptCapability`:
   load/validate canonical → verify expected revision → issue token →
   persist hash/status/revision atomically → trả plaintext token đúng một
   lần.
-- [ ] Tạo service `commitInterviewAnswer`:
-  verify token/hash/binding → validate answer/slots → consume token →
+- [x] Tạo service `commitInterviewAnswer`:
+  verify token/hash/binding → validate answer → consume token →
   append revision → advance state trong một transaction.
+  (slots/provenance chưa nối — thuộc P6.)
 - [ ] Tạo service tương đương cho deepen commit, dùng cùng transaction
-  kernel.
-- [ ] Public mutation API bắt buộc `expectedRevision: number`; không
+  kernel. **Chưa làm**: `deepen` vẫn chưa có case nào trong
+  `cliOperations.ts` (xem H0/finding X01) — không có production consumer
+  nào để nối vào, thuộc P6/P7.
+- [x] Public mutation API bắt buộc `expectedRevision: number`; không
   chấp nhận `null`.
-- [ ] Nếu initializer/migrator cần no-prior-revision, dùng API/type riêng,
-  không dùng cùng mutation function với sentinel `null`.
-- [ ] Chuẩn hóa error/result codes:
-  `STORE_MISSING`, `STORE_CORRUPT`, `STORE_VERSION_UNSUPPORTED`,
+- [x] Initializer dùng API riêng (`initializeInterviewStore`), không dùng
+  `transactInterviewStore` với sentinel `null`.
+- [~] Chuẩn hóa error/result codes: đã có `STORE_MISSING`, `STORE_CORRUPT`,
   `REVISION_CONFLICT`, `TURN_CAPABILITY_*`, `MIGRATION_REQUIRED`,
-  `RECOVERY_REQUIRED`.
+  `STORE_ALREADY_EXISTS`, `INVALID_EXPECTED_REVISION`. Chưa có
+  `STORE_VERSION_UNSUPPORTED`, `RECOVERY_REQUIRED` (không có seam nào cần
+  chúng ở phase này).
 
-### 5.3. Cut over production consumers
+### 5.3. Cut over production consumers — PARTIAL (2026-07-25)
 
-- [ ] `src/adapters/claude/userPromptSubmit.ts` không
+- [x] `src/adapters/claude/userPromptSubmit.ts` không
   `loadProgress/saveProgress`; chỉ gọi `issuePromptCapability`.
-- [ ] `src/adapters/claude/sessionStart.ts` không tạo/validate
+- [x] `src/adapters/claude/sessionStart.ts` không tạo/validate
   `progress.json` sau health; dùng initializer/migrator/canonical load.
-- [ ] `src/adapters/shared/cliOperations.ts`:
-  `status`, `next`, `commit`, `emit`, `deepen` đều đọc canonical service.
-- [ ] `src/core/evaluatePreAction.ts` nhận canonical runtime snapshot từ
-  caller; không tự load `progress.json`.
-- [ ] `src/core/runtimeHealth.ts` kiểm tra canonical store, không dùng
-  legacy progress làm health authority.
-- [ ] Claude/Codex hook marker logic dùng install manifest + canonical
-  marker; không dùng presence của `progress.json`.
-- [ ] Journey/e2e fixtures chuyển sang initializer/public CLI thay vì
-  tự ghi mock `progress.json`, trừ migration tests.
+- [~] `src/adapters/shared/cliOperations.ts`:
+  `status`, `init`, `commit`, `emit` đọc canonical service. `next` không
+  chạm progress (chỉ execution-state, không cần đổi). `deepen` chưa tồn
+  tại trong dispatcher (H0) — không có gì để cut over.
+- [~] `src/core/evaluatePreAction.ts` đọc canonical store thay vì
+  `progress.json`; đã thêm `request.progress` optional field để caller
+  bơm snapshot trực tiếp, nhưng **chưa adapter nào thực sự bơm nó** — vẫn
+  tự load canonical khi thiếu. "Nhận từ caller là bắt buộc duy nhất" chưa
+  đóng, để lại cho P4/P8.
+- [x] `src/core/runtimeHealth.ts` đã kiểm tra canonical store độc lập với
+  `progress.json` từ trước (không cần sửa thêm ở slice này).
+- [x] Claude (`session-start.mjs`, `user-prompt-submit.mjs`,
+  `pre-tool-use.mjs`) và Codex (`pre-tool-use.mjs`) hook wrapper "chưa
+  involved -> bypass" check nay xét cả canonical marker, không chỉ
+  `progress.json`/`execution-state.json`. Phát hiện quan trọng: trước khi
+  sửa, các wrapper `.mjs` này bypass hoàn toàn khi thiếu `progress.json`
+  — nghĩa là sau khi ngừng ghi `progress.json`, hook UserPromptSubmit/
+  PreToolUse thật sẽ tự vô hiệu hoá trên mọi dự án canonical-only. Unit
+  test không bắt được vì gọi thẳng hàm TS, bỏ qua logic bypass của
+  wrapper. Đã thêm regression test trong `hook-adversarial.test.ts`.
+- [x] Journey/e2e fixtures (`web-flow`, `web-edge-cases`, `mobile-flow`,
+  `mobile-edge-cases`, `preToolUse.test.ts`, `sessionStart.test.ts`,
+  `evaluatePreAction.test.ts`) chuyển sang seed/read canonical qua
+  `initializeInterviewStore`/`transactInterviewStore`/service helpers
+  (`test/helpers/canonicalProgress.ts`) thay vì tự ghi `progress.json`.
 
-### 5.4. Retire legacy authority
+### 5.4. Retire legacy authority — PARTIAL (2026-07-25)
 
-- [ ] Xóa `loadProgress/saveProgress` khỏi production exports, hoặc chuyển
-  vào module `legacyMigration` không được import bởi adapters/Core policy.
-- [ ] Production code không write `progress.json`.
-- [ ] Nếu cần compatibility projection cho người dùng, projection:
-  read-only, generated, có `source_revision`, không được bất kỳ
-  authorizer/gate/CLI operation nào đọc lại.
-- [ ] `Design/.interview/answers.json` legacy chỉ còn trong migrator và
-  migration fixtures.
-- [ ] Lint/architecture test cấm import legacy loaders ngoài allowlist.
+- [~] `loadProgress/saveProgress` vẫn export từ `core/index.ts` (không xoá
+  — nhiều fixture/migration test còn cần), nhưng import ngoài allowlist
+  (`loadProgress.ts`, `index.ts`, `runtimeHealth.ts`) bị cấm bằng máy qua
+  `src/core/legacyAuthorityBoundary.test.ts`.
+- [x] Production code không còn write `progress.json` (đã xác nhận: không
+  còn `saveProgress`/`writeFileSync(progressPath,...)` nào trong
+  adapters/Core policy path).
+- [ ] Compatibility read-only projection: **chưa cần/chưa làm** — không
+  có consumer nào đang yêu cầu một bản chiếu `progress.json` public.
+- [ ] `Design/.interview/answers.json` legacy: chưa đụng tới, vẫn thuộc
+  phạm vi P6 (answer/slot/provenance).
+- [x] Lint/architecture test cấm import legacy loaders ngoài allowlist:
+  `src/core/legacyAuthorityBoundary.test.ts`.
 
 ### Exit criteria
 

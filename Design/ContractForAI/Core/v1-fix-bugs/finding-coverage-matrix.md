@@ -29,7 +29,7 @@
 | X05 | Thiếu progress.json làm wrapper fail-open như project chưa cài | B2e, B4a | B5a | OPEN | none (existing `it('X05...')` tests a different behavior — direct-write deny) | — | — |
 | X06 | blocked conflates validation và execution failure; validate gỡ nhầm block | B1d | B5a | OPEN | none (existing `it('X06...')` tests a different behavior — direct-edit deny) | — | — |
 | X07 | Glob matcher tự chế sai dấu chấm, metachar và double-star | B2c | B5a | OPEN | none (existing `it('X07...')` tests a different behavior — phase-gate deny) | — | — |
-| X08 | Commit lưu progress rồi answers, có thể partial | B1b | B5b | OPEN | none | — | — |
+| X08 | Commit lưu progress rồi answers, có thể partial | B1b | B5b | SEAM_PARTIAL — `commitInterviewAnswer` (P2.2a, 2026-07-25) ghi progress+answers trong một `transactInterviewStore` call, không còn hai write riêng; slots/provenance chưa nối (P6) | none | src/core/canonicalAuthority.test.ts, src/core/interviewStore.test.ts | — |
 | X09 | validate fail nhưng CLI có thể exit 0; warning severity không khóa | B4c | B5a | OPEN | none | — | — |
 | X10 | Gate so basename nên docs/archive có thể giả artifact | B2d | B5a | OPEN | none (existing `it('X10...')` tests a different behavior — git command deny) | — | — |
 | X11 | gates_passed append-only, không revoke khi artifact đổi/xóa | B2d | B5a | OPEN | none | — | — |
@@ -55,7 +55,7 @@ Phải có test/evidence riêng trước khi coi phần primary contract tương
 | ID | Phát hiện bổ sung | Primary | Proof | Status | Test ID | Evidence path |
 |---|---|---|---|---|---|---|
 | R01 | UserPromptSubmit tạo capability nhưng plaintext token không được trả/inject cho caller; wrapper vẫn chỉ phát TURN_ID. Xóa legacy fallback ngay sẽ làm happy path không commit được. | B1a, B4a, B4f | B5a | SEAM_PARTIAL — `onUserPromptSubmit` nay trả `capabilityToken`, `renderInject` nhúng vào injected context, hook `user-prompt-submit.mjs` dạy `--capability-token`; CLI/SKILL.md hết `--turn` | none formal, covered by X01/X01b/X01c | test/integration/installed-runtime/hook-adversarial.test.ts |
-| R02 | `loadProgress`/`migrateInterviewStore` nuốt lỗi canonical/legacy parse rồi có thể trả fresh state — reset/fail-open. | B1b, B2e | B5a | OPEN | none | — |
+| R02 | `loadProgress`/`migrateInterviewStore` nuốt lỗi canonical/legacy parse rồi có thể trả fresh state — reset/fail-open. | B1b, B2e | B5a | SEAM_PARTIAL — `migrateInterviewStore` (P2.2a, 2026-07-25) không còn fabricate fresh state, trả `'no-legacy'`; `loadInterviewStore` throw `STORE_MISSING` thay vì tạo store rỗng. `loadProgress.ts` tự thân vẫn còn nhánh fresh-default khi ENOENT cả hai, nhưng không còn production adapter/policy nào gọi nó (chặn bằng `legacyAuthorityBoundary.test.ts`) — chỉ còn dùng bởi `runtimeHealth.ts` (soft-detect, không phải authority) và test fixtures. | none | src/core/canonicalAuthority.test.ts, src/core/interviewStore.test.ts, src/core/legacyAuthorityBoundary.test.ts |
 | R03 | SessionStart nuốt lỗi recover/migrate, bỏ qua `HealthReport`; health broken không chặn/inject recovery có cấu trúc. | B2e, B4a | B5a | OPEN | none | — |
 | R04 | Pha `plan-validating` blanket-allow write dưới `Design/`, `docs/`, `.design-everything/`; pha `blocked` deny-all. Cả hai trái B2a/B1d. | B1d, B2a, B4a | B5a | OPEN | none | — |
 | R05 | `checkExecutionGate` compatibility API trả allow khi `state=null`, trái invariant "installed/emit mà thiếu state phải deny". | B1c, B2e | B5a | OPEN | none | — |
