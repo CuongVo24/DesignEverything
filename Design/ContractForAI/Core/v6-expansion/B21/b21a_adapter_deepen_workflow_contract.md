@@ -3,6 +3,8 @@
 > Tầng: Adapter. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B21a, lõi B20a/B20b. Phụ thuộc: B20b. Adapter chỉ INJECT / GATE / EMIT — mọi logic nằm ở lõi đã có.
 >
 > **Sửa 2026-07-19 theo review mở lane:** bổ sung `--next`/`--commit` — bản trước không có đường hỏi/commit câu DS nào cả (lệnh `commit` tầng 1 từ chối khi phỏng vấn đã xong), nên không tồn tại happy path opt-in → hỏi → commit → emit. Commit deepen đi qua `commitDeepenAnswer` (B20a), KHÔNG qua `commitStep` tầng 1.
+>
+> **Sửa 2026-07-25 (H0, v1-fix-bugs):** `--commit` đổi từ `--turn <TURN_ID>` sang `--capability-token <TOKEN>` để khớp `commitDeepenAnswer` thật (B20a đã bỏ self-declared turn ID). CLI `deepen` chưa được wire vào dispatcher production (`cliOperations.ts`) tại thời điểm sửa này — đây chỉ là cập nhật đặc tả cho đúng interface lõi, việc wire consumer thuộc P6/P7 của `plan-v1-bonus-tasks.md`.
 
 ## 1. Micro-task target
 
@@ -16,7 +18,7 @@ Người dùng gọi được `deepen` từ cả hai harness thành vòng khép 
   - `deepen` (không arg): in JSON trạng thái 4 module (`opted_in/answered/missing/stale/emitted_at`) từ `loadDeepenState` + `canEmitModule`.
   - `deepen --module <id> --opt-in [--activation explicit|condition]`: gọi `optInModule`, `saveDeepenState`.
   - `deepen --module <id> --next`: in JSON instance kế tiếp chưa answered — `{question_id, subject_id, ask (đã thay {subject}), default (suy từ default_from + answers tầng 1), translate_back}`; hết câu → `{complete: true}`. Module chưa opt-in → exit ≠ 0.
-  - `deepen --module <id> --commit --turn <TURN_ID> --question <qid> [--subject <sid>] --answer "..."`: gọi `commitDeepenAnswer` (B20a — mọi luật từ chối do core gác), lưu nội dung answer vào kho answers hiện hành với key instance `<qid>@<sid>` (câu `per_subject: none` → key `<qid>`), rồi `saveDeepenState`. Vẫn dịch ngược + xác nhận như tầng 1.
+  - `deepen --module <id> --commit --capability-token <TOKEN> --question <qid> [--subject <sid>] --answer "..."`: gọi `commitDeepenAnswer` (B20a — mọi luật từ chối do core gác, token do hook/runtime issue cho đúng câu hỏi hiện tại, KHÔNG phải turn ID tự khai), lưu nội dung answer vào kho answers hiện hành với key instance `<qid>@<sid>` (câu `per_subject: none` → key `<qid>`), rồi `saveDeepenState`. Vẫn dịch ngược + xác nhận như tầng 1.
   - `deepen --module <id> --emit`: gọi `emitTier2`; chưa đủ câu → in `missing`, consistency error → in `issues`; cả hai exit ≠ 0 (fail-closed).
   - KHÔNG có đường auto-answer: skill chỉ được commit sau khi người dùng trả lời và xác nhận dịch ngược từng câu.
 - Skill: `adapter/claude-code/skill/design-everything/` (và bản build nếu chạm) + `adapter/codex-plugin/skills/`: thêm mục "Đào sâu thiết kế (tuỳ chọn)" — quy tắc: chỉ chào mời deepen khi NGƯỜI DÙNG hỏi hoặc điều kiện kích hoạt §3 taxonomy-decision xuất hiện trong answers; hỏi từng câu một; mọi câu vẫn dịch ngược + xác nhận.

@@ -63,5 +63,9 @@ Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SNAPSHOT_ONLY
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). SKILL.md handoff wording
 ("chưa validate, gate chưa mở") là cải thiện thật và nên giữ, nhưng cùng lúc bị xóa mất: cú pháp
 lệnh `deepen` khả thi, quy tắc SourceRef/`⚠ unknown` user-visible, và quy tắc scope guard khi
-phỏng vấn chưa xong. Skill vẫn dạy `--turn <TURN_ID>` thay vì capability token (B1a chưa đóng).
-Đóng ở P10 sau khi B1a/B3e đóng và skill được chạy trên target cài thật.
+phỏng vấn chưa xong. Codex skill từng dạy `--turn <TURN_ID>` thay vì capability token; đã sửa
+2026-07-25 (H0, `plan-v1-bonus-tasks.md`) — cả Claude/Codex skill nay dạy `--capability-token`.
+Không đóng contract: `deepen` CLI vẫn chưa được wire vào dispatcher production
+(`src/adapters/shared/cliOperations.ts` không có case `deepen`), nên chưa có executable path
+thật để chạy fixture trên target cài thật. Đóng ở P10 sau khi B1a/B3e đóng, `deepen` được wire
+(P6/P7) và skill được chạy trên target cài thật.

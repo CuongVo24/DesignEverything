@@ -63,8 +63,12 @@ Người dùng CÓ THỂ đào sâu 4 module dưới `docs/design/` (`glossary`,
 node "<pluginRoot>/cli.mjs" deepen --json
 node "<pluginRoot>/cli.mjs" deepen --module <id> --opt-in --json
 node "<pluginRoot>/cli.mjs" deepen --module <id> --next --json
-node "<pluginRoot>/cli.mjs" deepen --module <id> --commit --turn <TURN_ID> --question <qid> --answer "..." --json
+node "<pluginRoot>/cli.mjs" deepen --module <id> --commit --capability-token <TOKEN> --question <qid> --answer "..." --json
 node "<pluginRoot>/cli.mjs" deepen --module <id> --emit --json
 ```
+
+Token đến từ hook/runtime context cho đúng câu hỏi hiện tại — KHÔNG tự bịa token, KHÔNG tái
+dùng token đã commit. KHÔNG dùng `--turn <id>` — cờ này không còn được engine chấp nhận làm căn
+cứ uỷ quyền.
 
 Quy tắc: (1) chỉ đề xuất khi người dùng hỏi / opt-in và phase hợp lệ; (2) hỏi từng câu, dịch ngược + chờ xác nhận; (3) không tự auto-ack; (4) cite nguồn theo grammar SourceRef.

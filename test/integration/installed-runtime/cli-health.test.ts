@@ -76,6 +76,47 @@ describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
     expect(res.reason_code).toBe('TURN_CAPABILITY_MISSING');
   });
 
+  it('should fail closed with UNKNOWN_SUBCOMMAND for the documented deepen --capability-token shape (H0: deepen is not wired into the dispatcher yet)', async () => {
+    // Pins current reality: SKILL.md documents `deepen --commit --capability-token
+    // <TOKEN> ...` (H0, plan-v1-bonus-tasks.md) as the authorization shape, but
+    // cliOperations.ts has no `case 'deepen'` — it falls through to the default
+    // unknown-subcommand branch. This must stay a stable, typed failure and never
+    // silently "succeed" until P6/P7 actually wire the handler.
+    const res = await runCliOperation(tmpDir, [
+      'deepen',
+      '--module',
+      'glossary',
+      '--commit',
+      '--capability-token',
+      'not-a-real-token',
+      '--question',
+      'q1',
+      '--answer',
+      'Answer',
+    ]);
+
+    expect(res.ok).toBe(false);
+    expect(res.reason_code).toBe('UNKNOWN_SUBCOMMAND');
+  });
+
+  it('should reject the stale deepen --turn shape identically to UNKNOWN_SUBCOMMAND (--turn grants no authority via this surface either)', async () => {
+    const res = await runCliOperation(tmpDir, [
+      'deepen',
+      '--module',
+      'glossary',
+      '--commit',
+      '--turn',
+      'turn-1',
+      '--question',
+      'q1',
+      '--answer',
+      'Answer',
+    ]);
+
+    expect(res.ok).toBe(false);
+    expect(res.reason_code).toBe('UNKNOWN_SUBCOMMAND');
+  });
+
   it('should reject commit with INVALID_SLOTS_FILE when slots file path points outside workspace, given a valid capability token', async () => {
     const issued = issueTurnCapability(0, {
       sessionId: 'default-session',
