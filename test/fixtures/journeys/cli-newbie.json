@@ -1,0 +1,21 @@
+{
+  "shape": "cli",
+  "calibrate_mode": "fast",
+  "answers": {
+    "CAL0": "Tôi muốn chọn chế độ nhanh (fast mode)",
+    "S0": "Công cụ CLI tự động hóa deploy và kiểm tra mã nguồn",
+    "S1": "Tốn thời gian chạy thủ công nhiều lệnh terminal, công cụ gộp lại thành 1 lệnh",
+    "S2": "DevOps engineer và backend developer",
+    "S3": "Must: Chạy linter, build dự án, đẩy artifact lên server. Should: Hiển thị thanh tiến trình.",
+    "S4": "Dữ liệu bao gồm Config, Pipeline, DeploymentLog",
+    "S5": "Mở terminal -> gõ mycli deploy --env=prod -> xem log đầu ra",
+    "S6": "Làm solo trong 1 tuần",
+    "S7": "cli",
+    "S8": "Công cụ dòng lệnh terminal",
+    "C1": "Viết bằng Node.js và TypeScript",
+    "C2": "Nhận tham số qua flags và arguments CLI",
+    "C3": "Đọc tệp cấu hình JSON tại ~/.config/mycli.json",
+    "C4": "Chạy trên macOS và Linux",
+    "C5": "Phân phối qua NPM registry"
+  }
+}

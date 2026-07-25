@@ -1,0 +1,21 @@
+{
+  "shape": "web",
+  "calibrate_mode": "fast",
+  "answers": {
+    "CAL0": "Tôi muốn chọn chế độ nhanh (fast mode)",
+    "S0": "Tôi muốn làm ứng dụng quản lý công việc và dự án cá nhân",
+    "S1": "Quản lý công việc hay bị quên và trễ deadline, giải pháp là danh sách task thông minh",
+    "S2": "Lập trình viên và quản lý dự án cá nhân",
+    "S3": "Must: Tạo task, sửa status, đặt deadline. Should: Gửi thông báo. Could: Thống kê tuần.",
+    "S4": "Dữ liệu bao gồm User, Task, Project",
+    "S5": "Người dùng đăng nhập -> chọn dự án -> tạo công việc mới -> đánh dấu hoàn thành",
+    "S6": "Làm solo trong 2 tuần, ngân sách cá nhân",
+    "S7": "web",
+    "S8": "Ứng dụng web chạy trên trình duyệt",
+    "W1": "Cần SEO cơ bản cho trang giới thiệu",
+    "W2": "Giao diện responsive hỗ trợ cả desktop và mobile web",
+    "W3": "Triển khai lên Vercel",
+    "W4": "Đăng nhập bằng Email và Google OAuth",
+    "W5": "Cập nhật dữ liệu dạng polling thông thường, không cần realtime websocket"
+  }
+}

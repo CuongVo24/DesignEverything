@@ -1,0 +1,16 @@
+{
+  "shape": "web",
+  "calibrate_mode": "fast",
+  "answers": {
+    "CAL0": "fast",
+    "S0": "app",
+    "S1": "lam phan mem",
+    "S2": "moi nguoi",
+    "S3": "Must: tat ca deu phai co",
+    "S4": "data",
+    "S5": "chay thoi",
+    "S6": "lam sau",
+    "S7": "web",
+    "S8": "web"
+  }
+}

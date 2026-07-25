@@ -1,0 +1,26 @@
+{
+  "shape": "hybrid",
+  "calibrate_mode": "fast",
+  "answers": {
+    "CAL0": "Tôi muốn chọn chế độ nhanh (fast mode)",
+    "S0": "Hệ thống quản lý kho hàng đa nền tảng web admin và mobile scanner",
+    "S1": "Kho hàng kiểm kê chậm và tốn sức, ứng dụng giúp quét mã vạch và xem báo cáo",
+    "S2": "Nhân viên kiểm kho và quản lý kho hàng",
+    "S3": "Must: Quét mã kho (mobile), xem danh sách tồn kho (web). Should: Xuất báo cáo Excel.",
+    "S4": "Dữ liệu bao gồm Product, InventoryLog, WarehouseLocation",
+    "S5": "Nhân viên dùng mobile quét mã -> Server cập nhật -> Quản lý xem trang web admin",
+    "S6": "Đội 2 người trong 1 tháng",
+    "S7": "hybrid",
+    "S8": "Hệ thống kết hợp Web Dashboard và Mobile Scanner App",
+    "W1": "Trang web admin nội bộ không cần SEO",
+    "W2": "Web responsive cho màn hình máy tính",
+    "W3": "Triển khai server backend và web trên AWS",
+    "W4": "Đăng nhập bằng tài khoản nội bộ JWT",
+    "W5": "Cập nhật tồn kho theo thời gian thực",
+    "M1": "Chạy trên Android di động chuyên dụng",
+    "M2": "Lưu tạm khi mất mạng và đồng bộ khi kết nối lại",
+    "M3": "Dùng camera quét mã QR/Barcode",
+    "M4": "Viết bằng React Native",
+    "M5": "Phân phối tệp APK nội bộ"
+  }
+}

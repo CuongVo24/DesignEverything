@@ -1,0 +1,21 @@
+{
+  "shape": "mobile",
+  "calibrate_mode": "fast",
+  "answers": {
+    "CAL0": "Tôi muốn chọn chế độ nhanh (fast mode)",
+    "S0": "Ứng dụng theo dõi sức khỏe và lịch tập luyện cá nhân",
+    "S1": "Khó theo dõi thói quen tập luyện hằng ngày, ứng dụng nhắc nhở ghi chép",
+    "S2": "Người tập gym và theo dõi chế độ ăn uống",
+    "S3": "Must: Ghi lịch tập, tính calo tiêu thụ. Should: Biểu đồ tuần. Could: Gợi ý bài tập.",
+    "S4": "Dữ liệu bao gồm User, WorkoutLog, Exercise",
+    "S5": "Mở ứng dụng -> chọn bài tập -> nhập số rep/kg -> lưu nhật ký",
+    "S6": "Làm solo trong 3 tuần",
+    "S7": "mobile",
+    "S8": "Ứng dụng di động di chuyển linh hoạt",
+    "M1": "Hỗ trợ iOS và Android",
+    "M2": "Hoạt động offline tốt và đồng bộ khi có mạng",
+    "M3": "Sử dụng camera chụp ảnh món ăn và push notification nhắc tập",
+    "M4": "Dùng React Native hoặc Flutter",
+    "M5": "Phân phối qua Apple App Store và Google Play Store"
+  }
+}
