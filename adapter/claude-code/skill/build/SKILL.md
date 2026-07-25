@@ -11,65 +11,56 @@ Engine: `__ENGINE_ROOT__`
 CLI (động cơ quản lý state):
 
 ```bash
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" validate
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" start --task <task_id> --milestone <milestone_id>
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" verify --task <task_id> --command <command_id>
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" review --milestone <M4-...>
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" repair
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next-step [--calibrate deep|fast]
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" validate --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" next --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" start --task <task_id> --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" verify --task <task_id> --command <command_id> --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" review --milestone <M4-...> --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" repair --json
 ```
 
 ## Chu trình làm việc cốt lõi (Bắt buộc)
 
-### Bắt đầu: Đọc Trạng thái & Xác thực
-1. Chạy `next-step` để kiểm tra thẻ bước tiếp theo (Next Step Card).
-2. Nếu pha là `plan-validating` hoặc trạng thái yêu cầu validate, chạy ngay lệnh `validate`.
-   - Nếu `validate` thành công: Pha chuyển sang `ready-to-execute`. Tiếp tục bước tiếp theo.
-   - Nếu `validate` thất bại: Hệ thống chuyển sang `blocked`. Hãy đọc kỹ `block_reason` hoặc danh sách `issues` được trả về, sửa lại các tệp tài liệu thiết kế bị lỗi và chạy lại `validate`. Bạn không thể viết code khi chưa sửa xong.
+### Bắt đầu: Đọc Trạng thái & Xác thực CLI
+1. Bắt đầu bằng cách chạy `status --json` và `validate --json`.
+2. Kiểm tra `exitCode` và kết quả JSON envelope:
+   - Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG THỰC THI NGAY**. Hiển thị thông báo lỗi `message` và thực hiện đúng theo chỉ dẫn khắc phục `next_command` hoặc `safe_next_command`. KHÔNG tự ý suy đoán pha hoặc ép viết code khi CLI báo lỗi.
+   - Khi `validate --json` thành công (`ok: true`, `reason_code: "VALIDATION_PASSED"`): Pha chuyển sang `ready-to-execute`. Lúc này mới được phép chạy `next --json` để lấy task.
+   - Khi `validate --json` thất bại: Pha ở `blocked`. Đọc kỹ danh sách `issues` hoặc `block_reason`, sửa đổi tệp tài liệu được chỉ định và chạy lại `validate --json`.
 
-### Bước 1: Tìm Task khả thi tiếp theo
-1. Chạy `next` để lấy thông tin task card tiếp theo có thể thực thi.
-2. Tuyệt đối không tự ý thực hiện task có các preconditions chưa hoàn thành.
+### Bước 1: Lấy Task kế tiếp (`next`)
+1. Chạy `next --json` để lấy danh sách task hợp lệ.
+2. Tuyệt đối không tự ý thực hiện task khi preconditions chưa hoàn thành.
 
 ### Bước 2: Kích hoạt Task (`start`)
-1. Chạy `start --task <task_id> --milestone <milestone_id>`. Lệnh này chuyển pha sang `executing` và gán `active_task`.
-2. Trình bày tường minh trước khi bắt đầu code:
-   - **Mục tiêu**: Ý định thực thi là gì.
+1. Chạy `start --task <task_id> --json`. Lệnh này chuyển pha sang `executing` và gán `active_task`.
+2. Trình bày thông tin task cho người dùng theo `task_details` từ JSON result:
+   - **Mục tiêu**: Ý định thực thi.
    - **Tác động**: Các file được phép sửa đổi (`allowed_paths`).
-   - **Điều kiện**: Các preconditions của task.
    - **Nghiệm thu**: Lệnh kiểm chứng và kết quả mong đợi.
-   *(Nếu ở chế độ `deep` giải thích thêm lý do kỹ thuật chi tiết; chế độ `fast` đi thẳng vào vấn đề cùng các yêu cầu bằng chứng).*
 
-### Bước 3: Phát triển mã nguồn trong phạm vi (`allows_paths`)
-1. Thực hiện viết code/chỉnh sửa trong phạm vi cho phép của task.
-2. **CẢNH BÁO**: Mọi hành động ghi/sửa tệp nằm ngoài `allows_paths` của task sẽ bị hook `PreToolUse` từ chối thẳng thừng (Bậc A). Đừng cố gắng chỉnh sửa các tệp không được chỉ định trong task card hiện tại.
+### Bước 3: Phát triển mã nguồn trong phạm vi (`allowed_paths`)
+1. Thực hiện viết code/chỉnh sửa trong đúng phạm vi `allowed_paths` của task.
+2. Mọi hành động ghi/sửa tệp ngoài `allowed_paths` sẽ bị PreToolUse hook từ chối.
 
 ### Bước 4: Kiểm chứng bằng máy (`verify`)
-1. Với MỖI command trong Task Card, gọi `verify --task <task_id> --command <command_id>`. Engine TỰ chạy lệnh kiểm chứng đó và tự ghi nhận bằng chứng — bạn KHÔNG tự khai exit-code, không tự viết evidence. Nếu command có `requires_user_confirmation: true`, agent PHẢI hỏi người dùng thật trước; chỉ sau khi họ đồng ý trong chat mới được thêm `--confirm`. Không bao giờ tự thêm cờ này.
-   - **Nếu pass**: khi mọi command của task đã verify pass, task vào `completed_tasks`, giải phóng `active_task`, pha về `ready-to-execute`. Lúc này bạn mới được phép sang task tiếp theo.
-   - **Nếu fail**: pha chuyển sang `repairing`.
-2. Mỗi lần `verify` chạy, engine tự ghi lại `docs/progress-log.md` — nhật ký người-đọc-được dựng từ evidence (đã làm gì, lệnh nào, vấp ở đâu). File này do engine sinh: KHÔNG sửa tay, và không cần tự viết báo cáo tiến độ song song với nó.
+1. Gọi `verify --task <task_id> --command <command_id> --json`. Engine TỰ chạy lệnh kiểm chứng đó và ghi nhận bằng chứng.
+   - Nếu command có `requires_user_confirmation: true`, PHẢI hỏi người dùng trước và chỉ truyền `--confirm` khi họ đồng ý. Model KHÔNG tự động thêm cờ này.
+   - Nếu `ok: true`: task hoàn thành, pha trở về `ready-to-execute`.
+   - Nếu `ok: false`: pha chuyển sang `repairing`.
 
-### Bước 5: Sửa lỗi trong pha `repairing`
-1. Khi verify fail, tuyệt đối không được bỏ qua hoặc bấm chuyển sang task tiếp theo.
-2. Giữ nguyên task hiện tại, phân tích log lỗi chi tiết, sửa code trong phạm vi cho phép của task đó.
-3. Gọi lại `verify --task <task_id> --command <command_id>`. Khi pass, task mới được giải phóng.
+### Bước 5: Khắc phục lỗi (`repair`)
+1. Khi verify fail, phân tích log lỗi, sửa code trong phạm vi `allowed_paths` của task.
+2. Chạy lại `verify --task <task_id> --command <command_id> --json` cho đến khi thành công.
 
-### Bước 6: Review feature & break-task (pha `reviewing` — B17a/V5)
-
-Sau khi mọi task build của một feature-milestone (`M4-*`) đã pass, pha chuyển sang `reviewing` — **không** đi thẳng sang feature kế.
-
-1. Chạy `review --milestone <M4-...>`. Engine TỰ chạy lint/test của stack đã khóa trong `docs/conventions/` — bạn KHÔNG được tự khai "lint sạch, test xanh".
-2. **Output sạch** → review đóng, feature vào `reviewed_milestones`, pha về `ready-to-execute` để mở feature kế.
-3. **Output bẩn** → engine sinh **break-task** (`fix_*` cho bug, `polish_*` cho nợ kỹ thuật) và ghi ra `docs/break-tasks/<milestone>.md` kèm mục lục. Feature **CHƯA được coi là done** (fail-closed): phải làm xong mọi break-task (verify pass) rồi chạy lại `review` mới đóng được.
-4. **Feature-done gate**: không được mở feature-milestone mới khi còn feature cũ đã xong task build nhưng chưa đóng review.
-5. File trong `docs/break-tasks/` do engine sinh — trình bày cho người dùng, KHÔNG sửa tay.
+### Bước 6: Review feature & break-task (`review`)
+1. Khi mọi task build của feature (`M4-*`) đã pass, chạy `review --milestone <M4-...> --json`. Engine tự chạy lint/test.
+2. Nếu phát sinh break-task, làm xong break-task rồi chạy lại `review`.
 
 ## Điều cấm kỵ
 
-- Không tự chỉnh sửa `.design-everything/execution-state.json`.
-- Không cố gắng viết code cho task mới khi task cũ chưa hoàn thành hoặc chưa có bằng chứng xác thực hợp lệ.
-- Không sửa mã nguồn khi không có active task nào đang chạy.
-- Không nhảy sang feature kế khi review của feature hiện tại chưa đóng (còn break-task chưa xong).
+- Không tự ý chỉnh sửa `.design-everything/execution-state.json`.
+- Không tự suy đoán phase hay tự tiện viết code khi CLI trả về exit code khác 0.
+- Không tự động auto-ack cảnh báo hoặc tự thêm cờ `--confirm` mà không qua xác nhận của người dùng.
+- Không khuyên người dùng xóa tệp trạng thái/reinstall mù quáng khi gặp lỗi.

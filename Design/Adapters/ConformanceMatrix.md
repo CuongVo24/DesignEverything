@@ -75,3 +75,18 @@ Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đ
 - **Validation Engine:** `validateContract` xác thực chặt chẽ hình-hài, cấu trúc lệnh, chống done giả (chặn file-exists-only), và cấm trộn stack công nghệ.
 - **Task card compiler:** `compileContractToTaskCard` ánh xạ trực tiếp Contract thành cấu trúc TaskCard của V3.
 - Toàn bộ unit test cho B16a đã được bổ sung và chạy thành công. ✅ Đã code + test.
+
+## Trạng thái v6.0.0 (B4e Claude/Codex Shared Runtime Parity — 2026-07-25)
+Đã hợp nhất và loại bỏ duplicate logic CLI giữa Claude Code adapter và Codex plugin:
+- **Shared Runtime Runner:** 100% logic CLI operations (`status`, `init`, `commit`, `validate`, `emit`, `repair`, `next`, `start`, `verify`, `review`) được xử lý bởi `src/adapters/shared/cliOperations.ts`.
+- **Thin Launchers:** Cả `adapter/claude-code/cli.mjs` và `adapter/codex-plugin/cli.mjs` đều trở thành launcher mỏng (< 100 dòng), ủy quyền toàn bộ việc thực thi cho shared runner.
+- **Parity Verification:** Đã viết integration test `test/integration/adapter-parity.test.ts` và E2E benchmark `test/replay/crossRuntimeReplay.test.ts` đảm bảo 100% tương thích về JSON envelope, reason code, version evidence và state transitions. ✅ Đã code + test.
+
+## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync — 2026-07-25)
+Hoàn thành 100% kiểm tra sự thật runtime, kiểm thử chịu lỗi giao dịch, và đánh giá hành trình người dùng mới:
+- **Adversarial Installed Runtime (B5a):** Chặn đứng các hành vi can thiệp thô bạo vào state machine, bypass hook hoặc sửa lén manifest. ✅ Đã code + test (`test/integration/installed-runtime/hook-adversarial.test.ts`).
+- **Transaction Fault Injection (B5b):** Giao dịch `commit` và `emit` an toàn tuyệt đối trước process crash (`process.exit(137)`), đĩa đầy (`ENOSPC`), từ chối quyền (`EACCES`), và tự động dọn dẹp orphan lock khi tiến trình giữ lock bị treo/chết. ✅ Đã code + test (`test/fault-injection/`).
+- **Newbie Journey & Weak Executor Evaluation (B5c):** Đánh giá hành trình người dùng mới thông suốt trên 4 shapes (`web`, `mobile`, `cli`, `hybrid`) và 2 calibration modes (`deep`, `fast`), bảo đảm 0 false pass cho câu trả lời rỗng/placeholder. ✅ Đã code + test (`test/journey/`).
+- **Release Truth Sync (B5d):** Đồng bộ tài liệu release, xóa bỏ 100% link `file:///e:/...`, và duy trì linter tự động `test/docs/runtime-truth.test.ts`. ✅ Đã code + test.
+
+

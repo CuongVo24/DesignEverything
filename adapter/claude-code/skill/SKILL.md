@@ -13,17 +13,18 @@ Engine: `__ENGINE_ROOT__`
 CLI (mọi thao tác state đều qua đây, KHÔNG tự sửa `progress.json`):
 
 ```bash
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --turn <TURN_ID> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>]
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --capability-token <TOKEN> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>] --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --json
 ```
 
 ## Bắt đầu
 
-1. Chạy `status` để biết `current_step` và câu hỏi hiện tại.
-2. Nếu `current_step = null` và `phase = interview` → state lỗi, báo người dùng.
-3. Nếu phỏng vấn đã xong (`current_step = null`, chưa emit) → xác nhận với người dùng rồi chạy `emit`.
-4. Ngược lại: hỏi câu `current_step` theo đúng 4 quy tắc vàng bên dưới.
+1. Chạy `status --json` để kiểm tra sức khỏe hệ thống và câu hỏi hiện tại.
+2. Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG NGAY**, hiển thị thông báo lỗi `message` và hướng dẫn khắc phục `next_command` hoặc `safe_next_command` từ Core. KHÔNG tiếp tục phỏng vấn khi state bị hỏng.
+3. Nếu `current_step = null` và `phase = interview` → state lỗi, báo người dùng chạy lệnh khắc phục (`repair`).
+4. Nếu phỏng vấn đã xong (`current_step = null`, chưa emit) → xác nhận với người dùng rồi chạy `emit --json`.
+5. Ngược lại: hỏi câu `current_step` theo đúng 4 quy tắc vàng bên dưới.
 
 ## 4 quy tắc vàng (bắt buộc)
 
@@ -36,9 +37,14 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit
 
 ## Nhịp commit (một bước mỗi lượt người thật)
 
-- Hook UserPromptSubmit inject `TURN_ID` cho từng lượt của người dùng. Commit dùng đúng
-  TURN_ID của lượt mà người dùng vừa xác nhận. Mỗi TURN_ID chỉ commit được một lần —
-  không được commit nhiều bước trong một lượt.
+- Hook UserPromptSubmit phát hành một **capability token** cho câu `current_step` của lượt hiện
+  tại (xuất hiện trong ngữ cảnh được inject, dưới mục "Capability Token"). Commit bước bằng
+  đúng token đó qua `--capability-token`. KHÔNG tự bịa token, KHÔNG tái dùng token đã commit —
+  token chỉ dùng được một lần, hết lượt phải chờ token mới ở lượt kế tiếp.
+- KHÔNG dùng `--turn <id>` — cờ này không còn được engine chấp nhận làm căn cứ uỷ quyền.
+- Chạy `commit` với cờ `--json` để nhận kết quả dạng structured envelope.
+- Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG NGAY**, hiển thị thông báo lỗi và
+  hướng dẫn khắc phục từ Core (`next_command`).
 - Người dùng trả lời lan man/chưa xác nhận → KHÔNG commit, hỏi lại cho rõ.
 - Người dùng trả lời trước nhiều câu một lúc → vẫn chỉ commit câu hiện tại; giữ các ý còn lại
   để đối chiếu khi đến câu tương ứng (vẫn phải hỏi + dịch ngược từng câu).
@@ -100,87 +106,38 @@ trong `08-build-plan.md`. Không có hạn thì ghi đúng là không có; đừ
 mức bảo mật) và quy mô năm đầu (quyết định mức tối ưu). Nêu rõ mức "đủ dùng" cho từng cái — người
 mới hay làm thừa (bày microservice cho 50 user) hoặc làm thiếu (để mật khẩu thô).
 
-## Kết thúc phỏng vấn
+## Kết thúc phỏng vấn & Handoff Truth
 
 Khi `commit` trả về `interview_done: true`:
 
 1. Tóm tắt cho người dùng: nhánh đã chọn, các quyết định chính.
 2. **Soạn build plan (file dẫn xuất `08-build-plan.md`)** — KHÔNG hỏi thêm câu nào. Từ Must-list
    (S3) và flow chính (S5) đã chốt, suy ra chuỗi milestone có thứ tự và viết vào
-   `Design/.interview/slots-buildplan.json` với 3 key:
-   - `build_plan_principles`: nguyên tắc đi từng bước, điều chỉnh theo `calibrate_mode`
-     (deep → giải thích vì sao đi theo thứ tự này).
-   - `build_milestones`: bắt đầu bằng **M0 — khung xương biết đi** (lát cắt mỏng nhất của flow
-     chính chạy end-to-end với dữ liệu cứng, nêu cụ thể cho dự án này), rồi mỗi mục Must là một
-     milestone theo thứ tự xuất hiện trong flow. Mỗi milestone PHẢI có dòng `Done-when:` kiểm
-     chứng được bằng hành vi thật (chạy lệnh gì, thấy gì), không phải "code xong".
-   - `build_verification_notes`: cách chạy lại flow chính sau mỗi milestone + đối chiếu các
-     điểm dễ vỡ ở S5.
-   - `allowed_dependencies`: danh sách dependency đã chốt trong kiến trúc (mục "Thư viện/thành
-     phần chính" của câu C/W về kiến trúc), phân cách bằng dấu phẩy — ví dụ
-     `"yt-dlp, python-mpv, platformdirs, click"`. Đây là danh sách KHÓA: engine ghi vào
-     `docs/conventions/allowed-dependencies.md`, khi build không được thêm lib ngoài danh sách
-     nếu chưa cập nhật conventions trước.
-   - `architecture_decision_rationale`: **vì sao** chọn từng quyết định kỹ thuật đã chốt (W/M/C).
-     Mỗi quyết định 1-3 dòng, PHẢI nối ngược về một câu trả lời cụ thể của người dùng — nhu cầu,
-     ràng buộc, hoặc rủi ro. Không nối được về câu nào tức là đang chọn theo trend, phải nêu ra.
-     Đây là thứ biến bộ docs từ "danh sách công nghệ" thành tài liệu kiến trúc thật.
-   - `architecture_alternatives_considered`: các phương án đã cân nhắc và **vì sao loại**, kèm
-     điều kiện nào sẽ khiến quyết định đảo lại (VD: "chọn SQLite; đổi sang Postgres nếu cần
-     nhiều người ghi đồng thời"). Một quyết định không có phương án thay thế thường chỉ là mặc
-     định chưa ai xét.
-   - `docs_readme_glossary`: bảng thuật ngữ markdown 2 cột (Thuật ngữ | Nghĩa) gồm (a) 4-5
-     thuật ngữ của phương pháp (Must/Should/Could/Won't, M0, Done-when, allowed_paths,
-     verify/evidence) và (b) các thuật ngữ NGHIỆP VỤ riêng của dự án — mỗi thực thể chính
-     trong data model (S4) và khái niệm đặc thù người mới dễ hiểu sai, mỗi cái một dòng
-     nghĩa ngắn đúng theo cách dự án này dùng.
-3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json"` — sinh cây `docs/`
-   (11 file, gồm `08-build-plan.md` và `decisions.md`) + `docs/conventions/` (khóa stack +
-   dependency) + cập nhật gates. `decisions.md` (sổ quyết định), sơ đồ mermaid trong `03`/`04`,
-   và lịch tuần trong `08` đều được dẫn xuất tự động từ slot đã chốt — không viết tay.
-4. Nếu output emit có `consistency_warnings` không rỗng: đây là các chỗ docs TỰ MÂU THUẪN
-   (thường do câu phỏng vấn sau sửa quyết định của câu trước — VD chốt Windows ở C4 nhưng
-   slot C3 còn ghi đường dẫn Linux). Trình bày từng cảnh báo cho người dùng, cập nhật slot
-   của file bị nêu tên (qua `Design/.interview/answers.json` slot tương ứng hoặc slots-file)
-   rồi chạy lại `emit` cho tới khi hết cảnh báo. KHÔNG bỏ qua.
-5. Đọc lướt docs sinh ra, chỉ cho người dùng thứ tự đọc (README.md trong docs/), nhấn mạnh
-   `08-build-plan.md` là file mở ra khi bắt đầu code.
-6. Nếu `phase = ready-to-build` → thông báo gate đã mở, có thể bắt đầu code **theo đúng thứ tự
-   milestone trong 08-build-plan.md**, bắt đầu từ M0.
-   Mỗi file docs có mục "Tại sao cần file này" — nhắc người dùng đọc, đó là phần học nghề.
+   `Design/.interview/slots-buildplan.json`.
+3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json" --json` — sinh cây `docs/`
+   + `docs/conventions/`.
+4. Nếu output emit có `consistency_warnings` không rỗng: trình bày từng cảnh báo cho người dùng
+   và YÊU CẦU người dùng xác nhận hoặc điều chỉnh slot. Model KHÔNG được tự ý auto-ack cảnh báo.
+5. **THÔNG BÁO CHÍNH XÁC VỀ TRẠNG THÁI (HANDOFF TRUTH):**
+   - Nói rõ: "Bộ tài liệu thiết kế `docs/` đã được sinh thành công. **TUY NHIÊN, kế hoạch thực thi (`execution-plan.json`) CHƯA được validate.**"
+   - Tuyệt đối KHÔNG tuyên bố "gate đã mở" hay "có thể bắt đầu viết code ngay".
+   - Chỉ định hành động tiếp theo duy nhất: "Vui lòng gọi lệnh `/build` để tiến hành validate kế hoạch thi công trước khi viết code."
 
 ## Đào sâu thiết kế (tuỳ chọn — tầng 2)
 
-Sau khi docs nền móng đã emit, người dùng CÓ THỂ đào sâu 4 module thiết kế chi tiết dưới
-`docs/design/`: `glossary`, `feature-spec`, `adr`, `test-strategy`. Đây là **kênh riêng, hoàn
-toàn tuỳ chọn** — không đụng luồng phỏng vấn/gate tầng 1.
+Sau khi docs nền móng đã emit và kế hoạch đã validate (`ready-to-execute`), người dùng CÓ THỂ đào
+sâu 4 module thiết kế chi tiết dưới `docs/design/`: `glossary`, `feature-spec`, `adr`, `test-strategy`.
 
-```bash
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen                                  # trạng thái 4 module
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --opt-in [--activation explicit|condition]
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --next             # câu DS kế tiếp
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --commit --turn <TURN_ID> --question <qid> [--subject <sid>] --answer "..."
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --emit             # sinh docs/design/ khi đủ câu
-```
-
-Quy tắc (bắt buộc):
-
-1. **Chỉ chào mời deepen khi NGƯỜI DÙNG hỏi**, hoặc khi điều kiện kích hoạt §3 taxonomy-decision
-   xuất hiện trong answers (vd `adr` ↔ team ≥2 dev, `test-strategy` ↔ có CI/CD). KHÔNG tự opt-in hộ.
-2. **Chỉ opt-in sau khi người dùng đồng ý.** `--opt-in` là hành động của người dùng, không phải mặc định.
-3. Hỏi từng câu `--next` một; mỗi câu vẫn **dịch ngược + chờ người dùng xác nhận** rồi mới `--commit`.
-   KHÔNG auto-answer, KHÔNG commit hàng loạt.
-4. `--emit` fail-closed: thiếu câu → in `missing` và exit ≠ 0; consistency error → in `issues` và exit ≠ 0.
-   Trả lời nốt câu thiếu rồi emit lại; không lách.
-5. Mỗi khối trong `docs/design/` phải cite nguồn theo grammar SourceRef (taxonomy-tier2.md);
-   khối không truy được nguồn mang cờ `⚠ unknown — cần hỏi người`, KHÔNG bịa.
+Quy tắc:
+1. Chỉ đề xuất deepen khi Tier-1 ở trạng thái khỏe mạnh (`ready-to-execute`) và NGƯỜI DÙNG hỏi/opt-in.
+2. Nếu dự án đang ở pha phỏng vấn (`interview`) hoặc đang trong chu trình build/repair (`executing`,
+   `verifying`, `repairing`, `reviewing`, `blocked`): giải thích rõ lý do deepen chưa khả dụng và khi nào quay lại.
+3. Mọi thao tác commit/emit tầng 2 đều qua CLI `deepen`, hỏi từng câu và chờ xác nhận.
 
 ## Điều cấm
 
 - Không tự bịa câu hỏi ngoài script; không đổi thứ tự; không bỏ câu vì "đoán được".
 - Không tự trả lời thay người dùng rồi commit hàng loạt.
-- Không sửa tay `progress.json`, `Design/.interview/answers.json` — chỉ qua CLI.
-- **Không viết tay bất kỳ file nào trong `docs/` — kể cả giữa phỏng vấn.** `docs/` chỉ được
-  sinh từ lệnh `emit` ở cuối (một nguồn, một lần, đúng taxonomy). Giữa phỏng vấn chỉ được ghi
-  vào `Design/.interview/` (slots, ghi chú).
-- Không viết file ngoài `docs/` và `Design/` khi phỏng vấn chưa xong (hook cũng sẽ chặn).
+- Không sửa tay `progress.json`, `execution-state.json`, `Design/.interview/answers.json` — chỉ qua CLI.
+- Không viết tay bất kỳ file nào trong `docs/` — kể cả giữa phỏng vấn.
+- Không tự tiện tuyên bố gate đã mở hoặc khuyên người dùng xóa tệp trạng thái/reinstall khi có lỗi. Dùng `safe_next_command` từ Core.

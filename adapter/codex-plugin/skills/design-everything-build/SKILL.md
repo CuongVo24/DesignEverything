@@ -11,14 +11,13 @@ Plugin Root: `${PLUGIN_ROOT}` hoặc `~/.codex/plugins/design-everything-plugin`
 
 CLI (động cơ quản lý state):
 ```bash
-node "<pluginRoot>/cli.mjs" status
-node "<pluginRoot>/cli.mjs" validate
-node "<pluginRoot>/cli.mjs" next
-node "<pluginRoot>/cli.mjs" start --task <task_id> --milestone <milestone_id>
-node "<pluginRoot>/cli.mjs" verify --task <task_id> --command <command_id>
-node "<pluginRoot>/cli.mjs" review --milestone <M4-...>
-node "<pluginRoot>/cli.mjs" repair
-node "<pluginRoot>/cli.mjs" next-step [--calibrate deep|fast]
+node "<pluginRoot>/cli.mjs" status --json
+node "<pluginRoot>/cli.mjs" validate --json
+node "<pluginRoot>/cli.mjs" next --json
+node "<pluginRoot>/cli.mjs" start --task <task_id> --json
+node "<pluginRoot>/cli.mjs" verify --task <task_id> --command <command_id> --json
+node "<pluginRoot>/cli.mjs" review --milestone <M4-...> --json
+node "<pluginRoot>/cli.mjs" repair --json
 ```
 
 ## 1. Capability Card
@@ -34,68 +33,38 @@ node "<pluginRoot>/cli.mjs" next-step [--calibrate deep|fast]
 
 ---
 
-## 2. Slash Commands Mapping
+## 2. Slash Commands Mapping & Control Flow
 
-Khi người dùng gõ slash command, Codex dịch thành lệnh CLI tương ứng (chạy với `<pluginRoot>` phù hợp):
+Khi người dùng gõ slash command, Codex dịch thành lệnh CLI tương ứng (chạy với cờ `--json`):
 
-*   **`/hooks`**: Kiểm tra trạng thái kích hoạt và trust của Codex hooks.
-*   **`/validate`**: Chạy lệnh validate cấu hình dự án và sinh kế hoạch.
-    ```bash
-    node "<pluginRoot>/cli.mjs" validate
-    ```
-*   **`/status`**: Xem trạng thái thực thi hiện tại và active task.
-    ```bash
-    node "<pluginRoot>/cli.mjs" status
-    ```
-*   **`/next-step`**: Xem thông tin bước tiếp theo rõ ràng (Next Step Card) với các trường lý do và bằng chứng.
-    ```bash
-    node "<pluginRoot>/cli.mjs" next-step
-    ```
-*   **`/start <task_id> <milestone_id>`**: Bắt đầu thực thi một task cụ thể.
-    ```bash
-    node "<pluginRoot>/cli.mjs" start --task <task_id> --milestone <milestone_id>
-    ```
-*   **`/verify <task_id> <command_id>`**: Thực hiện lệnh tự động kiểm chứng cho task hiện tại.
-    ```bash
-    node "<pluginRoot>/cli.mjs" verify --task <task_id> --command <command_id>
-    ```
-    Nếu command có `requires_user_confirmation: true`, phải hỏi người dùng thật trước; chỉ thêm `--confirm` sau khi họ đồng ý trong chat. Không bao giờ tự thêm cờ này.
-*   **`/repair`**: Báo cáo lỗi và mở pha sửa đổi (repair) cho task.
-    ```bash
-    node "<pluginRoot>/cli.mjs" repair
-    ```
-*   **`/review <milestone>`**: Chạy manager-check cho feature vừa xong; sinh break-task nếu output bẩn và đóng review khi sạch.
-    ```bash
-    node "<pluginRoot>/cli.mjs" review --milestone <milestone>
-    ```
+*   **`/status`**: Chạy `node "<pluginRoot>/cli.mjs" status --json`. Nếu exit code khác 0, dừng ngay và hiển thị `message` + `next_command`.
+*   **`/validate`**: Chạy `node "<pluginRoot>/cli.mjs" validate --json`. Đọc kết quả `VALIDATION_PASSED` để chuyển sang `ready-to-execute`.
+*   **`/next`**: Chạy `node "<pluginRoot>/cli.mjs" next --json` lấy task khả thi.
+*   **`/start <task_id>`**: Chạy `node "<pluginRoot>/cli.mjs" start --task <task_id> --json`.
+*   **`/verify <task_id> <command_id>`**: Chạy `node "<pluginRoot>/cli.mjs" verify --task <task_id> --command <command_id> --json`. Nếu có `requires_user_confirmation: true`, PHẢI hỏi người dùng thật trước, chỉ thêm `--confirm` khi người dùng đồng ý.
+*   **`/repair`**: Chạy `node "<pluginRoot>/cli.mjs" repair --json`.
+*   **`/review <milestone>`**: Chạy `node "<pluginRoot>/cli.mjs" review --milestone <milestone> --json`.
 
 ---
 
-## 3. Review feature & break-task (pha `reviewing` — B17a/V5)
+## 3. Quy tắc Handoff Truth & Non-zero Exit
 
-Sau khi mọi task build của một feature-milestone (`M4-*`) pass, pha chuyển sang `reviewing`:
-
-1. Chạy `/review <milestone>` (tương đương `node "<pluginRoot>/cli.mjs" review --milestone <milestone>`). Engine TỰ chạy lint/test của stack đã khóa trong `docs/conventions/`.
-2. **Output sạch** → review đóng, mở feature kế.
-3. **Output bẩn** → sinh **break-task** (`fix_*`/`polish_*`); feature CHƯA done tới khi break-task xong (fail-closed).
-4. **Lưu ý Codex (soft-gate)**: vòng review là hướng dẫn ở mức soft. Codex cảnh báo khi bạn định nhảy sang feature kế lúc review chưa đóng, nhưng **không chặn cứng** như Claude. Coverage này được công bố đúng năng lực, không hứa hard-enforce.
+1. Sau khi `emit` xong, nói rõ: "Docs `docs/` đã được sinh, **NHƯNG kế hoạch thi công CHƯA được validate.**" Tiếp theo gọi `/validate` hoặc `/build`, KHÔNG tự tiện cho phép code hay bảo "gate đã mở".
+2. Khi CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG THỰC THI NGAY**, báo lỗi và đưa hướng dẫn `next_command` / `safe_next_command`. KHÔNG đoán state hay ép tiếp tục.
+3. Cảnh báo mâu thuẫn (`consistency_warnings`) cần người dùng xác nhận / sửa đổi; model KHÔNG tự auto-ack.
 
 ---
 
 ## 4. Đào sâu thiết kế (tuỳ chọn — tầng 2)
 
-Người dùng CÓ THỂ đào sâu 4 module dưới `docs/design/` (`glossary`, `feature-spec`, `adr`,
-`test-strategy`) — **kênh riêng, tuỳ chọn**, không đụng luồng tầng 1.
+Người dùng CÓ THỂ đào sâu 4 module dưới `docs/design/` (`glossary`, `feature-spec`, `adr`, `test-strategy`) khi Tier-1 ở trạng thái `ready-to-execute`.
 
 ```bash
-node "<pluginRoot>/cli.mjs" deepen                                  # trạng thái 4 module
-node "<pluginRoot>/cli.mjs" deepen --module <id> --opt-in [--activation explicit|condition]
-node "<pluginRoot>/cli.mjs" deepen --module <id> --next             # câu DS kế tiếp
-node "<pluginRoot>/cli.mjs" deepen --module <id> --commit --turn <TURN_ID> --question <qid> [--subject <sid>] --answer "..."
-node "<pluginRoot>/cli.mjs" deepen --module <id> --emit             # sinh docs/design/ khi đủ câu
+node "<pluginRoot>/cli.mjs" deepen --json
+node "<pluginRoot>/cli.mjs" deepen --module <id> --opt-in --json
+node "<pluginRoot>/cli.mjs" deepen --module <id> --next --json
+node "<pluginRoot>/cli.mjs" deepen --module <id> --commit --turn <TURN_ID> --question <qid> --answer "..." --json
+node "<pluginRoot>/cli.mjs" deepen --module <id> --emit --json
 ```
 
-Quy tắc: (1) **chỉ chào mời khi người dùng hỏi** hoặc điều kiện §3 taxonomy-decision xuất hiện
-trong answers — KHÔNG tự opt-in hộ; (2) hỏi từng câu, **dịch ngược + chờ xác nhận** rồi mới
-commit; (3) `--emit` fail-closed: thiếu câu/consistency error → exit ≠ 0; (4) mỗi khối cite
-nguồn theo grammar SourceRef, khối không truy được nguồn mang cờ `⚠ unknown — cần hỏi người`.
+Quy tắc: (1) chỉ đề xuất khi người dùng hỏi / opt-in và phase hợp lệ; (2) hỏi từng câu, dịch ngược + chờ xác nhận; (3) không tự auto-ack; (4) cite nguồn theo grammar SourceRef.

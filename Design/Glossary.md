@@ -36,10 +36,10 @@ Không có nguồn từ vựng chuẩn → mỗi doc viết mỗi kiểu, adapte
 
 | Thuật ngữ | Nghĩa |
 |---|---|
-| **Kịch bản phỏng vấn (interview-script)** | Sản phẩm thật: luồng câu hỏi S0–S7 + các nhánh shape, định dạng máy đọc. |
+| **Kịch bản phỏng vấn (interview-script)** | Sản phẩm thật: luồng câu hỏi CAL0, S0–S8, R1 + các nhánh shape (W/M/C), định dạng máy đọc. |
 | **Dịch ngược (translate-back)** | Người dùng trả lời đời thường → agent tóm lại bằng ngôn ngữ chuẩn rồi xác nhận. |
 | **Mặc định thông minh (smart default)** | Mỗi câu kèm lựa chọn phổ biến nhất; "không biết → chọn giúp" vẫn đi tiếp. |
-| **Khung Lõi (S0–S7)** | Phần phỏng vấn dùng chung cho tất cả các hình-hài dự án. |
+| **Khung Lõi (CAL0, S0–S8, R1)** | Phần phỏng vấn dùng chung cho tất cả các hình-hài dự án. |
 | **Nhánh (W1–W5 / M1–M5 / C1–C5...)** | Phần rẽ riêng cho từng hình-hài dự án sau S7. |
 | **MoSCoW** | Phân loại tính năng: Must / Should / Could / Won't. S3 dùng. |
 | **Hình-hài dự án (project shape)** | Loại dự án muốn xây dựng (`web`, `mobile`, `hybrid`, `cli`), được chọn ở câu S7. |

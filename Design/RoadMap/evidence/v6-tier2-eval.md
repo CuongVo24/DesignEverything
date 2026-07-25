@@ -1,6 +1,6 @@
 # Eval tầng 2 — Golden corpus (DesignEverything tự thiết kế)
 
-> Ngày đo: 2026-07-24 · ref_sha: `676925ee48a5f857c67442fa01d23fa3ae7d9a0b` · fixture: test/fixtures/de-self-answers.json
+> Ngày đo: 2026-07-25 · ref_sha: `676925ee48a5f857c67442fa01d23fa3ae7d9a0b` · fixture: test/fixtures/de-self-answers.json
 
 ## 5 số liệu (ngưỡng khoá ở test)
 

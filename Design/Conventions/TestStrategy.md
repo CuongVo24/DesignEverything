@@ -35,8 +35,17 @@ Unit test state và golden headings không chứng minh người mới thực s�
 
 Chi tiết fixture, rubric và release gate nằm ở B10a/B10b trong [V3-ExecutionExpansionPlan.md](../RoadMap/V3-ExecutionExpansionPlan.md) và báo cáo thực tế trong [v3-evaluation-report.md](../RoadMap/v3-evaluation-report.md).
 
+## B5a — Installed Runtime & Adversarial Integration Suite (v6.0.0)
+
+Bộ test tích hợp thực tế trên đường dẫn cài đặt thật (`test/integration/installed-runtime/`):
+1. **Claude Installation Flow** (`claude-install-flow.test.ts`): Thử nghiệm cài đặt vào thư mục tạm có space/unicode (`de install target ...`), kiểm tra wiring 3 hooks trong `.claude/settings.json`, copy skills và content templates.
+2. **Adversarial Hook Protection Suite** (`hook-adversarial.test.ts`): Phủ các kịch bản tấn công/bypasses U01–U04 và X01–X24 (giả mạo TURN token, sửa trực tiếp `progress.json`/`answers.json`, gọi lệnh hủy diệt `git clean`/`git restore`/`find -delete`, chuỗi lệnh `&&`/`;`/`|`, bọc powershell/cmd, corrupt state, mâu thuẫn phase gate).
+3. **CLI Health & Recovery Suite** (`cli-health.test.ts`): Phủ trạng thái UNINVOLVED, CORRUPT_PROGRESS_STATE, slots file trỏ ra ngoài workspace (traversal attempt), và subcommand không tồn tại.
+4. **Codex Parity & Self-Contained Bundle Suite** (`codex-parity.test.ts`): Kiểm thử bundler plugin Codex (`dist/` + `node_modules/`), tính self-contained và không chứa đường dẫn tuyệt đối của repo dev.
+
 ## Dogfooding (test case #1)
 Khi tool chạy được: **dùng nó sinh lại chính cây `Design/` này**. Vừa là demo, vừa là regression test cho cả script + taxonomy + gate.
 
 ## Đo lường thành công
 Thả lên dự án thật, đo: "1 tuần soạn doc" rút xuống còn bao lâu?
+

@@ -69,6 +69,16 @@ Rubric tách rõ hai lớp để executor/LLM không tự ý xác nhận thay ng
 - **Human acknowledgement** (outcome `needs_user_ack`) — nghi vấn chủ quan có thể đúng nhưng cần người xác nhận: persona "ai cũng dùng" (S2), mọi mục đều Must (S3), chọn offline/sync (M2), chọn lên store thật (M5), chọn realtime (W5), chọn phân phối binary đa nền tảng (C5). Danh sách `warning_rules` cụ thể nằm ở [script.yaml](interview-script/script.yaml); rule tiếng Việt/Anh có thể lệch nên đây luôn là cảnh báo, không phải semantic judge duy nhất — executor không được tự bấm "đồng ý" thay người dùng.
 - Một mục ở lớp B ghi "reject" trong bảng vẫn có thể chỉ là warning ở runtime nếu rule tương ứng khai `needs_user_ack`; nguồn sự thật là `answer_contract`/`derived-recipes.yaml`, bảng B chỉ mô tả ý định.
 
+## H. Release Scoring & Newbie Journey Evaluation Matrix
+
+Khung đánh giá chất lượng hành trình người mới (newbie journey) và độ tin cậy khi executor yếu:
+
+- [ ] **0 False Pass cho Hollow Fixtures** — 100% các câu trả lời rỗng, placeholder (`todo`, `tbd`, `abc`), hoặc generic persona ("mọi người") đều bị `validateAnswer` đánh nhãn `invalid` hoặc `needs_user_ack`.
+- [ ] **Bao phủ 4 Shapes** — Hành trình người mới chạy thông suốt trên cả 4 dạng ứng dụng: `web`, `mobile`, `cli`, và `hybrid` (hybrid đi đủ cả câu hỏi web + mobile).
+- [ ] **Bảo toàn Invariant giữa Deep và Fast** — Chế độ `deep` và `fast` chỉ khác nhau về độ chi tiết hướng dẫn phỏng vấn, giữ nguyên 100% thứ tự câu hỏi và trạng thái `state_revision`.
+- [ ] **Truy vết Đầu ra (Traceability & Source Integrity)** — 100% tài liệu tầng 1 và tầng 2 sinh ra chứa đúng mỏ neo `source_refs` / `SourceRef`. Không có khẳng định tự bịa thiếu nguồn.
+- [ ] **Khôi phục Không Deadlock (Deadlock-Free Recovery)** — Khi phát hiện lỗi chất lượng hoặc snapshot lỗi thời (`blocked`), hệ thống cung cấp thông điệp hướng dẫn rõ ràng (`validate`/`build`) và tự động giải phóng block khi re-emit/re-validate thành công.
+
 ## Cách dùng làm test
-Mỗi lần golden example hoặc output thật sinh ra → chấm theo A+B (+C/D/E/F/G nếu áp dụng). Một mục fail = nội dung chưa đạt, sửa kịch bản/template chứ không sửa tay output.
+Mỗi lần golden example hoặc output thật sinh ra → chấm theo A+B (+C/D/E/F/G/H nếu áp dụng). Một mục fail = nội dung chưa đạt, sửa kịch bản/template chứ không sửa tay output.
 

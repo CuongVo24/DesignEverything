@@ -1,13 +1,14 @@
-# Quickstart Onboarding — Hướng dẫn cài đặt và chạy thử 5 phút
+# Quickstart Onboarding — Hướng dẫn cài đặt và sử dụng
 
-Tài liệu này giúp các nhà phát triển mới hoặc người kiểm thử cài đặt, thiết lập và tạo ra bộ tài liệu thiết kế nền móng đầu tiên của họ bằng **DesignEverything** chỉ trong vòng 5 phút.
+Tài liệu này giúp các nhà phát triển mới hoặc người kiểm thử cài đặt, thiết lập và tạo ra bộ tài liệu thiết kế nền móng đầu tiên của họ bằng **DesignEverything**.
 
 ---
 
 ## 1. Bản Đồ Đọc Nhanh (Onboarding Reading Map)
+
 Trước khi bắt đầu chạy thực tế, bạn chỉ cần nắm rõ:
-- **Lõi (Core)**: Nằm ở [Design/Content/interview-script/script.yaml](file:///e:/DesignEverything/Design/Content/interview-script/script.yaml) (kịch bản phỏng vấn) và [Design/Content/doc-templates/](file:///e:/DesignEverything/Design/Content/doc-templates/) (các file doc mẫu).
-- **Bộ Kiểm Thử**: Các bài test nằm ở thư mục [test/](file:///e:/DesignEverything/test/) giúp tự động hóa quá trình chạy phỏng vấn giả lập.
+- **Lõi (Core)**: Nằm ở [Design/Content/interview-script/script.yaml](../Design/Content/interview-script/script.yaml) (kịch bản phỏng vấn) và [Design/Content/doc-templates/](../Design/Content/doc-templates/) (các file doc mẫu).
+- **Bộ Kiểm Thử**: Các bài test nằm ở thư mục [test/](../test/) giúp tự động hóa quá trình chạy phỏng vấn giả lập.
 
 ---
 
@@ -21,21 +22,50 @@ Bạn cần hoàn thành các bước thiết lập môi trường sau:
 
 ---
 
-## 3. Chạy Demo 5 Phút (Claude Code Reference Path)
+## 3. Trải Nghiệm Thật Trên Claude Code / CLI (Real Onboarding Path)
 
-Để trải nghiệm quy trình phỏng vấn tự động và sinh tài liệu giả lập bằng Claude Code (tuyến tham chiếu chính):
+Để trải nghiệm quy trình phỏng vấn thật và sinh tài liệu thiết kế trên dự án của bạn:
 
-### Bước 3.1. Chạy regression test giả lập phỏng vấn
+### Bước 3.1. Cài đặt Adapter vào thư mục dự án đích
+Chạy lệnh installer từ thư mục gốc của DesignEverything:
+```bash
+node adapter/claude-code/install.mjs /path/to/your-project
+```
+
+### Bước 3.2. Mở phiên Claude Code và bắt đầu phỏng vấn
+Mở Claude Code tại dự án đích và gõ lệnh slash command:
+```bash
+/design-everything
+```
+Agent sẽ tiến hành phỏng vấn từng câu một (thời lượng thực tế từ 10-15 phút tùy độ sâu câu trả lời).
+
+### Bước 3.3. Handoff và Kiểm duyệt Kế hoạch (`/build` validate)
+> [!IMPORTANT]
+> Việc hoàn tất phỏng vấn và xuất tài liệu (`docs-emitted`) **chưa đồng nghĩa với việc mã nguồn đã sẵn sàng để viết code**.
+> Bước bắt buộc tiếp theo là thực thi lệnh kiểm duyệt kế hoạch và tạo snapshot trạng thái:
+
+```bash
+node adapter/claude-code/cli.mjs validate
+```
+Hoặc dùng skill `/build` để xác thực kế hoạch trước khi bắt đầu thực thi task đầu tiên.
+
+---
+
+## 4. Chạy Giả Lập / Kiểm Thử Tự Động (Vitest Simulation & Test Path)
+
+Để chạy kiểm thử tự động quy trình phỏng vấn giả lập (dành cho CI/CD và kiểm thử hồi quy):
+
+### Bước 4.1. Chạy regression test giả lập phỏng vấn
 Chạy lệnh sau trong terminal:
 ```bash
 npx vitest run test/regression/run-dogfood.test.ts
 ```
 
-### Bước 3.2. Kết quả kỳ vọng (Expected Output)
-Bài test trên sẽ giả lập việc nạp các câu trả lời thật cho dự án **HabitBuilder Mobile App** (proj-01), tự động vượt qua các chốt chặn (gates) và gọi hàm lõi `emitTree` để sinh ra một cây thư mục tài liệu thiết kế hoàn chỉnh tại:
-- [Design/RoadMap/Month3/dogfood/proj-01/docs-generated/](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/proj-01/docs-generated/)
+### Bước 4.2. Kết quả kỳ vọng (Expected Output)
+Bài test trên sẽ giả lập việc nạp các câu trả lời thật cho dự án mẫu, tự động vượt qua các chốt chặn (gates) và gọi hàm lõi `emitTree` để sinh ra một cây thư mục tài liệu thiết kế hoàn chỉnh tại:
+- `Design/RoadMap/Month3/dogfood/proj-01/docs-generated/`
 
-Mở thư mục trên, bạn sẽ thấy cấu trúc 10 file tài liệu chuẩn:
+Mở thư mục trên, bạn sẽ thấy cấu trúc file tài liệu chuẩn:
 ```text
 docs-generated/
 ├── 00-vision.md          # Tầm nhìn & Nỗi đau cốt lõi
@@ -52,16 +82,13 @@ docs-generated/
 
 ---
 
-## 4. Hướng Dẫn Tuyến Rules-Only (`AGENTS.md`)
+## 5. Hướng Dẫn Tuyến Rules-Only (`AGENTS.md`)
+
 Đối với các coding harness không hỗ trợ hook chạy code lập trình (như Cursor, Cline, Cursor Rules, hay Codex), DesignEverything hỗ trợ cơ chế ép mềm bằng tệp cấu hình quy tắc:
-- Tệp quy tắc tự động sinh ra tại: [Design/Adapters/generated/AGENTS.sample.md](file:///e:/DesignEverything/Design/Adapters/generated/AGENTS.sample.md) (hoặc tệp quy tắc [AGENTS.md](file:///e:/DesignEverything/.agents/AGENTS.md) ở root workspace).
-- **Cách dùng**: Sao chép nội dung tệp này vào tệp cấu hình quy tắc của IDE của bạn (ví dụ: dán vào `.clauderules` hoặc cấu hình Agent của Cursor/Cline). AI agent đọc file này sẽ tự động hiểu kịch bản, hỏi bạn từng câu một và tiến hành sinh tài liệu theo đúng taxonomy.
+- Tệp quy tắc tự động sinh ra tại: `Design/Adapters/generated/AGENTS.sample.md` (hoặc tệp quy tắc `.agents/AGENTS.md` ở root workspace).
+- **Cách dùng**: Sao chép nội dung tệp này vào tệp cấu hình quy tắc của IDE của bạn (ví dụ: dán vào `.clauderules` hoặc cấu hình Agent của Cursor/Cline).
 
 ---
-
-## 5. Ranh giới hiện tại và hướng execution
-
-Sau khi emit, hãy mở 08-build-plan.md và bắt đầu từ M0; đó là hướng dẫn milestone, chưa phải một executor có task/evidence gate. Đừng hiểu việc phase ready-to-build hiện tại là chứng minh spec đã khả thi hoặc mọi lệnh trong docs đã tồn tại. V3 Execution Expansion (target 4.0.0) sẽ thêm semantic validation, risk spike, execution plan và resume có evidence; xem [RoadMap](../Design/RoadMap/V3-ExecutionExpansionPlan.md).
 
 ## 6. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
 
