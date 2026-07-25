@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, unlinkSync } from 'fs';
+import fs from 'fs';
 import { join, dirname } from 'path';
 import type { StagedGeneration } from './emitTransactionStage.js';
 import { emitManifestSchema, type EmitManifest, type EmitJournal } from './schemas/emitManifest.js';
@@ -34,8 +34,8 @@ function backupDirFor(channel: EmitChannel, generationId: string): string {
 
 function readActiveManifest(root: string, channel: EmitChannel): EmitManifest | null {
   const p = manifestPath(root, channel);
-  if (!existsSync(p)) return null;
-  const parsed = emitManifestSchema.safeParse(JSON.parse(readFileSync(p, 'utf8')));
+  if (!fs.existsSync(p)) return null;
+  const parsed = emitManifestSchema.safeParse(JSON.parse(fs.readFileSync(p, 'utf8')));
   if (!parsed.success) {
     throw new Error(`Active emit manifest at ${p} is corrupt: ${JSON.stringify(parsed.error.format())}`);
   }
@@ -44,16 +44,16 @@ function readActiveManifest(root: string, channel: EmitChannel): EmitManifest | 
 
 function writeJournal(root: string, channel: EmitChannel, journal: EmitJournal): void {
   const p = journalPath(root, channel);
-  mkdirSync(dirname(p), { recursive: true });
-  writeFileSync(p, JSON.stringify(journal, null, 2), 'utf8');
+  fs.mkdirSync(dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(journal, null, 2), 'utf8');
 }
 
 function backupFile(root: string, backupDir: string, relPath: string): void {
   const live = join(root, relPath);
-  if (!existsSync(live)) return;
+  if (!fs.existsSync(live)) return;
   const dest = join(root, backupDir, relPath);
-  mkdirSync(dirname(dest), { recursive: true });
-  copyFileSync(live, dest);
+  fs.mkdirSync(dirname(dest), { recursive: true });
+  fs.copyFileSync(live, dest);
 }
 
 /**
@@ -88,7 +88,7 @@ export function activateEmit(
   const collisions: string[] = [];
   for (const artifact of generation.manifest.artifacts) {
     const live = join(root, artifact.path);
-    if (existsSync(live) && !oldManagedByPath.has(artifact.path)) {
+    if (fs.existsSync(live) && !oldManagedByPath.has(artifact.path)) {
       collisions.push(artifact.path);
     }
   }
@@ -108,10 +108,10 @@ export function activateEmit(
     started_at: new Date().toISOString(),
   });
 
-  if (existsSync(manifestPath(root, channel))) {
+  if (fs.existsSync(manifestPath(root, channel))) {
     const dest = join(root, backupDir, manifestRelPath);
-    mkdirSync(dirname(dest), { recursive: true });
-    copyFileSync(manifestPath(root, channel), dest);
+    fs.mkdirSync(dirname(dest), { recursive: true });
+    fs.copyFileSync(manifestPath(root, channel), dest);
   }
   for (const artifact of generation.manifest.artifacts) {
     backupFile(root, backupDir, artifact.path);
@@ -131,12 +131,12 @@ export function activateEmit(
   for (const artifact of generation.manifest.artifacts) {
     const src = join(generation.stagingDir, artifact.path);
     const dest = join(root, artifact.path);
-    mkdirSync(dirname(dest), { recursive: true });
-    copyFileSync(src, dest);
+    fs.mkdirSync(dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
   }
   for (const path of staleManagedPaths) {
     const live = join(root, path);
-    if (existsSync(live)) unlinkSync(live);
+    if (fs.existsSync(live)) fs.unlinkSync(live);
   }
 
   writeJournal(root, channel, {
@@ -151,8 +151,8 @@ export function activateEmit(
     ...generation.manifest,
     activated_at: new Date().toISOString(),
   };
-  mkdirSync(dirname(manifestPath(root, channel)), { recursive: true });
-  writeFileSync(manifestPath(root, channel), JSON.stringify(activatedManifest, null, 2), 'utf8');
+  fs.mkdirSync(dirname(manifestPath(root, channel)), { recursive: true });
+  fs.writeFileSync(manifestPath(root, channel), JSON.stringify(activatedManifest, null, 2), 'utf8');
 
   writeJournal(root, channel, {
     generation_id: generation.generation_id,

@@ -34,7 +34,7 @@ describe('B1b — Atomic interview persistence', () => {
     const envelope = loadInterviewStore(tempDir);
     expect(envelope.schema_version).toBe('7.0.0');
     expect(envelope.state_revision).toBe(0);
-    expect(envelope.payload.progress.current_step).toBe('S0');
+    expect(envelope.payload.progress.current_step).toBe('CAL0');
     expect(envelope.checksum).toBe(computePayloadChecksum(envelope.payload));
   });
 

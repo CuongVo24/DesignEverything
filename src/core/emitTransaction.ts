@@ -4,5 +4,5 @@ export {
   type StageValidationResult,
   type StageValidationIssue,
 } from './emitTransactionValidate.js';
-export { activateEmit, type ActivateEmitResult, type EmitChannel } from './emitTransactionActivate.js';
+export { activateEmit, manifestPath, type ActivateEmitResult, type EmitChannel } from './emitTransactionActivate.js';
 export { recoverEmit, type RecoverEmitResult } from './recoverEmitTransaction.js';

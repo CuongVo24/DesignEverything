@@ -70,8 +70,28 @@ export function recoverEmit(root: string, channel: EmitChannel = 'tier1'): Recov
     if (existsSync(stagedManifestPath)) {
       const staged = emitManifestSchema.safeParse(JSON.parse(readFileSync(stagedManifestPath, 'utf8')));
       if (staged.success) {
+        let prevManagedPaths = new Set<string>();
+        if (journal.previous_generation_id) {
+          const prevBackupManifest = join(backupDir, manifestRelPath);
+          if (existsSync(prevBackupManifest)) {
+            const parsedPrev = emitManifestSchema.safeParse(JSON.parse(readFileSync(prevBackupManifest, 'utf8')));
+            if (parsedPrev.success) {
+              prevManagedPaths = new Set(parsedPrev.data.artifacts.map((a) => a.path));
+            }
+          } else {
+            // Backup manifest wasn't copied yet, read active manifest if it matches previous_generation_id
+            const activeMPath = manifestPath(root, channel);
+            if (existsSync(activeMPath)) {
+              const parsedActive = emitManifestSchema.safeParse(JSON.parse(readFileSync(activeMPath, 'utf8')));
+              if (parsedActive.success && parsedActive.data.generation_id === journal.previous_generation_id) {
+                prevManagedPaths = new Set(parsedActive.data.artifacts.map((a) => a.path));
+              }
+            }
+          }
+        }
+
         for (const artifact of staged.data.artifacts) {
-          if (!restoredRelPaths.has(artifact.path)) {
+          if (!restoredRelPaths.has(artifact.path) && !prevManagedPaths.has(artifact.path)) {
             const live = join(root, artifact.path);
             if (existsSync(live)) unlinkSync(live);
           }

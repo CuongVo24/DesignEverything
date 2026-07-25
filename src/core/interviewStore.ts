@@ -1,12 +1,4 @@
-import {
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  renameSync,
-  unlinkSync,
-  mkdirSync,
-  statSync,
-} from 'fs';
+import fs from 'fs';
 import { join, dirname } from 'path';
 import { createHash } from 'crypto';
 import {
@@ -41,24 +33,37 @@ export function computePayloadChecksum(payload: InterviewStorePayload): string {
 
 export function acquireLock(workspaceRoot: string, timeoutMs: number = 5000): void {
   const lockPath = join(workspaceRoot, LOCK_REL_PATH);
-  mkdirSync(dirname(lockPath), { recursive: true });
+  fs.mkdirSync(dirname(lockPath), { recursive: true });
 
   const start = Date.now();
   while (true) {
-    if (!existsSync(lockPath)) {
+    if (!fs.existsSync(lockPath)) {
       try {
-        writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: Date.now() }), { flag: 'wx' });
+        fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: Date.now() }), { flag: 'wx' });
         return;
       } catch {
         // Retry
       }
     } else {
-      // Check stale lock
+      // Check stale lock or dead process PID
       try {
-        const stats = statSync(lockPath);
-        if (Date.now() - stats.mtimeMs > 30000) {
-          // Lock stale (> 30s) -> force release
-          unlinkSync(lockPath);
+        let isAlive = false;
+        if (fs.existsSync(lockPath)) {
+          const raw = fs.readFileSync(lockPath, 'utf8');
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.pid === 'number') {
+            try {
+              process.kill(parsed.pid, 0);
+              isAlive = true;
+            } catch {
+              isAlive = false; // PID is dead
+            }
+          }
+        }
+        const stats = fs.statSync(lockPath);
+        if (!isAlive || Date.now() - stats.mtimeMs > 30000) {
+          // Lock stale or owner process dead -> force release
+          fs.unlinkSync(lockPath);
         }
       } catch {
         // Ignore
@@ -79,9 +84,9 @@ export function acquireLock(workspaceRoot: string, timeoutMs: number = 5000): vo
 
 export function releaseLock(workspaceRoot: string): void {
   const lockPath = join(workspaceRoot, LOCK_REL_PATH);
-  if (existsSync(lockPath)) {
+  if (fs.existsSync(lockPath)) {
     try {
-      unlinkSync(lockPath);
+      fs.unlinkSync(lockPath);
     } catch {
       // Ignore
     }
@@ -92,15 +97,15 @@ export function loadInterviewStore(workspaceRoot: string): InterviewStoreEnvelop
   const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
 
   // Auto-migrate if canonical store does not exist yet
-  if (!existsSync(canonicalPath)) {
+  if (!fs.existsSync(canonicalPath)) {
     migrateInterviewStore(workspaceRoot);
   }
 
-  if (!existsSync(canonicalPath)) {
+  if (!fs.existsSync(canonicalPath)) {
     throw new Error('INTERVIEW_STORE_NOT_FOUND: Canonical store does not exist and migration did not produce one.');
   }
 
-  const content = readFileSync(canonicalPath, 'utf8');
+  const content = fs.readFileSync(canonicalPath, 'utf8');
   let envelope: InterviewStoreEnvelope;
   try {
     const raw = JSON.parse(content);
@@ -153,10 +158,10 @@ export function transactInterviewStore(
     // Write temp file on same volume + flush + rename
     const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
     const tmpPath = `${canonicalPath}.tmp.${Date.now()}.${Math.floor(Math.random() * 10000)}`;
-    mkdirSync(dirname(canonicalPath), { recursive: true });
+    fs.mkdirSync(dirname(canonicalPath), { recursive: true });
 
-    writeFileSync(tmpPath, JSON.stringify(validated, null, 2), 'utf8');
-    renameSync(tmpPath, canonicalPath);
+    fs.writeFileSync(tmpPath, JSON.stringify(validated, null, 2), 'utf8');
+    fs.renameSync(tmpPath, canonicalPath);
 
     return validated;
   } finally {

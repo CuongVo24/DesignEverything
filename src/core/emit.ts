@@ -433,7 +433,7 @@ export function emitTree(
   const synthesis = synthesizeExecutionPlan({
     answers,
     profile,
-    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'],
+    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'].map((file) => ({ file, content: '' })),
   });
 
   const planJson = synthesis.plan;
@@ -597,7 +597,7 @@ export function generateExecutionPlanJson(
   const synthesis = synthesizeExecutionPlan({
     answers,
     profile,
-    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'],
+    docs: ['00-vision.md', '01-personas-jtbd.md', '02-non-functional-requirements.md', '03-project-scope.md', '04-data-model.md', '05-user-flows.md', '06-system-architecture.md', '07-engineering-constraints.md', '08-ops-distribution.md', '09-execution-plan.md'].map((file) => ({ file, content: '' })),
   });
 
   return synthesis.plan;

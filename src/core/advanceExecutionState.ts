@@ -469,6 +469,7 @@ export function evaluateBuildReadiness(
   progress: { phase: string; branch: string | null },
   execState: ExecutionState | null
 ): { ready: boolean; reason_code: string; next_command: string; message: string } {
+  void progress;
   if (!execState) {
     return {
       ready: false,

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { progressSchema, type Progress } from './schemas/state.js';
+import { progressSchema, type Progress } from './schemas/index.js';
 import {
   computePayloadChecksum,
   CANONICAL_STORE_REL_PATH,
@@ -55,7 +55,7 @@ export function migrateInterviewStore(workspaceRoot: string): 'migrated' | 'alre
       session_id: `session-${Date.now()}`,
       state_revision: 0,
       branch: null,
-      current_step: 'S0',
+      current_step: 'CAL0',
       answered: [],
       emitted_docs: [],
       gates_passed: [],
