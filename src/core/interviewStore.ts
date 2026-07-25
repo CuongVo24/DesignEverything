@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { join, dirname } from 'path';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import {
   interviewStoreEnvelopeSchema,
   INTERVIEW_STORE_VERSION,
@@ -11,6 +11,25 @@ import { migrateInterviewStore } from './migrateInterviewStore.js';
 
 export const CANONICAL_STORE_REL_PATH = '.design-everything/interview-state.json';
 export const LOCK_REL_PATH = '.design-everything/interview-state.lock';
+
+// A live owner is never reclaimed by TTL alone (P2.2b). This bound only
+// applies when liveness genuinely cannot be determined (unparsable/legacy
+// lock record, or a platform where PID-signal probing is inconclusive) —
+// it's a last-resort fallback, not the primary staleness signal.
+const LOCK_STALE_FALLBACK_MS = 30000;
+
+export interface LockRecord {
+  nonce: string;
+  pid: number;
+  session_id: string | null;
+  acquired_at: string;
+  target: string;
+}
+
+export interface AcquireLockOptions {
+  timeoutMs?: number;
+  sessionId?: string | null;
+}
 
 export function computePayloadChecksum(payload: InterviewStorePayload): string {
   const sortedAnswers: Record<string, string> = {};
@@ -31,42 +50,109 @@ export function computePayloadChecksum(payload: InterviewStorePayload): string {
   return createHash('sha256').update(JSON.stringify(canonicalObj), 'utf8').digest('hex');
 }
 
-export function acquireLock(workspaceRoot: string, timeoutMs: number = 5000): void {
+function readLockRecord(lockPath: string): LockRecord | null {
+  try {
+    const raw = fs.readFileSync(lockPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.nonce === 'string' &&
+      typeof parsed.pid === 'number' &&
+      typeof parsed.acquired_at === 'string'
+    ) {
+      return parsed as LockRecord;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** true = alive, false = definitively dead, 'unknown' = platform couldn't tell. */
+function probePidLiveness(pid: number): boolean | 'unknown' {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ESRCH') return false;
+    if (code === 'EPERM') return true; // exists, just not signalable by us
+    return 'unknown';
+  }
+}
+
+function ttlExpired(lockPath: string): boolean {
+  try {
+    const stats = fs.statSync(lockPath);
+    return Date.now() - stats.mtimeMs > LOCK_STALE_FALLBACK_MS;
+  } catch {
+    return true; // already gone
+  }
+}
+
+function isLockStale(lockPath: string): boolean {
+  const record = readLockRecord(lockPath);
+  if (!record) {
+    // Unparsable or legacy (pre-nonce) lock file — ownership can't be
+    // verified at all, so only the bounded TTL fallback applies.
+    return ttlExpired(lockPath);
+  }
+
+  const liveness = probePidLiveness(record.pid);
+  if (liveness === false) return true; // owner process is definitively dead
+  if (liveness === true) return false; // owner alive -> TTL alone never reclaims it
+  return ttlExpired(lockPath); // liveness truly indeterminate -> bounded fallback only
+}
+
+function sleepSync(ms: number): void {
+  // Node has no synchronous sleep primitive besides Atomics.wait on a
+  // SharedArrayBuffer-backed view. This actually yields the OS thread
+  // instead of burning CPU in a busy-spin loop (P2.2b) — important under
+  // concurrent test/process load where a spin loop measurably starves
+  // other work on the machine.
+  const view = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.wait(view, 0, 0, ms);
+}
+
+/**
+ * Acquires the workspace's interview-store lock and returns the nonce that
+ * proves ownership. The caller MUST pass that exact nonce to releaseLock —
+ * there is no unconditional release, so a writer can never delete a lock it
+ * doesn't actually hold (e.g. one that was reclaimed as stale and re-issued
+ * to a different writer while this one was still executing).
+ */
+export function acquireLock(workspaceRoot: string, opts: AcquireLockOptions = {}): string {
+  const timeoutMs = opts.timeoutMs ?? 5000;
   const lockPath = join(workspaceRoot, LOCK_REL_PATH);
   fs.mkdirSync(dirname(lockPath), { recursive: true });
 
+  const nonce = randomBytes(16).toString('hex');
+  const record: LockRecord = {
+    nonce,
+    pid: process.pid,
+    session_id: opts.sessionId ?? null,
+    acquired_at: new Date().toISOString(),
+    target: CANONICAL_STORE_REL_PATH,
+  };
+  const serialized = JSON.stringify(record);
+
   const start = Date.now();
+  let attempt = 0;
   while (true) {
-    if (!fs.existsSync(lockPath)) {
+    try {
+      fs.writeFileSync(lockPath, serialized, { flag: 'wx' });
+      return nonce;
+    } catch {
+      // Lock file already exists (or a transient FS error) — fall through
+      // to the staleness check below.
+    }
+
+    if (isLockStale(lockPath)) {
       try {
-        fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: Date.now() }), { flag: 'wx' });
-        return;
+        fs.unlinkSync(lockPath);
+        continue; // retry immediately, no sleep needed
       } catch {
-        // Retry
-      }
-    } else {
-      // Check stale lock or dead process PID
-      try {
-        let isAlive = false;
-        if (fs.existsSync(lockPath)) {
-          const raw = fs.readFileSync(lockPath, 'utf8');
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed.pid === 'number') {
-            try {
-              process.kill(parsed.pid, 0);
-              isAlive = true;
-            } catch {
-              isAlive = false; // PID is dead
-            }
-          }
-        }
-        const stats = fs.statSync(lockPath);
-        if (!isAlive || Date.now() - stats.mtimeMs > 30000) {
-          // Lock stale or owner process dead -> force release
-          fs.unlinkSync(lockPath);
-        }
-      } catch {
-        // Ignore
+        // Another writer reclaimed/removed it first — fall through to retry.
       }
     }
 
@@ -74,22 +160,25 @@ export function acquireLock(workspaceRoot: string, timeoutMs: number = 5000): vo
       throw new Error(`LOCK_TIMEOUT: Could not acquire workspace lock within ${timeoutMs}ms`);
     }
 
-    // Micro sleep
-    const end = Date.now() + 50;
-    while (Date.now() < end) {
-      // spin
-    }
+    attempt += 1;
+    sleepSync(Math.min(50 * attempt, 250)); // bounded backoff, never a CPU spin
   }
 }
 
-export function releaseLock(workspaceRoot: string): void {
+/**
+ * Releases the lock ONLY if `nonce` matches the current on-disk owner.
+ * Never deletes a lock this caller doesn't actually hold.
+ */
+export function releaseLock(workspaceRoot: string, nonce: string): void {
   const lockPath = join(workspaceRoot, LOCK_REL_PATH);
-  if (fs.existsSync(lockPath)) {
-    try {
-      fs.unlinkSync(lockPath);
-    } catch {
-      // Ignore
-    }
+  const record = readLockRecord(lockPath);
+  if (!record || record.nonce !== nonce) {
+    return;
+  }
+  try {
+    fs.unlinkSync(lockPath);
+  } catch {
+    // Already gone — fine.
   }
 }
 
@@ -151,7 +240,7 @@ export function transactInterviewStore(
       `INVALID_EXPECTED_REVISION: expectedRevision must be a non-negative integer, got ${String(expectedRevision)}`
     );
   }
-  acquireLock(workspaceRoot);
+  const lockNonce = acquireLock(workspaceRoot);
   try {
     const current = loadInterviewStore(workspaceRoot);
 
@@ -174,26 +263,55 @@ export function transactInterviewStore(
     // Validate entire envelope before writing
     const validated = interviewStoreEnvelopeSchema.parse(mutated);
 
-    // Write temp file on same volume + flush + rename
-    const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
-    const tmpPath = `${canonicalPath}.tmp.${Date.now()}.${Math.floor(Math.random() * 10000)}`;
-    fs.mkdirSync(dirname(canonicalPath), { recursive: true });
-
-    fs.writeFileSync(tmpPath, JSON.stringify(validated, null, 2), 'utf8');
-    fs.renameSync(tmpPath, canonicalPath);
+    writeEnvelopeAtomic(workspaceRoot, validated);
 
     return validated;
   } finally {
-    releaseLock(workspaceRoot);
+    releaseLock(workspaceRoot, lockNonce);
   }
 }
 
+/**
+ * Durable atomic write (P2.2b): open -> write -> fsync -> close the temp
+ * file (so its bytes are actually on disk, not just past writeFileSync's
+ * buffered write) before the atomic rename makes it the canonical store.
+ * Parent-directory fsync is attempted best-effort for the rename's
+ * directory-entry update — POSIX only; Windows has no directory-fsync
+ * equivalent (opening a directory for fsync fails there), so it's wrapped
+ * and never allowed to fail the write. NTFS's own metadata journaling is
+ * the practical guarantee on Windows, which is what this runtime targets.
+ */
 function writeEnvelopeAtomic(workspaceRoot: string, envelope: InterviewStoreEnvelope): void {
   const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
+  const dir = dirname(canonicalPath);
   const tmpPath = `${canonicalPath}.tmp.${Date.now()}.${Math.floor(Math.random() * 10000)}`;
-  fs.mkdirSync(dirname(canonicalPath), { recursive: true });
-  fs.writeFileSync(tmpPath, JSON.stringify(envelope, null, 2), 'utf8');
+  fs.mkdirSync(dir, { recursive: true });
+
+  const data = JSON.stringify(envelope, null, 2);
+  fs.writeFileSync(tmpPath, data, 'utf8');
+
+  // Reopen to fsync: guarantees the bytes just written are durable on disk
+  // before the rename below makes them visible as canonical, closing the
+  // gap a buffered writeFileSync alone leaves open.
+  const fd = fs.openSync(tmpPath, 'r+');
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+
   fs.renameSync(tmpPath, canonicalPath);
+
+  try {
+    const dirFd = fs.openSync(dir, 'r');
+    try {
+      fs.fsyncSync(dirFd);
+    } finally {
+      fs.closeSync(dirFd);
+    }
+  } catch {
+    // Expected on Windows (no directory-fsync); not fatal anywhere else.
+  }
 }
 
 function buildFreshProgress(): InterviewStorePayload['progress'] {
@@ -229,7 +347,7 @@ export function initializeInterviewStore(workspaceRoot: string): InterviewStoreE
   const legacyProgressPath = join(workspaceRoot, 'progress.json');
   const legacyAnswersPath = join(workspaceRoot, 'Design/.interview/answers.json');
 
-  acquireLock(workspaceRoot);
+  const lockNonce = acquireLock(workspaceRoot);
   try {
     if (fs.existsSync(canonicalPath)) {
       throw new Error(
@@ -257,6 +375,6 @@ export function initializeInterviewStore(workspaceRoot: string): InterviewStoreE
     writeEnvelopeAtomic(workspaceRoot, envelope);
     return envelope;
   } finally {
-    releaseLock(workspaceRoot);
+    releaseLock(workspaceRoot, lockNonce);
   }
 }

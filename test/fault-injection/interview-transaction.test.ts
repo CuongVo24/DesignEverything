@@ -73,7 +73,7 @@ describe('B5b — Interview Transaction Fault Injection Suite', () => {
   });
 
   it('FI-01 — should handle lock contention and timeout when workspace lock is held', () => {
-    acquireLock(tmpDir);
+    const holderNonce = acquireLock(tmpDir);
 
     try {
       expect(() => {
@@ -83,7 +83,7 @@ describe('B5b — Interview Transaction Fault Injection Suite', () => {
         });
       }).toThrow('LOCK_TIMEOUT');
     } finally {
-      releaseLock(tmpDir);
+      releaseLock(tmpDir, holderNonce);
     }
 
     // Store state remains revision 1
