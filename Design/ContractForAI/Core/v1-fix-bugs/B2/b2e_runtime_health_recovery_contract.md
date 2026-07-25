@@ -59,4 +59,12 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-25 (bugfix, không phải implementation đầy đủ của contract): `authorizeRecovery` đã
+xoá điều kiện `cmd.includes(attemptedAction)` — trước đây một `attemptedAction` ngắn tuỳ ý (vd chỉ
+chuỗi `"node"`) khớp substring vào bất kỳ `safe_next_command` dài nào và được authorize, một đường
+bypass rõ ràng của "Recovery chỉ allow exact repair action" ở §6. Giờ chỉ còn hướng
+`attemptedAction.includes(cmd)` (attempted phải chứa TRỌN VẸN command an toàn). Đây vẫn là so khớp
+theo chuỗi, chưa phải "exact repair action" đúng nghĩa contract yêu cầu — R10 (parse/verify install
+manifest schema/hash) và phần lớn checklist B2e khác vẫn `[ ]`.

@@ -88,6 +88,23 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     expect(auth.authorized).toBe(true);
   });
 
+  test('authorizeRecovery rejects a short attemptedAction that is merely a substring of the safe command', () => {
+    // Regression: authorizeRecovery used to also check
+    // `cmd.includes(attemptedAction)`, so a trivial attemptedAction like
+    // "node" would match against any long safe_next_command and be
+    // authorized as a bypass.
+    mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify({ version: '6.0.0' }, null, 2)
+    );
+
+    const report = inspectRuntimeHealth(tempDir);
+    const auth = authorizeRecovery(report, 'node');
+    expect(auth.authorized).toBe(false);
+    expect(auth.reason_code).toBe('UNAUTHORIZED_RECOVERY_ACTION');
+  });
+
   test('B3e — opted-in deepen module with a resolvable deepen-script.yaml stays healthy', () => {
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(

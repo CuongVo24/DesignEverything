@@ -61,4 +61,11 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-25 (bugfix, không phải implementation đầy đủ của contract): đã xoá check substring
+`norm.includes('shapes/')`/`norm.includes('schemas/')` khỏi `classifyArtifact` — check này false-deny
+mọi path người dùng chỉ TÌNH CỜ chứa "schemas/" hoặc "shapes/" (vd `src/schemas/user.ts`) vì không có
+thư mục `shapes/`/`schemas/` nào thật sự được cài vào target project. Phần còn lại của checklist B2a
+(exact catalog-driven managed-output, capability path binding chặt, scratch containment/size/TTL)
+**chưa làm** — xem R07 trong finding-coverage-matrix.md.

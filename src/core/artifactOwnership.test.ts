@@ -23,6 +23,16 @@ describe('B2a — Protected artifact ownership policy contract', () => {
     expect(classifyArtifact('test/app.test.ts')).toBe('user-owned');
   });
 
+  test('classifyArtifact does not false-deny legitimate user paths that merely contain "schemas/" or "shapes/"', () => {
+    // Regression for a false-deny bug: a bare substring check on
+    // shapes//schemas/ would classify ordinary user source files as
+    // engine-policy (deny-by-default) even though the installed layout
+    // never places a shapes/ or schemas/ directory in a target project.
+    expect(classifyArtifact('src/schemas/user.ts')).toBe('user-owned');
+    expect(classifyArtifact('src/shapes/circle.ts')).toBe('user-owned');
+    expect(classifyArtifact('app/schemas/order.schema.json')).toBe('user-owned');
+  });
+
   test('authorizeMutation allows user-owned artifact mutation', () => {
     const res = authorizeMutation('write', 'agent-host', 'src/index.ts');
     expect(res.decision).toBe('allow');

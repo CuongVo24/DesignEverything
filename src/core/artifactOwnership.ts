@@ -20,6 +20,8 @@ export function classifyArtifact(path: string, catalogPaths: string[] = []): Art
     norm.includes('.design-everything/execution-state.json') ||
     norm.includes('.design-everything/execution-plan.json') ||
     norm.endsWith('progress.json') ||
+    norm.endsWith('answers.json') ||
+    norm.includes('.interview/') ||
     norm.includes('.design-everything/backups/') ||
     norm.endsWith('.lock') ||
     norm.endsWith('.digest')
@@ -28,11 +30,15 @@ export function classifyArtifact(path: string, catalogPaths: string[] = []): Art
   }
 
   // 2. engine-policy
+  // Note: no bare `shapes/`/`schemas/` substring check here — the installed
+  // layout only ever places `shapes.yaml` under
+  // Design/Content/interview-script/ (covered by the prefix check below),
+  // and no `schemas/` directory is ever copied into a target project. A
+  // bare substring match would false-deny legitimate user code such as
+  // `src/schemas/user.ts` or `src/shapes/circle.ts`.
   if (
     norm.includes('Design/Content/interview-script/') ||
     norm.endsWith('gate-policy.yaml') ||
-    norm.includes('shapes/') ||
-    norm.includes('schemas/') ||
     norm.endsWith('version.json')
   ) {
     return 'engine-policy';
@@ -60,6 +66,7 @@ export function authorizeMutation(
   capability?: InternalMutationCapability,
   catalogPaths: string[] = []
 ): { decision: 'allow' | 'deny'; reason_code: string; user_message: string } {
+  void action;
   const artifactClass = classifyArtifact(targetPath, catalogPaths);
 
   if (artifactClass === 'user-owned') {
