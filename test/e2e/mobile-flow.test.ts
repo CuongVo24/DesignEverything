@@ -82,16 +82,17 @@ describe('E2E Mobile Interview & Gating Flow', () => {
     const coreSteps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (let i = 0; i < coreSteps.length; i++) {
       const step = coreSteps[i];
-      const turnId = `turn-core-${step}`;
 
       // Submit prompt check
-      const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: turnId });
+      const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
       expect(promptResult.decision).toBe('allow');
       expect(promptResult.injectedContext).toContain(`ID câu hỏi: ${step}`);
 
       // Skill commits the step
       progress = loadProgress(progressPath);
-      const commitOpts: { userTurnId: string; branchChoice?: string } = { userTurnId: turnId };
+      const commitOpts: { capabilityToken: string; branchChoice?: string } = {
+        capabilityToken: promptResult.capabilityToken!,
+      };
       if (step === 'S7') {
         commitOpts.branchChoice = 'mobile';
       }
@@ -104,11 +105,11 @@ describe('E2E Mobile Interview & Gating Flow', () => {
     expect(progress.current_step).toBe('R1');
 
     // Commit R1
-    const r1PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-core-R1' });
+    const r1PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     expect(r1PromptResult.decision).toBe('allow');
 
     progress = loadProgress(progressPath);
-    progress = commitStep(progress, script, { userTurnId: 'turn-core-R1' });
+    progress = commitStep(progress, script, { capabilityToken: r1PromptResult.capabilityToken! });
     saveProgress(progressPath, progress);
 
     // S8 — yêu cầu phi chức năng (dữ liệu nhạy cảm + quy mô), câu lõi cuối trước khi rẽ nhánh.
@@ -117,11 +118,11 @@ describe('E2E Mobile Interview & Gating Flow', () => {
 
     // onUserPromptSubmit đóng dấu lượt và GHI progress; phải load lại sau nó,
     // nếu không commit sẽ ghi đè mất dấu và lượt kế bị rate-limit chặn oan.
-    const s8PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-core-S8' });
+    const s8PromptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     expect(s8PromptResult.decision).toBe('allow');
 
     progress = loadProgress(progressPath);
-    progress = commitStep(progress, script, { userTurnId: 'turn-core-S8' });
+    progress = commitStep(progress, script, { capabilityToken: s8PromptResult.capabilityToken! });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
@@ -157,9 +158,8 @@ describe('E2E Mobile Interview & Gating Flow', () => {
     const mobileSteps = ['M1', 'M2', 'M3', 'M4', 'M5'];
     for (let i = 0; i < mobileSteps.length; i++) {
       const step = mobileSteps[i];
-      const turnId = `turn-mobile-${step}`;
 
-      const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: turnId });
+      const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
       expect(promptResult.decision).toBe('allow');
       expect(promptResult.injectedContext).toContain(`ID câu hỏi: ${step}`);
 
@@ -173,7 +173,7 @@ describe('E2E Mobile Interview & Gating Flow', () => {
       }
 
       progress = loadProgress(progressPath);
-      progress = commitStep(progress, script, { userTurnId: turnId });
+      progress = commitStep(progress, script, { capabilityToken: promptResult.capabilityToken! });
       saveProgress(progressPath, progress);
     }
 

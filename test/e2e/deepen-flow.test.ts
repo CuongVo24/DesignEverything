@@ -21,9 +21,10 @@ import {
   computeSourceDigest,
   emitTier2,
   renderNextStep,
+  issueTurnCapability,
 } from '../../src/core/index.js';
 import { defaultDeepenState } from '../../src/core/schemas/deepenState.js';
-import type { DeepenState } from '../../src/core/schemas/deepenState.js';
+import type { DeepenState, DeepenModuleId } from '../../src/core/schemas/deepenState.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '../..');
@@ -60,6 +61,21 @@ function setup(ans: Record<string, string>): void {
   writeFileSync(join(ws, 'Design/.interview/answers.json'), JSON.stringify(ans, null, 2));
 }
 
+/** Issues a real deepen capability then commits it in one call (mirrors production flow). */
+function commitDeepen(
+  s: DeepenState,
+  args: { module: DeepenModuleId; questionId: string; subjectId: string | null }
+): DeepenState {
+  const issued = issueTurnCapability(s.state_revision || 0, {
+    sessionId: s.session_id || 'default-session',
+    operationKind: 'deepen',
+    questionId: args.questionId,
+    subjectId: args.subjectId,
+  });
+  const withCap: DeepenState = { ...s, pending_turn_capability: issued.capability };
+  return commitDeepenAnswer(withCap, script, { ...args, capabilityToken: issued.token });
+}
+
 function tier1Docs(): Record<string, string> {
   const out: Record<string, string> = {};
   const walk = (dir: string, rel: string) => {
@@ -87,13 +103,11 @@ describe('E2E deepen flow', () => {
 
     // Mô phỏng --next/--commit từng instance.
     const instances = expandQuestionInstances(script, 'feature-spec', subjects);
-    let turn = 0;
     for (const inst of instances) {
-      state = commitDeepenAnswer(state, script, {
+      state = commitDeepen(state, {
         module: 'feature-spec',
         questionId: inst.question_id,
         subjectId: inst.subject_id,
-        userTurnId: `t${turn++}`,
       });
       writeFileSync(
         join(ws, 'Design/.interview/answers.json'),

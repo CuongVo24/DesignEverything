@@ -1,12 +1,33 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { loadProgress, saveProgress, loadScript, checkRate, stampTurn, issueTurnCapability } from '../../core/index.js';
+import {
+  loadProgress,
+  saveProgress,
+  loadScript,
+  checkRate,
+  stampTurn,
+  issueTurnCapability,
+  inspectRuntimeHealth,
+} from '../../core/index.js';
 import { renderInject } from './skill/render-inject.js';
 
 export function onUserPromptSubmit(ctx: {
   workspaceRoot: string;
-  userTurnId: string;
-}): { decision: 'allow' | 'block'; injectedContext?: string; message?: string } {
+  /** @deprecated unused — capability issuance/verification is the sole commit authority (B1a). */
+  userTurnId?: string;
+}): { decision: 'allow' | 'block'; injectedContext?: string; capabilityToken?: string; message?: string } {
+  // 0. Fail-closed Runtime Health Check
+  const health = inspectRuntimeHealth(ctx.workspaceRoot);
+  if (health.status === 'broken') {
+    const errorIssue = health.issues.find((i) => i.severity === 'error');
+    if (errorIssue) {
+      return {
+        decision: 'block',
+        message: `Runtime state is broken: ${errorIssue.detail}. Run "${errorIssue.safe_next_command}" to recover.`,
+      };
+    }
+  }
+
   const progressPath = join(ctx.workspaceRoot, 'progress.json');
 
   if (!existsSync(progressPath)) {
@@ -36,8 +57,9 @@ export function onUserPromptSubmit(ctx: {
     };
   }
 
-  // 3. Stamp turn, issue capability if active step, and save progress
+  // 3. Stamp turn and issue turn capability for active step
   let stampedProgress = stampTurn(progress, progress.answered.length);
+  let capabilityToken: string | undefined;
 
   if (stampedProgress.current_step !== null) {
     const issueRes = issueTurnCapability(stampedProgress.state_revision || 0, {
@@ -49,6 +71,9 @@ export function onUserPromptSubmit(ctx: {
       ...stampedProgress,
       pending_turn_capability: issueRes.capability,
     };
+    // Plaintext token is returned exactly once here for this turn; the
+    // persisted state only ever holds its hash (issueRes.capability).
+    capabilityToken = issueRes.token;
   }
 
   try {
@@ -60,7 +85,7 @@ export function onUserPromptSubmit(ctx: {
     };
   }
 
-  // 4. Inject context if current_step != null
+  // 4. Inject context if active question step
   if (stampedProgress.current_step !== null) {
     const scriptPath = join(ctx.workspaceRoot, 'Design/Content/interview-script/script.yaml');
     let script;
@@ -75,7 +100,7 @@ export function onUserPromptSubmit(ctx: {
 
     let injectedContext = '';
     try {
-      injectedContext = renderInject(stampedProgress, script);
+      injectedContext = renderInject(stampedProgress, script, capabilityToken);
     } catch (error: unknown) {
       return {
         decision: 'block',
@@ -86,10 +111,10 @@ export function onUserPromptSubmit(ctx: {
     return {
       decision: 'allow',
       injectedContext,
+      capabilityToken,
     };
   }
 
-  // 5. If current_step == null -> do not inject
   return {
     decision: 'allow',
   };

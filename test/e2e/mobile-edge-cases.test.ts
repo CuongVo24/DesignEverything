@@ -2,7 +2,15 @@ import { expect, test, describe, afterEach, beforeEach } from 'vitest';
 import { onSessionStart } from '../../src/adapters/claude/sessionStart.js';
 import { onUserPromptSubmit } from '../../src/adapters/claude/userPromptSubmit.js';
 import { onPreToolUse } from '../../src/adapters/claude/preToolUse.js';
-import { loadProgress, saveProgress, loadScript, commitStep, stampTurn, emitTree } from '../../src/core/index.js';
+import {
+  loadProgress,
+  saveProgress,
+  loadScript,
+  commitStep,
+  stampTurn,
+  emitTree,
+  issueTurnCapability,
+} from '../../src/core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, rmSync, copyFileSync, writeFileSync } from 'fs';
@@ -66,11 +74,12 @@ describe('E2E Mobile Edge Cases Flow', () => {
 
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'];
     for (const step of steps) {
-      const turnId = `turn-m-edge-${step}`;
-      onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: turnId });
+      const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
       progress = loadProgress(progressPath);
 
-      const opts: { userTurnId: string; branchChoice?: string } = { userTurnId: turnId };
+      const opts: { capabilityToken: string; branchChoice?: string } = {
+        capabilityToken: promptResult.capabilityToken!,
+      };
       if (step === 'S7') {
         opts.branchChoice = 'mobile';
       }
@@ -86,9 +95,15 @@ describe('E2E Mobile Edge Cases Flow', () => {
     expect(progress.branch).toBe('mobile');
     expect(progress.current_step).toBe('R1');
 
-    // Attempt to change branch
+    // Attempt to change branch (issue a real capability for R1 first).
+    const wrongIssued = issueTurnCapability(progress.state_revision || 0, {
+      sessionId: progress.session_id || 'default-session',
+      operationKind: 'interview',
+      questionId: 'R1',
+    });
+    const progressWithWrongCap = { ...progress, pending_turn_capability: wrongIssued.capability };
     expect(() => {
-      commitStep(progress, script, { userTurnId: 'turn-m-wrong', branchChoice: 'web' });
+      commitStep(progressWithWrongCap, script, { capabilityToken: wrongIssued.token, branchChoice: 'web' });
     }).toThrow('Cannot change branch once set. Current: mobile, New: web');
   });
 
@@ -156,22 +171,23 @@ describe('E2E Mobile Edge Cases Flow', () => {
     }
   });
 
-  test('Case (d): Double-commit and duplicate turnId edge cases', () => {
+  test('Case (d): Double-commit and capability replay edge cases', () => {
     const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
     onSessionStart({ workspaceRoot: testWorkspaceRoot });
     let progress = loadProgress(progressPath);
 
     // Answer CAL0
-    onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-dup-1' });
+    const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     progress = loadProgress(progressPath);
-    progress = commitStep(progress, script, { userTurnId: 'turn-dup-1' });
+    const usedToken = promptResult.capabilityToken!;
+    progress = commitStep(progress, script, { capabilityToken: usedToken });
     saveProgress(progressPath, progress);
 
     progress = loadProgress(progressPath);
     expect(progress.current_step).toBe('S0');
 
     expect(() => {
-      commitStep(progress, script, { userTurnId: 'turn-dup-1' });
-    }).toThrow('Duplicate commit');
+      commitStep(progress, script, { capabilityToken: usedToken });
+    }).toThrow(/TURN_CAPABILITY_REPLAY/);
   });
 });

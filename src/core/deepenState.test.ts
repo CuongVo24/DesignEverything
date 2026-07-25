@@ -13,7 +13,8 @@ import {
   canEmitModule,
   computeSourceDigest,
 } from './deepenState.js';
-import { defaultDeepenState } from './schemas/deepenState.js';
+import { issueTurnCapability } from './turnCapability.js';
+import { defaultDeepenState, type DeepenState, type DeepenModuleId } from './schemas/deepenState.js';
 import { loadDeepenScript } from './loadDeepenScript.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,21 @@ const script = loadDeepenScript(join(__dirname, '../../Design/Content/interview-
 
 function ws(): string {
   return mkdtempSync(join(tmpdir(), 'de-ws-'));
+}
+
+/** Issues a real deepen capability then commits it in one call (mirrors production flow). */
+function commitDeepen(
+  s: DeepenState,
+  args: { module: DeepenModuleId; questionId: string; subjectId: string | null }
+): DeepenState {
+  const issued = issueTurnCapability(s.state_revision || 0, {
+    sessionId: s.session_id || 'default-session',
+    operationKind: 'deepen',
+    questionId: args.questionId,
+    subjectId: args.subjectId,
+  });
+  const withCap: DeepenState = { ...s, pending_turn_capability: issued.capability };
+  return commitDeepenAnswer(withCap, script, { ...args, capabilityToken: issued.token });
 }
 
 describe('loadDeepenState / saveDeepenState', () => {
@@ -55,55 +71,81 @@ describe('loadDeepenState / saveDeepenState', () => {
 describe('optInModule', () => {
   it('idempotent — opt-in lại không reset answered, giữ activation đầu', () => {
     let s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
-    s = commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't1' });
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null });
     const again = optInModule(s, 'glossary', 'condition');
     expect(again.modules.glossary.answered.length).toBe(1);
     expect(again.modules.glossary.activation).toBe('explicit');
   });
 });
 
-describe('commitDeepenAnswer — 5 ca throw', () => {
+describe('commitDeepenAnswer — capability + validation cases', () => {
+  it('thiếu capability token', () => {
+    const s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
+    expect(() =>
+      commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, capabilityToken: '' })
+    ).toThrow(/TURN_CAPABILITY_MISSING/);
+  });
+
   it('module chưa opt-in', () => {
     expect(() =>
-      commitDeepenAnswer(defaultDeepenState(), script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't1' })
+      commitDeepen(defaultDeepenState(), { module: 'glossary', questionId: 'DS1a', subjectId: null })
     ).toThrow(/chưa opt-in/);
   });
 
   it('question không thuộc module', () => {
     const s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
     expect(() =>
-      commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS2a', subjectId: null, userTurnId: 't1' })
+      commitDeepen(s, { module: 'glossary', questionId: 'DS2a', subjectId: null })
     ).toThrow(/không thuộc module/);
   });
 
   it('subjectId không khớp per_subject (none nhưng có subject)', () => {
     const s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
     expect(() =>
-      commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: 'x', userTurnId: 't1' })
+      commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: 'x' })
     ).toThrow(/per_subject:none/);
   });
 
   it('per_subject:must nhưng thiếu subjectId', () => {
     const s = optInModule(defaultDeepenState(), 'feature-spec', 'explicit');
     expect(() =>
-      commitDeepenAnswer(s, script, { module: 'feature-spec', questionId: 'DS2a', subjectId: null, userTurnId: 't1' })
+      commitDeepen(s, { module: 'feature-spec', questionId: 'DS2a', subjectId: null })
     ).toThrow(/thiếu subjectId/);
   });
 
   it('instance đã commit', () => {
     let s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
-    s = commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't1' });
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null });
     expect(() =>
-      commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't2' })
+      commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null })
     ).toThrow(/đã được commit/);
   });
 
-  it('duplicate turn', () => {
+  it('replay của capability token đã tiêu thụ bị chặn', () => {
     let s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
-    s = commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't1' });
+    const issued = issueTurnCapability(s.state_revision || 0, {
+      sessionId: s.session_id || 'default-session',
+      operationKind: 'deepen',
+      questionId: 'DS1a',
+      subjectId: null,
+    });
+    s = { ...s, pending_turn_capability: issued.capability };
+    s = commitDeepenAnswer(s, script, {
+      module: 'glossary',
+      questionId: 'DS1a',
+      subjectId: null,
+      capabilityToken: issued.token,
+    });
+    // Same (now-consumed) token reused for a different question must fail —
+    // there is no more userTurnId-based bypass to fall back on (X17/R01).
     expect(() =>
-      commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1b', subjectId: null, userTurnId: 't1' })
-    ).toThrow(/Duplicate turn/);
+      commitDeepenAnswer(s, script, {
+        module: 'glossary',
+        questionId: 'DS1b',
+        subjectId: null,
+        capabilityToken: issued.token,
+      })
+    ).toThrow(/TURN_CAPABILITY_REPLAY|TURN_CAPABILITY_WRONG_QUESTION/);
   });
 });
 
@@ -113,9 +155,8 @@ describe('per-subject completeness', () => {
   it('DS2a của A không tính cho B; canEmitModule liệt kê missing theo instance', () => {
     let s = optInModule(defaultDeepenState(), 'feature-spec', 'explicit');
     // Trả đủ 3 câu cho A, chưa gì cho B.
-    let turn = 0;
     for (const q of ['DS2a', 'DS2b', 'DS2c']) {
-      s = commitDeepenAnswer(s, script, { module: 'feature-spec', questionId: q, subjectId: 'dang-nhap', userTurnId: `t${turn++}` });
+      s = commitDeepen(s, { module: 'feature-spec', questionId: q, subjectId: 'dang-nhap' });
     }
     const res = canEmitModule(s, script, 'feature-spec', subjects);
     expect(res.ok).toBe(false);
@@ -126,10 +167,9 @@ describe('per-subject completeness', () => {
 
   it('đủ mọi instance → ok:true', () => {
     let s = optInModule(defaultDeepenState(), 'feature-spec', 'explicit');
-    let turn = 0;
     for (const subj of subjects) {
       for (const q of ['DS2a', 'DS2b', 'DS2c']) {
-        s = commitDeepenAnswer(s, script, { module: 'feature-spec', questionId: q, subjectId: subj, userTurnId: `t${turn++}` });
+        s = commitDeepen(s, { module: 'feature-spec', questionId: q, subjectId: subj });
       }
     }
     expect(canEmitModule(s, script, 'feature-spec', subjects).ok).toBe(true);
@@ -139,8 +179,8 @@ describe('per-subject completeness', () => {
 describe('canEmitModule — stale', () => {
   it('emitted_at set + digest khác → stale; digest khớp → không stale', () => {
     let s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
-    s = commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't1' });
-    s = commitDeepenAnswer(s, script, { module: 'glossary', questionId: 'DS1b', subjectId: null, userTurnId: 't2' });
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null });
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1b', subjectId: null });
     s.modules.glossary.emitted_at = '2026-07-21T00:00:00Z';
     s.modules.glossary.source_digest = 'DIGEST_A';
     expect(canEmitModule(s, script, 'glossary', [], 'DIGEST_B').stale).toBe(true);

@@ -4,8 +4,7 @@
 import { pathToFileURL } from 'url';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { randomBytes } from 'crypto';
-import { ENGINE_ROOT, readStdinJson, workspaceRootFrom, emitJson } from './_shared.mjs';
+import { ENGINE_ROOT, readStdinJson, workspaceRootFrom, emitJson, resolveModule } from './_shared.mjs';
 
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
@@ -15,13 +14,13 @@ if (!existsSync(join(workspaceRoot, 'progress.json'))) {
   process.exit(0);
 }
 
-const userTurnId = `turn-${Date.now()}-${randomBytes(3).toString('hex')}`;
-
 try {
   const { onUserPromptSubmit } = await import(
-    pathToFileURL(join(ENGINE_ROOT, 'dist/src/adapters/claude/userPromptSubmit.js')).href
+    pathToFileURL(resolveModule('adapters/claude/userPromptSubmit.js')).href
   );
-  const result = onUserPromptSubmit({ workspaceRoot, userTurnId });
+  // No caller-supplied turn identifier: the only thing that authorizes a
+  // commit is the capability Core issues below (result.capabilityToken).
+  const result = onUserPromptSubmit({ workspaceRoot });
 
   if (result.decision === 'block') {
     emitJson({ decision: 'block', reason: `[DesignEverything] ${result.message}` });
@@ -30,15 +29,18 @@ try {
 
   if (result.injectedContext) {
     const cliPath = join(ENGINE_ROOT, 'adapter/claude-code/cli.mjs').replace(/\\/g, '/');
+    const commitLine = result.capabilityToken
+      ? `  node "${cliPath}" commit --capability-token ${result.capabilityToken} --answer "<câu trả lời đã chuẩn hoá>"\n`
+      : '';
     emitJson({
       hookSpecificOutput: {
         hookEventName: 'UserPromptSubmit',
         additionalContext:
           result.injectedContext +
           `\n\n[Cách commit bước (bắt buộc dùng CLI, không tự sửa progress.json)]\n` +
-          `TURN_ID của lượt này: ${userTurnId}\n` +
           `Sau khi người dùng xác nhận bản dịch ngược (và critic-pass nếu có), chạy:\n` +
-          `  node "${cliPath}" commit --turn ${userTurnId} --answer "<câu trả lời đã chuẩn hoá>"\n` +
+          commitLine +
+          `Token ở trên chỉ dùng được một lần cho đúng câu này; KHÔNG tự bịa token hoặc tái dùng token cũ.\n` +
           `Tuỳ chọn: --calibrate deep|fast (chỉ CAL0), --branch <shape> (chỉ S7), ` +
           `--slots-file <file.json> (giá trị slot chi tiết, xem SKILL.md).\n` +
           `Xem trạng thái: node "${cliPath}" status`,

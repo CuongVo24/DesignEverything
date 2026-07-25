@@ -31,33 +31,32 @@ import { verifyTurnCapability } from './turnCapability.js';
 export function commitStep(
   progress: Progress,
   script: Script,
-  args: { userTurnId?: string; capabilityToken?: string; branchChoice?: string }
+  args: { capabilityToken: string; branchChoice?: string }
 ): Progress {
   const currentStepId = progress.current_step;
   if (currentStepId === null) {
     throw new Error('Interview is already completed; no active step to commit');
   }
 
-  // Capability Verification (B1a)
-  if (args.capabilityToken) {
-    const verifyRes = verifyTurnCapability(
-      progress.pending_turn_capability,
-      args.capabilityToken,
-      {
-        sessionId: progress.session_id || 'default-session',
-        operationKind: 'interview',
-        questionId: currentStepId,
-        currentRevision: progress.state_revision || 0,
-      }
-    );
-    if (!verifyRes.valid) {
-      throw new Error(`Commit failed (${verifyRes.reason_code}): ${verifyRes.message}`);
+  // Capability Verification (B1a) — mandatory. There is no legacy
+  // self-declared-turn-id fallback: a caller-supplied identifier can never
+  // authorize a commit, only a capability issued by UserPromptSubmit for
+  // this exact session/question/revision can.
+  if (!args.capabilityToken) {
+    throw new Error('Commit failed (TURN_CAPABILITY_MISSING): No capability token provided.');
+  }
+  const verifyRes = verifyTurnCapability(
+    progress.pending_turn_capability,
+    args.capabilityToken,
+    {
+      sessionId: progress.session_id || 'default-session',
+      operationKind: 'interview',
+      questionId: currentStepId,
+      currentRevision: progress.state_revision || 0,
     }
-  } else if (args.userTurnId) {
-    // Legacy fallback check if capabilityToken is not provided
-    if (progress.last_user_turn_id !== null && args.userTurnId === progress.last_user_turn_id) {
-      throw new Error('Duplicate commit: this turn ID has already been committed');
-    }
+  );
+  if (!verifyRes.valid) {
+    throw new Error(`Commit failed (${verifyRes.reason_code}): ${verifyRes.message}`);
   }
 
   const nextProgress: Progress = {
@@ -66,19 +65,13 @@ export function commitStep(
     answered: [...progress.answered],
     emitted_docs: [...progress.emitted_docs],
     gates_passed: [...progress.gates_passed],
-    pending_turn_capability: progress.pending_turn_capability
-      ? {
-          ...progress.pending_turn_capability,
-          consumed_at: new Date().toISOString(),
-          status: 'consumed',
-        }
-      : null,
+    // verifyRes.valid guarantees pending_turn_capability is non-null.
+    pending_turn_capability: {
+      ...progress.pending_turn_capability!,
+      consumed_at: new Date().toISOString(),
+      status: 'consumed',
+    },
   };
-
-  // 2. Set last_user_turn_id
-  if (args.userTurnId) {
-    nextProgress.last_user_turn_id = args.userTurnId;
-  }
 
   // 3. Append current_step to answered
   nextProgress.answered.push(currentStepId);

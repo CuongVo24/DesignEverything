@@ -133,6 +133,52 @@ describe('renderInject function', () => {
     expect(result).toContain('Ack prompt: Confirm Scope Creep');
   });
 
+  test('should inject the plaintext capability token and --capability-token instruction when a token is provided', () => {
+    const progress: Progress = {
+      version: '0.1.0',
+      session_id: 'session-1',
+      state_revision: 0,
+      phase: 'interview',
+      branch: null,
+      current_step: 'S0',
+      answered: [],
+      emitted_docs: [],
+      gates_passed: [],
+      pending_turn_capability: null,
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 0,
+      updated_at: new Date().toISOString(),
+      calibrate_mode: null,
+    };
+
+    const result = renderInject(progress, mockScript, 'deadbeef1234');
+    expect(result).toContain('[Capability Token');
+    expect(result).toContain('deadbeef1234');
+    expect(result).toContain('--capability-token');
+  });
+
+  test('should NOT render a Capability Token section when no token is provided', () => {
+    const progress: Progress = {
+      version: '0.1.0',
+      session_id: 'session-1',
+      state_revision: 0,
+      phase: 'interview',
+      branch: null,
+      current_step: 'S0',
+      answered: [],
+      emitted_docs: [],
+      gates_passed: [],
+      pending_turn_capability: null,
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 0,
+      updated_at: new Date().toISOString(),
+      calibrate_mode: null,
+    };
+
+    const result = renderInject(progress, mockScript);
+    expect(result).not.toContain('[Capability Token');
+  });
+
   test('should throw error when current_step question is not found in script', () => {
     const progress: Progress = {
       version: '0.1.0',

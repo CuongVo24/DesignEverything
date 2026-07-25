@@ -64,4 +64,12 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-25 (bugfix, không phải implementation của contract): `src/core/loadProgress.ts`
+`saveProgress` alias-mutation bug đã sửa (mutator truyền `p` trực tiếp cho
+`transactInterviewStore`, khiến stamp revision nội bộ ghi đè ngược `p.state_revision` trong bộ nhớ —
+chi tiết ở B1a §3). Đây là một bug cụ thể, không phải việc hoàn thành checklist B1b: `progress.json`
+production vẫn là dual-authority với canonical store, `expectedRevision` vẫn truyền `null` (bỏ qua
+CAS), chưa có journal/recovery marker, chưa fsync, chưa migration fail-closed. Toàn bộ §3 còn
+`[ ]`; P2.2 trong plan-v1-fix.md vẫn là công việc lớn còn lại.

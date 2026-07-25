@@ -1,7 +1,9 @@
 import { expect, test, describe } from 'vitest';
 import { commitStep, checkRate, stampTurn } from './advanceState.js';
+import { issueTurnCapability } from './turnCapability.js';
 import { loadScript } from './loadScript.js';
 import { loadProgress } from './loadProgress.js';
+import type { Progress } from './schemas/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,6 +13,25 @@ const __dirname = dirname(__filename);
 const scriptPath = join(__dirname, '../../Design/Content/interview-script/script.yaml');
 const script = loadScript(scriptPath);
 
+/** Issues a real capability for progress.current_step, mirroring what UserPromptSubmit does. */
+function issueFor(progress: Progress): { progress: Progress; token: string } {
+  if (progress.current_step === null) {
+    throw new Error('issueFor: no active current_step to issue a capability for');
+  }
+  const issued = issueTurnCapability(progress.state_revision || 0, {
+    sessionId: progress.session_id || 'default-session',
+    operationKind: 'interview',
+    questionId: progress.current_step,
+  });
+  return { progress: { ...progress, pending_turn_capability: issued.capability }, token: issued.token };
+}
+
+/** Issues a capability for the current step and commits it in one call. */
+function commit(progress: Progress, opts: { branchChoice?: string } = {}): Progress {
+  const { progress: withCap, token } = issueFor(progress);
+  return commitStep(withCap, script, { capabilityToken: token, branchChoice: opts.branchChoice });
+}
+
 describe('advanceState engine', () => {
   test('should go CAL0 -> S0 -> S1 -> ... -> S7 correctly', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
@@ -19,7 +40,7 @@ describe('advanceState engine', () => {
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
     for (let i = 0; i < steps.length; i++) {
       expect(progress.current_step).toBe(steps[i]);
-      progress = commitStep(progress, script, { userTurnId: `turn-${steps[i]}` });
+      progress = commit(progress);
     }
     expect(progress.current_step).toBe('S7');
   });
@@ -28,47 +49,71 @@ describe('advanceState engine', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
     progress.current_step = 'CAL0';
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
-    for (const step of steps) {
-      progress = commitStep(progress, script, { userTurnId: `turn-${step}` });
+    for (let i = 0; i < steps.length; i++) {
+      progress = commit(progress);
     }
 
     // Try committing S7 without branchChoice -> should throw
-    expect(() => commitStep(progress, script, { userTurnId: 'turn-S7' })).toThrow(
-      /branchChoice must be provided when committing step S7/
-    );
+    {
+      const { progress: withCap, token } = issueFor(progress);
+      expect(() => commitStep(withCap, script, { capabilityToken: token })).toThrow(
+        /branchChoice must be provided when committing step S7/
+      );
+    }
 
     // Commit S7 with web branch
-    const progressWeb = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
+    const progressWeb = commit(progress, { branchChoice: 'web' });
     expect(progressWeb.branch).toBe('web');
     expect(progressWeb.current_step).toBe('R1');
     // R1 (rủi ro) rồi S8 (yêu cầu phi chức năng) đều là câu lõi, chạy trước khi rẽ nhánh.
-    const progressWebR1 = commitStep(progressWeb, script, { userTurnId: 'turn-R1' });
+    const progressWebR1 = commit(progressWeb);
     expect(progressWebR1.current_step).toBe('S8');
-    const progressWebS8 = commitStep(progressWebR1, script, { userTurnId: 'turn-S8' });
+    const progressWebS8 = commit(progressWebR1);
     expect(progressWebS8.current_step).toBe('W1');
 
     // Try changing branch -> should throw
-    expect(() =>
-      commitStep(progressWebS8, script, { userTurnId: 'turn-8', branchChoice: 'mobile' })
-    ).toThrow(/Cannot change branch once set/);
+    {
+      const { progress: withCap, token } = issueFor(progressWebS8);
+      expect(() => commitStep(withCap, script, { capabilityToken: token, branchChoice: 'mobile' })).toThrow(
+        /Cannot change branch once set/
+      );
+    }
 
     // Commit S7 with mobile branch
-    const progressMobile = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'mobile' });
+    const progressMobile = commit(progress, { branchChoice: 'mobile' });
     expect(progressMobile.branch).toBe('mobile');
     expect(progressMobile.current_step).toBe('R1');
-    const progressMobileR1 = commitStep(progressMobile, script, { userTurnId: 'turn-R1' });
+    const progressMobileR1 = commit(progressMobile);
     expect(progressMobileR1.current_step).toBe('S8');
-    const progressMobileS8 = commitStep(progressMobileR1, script, { userTurnId: 'turn-S8' });
+    const progressMobileS8 = commit(progressMobileR1);
     expect(progressMobileS8.current_step).toBe('M1');
   });
 
-  test('should throw error on duplicate turn ID commit', () => {
-    let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
-    progress = commitStep(progress, script, { userTurnId: 'turn-0' });
+  test('should reject commit without a capability token', () => {
+    const progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    expect(() => commitStep(progress, script, { capabilityToken: '' })).toThrow(
+      /TURN_CAPABILITY_MISSING/
+    );
+  });
 
-    // Commit again with same turn ID -> should throw
-    expect(() => commitStep(progress, script, { userTurnId: 'turn-0' })).toThrow(
-      /Duplicate commit: this turn ID has already been committed/
+  test('should reject replay of an already-consumed capability token', () => {
+    let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    const { progress: withCap, token } = issueFor(progress);
+    progress = commitStep(withCap, script, { capabilityToken: token });
+
+    // Re-using the same (now-consumed) token for a second commit must fail —
+    // this is the exact replay/duplicate-commit case the legacy userTurnId
+    // fallback used to under-protect (X01/R01).
+    expect(() => commitStep(progress, script, { capabilityToken: token })).toThrow(
+      /TURN_CAPABILITY_REPLAY|TURN_CAPABILITY_WRONG_QUESTION/
+    );
+  });
+
+  test('should reject a forged capability token', () => {
+    const progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    const { progress: withCap } = issueFor(progress);
+    expect(() => commitStep(withCap, script, { capabilityToken: 'forged-token-xyz' })).toThrow(
+      /TURN_CAPABILITY_FORGED/
     );
   });
 
@@ -83,7 +128,7 @@ describe('advanceState engine', () => {
     expect(checkRate(progress, 2).ok).toBe(false);
 
     // Advance and stamp
-    progress = commitStep(progress, script, { userTurnId: 'turn-0' });
+    progress = commit(progress);
     progress = stampTurn(progress, progress.answered.length);
     expect(progress.answered_len_at_last_turn).toBe(1);
 
@@ -100,22 +145,22 @@ describe('advanceState engine', () => {
 
     // CAL0 -> S6
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
-    for (const step of steps) {
-      progress = commitStep(progress, script, { userTurnId: `turn-${step}` });
+    for (let i = 0; i < steps.length; i++) {
+      progress = commit(progress);
     }
     // S7 -> Web branch
-    progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'web' });
+    progress = commit(progress, { branchChoice: 'web' });
     // R1 (rủi ro) và S8 (yêu cầu phi chức năng) — câu lõi cuối trước khi rẽ nhánh
-    progress = commitStep(progress, script, { userTurnId: 'turn-R1' });
-    progress = commitStep(progress, script, { userTurnId: 'turn-S8' });
+    progress = commit(progress);
+    progress = commit(progress);
 
     // W1 -> W4
     for (let i = 1; i <= 4; i++) {
-      progress = commitStep(progress, script, { userTurnId: `turn-web-${i}` });
+      progress = commit(progress);
     }
 
     // Clone progress to test docs-emitted (default) and ready-to-build
-    const progressDocsEmitted = commitStep(progress, script, { userTurnId: 'turn-web-5' });
+    const progressDocsEmitted = commit(progress);
     expect(progressDocsEmitted.current_step).toBeNull();
     expect(progressDocsEmitted.phase).toBe('docs-emitted');
 
@@ -127,7 +172,7 @@ describe('advanceState engine', () => {
       .map((q) => q.target_doc as string);
     progressReady.gates_passed = ['scope-locked'];
 
-    progressReady = commitStep(progressReady, script, { userTurnId: 'turn-web-5' });
+    progressReady = commit(progressReady);
     expect(progressReady.current_step).toBeNull();
     expect(progressReady.phase).toBe('ready-to-build');
   });
@@ -137,17 +182,17 @@ describe('advanceState engine', () => {
     progress.current_step = 'CAL0';
 
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
-    for (const step of steps) {
-      progress = commitStep(progress, script, { userTurnId: `turn-${step}` });
+    for (let i = 0; i < steps.length; i++) {
+      progress = commit(progress);
     }
 
     // Commit S7 with hybrid branch
-    progress = commitStep(progress, script, { userTurnId: 'turn-S7', branchChoice: 'hybrid' });
+    progress = commit(progress, { branchChoice: 'hybrid' });
     expect(progress.branch).toBe('hybrid');
     expect(progress.current_step).toBe('R1');
-    progress = commitStep(progress, script, { userTurnId: 'turn-R1' });
+    progress = commit(progress);
     expect(progress.current_step).toBe('S8');
-    progress = commitStep(progress, script, { userTurnId: 'turn-S8' });
+    progress = commit(progress);
 
     // The next questions must include both Web and Mobile questions.
     const expectedQuestions = [
@@ -157,7 +202,7 @@ describe('advanceState engine', () => {
 
     for (const qId of expectedQuestions) {
       expect(progress.current_step).toBe(qId);
-      progress = commitStep(progress, script, { userTurnId: `turn-${qId}` });
+      progress = commit(progress);
     }
 
     expect(progress.current_step).toBeNull();
@@ -166,13 +211,12 @@ describe('advanceState engine', () => {
   test('should ensure purity by not mutating original progress state', () => {
     const progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
     const originalAnsweredLength = progress.answered.length;
-    const originalLastTurnId = progress.last_user_turn_id;
+    const { progress: withCap, token } = issueFor(progress);
 
-    const nextProgress = commitStep(progress, script, { userTurnId: 'turn-0' });
+    const nextProgress = commitStep(withCap, script, { capabilityToken: token });
 
     expect(progress.answered.length).toBe(originalAnsweredLength);
-    expect(progress.last_user_turn_id).toBe(originalLastTurnId);
     expect(nextProgress.answered.length).toBe(originalAnsweredLength + 1);
-    expect(nextProgress.last_user_turn_id).toBe('turn-0');
+    expect(nextProgress.pending_turn_capability?.status).toBe('consumed');
   });
 });

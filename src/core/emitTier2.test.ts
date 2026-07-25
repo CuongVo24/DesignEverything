@@ -12,12 +12,28 @@ import {
   optInModule,
   commitDeepenAnswer,
 } from './deepenState.js';
+import { issueTurnCapability } from './turnCapability.js';
 import { defaultDeepenState } from './schemas/deepenState.js';
-import type { DeepenState } from './schemas/deepenState.js';
+import type { DeepenState, DeepenModuleId } from './schemas/deepenState.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const script = loadDeepenScript(join(__dirname, '../../Design/Content/interview-script/deepen-script.yaml'));
 const GOLDEN_DOCS = join(__dirname, '../../Design/Content/golden-example-web/docs');
+
+/** Issues a real deepen capability then commits it in one call (mirrors production flow). */
+function commitDeepen(
+  s: DeepenState,
+  args: { module: DeepenModuleId; questionId: string; subjectId: string | null }
+): DeepenState {
+  const issued = issueTurnCapability(s.state_revision || 0, {
+    sessionId: s.session_id || 'default-session',
+    operationKind: 'deepen',
+    questionId: args.questionId,
+    subjectId: args.subjectId,
+  });
+  const withCap: DeepenState = { ...s, pending_turn_capability: issued.capability };
+  return commitDeepenAnswer(withCap, script, { ...args, capabilityToken: issued.token });
+}
 
 const ARCH = {
   data_sensitivity_and_security: 'Chỉ thông tin đăng nhập',
@@ -78,8 +94,8 @@ describe('emitTier2 transaction', () => {
     const answers = { ...baseAnswers, DS1a: 'Recipe, ShoppingList', DS1b: 'Định nghĩa' };
     const ws = buildWorkspace(answers);
     let state = optInModule(defaultDeepenState(), 'glossary', 'explicit');
-    state = commitDeepenAnswer(state, script, { module: 'glossary', questionId: 'DS1a', subjectId: null, userTurnId: 't1' });
-    state = commitDeepenAnswer(state, script, { module: 'glossary', questionId: 'DS1b', subjectId: null, userTurnId: 't2' });
+    state = commitDeepen(state, { module: 'glossary', questionId: 'DS1a', subjectId: null });
+    state = commitDeepen(state, { module: 'glossary', questionId: 'DS1b', subjectId: null });
     saveDeepenState(ws, state);
 
     const res = emitTier2({ workspace: ws, modules: ['glossary'], script, state });
@@ -100,10 +116,9 @@ describe('emitTier2 transaction', () => {
     };
     const ws = buildWorkspace(answers2);
     let state: DeepenState = optInModule(defaultDeepenState(), 'feature-spec', 'explicit');
-    let turn = 0;
     for (const subj of ['ng-nh-p', 't-m-ki-m']) {
       for (const q of ['DS2a', 'DS2b', 'DS2c']) {
-        state = commitDeepenAnswer(state, script, { module: 'feature-spec', questionId: q, subjectId: subj, userTurnId: `t${turn++}` });
+        state = commitDeepen(state, { module: 'feature-spec', questionId: q, subjectId: subj });
       }
     }
     saveDeepenState(ws, state);

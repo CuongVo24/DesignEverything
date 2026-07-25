@@ -4,7 +4,7 @@ import { Progress, Script } from '../../../core/schemas/index.js';
  * Builds the injected context text from current progress and interview script.
  * Following the 4 Golden Rules of phỏng vấn.
  */
-export function renderInject(progress: Progress, script: Script): string {
+export function renderInject(progress: Progress, script: Script, capabilityToken?: string): string {
   if (progress.current_step === null) {
     return '';
   }
@@ -17,6 +17,14 @@ export function renderInject(progress: Progress, script: Script): string {
   const targetDocText = question.target_doc
     ? question.target_doc
     : 'Không có (meta question)';
+
+  const capabilitySection = capabilityToken
+    ? `\n[Capability Token — chỉ dùng cho lượt này, không hiển thị lại cho người dùng]
+${capabilityToken}
+Dùng đúng token này với cờ --capability-token khi gọi lệnh commit cho câu ${question.id}. Token chỉ
+dùng được một lần; hết lượt này token cũ không còn hiệu lực và bạn sẽ nhận token mới ở lượt kế tiếp.
+`
+    : '';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const critic = (script as any).critics?.[question.id];
@@ -38,7 +46,7 @@ Câu hỏi (ask): ${question.ask}
 Đề xuất mặc định (default): ${question.default ?? 'Không có'}
 File đích (target_doc): ${targetDocText}
 Dịch ngược (translate_back): ${question.translate_back}
-${criticSection}
+${criticSection}${capabilitySection}
 [4 Quy tắc vàng của phỏng vấn]
 1. Hỏi từng câu một: Không hỏi gộp nhiều câu cùng lúc.
 2. Luôn có đề xuất mặc định thông minh: Giúp người dùng dễ dàng trả lời nhanh.

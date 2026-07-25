@@ -21,16 +21,25 @@ Thay TURN_ID do agent tự khai bằng capability do runtime phát hành, bind �
 
 ## 3. Implementation checklist
 
-- [ ] Bump progress/interview schema theo next MAJOR; thêm state_revision và pending_turn_capability.
-- [ ] Capability gồm opaque id đủ entropy, session_id, operation_kind, question_id, expected_revision, issued_at, expires_at và consumed_at/status.
-- [ ] Chỉ UserPromptSubmit được issue capability; caller không truyền user_turn_id tùy ý vào commitStep.
-- [ ] Persist hash của token, không log hoặc echo plaintext sau khi issue.
-- [ ] commitStep nhận token + current revision; exact match tất cả binding mới được advance.
-- [ ] Consume capability và tăng revision trong cùng transaction B1b; lần gọi thứ hai trả TURN_CAPABILITY_REPLAY.
-- [ ] Capability cũ tự invalid khi câu hỏi, branch, session hoặc revision đổi.
-- [ ] Deepen commit dùng cùng primitive với operation_kind=deepen và module/question binding.
-- [ ] Loại check “bắt ở lượt người dùng kế tiếp”; violation phải bị từ chối ngay tại commit.
-- [ ] Migrator không biến last_user_turn_id cũ thành token hợp lệ; buộc issue capability mới.
+- [x] Bump progress/interview schema; thêm state_revision và pending_turn_capability (đã có trước lần sửa 2026-07-25; đã dùng chỗ này).
+- [x] Capability gồm opaque id đủ entropy, session_id, operation_kind, question_id, expected_revision, issued_at, expires_at và consumed_at/status (`turnCapability.ts`, không đổi).
+- [x] Chỉ UserPromptSubmit được issue capability; caller không truyền user_turn_id tùy ý vào commitStep — đã xoá hoàn toàn nhánh legacy fallback ở `commitStep`/`commitDeepenAnswer`; `capabilityToken` bắt buộc, `userTurnId` không còn là tham số.
+- [x] Persist hash của token, không log hoặc echo plaintext sau khi issue — plaintext chỉ tồn tại trong biến cục bộ `onUserPromptSubmit` và trong `additionalContext` trả về UserPromptSubmit hook cho đúng lượt đó; state chỉ giữ `token_hash`.
+- [x] commitStep nhận token + current revision; exact match tất cả binding mới được advance (không đổi logic verify, chỉ xoá đường vòng).
+- [x] Consume capability trong cùng lệnh gọi `commitStep`/`commitDeepenAnswer`; lần gọi thứ hai trả TURN_CAPABILITY_REPLAY (unit + e2e + installed-hook subprocess test).
+- [x] Capability cũ tự invalid khi câu hỏi, branch, session hoặc revision đổi (không đổi, đã có sẵn trong `verifyTurnCapability`).
+- [x] Deepen commit dùng cùng primitive với operation_kind=deepen và module/question binding (`commitDeepenAnswer` nay bắt buộc capabilityToken giống commitStep).
+- [x] Loại check "bắt ở lượt người dùng kế tiếp"; violation phải bị từ chối ngay tại commit (nhánh legacy đã xoá; deepen's `userTurnId === last_user_turn_id` no-op-else-allow bug cũng đã xoá).
+- [ ] Migrator không biến last_user_turn_id cũ thành token hợp lệ; buộc issue capability mới — **CHƯA LÀM**: `migrateInterviewStore`/`loadProgress` chưa được audit riêng cho việc này trong lần sửa này; xem R02 trong finding-coverage-matrix.md, còn lại cho P2.2.
+
+**Bổ sung ngoài checklist gốc, phát hiện khi nối dây (2026-07-25):** `src/core/loadProgress.ts`
+`saveProgress` có bug alias nghiêm trọng — mutator truyền cho `transactInterviewStore` gán thẳng
+tham chiếu `p` làm `payload.progress`, nên bước stamp revision nội bộ của `transactInterviewStore`
+ghi đè `state_revision` của `p` ngay trong bộ nhớ, làm lệch khỏi `expected_revision` mà capability
+vừa phát hành — khiến MỌI commit hợp lệ đều bị `TURN_CAPABILITY_WRONG_REVISION` một khi capability
+bắt buộc. Đã sửa bằng `structuredClone(p)` trước khi truyền vào mutator. Đây là lý do
+`TURN_CAPABILITY_WRONG_REVISION` không lộ ra trước đây: đường fallback legacy không kiểm revision
+nên bug bị che giấu.
 
 ## 4. Interfaces / Files expected to change
 
@@ -64,4 +73,18 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL (9/10 checklist items done, migrator audit
+còn lại) | Proof: SEAM_PARTIAL
+
+Cập nhật 2026-07-25: legacy `userTurnId`-based bypass (X01/R01) đã xoá khỏi
+`commitStep`/`commitDeepenAnswer`; plaintext token nay thật sự được UserPromptSubmit trả về và
+injected cho caller (trước đó bị tính/rồi vứt bỏ, khiến việc bật capability bắt buộc sẽ phá vỡ toàn
+bộ luồng — xem ghi chú alias bug ở trên). Test: `src/core/advanceState.test.ts`,
+`src/core/deepenState.test.ts`, `src/adapters/claude/userPromptSubmit.test.ts`,
+`src/adapters/claude/skill/render-inject.test.ts`, `test/e2e/*-flow.test.ts`,
+`test/e2e/*-edge-cases.test.ts`, `test/journey/newbie-shapes.test.ts`,
+`test/integration/adapter-parity.test.ts` (thật spawn cả hai CLI), và
+`test/integration/installed-runtime/hook-adversarial.test.ts` X01/X01b/X01c (thật spawn hook
+subprocess qua stdin/stdout, không chỉ import Core). Chưa VERIFIED ở mức installed-runtime đầy đủ
+vì chưa đi qua `install.mjs` thật (đó là B4d, chưa bắt đầu) — giữ ở SEAM_PARTIAL theo đúng quy tắc
+"không dùng test Core pass thay cho installer/wrapper test" trong finding-coverage-matrix.md.

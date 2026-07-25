@@ -164,8 +164,7 @@ export function commitDeepenAnswer(
     module: DeepenModuleId;
     questionId: string;
     subjectId: string | null;
-    userTurnId?: string;
-    capabilityToken?: string;
+    capabilityToken: string;
   }
 ): DeepenState {
   const mod = state.modules[args.module];
@@ -189,36 +188,34 @@ export function commitDeepenAnswer(
   if (already) {
     throw new Error(`Instance ${args.questionId}@${args.subjectId ?? '-'} đã được commit trước đó.`);
   }
-  if (args.capabilityToken) {
-    const verifyRes = verifyTurnCapability(
-      state.pending_turn_capability,
-      args.capabilityToken,
-      {
-        sessionId: state.session_id || 'default-session',
-        operationKind: 'deepen',
-        questionId: args.questionId,
-        subjectId: args.subjectId,
-        currentRevision: state.state_revision || 0,
-      }
-    );
-    if (!verifyRes.valid) {
-      throw new Error(`Commit deepen failed (${verifyRes.reason_code}): ${verifyRes.message}`);
+  if (!args.capabilityToken) {
+    throw new Error('Commit deepen failed (TURN_CAPABILITY_MISSING): No capability token provided.');
+  }
+  const verifyRes = verifyTurnCapability(
+    state.pending_turn_capability,
+    args.capabilityToken,
+    {
+      sessionId: state.session_id || 'default-session',
+      operationKind: 'deepen',
+      questionId: args.questionId,
+      subjectId: args.subjectId,
+      currentRevision: state.state_revision || 0,
     }
-  } else if (args.userTurnId === mod.last_user_turn_id) {
-    throw new Error(`Duplicate turn: ${args.userTurnId} đã dùng cho lượt trước của module ${args.module}.`);
+  );
+  if (!verifyRes.valid) {
+    throw new Error(`Commit deepen failed (${verifyRes.reason_code}): ${verifyRes.message}`);
   }
 
   const next: DeepenState = structuredClone(state);
   next.state_revision = (next.state_revision || 0) + 1;
-  if (next.pending_turn_capability) {
-    next.pending_turn_capability.consumed_at = new Date().toISOString();
-    next.pending_turn_capability.status = 'consumed';
-  }
+  // verifyRes.valid guarantees pending_turn_capability is non-null.
+  next.pending_turn_capability = {
+    ...state.pending_turn_capability!,
+    consumed_at: new Date().toISOString(),
+    status: 'consumed',
+  };
   const nmod = next.modules[args.module];
   nmod.answered.push({ question_id: args.questionId, subject_id: args.subjectId });
-  if (args.userTurnId) {
-    nmod.last_user_turn_id = args.userTurnId;
-  }
   return next;
 }
 

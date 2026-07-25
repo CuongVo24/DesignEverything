@@ -1,6 +1,6 @@
 import { expect, test, describe, afterEach, beforeEach } from 'vitest';
 import { onUserPromptSubmit } from './userPromptSubmit.js';
-import { loadProgress } from '../../core/index.js';
+import { loadProgress, commitStep, loadScript } from '../../core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs';
@@ -76,6 +76,37 @@ describe('onUserPromptSubmit hook', () => {
     expect(updatedProgress.answered).toEqual(['S0', 'S1', 'S2']);
   });
 
+  test('should issue a capability token that commitStep accepts end-to-end (B1a)', () => {
+    const mockState = {
+      version: '0.1.0',
+      phase: 'interview',
+      branch: null,
+      current_step: 'S3',
+      answered: ['S0', 'S1', 'S2'],
+      emitted_docs: [],
+      gates_passed: [],
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 2,
+      updated_at: new Date().toISOString(),
+    };
+    writeFileSync(projectProgressPath, JSON.stringify(mockState, null, 2), 'utf8');
+
+    const result = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
+    expect(result.decision).toBe('allow');
+    expect(result.capabilityToken).toBeTruthy();
+    expect(result.injectedContext).toContain(result.capabilityToken!);
+
+    const script = loadScript(join(testWorkspaceRoot, 'Design/Content/interview-script/script.yaml'));
+    const progress = loadProgress(projectProgressPath);
+    const committed = commitStep(progress, script, { capabilityToken: result.capabilityToken! });
+    expect(committed.answered).toContain('S3');
+
+    // The token is single-use: reusing it must fail.
+    expect(() => commitStep(committed, script, { capabilityToken: result.capabilityToken! })).toThrow(
+      /TURN_CAPABILITY_REPLAY/
+    );
+  });
+
   test('should block turn when rate limit is violated (answered length grew by 2 without stamping)', () => {
     const mockState = {
       version: '0.1.0',
@@ -145,6 +176,6 @@ describe('onUserPromptSubmit hook', () => {
     writeFileSync(projectProgressPath, JSON.stringify({ version: 'invalid' }), 'utf8');
     const resultInvalid = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot, userTurnId: 'turn-1' });
     expect(resultInvalid.decision).toBe('block');
-    expect(resultInvalid.message).toContain('Failed to load progress state');
+    expect(resultInvalid.message).toMatch(/Failed to load progress/);
   });
 });
