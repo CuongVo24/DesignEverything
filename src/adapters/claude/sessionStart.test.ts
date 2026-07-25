@@ -1,8 +1,8 @@
-import { expect, test, describe, afterEach } from 'vitest';
+import { expect, test, describe, afterEach, beforeEach } from 'vitest';
 import { onSessionStart } from './sessionStart.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, unlinkSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync, readFileSync, rmSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,11 +10,29 @@ const testWorkspaceRoot = join(__dirname, '../../../test/fixtures/progress');
 const progressPath = join(testWorkspaceRoot, 'progress.json');
 
 describe('onSessionStart hook', () => {
-  afterEach(() => {
-    // Clean up progress.json if created in test folder
+  beforeEach(() => {
     try {
       if (existsSync(progressPath)) {
         unlinkSync(progressPath);
+      }
+      const storePath = join(testWorkspaceRoot, '.design-everything');
+      if (existsSync(storePath)) {
+        rmSync(storePath, { recursive: true, force: true });
+      }
+    } catch {
+      // Ignore
+    }
+  });
+
+  afterEach(() => {
+    // Clean up progress.json and .design-everything if created in test folder
+    try {
+      if (existsSync(progressPath)) {
+        unlinkSync(progressPath);
+      }
+      const storePath = join(testWorkspaceRoot, '.design-everything');
+      if (existsSync(storePath)) {
+        rmSync(storePath, { recursive: true, force: true });
       }
     } catch {
       // Ignore

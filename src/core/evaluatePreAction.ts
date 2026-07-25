@@ -180,24 +180,6 @@ function evaluatePreActionInner(
     };
   }
 
-  // Deny code write when in plan-validating phase
-  if (execState && execState.phase === 'plan-validating') {
-    if (request.action_kind === 'write') {
-      const isDocWrite = resolvedPaths.every(
-        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p === 'progress.json'
-      );
-      if (!isDocWrite) {
-        return {
-          decision: 'deny',
-          reason_code: 'PLAN_VALIDATION_REQUIRED',
-          user_message: 'Kế hoạch thi công chưa được validate. Vui lòng chạy lệnh /build trước khi viết code.',
-          enforcement: 'hard',
-        };
-      }
-    }
-  }
-
-  // 6. Handle Interview / Docs-Emitted phase
   if (!execState) {
     if (request.action_kind === 'read') {
       return {
@@ -220,18 +202,24 @@ function evaluatePreActionInner(
           };
         }
       }
-      return {
-        decision: 'allow',
-        reason_code: 'interview-doc-write-allowed',
-        user_message: 'Ghi tài liệu được phép.',
-        enforcement: 'hard',
-      };
+      const isDocWrite = resolvedPaths.every(
+        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/scratch/') || p === 'progress.json'
+      );
+      if (isDocWrite) {
+        return {
+          decision: 'allow',
+          reason_code: 'interview-doc-write-allowed',
+          user_message: 'Ghi tài liệu được phép.',
+          enforcement: 'hard',
+        };
+      }
     }
 
     if (request.action_kind === 'shell') {
+      const reqExt = request as unknown as { shell_kind?: string; command?: string };
       const classification = classifyCommand({
-        shell: request.shell_kind,
-        raw: request.command,
+        shell: reqExt.shell_kind,
+        raw: reqExt.command,
         argv: request.command_argv,
         cwd: request.workspace,
       });
@@ -386,7 +374,7 @@ function evaluatePreActionInner(
       }
       return {
         decision: 'deny',
-        reason_code: 'plan-validating-write-blocked',
+        reason_code: 'PLAN_VALIDATION_REQUIRED',
         user_message: 'Không có task hoạt động (active_task) nào đang chạy. Vui lòng chạy lệnh "validate" để bắt đầu quy trình.',
         enforcement: 'hard',
       };
