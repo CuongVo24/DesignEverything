@@ -281,7 +281,8 @@ export function transactInterviewStore(
  * and never allowed to fail the write. NTFS's own metadata journaling is
  * the practical guarantee on Windows, which is what this runtime targets.
  */
-function writeEnvelopeAtomic(workspaceRoot: string, envelope: InterviewStoreEnvelope): void {
+/** @internal exported for migrateInterviewStore.ts's own durable write — not part of the public store API. */
+export function writeEnvelopeAtomic(workspaceRoot: string, envelope: InterviewStoreEnvelope): void {
   const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
   const dir = dirname(canonicalPath);
   const tmpPath = `${canonicalPath}.tmp.${Date.now()}.${Math.floor(Math.random() * 10000)}`;

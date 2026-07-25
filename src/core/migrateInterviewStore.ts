@@ -1,9 +1,13 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { progressSchema, type Progress } from './schemas/index.js';
 import {
   computePayloadChecksum,
   CANONICAL_STORE_REL_PATH,
+  loadInterviewStore,
+  acquireLock,
+  releaseLock,
+  writeEnvelopeAtomic,
 } from './interviewStore.js';
 import {
   INTERVIEW_STORE_VERSION,
@@ -18,80 +22,132 @@ export type MigrateInterviewStoreOutcome = 'migrated' | 'already-current' | 'no-
  * legacy files is reported as 'no-legacy' and left untouched; only
  * initializeInterviewStore() may create a store from nothing (P2.2a §5.2/5.4:
  * "Missing cả hai ở workspace uninvolved chỉ đi qua explicit initializer").
+ *
+ * P2.2b hardening:
+ * - An existing canonical store is schema/checksum-validated before being
+ *   declared 'already-current' — corruption is never silently accepted as a
+ *   no-op.
+ * - A legacy progress.json/answers.json that exists but fails to parse is a
+ *   structured blocking error, never silently treated as "no legacy" (which
+ *   would let a caller fabricate fresh state and discard real data).
+ * - The whole read-backup-write sequence runs under the same workspace lock
+ *   as every other canonical mutation, so two concurrent migrations can't
+ *   race each other or interleave with a transactInterviewStore call.
+ * - The backup directory name includes a random suffix, not just
+ *   Date.now(), so two migrations landing in the same millisecond can't
+ *   collide.
  */
 export function migrateInterviewStore(workspaceRoot: string): MigrateInterviewStoreOutcome {
   const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
+
   if (existsSync(canonicalPath)) {
-    return 'already-current';
+    try {
+      loadInterviewStore(workspaceRoot);
+      return 'already-current';
+    } catch (err: unknown) {
+      throw new Error(
+        `MIGRATION_BLOCKED_CANONICAL_CORRUPT: Existing canonical store failed validation and was left untouched: ${(err as Error).message}`
+      );
+    }
   }
 
   const legacyProgressPath = join(workspaceRoot, 'progress.json');
   const legacyAnswersPath = join(workspaceRoot, 'Design/.interview/answers.json');
 
   let legacyProgress: Progress | null = null;
-  let legacyAnswers: Record<string, string> = {};
-
   if (existsSync(legacyProgressPath)) {
+    let raw: unknown;
     try {
-      const raw = JSON.parse(readFileSync(legacyProgressPath, 'utf8'));
-      const parsed = progressSchema.safeParse(raw);
-      if (parsed.success) {
-        legacyProgress = parsed.data;
-      }
-    } catch {
-      // Ignore
+      raw = JSON.parse(readFileSync(legacyProgressPath, 'utf8'));
+    } catch (err: unknown) {
+      throw new Error(
+        `MIGRATION_BLOCKED_LEGACY_CORRUPT: progress.json exists but is not valid JSON (${(err as Error).message}); refusing to silently treat it as absent.`
+      );
     }
+    const parsed = progressSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new Error(
+        `MIGRATION_BLOCKED_LEGACY_CORRUPT: progress.json exists but failed schema validation; refusing to silently treat it as absent. ${parsed.error.message}`
+      );
+    }
+    legacyProgress = parsed.data;
   }
 
+  let legacyAnswers: Record<string, string> = {};
   if (existsSync(legacyAnswersPath)) {
+    let raw: unknown;
     try {
-      const raw = JSON.parse(readFileSync(legacyAnswersPath, 'utf8'));
-      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        legacyAnswers = raw;
-      }
-    } catch {
-      // Ignore
+      raw = JSON.parse(readFileSync(legacyAnswersPath, 'utf8'));
+    } catch (err: unknown) {
+      throw new Error(
+        `MIGRATION_BLOCKED_LEGACY_CORRUPT: Design/.interview/answers.json exists but is not valid JSON (${(err as Error).message}); refusing to silently discard it.`
+      );
     }
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error(
+        'MIGRATION_BLOCKED_LEGACY_CORRUPT: Design/.interview/answers.json exists but is not a JSON object; refusing to silently discard it.'
+      );
+    }
+    legacyAnswers = raw as Record<string, string>;
   }
-
-  const now = new Date().toISOString();
 
   if (!legacyProgress) {
     return 'no-legacy';
   }
 
-  // Backup legacy files
-  const backupDir = join(workspaceRoot, '.design-everything/backups', `migration-${Date.now()}`);
-  mkdirSync(backupDir, { recursive: true });
+  const lockNonce = acquireLock(workspaceRoot);
+  try {
+    // Re-check under the lock: another writer may have migrated or
+    // initialized the store between our pre-lock check and acquiring it.
+    if (existsSync(canonicalPath)) {
+      try {
+        loadInterviewStore(workspaceRoot);
+        return 'already-current';
+      } catch (err: unknown) {
+        throw new Error(
+          `MIGRATION_BLOCKED_CANONICAL_CORRUPT: Existing canonical store failed validation and was left untouched: ${(err as Error).message}`
+        );
+      }
+    }
 
-  if (existsSync(legacyProgressPath)) {
+    // Backup legacy files — immutable and uniquely named so two migrations
+    // in the same millisecond (or a rerun) never collide or overwrite an
+    // earlier backup.
+    const backupDir = join(
+      workspaceRoot,
+      '.design-everything/backups',
+      `migration-${Date.now()}.${Math.floor(Math.random() * 1_000_000)}`
+    );
+    mkdirSync(backupDir, { recursive: true });
     writeFileSync(join(backupDir, 'progress.json'), readFileSync(legacyProgressPath));
+    if (existsSync(legacyAnswersPath)) {
+      writeFileSync(join(backupDir, 'answers.json'), readFileSync(legacyAnswersPath));
+    }
+
+    // Build migrated envelope
+    const now = new Date().toISOString();
+    const payload = {
+      progress: {
+        ...legacyProgress,
+        state_revision: legacyProgress.state_revision ?? 0,
+        session_id: legacyProgress.session_id ?? `session-${Date.now()}`,
+      },
+      answers: legacyAnswers,
+      slots: {},
+    };
+
+    const envelope: InterviewStoreEnvelope = {
+      schema_version: INTERVIEW_STORE_VERSION,
+      state_revision: payload.progress.state_revision,
+      session_id: payload.progress.session_id,
+      checksum: computePayloadChecksum(payload),
+      payload,
+      updated_at: now,
+    };
+
+    writeEnvelopeAtomic(workspaceRoot, envelope);
+    return 'migrated';
+  } finally {
+    releaseLock(workspaceRoot, lockNonce);
   }
-  if (existsSync(legacyAnswersPath)) {
-    writeFileSync(join(backupDir, 'answers.json'), readFileSync(legacyAnswersPath));
-  }
-
-  // Build migrated envelope
-  const payload = {
-    progress: {
-      ...legacyProgress,
-      state_revision: legacyProgress.state_revision ?? 0,
-      session_id: legacyProgress.session_id ?? `session-${Date.now()}`,
-    },
-    answers: legacyAnswers,
-    slots: {},
-  };
-
-  const envelope: InterviewStoreEnvelope = {
-    schema_version: INTERVIEW_STORE_VERSION,
-    state_revision: payload.progress.state_revision,
-    session_id: payload.progress.session_id,
-    checksum: computePayloadChecksum(payload),
-    payload,
-    updated_at: now,
-  };
-
-  mkdirSync(dirname(canonicalPath), { recursive: true });
-  writeFileSync(canonicalPath, JSON.stringify(envelope, null, 2), 'utf8');
-  return 'migrated';
 }
