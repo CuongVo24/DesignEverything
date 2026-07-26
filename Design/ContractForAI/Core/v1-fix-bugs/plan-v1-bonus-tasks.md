@@ -110,7 +110,7 @@ regression test.
 
 ---
 
-## 4. H0 — hotfix stale Codex deepen command
+## 4. H0 — hotfix stale Codex deepen command — DONE (2026-07-25, `fbcf256`)
 
 ### Phạm vi
 
@@ -120,27 +120,49 @@ regression test.
 
 ### Công việc
 
-- [ ] Thay:
+- [x] Thay:
   `deepen --module <id> --commit --turn <TURN_ID> ...`
-  bằng command nhận `--capability-token <TOKEN>`.
-- [ ] Ghi rõ token chỉ đến từ hook/runtime context, người dùng/model
-  không tự tạo token.
-- [ ] Tìm toàn bộ production docs/skills cho `--turn`, `TURN_ID`,
-  `userTurnId`; giữ lại chỉ trong negative regression tests hoặc
-  migration history có chú thích.
-- [ ] Thêm executable skill fixture chạy đúng command mới.
-- [ ] Thêm negative fixture chứng minh `--turn` bị từ chối.
+  bằng command nhận `--capability-token <TOKEN>`. Cả Codex
+  (`adapter/codex-plugin/skills/design-everything-build/SKILL.md`) và
+  Claude (`adapter/claude-code/skill/SKILL.md`) đã dùng cùng shape
+  `--capability-token <TOKEN>`.
+- [x] Ghi rõ token chỉ đến từ hook/runtime context, người dùng/model
+  không tự tạo token — cả hai SKILL.md đều có câu "KHÔNG dùng `--turn
+  <id>` — cờ này không còn được engine chấp nhận làm căn cứ uỷ quyền."
+- [x] Tìm toàn bộ production docs/skills cho `--turn`, `TURN_ID`,
+  `userTurnId`; xác nhận qua `rg` — mọi hit còn lại là negative
+  documentation (SKILL.md cảnh báo không dùng), user-facing Vietnamese
+  copy nhắc "không dùng --turn tự đặt", hoặc field
+  `userTurnId?: string` ở `userPromptSubmit.ts` đã gắn
+  `@deprecated unused` — không còn seam executable nào chấp nhận nó
+  làm authorization.
+- [x] Thêm executable skill fixture chạy đúng command mới:
+  `test/integration/installed-runtime/cli-health.test.ts` pin hành vi
+  `UNKNOWN_SUBCOMMAND` fail-closed cho shape `--capability-token` mới
+  (đúng như tài liệu SKILL.md dạy) — chưa phải success fixture thật vì
+  `deepen` chưa có case trong dispatcher (X01, thuộc P6/P7), nhưng đã
+  chứng minh command shape đúng contract không bị misclassify thành gì
+  khác.
+- [x] Thêm negative fixture chứng minh `--turn` bị từ chối: cùng file,
+  test "reject commit without --capability-token even with a
+  plausible-looking --turn flag" và test riêng cho stale `deepen
+  --turn` shape.
 
 ### Exit criteria
 
-- Không còn hướng dẫn executable nào dùng self-declared turn ID.
-- Claude và Codex hiển thị cùng command shape cho commit/deepen.
-- Skill truth test chạy trên target-local command fixture, không chỉ
-  regex keyword.
+- [x] Không còn hướng dẫn executable nào dùng self-declared turn ID.
+- [x] Claude và Codex hiển thị cùng command shape cho commit/deepen
+  (`--capability-token <TOKEN>`).
+- [~] Skill truth test chạy trên target-local command fixture, không
+  chỉ regex keyword: fixture hiện chạy qua CLI thật (`execFileSync`
+  installed-runtime), không phải regex-only — nhưng vì `deepen` chưa
+  wired, fixture chỉ pin fail-closed, chưa pin một success path thật.
+  Đủ cho scope H0 (doc/skill truth); success fixture thật cho `deepen`
+  thuộc P6/P7.
 
-### Commit đề xuất
+### Commit đề xuất — đã thực hiện
 
-`fix(skill): remove stale Codex deepen turn-id command`
+`fix(skill): remove stale Codex deepen turn-id command` (commit `fbcf256`)
 
 ---
 
