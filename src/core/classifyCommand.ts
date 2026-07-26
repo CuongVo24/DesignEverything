@@ -100,7 +100,7 @@ export function classifyCommand(input: ClassifyCommandInput): CommandClassificat
 
   // 4. Git command policy
   if (exe === 'git') {
-    const gitRes = isGitReadOnly(argv);
+    const gitRes = isGitReadOnly(argv, input.cwd);
     if (gitRes.safe) {
       return {
         outcome: 'proven_read_only',

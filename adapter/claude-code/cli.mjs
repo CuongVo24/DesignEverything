@@ -39,7 +39,7 @@ try {
     operation: rawArgv[0] || 'unknown',
     reason_code: 'INTERNAL_ERROR',
     severity: 'error',
-    message: `Lỗi hệ thống khi thực thi CLI: ${err.message}`,
+    message: `Lỗi hệ thống khi thực thi CLI: ${core.redactInternalError(err.message || String(err))}`,
     runtime_version: '6.0.0',
   };
 }

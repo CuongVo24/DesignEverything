@@ -1,5 +1,40 @@
 import { normalize } from 'path';
 
+// Quote-aware split: a double- or single-quoted run (e.g. an --answer-text value
+// containing spaces, or a launcher path containing a space) stays one token instead
+// of being torn apart by a naive whitespace split. Not a full shell grammar parser —
+// still no support for escaped quotes or $VAR expansion; that remains open (see
+// plan-v1-bonus-tasks.md P4.3 raw-command-parser gap).
+function tokenizeCommand(rawCommand) {
+  const tokens = [];
+  let current = '';
+  let quote = null;
+  for (const ch of rawCommand) {
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (current) {
+        tokens.push(current);
+        current = '';
+      }
+      continue;
+    }
+    current += ch;
+  }
+  if (current) tokens.push(current);
+  return tokens;
+}
+
 /**
  * Parses and verifies whether a Bash tool invocation is an exact CLI invocation
  * targeting adapter/claude-code/cli.mjs without shell operator tricks.
@@ -29,7 +64,7 @@ export function resolveCliInvocation(event, _installManifest, _commandClassifica
     return { outcome: 'not-cli' };
   }
 
-  const tokens = rawCommand.split(/\s+/);
+  const tokens = tokenizeCommand(rawCommand);
   if (tokens.length === 0) return { outcome: 'not-cli' };
 
   let cliTokenIndex = -1;
@@ -151,6 +186,18 @@ export function authorizeCliOperation(operation, runtimeSnapshot) {
     };
   }
 
-  // Default fallback for recognized subcommands
-  return { decision: 'allow' };
+  // 8. Remaining real dispatcher subcommands (read/inspect/state-advance) are safe
+  // regardless of phase — cliOperations.ts itself re-validates state on each of these.
+  if (sub === 'next' || sub === 'start' || sub === 'verify' || sub === 'review') {
+    return { decision: 'allow' };
+  }
+
+  // Unrecognized subcommand: fail closed instead of assuming it is read-only-safe.
+  // The real CLI dispatcher (cliOperations.ts) denies unknown subcommands too, but
+  // this pre-check must not tell the model an unknown command was fine to run.
+  return {
+    decision: 'deny',
+    reason_code: 'UNRECOGNIZED_CLI_SUBCOMMAND',
+    message: `Subcommand CLI không được nhận diện: "${operation.subcommand}".`,
+  };
 }

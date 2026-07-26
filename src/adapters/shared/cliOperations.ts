@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { join, relative, dirname } from 'path';
+import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
 import {
   inspectRuntimeHealth,
@@ -29,11 +29,14 @@ import {
   initializeInterviewStore,
   ensureCanonicalStore,
   commitInterviewAnswer,
-  emitTree,
+  activateTier1Emit,
+  completeTier1Activation,
+  evaluateBuildReadiness,
   ExecutionState,
+  BlockRecord,
 } from '../../core/index.js';
 import { renderNextStep } from './renderNextStep.js';
-import { CliResultEnvelope } from './cliResult.js';
+import { CliResultEnvelope, redactInternalError } from './cliResult.js';
 
 function getArg(argv: string[], flag: string): string | undefined {
   const idx = argv.indexOf(flag);
@@ -197,7 +200,7 @@ function handleInit(workspaceRoot: string): CliResultEnvelope {
       operation: 'init',
       reason_code: 'INIT_FAILED',
       severity: 'error',
-      message: `Lỗi khởi tạo trạng thái: ${(err as Error).message}`,
+      message: `Lỗi khởi tạo trạng thái: ${redactInternalError((err as Error).message)}`,
       runtime_version: '6.0.0',
     };
   }
@@ -208,6 +211,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
   const capabilityToken = getArg(argv, '--capability-token');
   const answerText = getArg(argv, '--answer');
   const slotsFileArg = getArg(argv, '--slots-file');
+  const ackWarnings = argv.includes('--ack-warnings');
 
   if (!capabilityToken) {
     return {
@@ -246,7 +250,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
     }
   }
 
-  const result = commitInterviewAnswer(workspaceRoot, { capabilityToken, branchChoice, answerText });
+  const result = commitInterviewAnswer(workspaceRoot, { capabilityToken, branchChoice, answerText, ackWarnings });
 
   if (!result.ok) {
     if (result.reason_code === 'STORE_MISSING') {
@@ -310,7 +314,7 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
         operation: 'validate',
         reason_code: 'VALIDATION_FAILED',
         severity: 'error',
-        message: `Lỗi validate kế hoạch: ${(err as Error).message}`,
+        message: `Lỗi validate kế hoạch: ${redactInternalError((err as Error).message)}`,
         runtime_version: '6.0.0',
       };
     }
@@ -387,7 +391,7 @@ function handleRepair(workspaceRoot: string): CliResultEnvelope {
       operation: 'repair',
       reason_code: 'REPAIR_FAILED',
       severity: 'error',
-      message: `Lỗi khôi phục trạng thái: ${(err as Error).message}`,
+      message: `Lỗi khôi phục trạng thái: ${redactInternalError((err as Error).message)}`,
       runtime_version: '6.0.0',
     };
   }
@@ -430,7 +434,6 @@ function handleEmit(workspaceRoot: string): CliResultEnvelope {
     };
   }
 
-  const templatesDir = join(workspaceRoot, 'Design/Content/doc-templates');
   const answersDir = join(workspaceRoot, 'Design/.interview');
   let answers: Record<string, string> = {};
   const answersPath = join(answersDir, 'answers.json');
@@ -442,61 +445,44 @@ function handleEmit(workspaceRoot: string): CliResultEnvelope {
     }
   }
 
-  try {
-    const docs = emitTree(answers, branch, templatesDir, { workspaceDir: workspaceRoot });
-    const docsDir = join(workspaceRoot, 'docs');
-    mkdirSync(docsDir, { recursive: true });
-
-    const emittedPaths: string[] = [];
-    for (const doc of docs) {
-      const targetPath = doc.file.startsWith('.design-everything/')
-        ? join(workspaceRoot, doc.file)
-        : join(docsDir, doc.file);
-      mkdirSync(dirname(targetPath), { recursive: true });
-      writeFileSync(targetPath, doc.content, 'utf8');
-      emittedPaths.push(relative(workspaceRoot, targetPath).replace(/\\/g, '/'));
-    }
-
-    return {
-      ok: true,
-      operation: 'emit',
-      reason_code: 'EMIT_SUCCESS',
-      severity: 'info',
-      message: 'Xuất bản tài liệu thiết kế thành công.',
-      data: { emitted_files: emittedPaths },
-      next_command: 'node adapter/claude-code/cli.mjs status',
-      runtime_version: '6.0.0',
-    };
-  } catch (err: unknown) {
-    const manifestPath = join(workspaceRoot, '.design-everything/tier1-manifest.json');
-    if (existsSync(manifestPath)) {
-      try {
-        const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-        const paths = manifest.artifacts ? manifest.artifacts.map((a: { path: string }) => a.path) : [];
-        return {
-          ok: true,
-          operation: 'emit',
-          reason_code: 'EMIT_SUCCESS',
-          severity: 'info',
-          message: 'Xuất bản tài liệu thiết kế thành công.',
-          data: { emitted_files: paths, manifest },
-          next_command: 'node adapter/claude-code/cli.mjs status',
-          runtime_version: '6.0.0',
-        };
-      } catch {
-        // Fallback
-      }
-    }
-
+  // P7.1 — the sole production authority for tier-1 emit is
+  // activateTier1Emit's render->stage->validate->activate transaction
+  // kernel. There is no direct writeFileSync loop here anymore, and no
+  // catch branch that turns a thrown render/validation error into a
+  // fabricated success by reading a stale manifest.
+  const result = activateTier1Emit(workspaceRoot, answers, branch);
+  if (!result.ok) {
     return {
       ok: false,
       operation: 'emit',
-      reason_code: 'EMIT_FAILED',
+      reason_code: result.reason_code,
       severity: 'error',
-      message: `Lỗi xuất bản tài liệu: ${(err as Error).message}`,
+      message: result.message,
+      data: 'issues' in result && result.issues ? { issues: result.issues } : undefined,
       runtime_version: '6.0.0',
     };
   }
+
+  // P3.1 — a successful tier-1 activation must always hand off into
+  // execution-state.json at plan-validating. completeTier1Activation is
+  // idempotent: it never resets state that has already moved past
+  // plan-validating from a prior emit.
+  completeTier1Activation(workspaceRoot);
+
+  return {
+    ok: true,
+    operation: 'emit',
+    reason_code: result.reason_code,
+    severity: 'info',
+    message: 'Xuất bản tài liệu thiết kế thành công.',
+    data: {
+      emitted_files: result.emitted_files,
+      manifest_generation_id: result.manifest_generation_id,
+      warnings: result.warnings,
+    },
+    next_command: 'node adapter/claude-code/cli.mjs status',
+    runtime_version: '6.0.0',
+  };
 }
 
 function handleNext(workspaceRoot: string): CliResultEnvelope {
@@ -530,6 +516,37 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
   let v3Plan: any;
   try {
     execState = loadExecutionState(execStatePath);
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      operation: 'next',
+      reason_code: 'STALE_SNAPSHOT',
+      severity: 'error',
+      message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
+      next_command: 'node adapter/claude-code/cli.mjs validate',
+      runtime_version: '6.0.0',
+    };
+  }
+
+  // P3.1 — evaluateBuildReadiness is the single handoff authority for
+  // "is this execution state actually ready for build tasks": a
+  // just-created plan-validating state is guaranteed to fail the digest
+  // check below, so surface its real reason (PLAN_VALIDATION_REQUIRED)
+  // instead of the generic snapshot-staleness error.
+  const readiness = evaluateBuildReadiness({ phase: execState.phase, branch: null }, execState);
+  if (!readiness.ready && readiness.reason_code === 'PLAN_VALIDATION_REQUIRED') {
+    return {
+      ok: false,
+      operation: 'next',
+      reason_code: readiness.reason_code,
+      severity: 'error',
+      message: readiness.message,
+      next_command: readiness.next_command,
+      runtime_version: '6.0.0',
+    };
+  }
+
+  try {
     v3Plan = JSON.parse(readFileSync(execPlanPath, 'utf8'));
     const emittedDocs = loadEmittedDocs(workspaceRoot, execPlanPath);
     assertValidatedSnapshot({ docs: emittedDocs, plan: v3Plan, state: execState });
@@ -540,7 +557,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
       operation: 'next',
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
-      message: `Xác thực Snapshot thất bại: ${(err as Error).message}`,
+      message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
       next_command: 'node adapter/claude-code/cli.mjs validate',
       runtime_version: '6.0.0',
     };
@@ -633,7 +650,7 @@ function handleStart(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       operation: 'start',
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
-      message: `Xác thực Snapshot thất bại: ${(err as Error).message}`,
+      message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
       next_command: 'node adapter/claude-code/cli.mjs validate',
       runtime_version: '6.0.0',
     };
@@ -690,7 +707,7 @@ function handleStart(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       operation: 'start',
       reason_code: 'START_FAILED',
       severity: 'error',
-      message: (err as Error).message,
+      message: redactInternalError((err as Error).message),
       runtime_version: '6.0.0',
     };
   }
@@ -749,7 +766,7 @@ async function handleVerify(workspaceRoot: string, argv: string[]): Promise<CliR
       operation: 'verify',
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
-      message: (err as Error).message,
+      message: redactInternalError((err as Error).message),
       runtime_version: '6.0.0',
     };
   }
@@ -770,7 +787,7 @@ async function handleVerify(workspaceRoot: string, argv: string[]): Promise<CliR
       operation: 'verify',
       reason_code: 'VERIFICATION_FAILED',
       severity: 'error',
-      message: (err as Error).message,
+      message: redactInternalError((err as Error).message),
       runtime_version: '6.0.0',
     };
   }
@@ -804,7 +821,16 @@ async function handleVerify(workspaceRoot: string, argv: string[]): Promise<CliR
       };
       promoted = true;
     } catch (e: unknown) {
-      nextState = { ...nextState, phase: 'blocked' as const, block_reason: `Plan promotion failed: ${(e as Error).message}`, updated_at: new Date().toISOString() };
+      const blockRecord: BlockRecord = {
+        kind: 'artifact-integrity',
+        reason_code: 'PLAN_PROMOTION_FAILED',
+        origin_phase: nextState.phase,
+        task_id: nextState.active_task,
+        recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T3-verify',
+        detail: `Plan promotion failed: ${(e as Error).message}`,
+        created_at: new Date().toISOString(),
+      };
+      nextState = { ...nextState, phase: 'blocked' as const, block_reason: blockRecord, updated_at: new Date().toISOString() };
     }
   }
 

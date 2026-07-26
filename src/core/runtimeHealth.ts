@@ -149,11 +149,14 @@ export function authorizeRecovery(
   }
 
   const allowedRecoveryCmds = report.issues.map((i) => i.safe_next_command);
-  // Only the forward direction is safe: the attempted action must contain
-  // the FULL allowed command. The reverse (`cmd.includes(attemptedAction)`)
-  // let any short attemptedAction — even a single word like "node" — match
-  // against a long safe command and get authorized (bypass).
-  const isAllowed = allowedRecoveryCmds.some((cmd) => attemptedAction.includes(cmd));
+  // Exact match only (modulo surrounding whitespace). A substring/contains
+  // check in either direction is unsafe: `cmd.includes(attemptedAction)` lets
+  // a trivial attemptedAction like "node" match any long safe command, and
+  // `attemptedAction.includes(cmd)` lets an attacker pad an arbitrary
+  // prefix/suffix (e.g. "rm -rf / && <safe command>") around a valid command
+  // and still get authorized.
+  const trimmedAttempt = attemptedAction.trim();
+  const isAllowed = allowedRecoveryCmds.some((cmd) => trimmedAttempt === cmd.trim());
 
   if (isAllowed) {
     return { authorized: true, reason_code: 'RECOVERY_AUTHORIZED', message: 'Recovery command authorized.' };

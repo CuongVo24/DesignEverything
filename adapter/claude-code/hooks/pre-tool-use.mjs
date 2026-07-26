@@ -45,7 +45,20 @@ if (coreTool === 'Bash') {
     process.exit(0);
   }
   if (cliResolution.outcome === 'exact-operation') {
-    const auth = authorizeCliOperation(cliResolution, null);
+    // Load the real canonical phase instead of always deciding on a null snapshot.
+    // A load failure (corrupt/missing store) falls back to `null`, which
+    // authorizeCliOperation already treats as a safe interview-phase default —
+    // that preserves prior behavior for a truly broken workspace instead of
+    // locking the user out of `init`/`repair`.
+    let runtimeSnapshot = null;
+    try {
+      const { loadInterviewStore } = await import(pathToFileURL(resolveModule('core/index.js')).href);
+      const envelope = loadInterviewStore(workspaceRoot);
+      runtimeSnapshot = { progress: envelope.payload.progress };
+    } catch {
+      runtimeSnapshot = null;
+    }
+    const auth = authorizeCliOperation(cliResolution, runtimeSnapshot);
     if (auth.decision === 'deny') {
       emitJson({
         hookSpecificOutput: {
@@ -75,7 +88,12 @@ try {
   const { onPreToolUse } = await import(
     pathToFileURL(resolveModule('adapters/claude/preToolUse.js')).href
   );
-  const result = onPreToolUse({ workspaceRoot, tool: coreTool, toolInput: normalizedInput });
+  const result = onPreToolUse({
+    workspaceRoot,
+    tool: coreTool,
+    toolInput: normalizedInput,
+    sessionId: typeof input.session_id === 'string' ? input.session_id : undefined,
+  });
 
   if (result.decision === 'deny') {
     emitJson({

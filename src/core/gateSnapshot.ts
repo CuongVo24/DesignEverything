@@ -51,14 +51,14 @@ export function buildGateSnapshot(
           }
           sha256 = createHash('sha256').update(content).digest('hex');
         }
+        // A directory (or any non-regular-file entry) at this path is never
+        // treated as an existing artifact.
       } catch {
-        // Ignore read errors
+        // Unreadable -> fail closed as missing, never assume existence.
       }
-    } else {
-      // In-memory or simulated string list
-      exists = true;
-      nonEmpty = true;
     }
+    // A path that does not exist on disk is always exists=false/nonEmpty=false
+    // — it must never be assumed present just because the caller listed it.
 
     artifacts[key] = {
       canonicalPath: key,

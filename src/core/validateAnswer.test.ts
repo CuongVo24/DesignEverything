@@ -65,4 +65,47 @@ describe('B3a — Answer and slot validation engine contract (validateAnswer)', 
     expect(res.outcome).toBe('valid');
     expect(res.reason_code).toBe('VALID_ANSWER');
   });
+
+  test('P6.1 — rejects an answer that does not match the contract pattern', () => {
+    const contract: AnswerContract = {
+      required: true,
+      min_trimmed_chars: 5,
+      pattern: 'must',
+      warning_rules: [],
+    };
+
+    const bad = validateAnswer(contract, 'Should: nice logging only.');
+    expect(bad.outcome).toBe('invalid');
+    expect(bad.reason_code).toBe('PATTERN_VIOLATION');
+
+    const good = validateAnswer(contract, 'Must: run the main command.');
+    expect(good.outcome).toBe('valid');
+  });
+
+  test('P6.1 — rejects an answer outside the contract enum_values', () => {
+    const contract: AnswerContract = {
+      required: true,
+      min_trimmed_chars: 0,
+      enum_values: ['web', 'mobile', 'hybrid', 'cli'],
+      warning_rules: [],
+    };
+
+    const bad = validateAnswer(contract, 'desktop');
+    expect(bad.outcome).toBe('invalid');
+    expect(bad.reason_code).toBe('ENUM_VIOLATION');
+
+    const good = validateAnswer(contract, 'cli');
+    expect(good.outcome).toBe('valid');
+  });
+
+  test('P6.1 — an explicitly optional contract (required: false) allows an empty answer', () => {
+    const contract: AnswerContract = {
+      required: false,
+      min_trimmed_chars: 0,
+      warning_rules: [],
+    };
+
+    const res = validateAnswer(contract, '');
+    expect(res.outcome).toBe('valid');
+  });
 });

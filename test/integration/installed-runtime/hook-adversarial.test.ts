@@ -169,6 +169,46 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(replay.reason_code).toBe('TURN_CAPABILITY_REPLAY');
   });
 
+  it('P8 — PreToolUse denies an unrecognized CLI subcommand instead of defaulting to allow', () => {
+    const res = runHook(PRE_TOOL_HOOK, {
+      cwd: tmpDir,
+      tool_name: 'Bash',
+      tool_input: { command: 'node adapter/claude-code/cli.mjs totally-not-a-real-subcommand' },
+    });
+    expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(res?.hookSpecificOutput.permissionDecisionReason).toContain('totally-not-a-real-subcommand');
+  });
+
+  it('P8 — PreToolUse authorizes CLI deepen from the real canonical phase, not a hardcoded interview default', () => {
+    // Prior to this fix, authorizeCliOperation was always called with a null
+    // runtime snapshot, so `deepen` was denied unconditionally regardless of
+    // the workspace's real phase. Seed a post-interview phase and confirm the
+    // real canonical phase is what the decision is now based on.
+    const progress = {
+      version: '4.0.0',
+      phase: 'ready-to-build',
+      branch: 'web',
+      calibrate_mode: 'fast',
+      current_step: null,
+      answered: ['S0', 'S1'],
+      emitted_docs: ['docs/01-vision.md'],
+      gates_passed: ['interview_done'],
+      last_user_turn_id: 'turn-1',
+      answered_len_at_last_turn: 2,
+      updated_at: new Date().toISOString(),
+    };
+    writeFileSync(join(tmpDir, 'progress.json'), JSON.stringify(progress, null, 2), 'utf8');
+
+    // Allow produces no stdout at all (early process.exit(0)), so a null
+    // result IS the positive assertion here — a deny would emit JSON.
+    const res = runHook(PRE_TOOL_HOOK, {
+      cwd: tmpDir,
+      tool_name: 'Bash',
+      tool_input: { command: 'node adapter/claude-code/cli.mjs deepen --module m1' },
+    });
+    expect(res).toBeNull();
+  });
+
   // --- Category B: Managed File Tampering Bypasses ---
 
   it('X05 — should deny direct Write to progress.json', () => {

@@ -120,6 +120,13 @@ describe('B1d — Typed blocked reason and transition contract', () => {
     expect(rem.next_command).toBe('/build');
   });
 
+  test('allowedRemediation does not blanket-allow when phase is blocked but block_reason is missing', () => {
+    const state = { ...initExecutionState(), phase: 'blocked' as const, block_reason: null };
+    const rem = allowedRemediation(state);
+    expect(rem.allowed_paths).not.toContain('*');
+    expect(rem.allowed_actions).not.toContain('*');
+  });
+
   test('renderNextStep outputs recoverable_by from BlockRecord', () => {
     let state = initExecutionState();
     state = blockExecution(state, {

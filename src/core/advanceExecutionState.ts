@@ -249,11 +249,20 @@ export function applyReviewOutcome(
   if (breakTaskIds.length === 0) {
     return closeFeatureReview({ ...state, open_break_tasks: [] }, milestoneId);
   }
+  const blockRecord: BlockRecord = {
+    kind: 'review-incomplete',
+    reason_code: 'FEATURE_HAS_OPEN_BREAK_TASKS',
+    origin_phase: 'reviewing',
+    task_id: null,
+    recoverable_by: `node adapter/claude-code/cli.mjs review --milestone ${milestoneId}`,
+    detail: `Feature ${milestoneId} có ${breakTaskIds.length} break-task chưa xử lý; chưa được coi là done.`,
+    created_at: new Date().toISOString(),
+  };
   return {
     ...state,
     phase: 'reviewing',
     open_break_tasks: breakTaskIds,
-    block_reason: `Feature ${milestoneId} có ${breakTaskIds.length} break-task chưa xử lý; chưa được coi là done.`,
+    block_reason: blockRecord,
     updated_at: new Date().toISOString(),
   };
 }
@@ -438,20 +447,39 @@ export function recordEvidence(
     }
 
     const failurePolicy = activeTaskCard?.failure_policy || 'abort';
+    const verifyCommand = `node adapter/claude-code/cli.mjs verify --task ${state.active_task ?? ''}`;
     if (failurePolicy === 'abort') {
+      const blockRecord: BlockRecord = {
+        kind: 'verification-failed',
+        reason_code: 'TASK_COMMAND_FAILED_ABORT_POLICY',
+        origin_phase: state.phase,
+        task_id: state.active_task,
+        recoverable_by: verifyCommand,
+        detail: `Task verification failed under abort policy. Command failed with exit code ${record.exit_code}.`,
+        created_at: new Date().toISOString(),
+      };
       return {
         ...state,
         phase: 'blocked',
         evidence: updatedEvidence,
-        block_reason: `Task verification failed under abort policy. Command failed with exit code ${record.exit_code}.`,
+        block_reason: blockRecord,
         updated_at: new Date().toISOString(),
       };
     } else {
+      const blockRecord: BlockRecord = {
+        kind: 'verification-failed',
+        reason_code: 'TASK_COMMAND_FAILED',
+        origin_phase: state.phase,
+        task_id: state.active_task,
+        recoverable_by: verifyCommand,
+        detail: `Task verification command failed with exit code ${record.exit_code}.`,
+        created_at: new Date().toISOString(),
+      };
       return {
         ...state,
         phase: 'repairing',
         evidence: updatedEvidence,
-        block_reason: `Task verification command failed with exit code ${record.exit_code}.`,
+        block_reason: blockRecord,
         updated_at: new Date().toISOString(),
       };
     }
@@ -461,6 +489,31 @@ export function recordEvidence(
 export function completeTier1Emit(workspaceRoot: string): ExecutionState {
   const execStatePath = `${workspaceRoot}/.design-everything/execution-state.json`;
   const state = initExecutionState();
+  saveExecutionState(execStatePath, state);
+  return state;
+}
+
+/**
+ * P3.1 — the handoff authority a successful tier-1 activation must call.
+ * Idempotent by design: a tier-1 re-emit (design doc edits after the build
+ * has already started) must never clobber execution state that has already
+ * moved past plan-validating — that would silently discard in-flight build
+ * progress/evidence. Only when no execution state exists yet does this
+ * create one, bound to the digests of what was just activated.
+ */
+export function completeTier1Activation(
+  workspaceRoot: string,
+  opts: { planDigest?: string; docsDigest?: string } = {}
+): ExecutionState {
+  const execStatePath = `${workspaceRoot}/.design-everything/execution-state.json`;
+  if (existsSync(execStatePath)) {
+    return loadExecutionState(execStatePath);
+  }
+  const state: ExecutionState = {
+    ...initExecutionState(),
+    validated_plan_digest: opts.planDigest ?? '',
+    validated_docs_digest: opts.docsDigest ?? '',
+  };
   saveExecutionState(execStatePath, state);
   return state;
 }
@@ -557,8 +610,15 @@ export function allowedRemediation(state: ExecutionState): {
   allowed_paths: string[];
   next_command: string;
 } {
-  if (state.phase !== 'blocked' || !state.block_reason) {
+  if (state.phase !== 'blocked') {
     return { allowed_actions: ['*'], allowed_paths: ['*'], next_command: '' };
+  }
+
+  // A blocked phase with no block reason at all (typed or legacy string) is
+  // a data-integrity gap, not "nothing to restrict" — fail closed to
+  // read-only instead of granting blanket remediation.
+  if (!state.block_reason) {
+    return { allowed_actions: ['read'], allowed_paths: [], next_command: '/build' };
   }
 
   const block = typeof state.block_reason === 'object' ? state.block_reason : null;

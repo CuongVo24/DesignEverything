@@ -133,4 +133,207 @@ describe('evaluatePreAction core engine', () => {
     expect(decision.reason_code).toBe('unsupported-tool');
     expect(decision.enforcement).toBe('unsupported');
   });
+
+  function baseExecState(overrides: Partial<import('./schemas/index.js').ExecutionState>) {
+    return {
+      version: '1.0.0',
+      phase: 'plan-validating' as const,
+      active_task: null,
+      active_milestone: null,
+      completed_tasks: [],
+      evidence: [],
+      block_reason: null,
+      validated_plan_digest: 'digest',
+      validated_docs_digest: 'digest',
+      validation_result_digest: 'digest',
+      plan_revision: 1,
+      amendment_history: [],
+      open_break_tasks: [],
+      reviewed_milestones: [],
+      updated_at: new Date().toISOString(),
+      ...overrides,
+    };
+  }
+
+  describe('P4.3 — shell classifier must be the sole authority (no basename safe-list bypass)', () => {
+    test('plan-validating phase denies git branch -D via the real classifier, not a basename safe-list', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['git', 'branch', '-D', 'feature'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'plan-validating' }),
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('GIT_BRANCH_MUTATION_DENIED');
+    });
+
+    test('active-task phase denies find -delete via the real classifier, not a basename safe-list', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['find', '.', '-name', '*.ts', '-delete'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'executing', active_task: 'T1' }),
+        plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      // Not proven read-only (real classifier denies -delete) and not an
+      // exact-registered verification command either -> generic deny, never
+      // the old basename safe-list "read-only-allowed".
+      expect(decision.reason_code).not.toBe('read-only-allowed');
+    });
+
+    test('active-task write path matching does not let regex metacharacters in allowed_paths create false-positive matches', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['src/aXb/file.ts'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'executing', active_task: 'T1' }),
+        plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/a.b/**'], commands: [] } } },
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('path-outside-scope');
+    });
+  });
+
+  describe('P3.2 — blocked-phase actions must follow allowedRemediation, not a hardcoded deny-all', () => {
+    function blockedState(block: import('./schemas/index.js').BlockRecord | null) {
+      return baseExecState({ phase: 'blocked', block_reason: block });
+    }
+
+    test('write inside the declared remediation scope for a validation block is allowed, not denied outright', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['Design/02-scope.md'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: blockedState({
+          kind: 'validation',
+          reason_code: 'MISSING_MUST_SCOPE',
+          origin_phase: 'plan-validating',
+          task_id: null,
+          recoverable_by: '/build',
+          detail: '02-scope.md is missing Must items.',
+          created_at: new Date().toISOString(),
+        }),
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('allow');
+      expect(decision.reason_code).toBe('blocked-remediation-write-allowed');
+    });
+
+    test('write outside the declared remediation scope is still denied while blocked', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['src/index.ts'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: blockedState({
+          kind: 'validation',
+          reason_code: 'MISSING_MUST_SCOPE',
+          origin_phase: 'plan-validating',
+          task_id: null,
+          recoverable_by: '/build',
+          detail: '02-scope.md is missing Must items.',
+          created_at: new Date().toISOString(),
+        }),
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('state-blocked');
+    });
+
+    test('the exact recoverable_by verify command is allowed for a verification-failed block', () => {
+      const recoverCmd = 'node adapter/claude-code/cli.mjs verify --task T1-setup';
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: recoverCmd.split(' '),
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: blockedState({
+          kind: 'verification-failed',
+          reason_code: 'TASK_COMMAND_FAILED',
+          origin_phase: 'verifying',
+          task_id: 'T1-setup',
+          recoverable_by: recoverCmd,
+          detail: 'Exit code 1 on npm test',
+          created_at: new Date().toISOString(),
+        }),
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('allow');
+      expect(decision.reason_code).toBe('blocked-remediation-verify-allowed');
+    });
+
+    test('a lookalike/padded shell command is still denied, even inside a verification-failed block', () => {
+      const recoverCmd = 'node adapter/claude-code/cli.mjs verify --task T1-setup';
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: [...recoverCmd.split(' '), '&&', 'rm', '-rf', '/'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: blockedState({
+          kind: 'verification-failed',
+          reason_code: 'TASK_COMMAND_FAILED',
+          origin_phase: 'verifying',
+          task_id: 'T1-setup',
+          recoverable_by: recoverCmd,
+          detail: 'Exit code 1 on npm test',
+          created_at: new Date().toISOString(),
+        }),
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+    });
+
+    test('a blocked phase with no block_reason at all fails closed to read-only, never a blanket allow', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['src/index.ts'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: blockedState(null),
+      };
+
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('state-blocked');
+    });
+  });
 });

@@ -78,7 +78,8 @@ export function renderProgressLog(input: RenderProgressLogInput): string {
   lines.push(`| Số lần vấp (verify fail) | ${failures.length} |`);
   lines.push(`| Task đang mở | ${state.active_task ?? '—'} |`);
   if (state.block_reason) {
-    lines.push(`| Đang bị chặn vì | ${state.block_reason} |`);
+    const blockText = typeof state.block_reason === 'object' ? state.block_reason.detail : state.block_reason;
+    lines.push(`| Đang bị chặn vì | ${blockText} |`);
   }
   lines.push(`| Cập nhật lúc | ${state.updated_at} |`);
   lines.push('');

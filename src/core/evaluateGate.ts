@@ -1,8 +1,5 @@
 import type { Gate, GatePolicy, ExecutionState } from './schemas/index.js';
-import { basename } from 'path';
 import { GateSnapshot, buildGateSnapshot } from './gateSnapshot.js';
-
-const getBasename = (p: string): string => basename(p.replace(/\\/g, '/'));
 
 export function evaluateGate(
   gate: Gate,
@@ -21,15 +18,18 @@ export function evaluateGate(
 
   const missing: string[] = [];
 
-  // Check required docs by exact path match or basename fallback if exact not found
+  // Check required docs by exact canonical path match. `gate-policy.yaml`
+  // declares requires_docs as bare filenames (e.g. "00-vision.md"), while
+  // the engine always emits them flatly under the one well-known `docs/`
+  // directory (see evaluatePreAction's docsDir / emit.ts templates) — so a
+  // bare filename is tried both as-is and joined with that single fixed
+  // canonical prefix. This is NOT a basename-anywhere fallback: it is one
+  // specific, hardcoded location, so a lookalike file living under an
+  // unrelated directory still cannot satisfy the requirement.
   for (const reqDoc of gate.requires_docs) {
     const normReq = reqDoc.replace(/\\/g, '/');
-    const reqBasename = getBasename(normReq);
-
-    // Look for exact key match or basename match in snapshot artifacts
-    const foundArtifact = Object.values(snapshot.artifacts).find(
-      (art) => art.canonicalPath === normReq || art.canonicalPath.endsWith(normReq) || getBasename(art.canonicalPath) === reqBasename
-    );
+    const candidateKeys = normReq.includes('/') ? [normReq] : [normReq, `docs/${normReq}`];
+    const foundArtifact = candidateKeys.map((k) => snapshot.artifacts[k]).find((a) => a !== undefined);
 
     if (!foundArtifact || !foundArtifact.exists || !foundArtifact.nonEmpty) {
       missing.push(reqDoc);
@@ -63,11 +63,11 @@ export function evaluateGate(
 export function isBlocked(
   gate: Gate,
   tool: 'Write' | 'Edit' | 'Bash',
-  existingDocs: string[],
+  docsOrSnapshot: string[] | GateSnapshot,
   validationPass?: boolean,
   completedTasks?: string[]
 ): boolean {
-  const { open } = evaluateGate(gate, existingDocs, validationPass, completedTasks);
+  const { open } = evaluateGate(gate, docsOrSnapshot, validationPass, completedTasks);
   if (open) {
     return false;
   }
@@ -76,13 +76,13 @@ export function isBlocked(
 
 export function passedGates(
   policy: GatePolicy,
-  existingDocs: string[],
+  docsOrSnapshot: string[] | GateSnapshot,
   validationPass?: boolean,
   completedTasks?: string[]
 ): string[] {
   const passed: string[] = [];
   for (const gate of policy.gates) {
-    const { open } = evaluateGate(gate, existingDocs, validationPass, completedTasks);
+    const { open } = evaluateGate(gate, docsOrSnapshot, validationPass, completedTasks);
     if (open) {
       passed.push(gate.id);
     }
@@ -99,7 +99,13 @@ export function checkExecutionGate(
   allowedPathsFromPlan?: string[]
 ): { allowed: boolean; reason?: string } {
   if (!state) {
-    return { allowed: true };
+    // P5.1 — a missing execution state must fail closed. The old
+    // blanket-allow assumed "no state yet" meant "nothing to gate", but the
+    // real production authority (evaluatePreAction) never grants a write
+    // this way; it always resolves interview-phase writes through explicit
+    // doc-path/gate-policy checks. Mirroring a bare allow here would let a
+    // legacy caller of this compatibility helper bypass that authority.
+    return { allowed: false, reason: 'EXECUTION_STATE_REQUIRED: no execution state to evaluate against.' };
   }
   const action_kind = tool === 'Bash' ? ('shell' as const) : ('write' as const);
   const target_paths = path ? [path] : [];

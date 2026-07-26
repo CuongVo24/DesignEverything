@@ -27,8 +27,17 @@ export function validateAnswer(
 ): AnswerValidationResult {
   const trimmed = typeof payload === 'string' ? payload.trim() : JSON.stringify(payload).trim();
 
-  // 1. Check for empty/whitespace
+  // 1. Check for empty/whitespace — an explicitly optional contract
+  // (required: false) is the only way to skip this; the schema defaults
+  // `required` to true, so a null/absent contract still enforces it.
   if (trimmed.length === 0) {
+    if (contract && contract.required === false) {
+      return {
+        outcome: 'valid',
+        reason_code: 'VALID_ANSWER',
+        message: 'Câu trả lời hợp lệ (không bắt buộc, để trống).',
+      };
+    }
     return {
       outcome: 'invalid',
       reason_code: 'EMPTY_ANSWER',
@@ -62,7 +71,28 @@ export function validateAnswer(
     };
   }
 
-  // 4. Warning rules check -> needs_user_ack
+  // 4. Enum values check
+  if (contract.enum_values && contract.enum_values.length > 0 && !contract.enum_values.includes(trimmed)) {
+    return {
+      outcome: 'invalid',
+      reason_code: 'ENUM_VIOLATION',
+      message: `Câu trả lời "${trimmed}" không nằm trong danh sách cho phép: ${contract.enum_values.join(', ')}.`,
+    };
+  }
+
+  // 5. Pattern check (must-contain, case-insensitive — mirrors warning_rules)
+  if (contract.pattern) {
+    const regex = new RegExp(contract.pattern, 'i');
+    if (!regex.test(trimmed)) {
+      return {
+        outcome: 'invalid',
+        reason_code: 'PATTERN_VIOLATION',
+        message: `Câu trả lời không khớp mẫu bắt buộc: ${contract.pattern}.`,
+      };
+    }
+  }
+
+  // 6. Warning rules check -> needs_user_ack
   const warnings: string[] = [];
   if (contract.warning_rules && contract.warning_rules.length > 0) {
     for (const rule of contract.warning_rules) {

@@ -1,6 +1,6 @@
-import { expect, test, describe, afterEach, beforeEach } from 'vitest';
+import { expect, test, describe, afterEach, beforeEach, vi } from 'vitest';
 import { onPreToolUse } from './preToolUse.js';
-import { loadInterviewStore } from '../../core/index.js';
+import * as core from '../../core/index.js';
 import { seedCanonicalProgress } from '../../../test/helpers/canonicalProgress.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -141,8 +141,46 @@ describe('onPreToolUse hook', () => {
     expect(result.decision).toBe('allow');
 
     // Verify canonical gates_passed now contains scope-locked
-    const updated = loadInterviewStore(testWorkspaceRoot);
+    const updated = core.loadInterviewStore(testWorkspaceRoot);
     expect(updated.payload.progress.gates_passed).toContain('scope-locked');
+  });
+
+  test('P8 — passes the real host session id through to the Core request instead of a hardcoded value', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+    mkdirSync(docsDir, { recursive: true });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Write',
+        toolInput: { path: 'docs/02-scope.md' },
+        sessionId: 'sess-abc-123',
+      });
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({ session_id: 'sess-abc-123' }),
+        expect.anything()
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('P8 — falls back to "unknown" (not a fixed fake session) when no session id is provided', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+    mkdirSync(docsDir, { recursive: true });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Write',
+        toolInput: { path: 'docs/02-scope.md' },
+      });
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ session_id: 'unknown' }), expect.anything());
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test('should deny path traversal and drives on Write/Edit tools', () => {

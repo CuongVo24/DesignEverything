@@ -128,6 +128,10 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     expect(state.phase).toBe('repairing');
     expect(state.active_task).toBe('T1');
     expect(state.evidence).toHaveLength(1);
+    // P3.2 — block_reason must always be a typed BlockRecord, never a raw string.
+    expect(typeof state.block_reason).toBe('object');
+    expect(state.block_reason).not.toBeNull();
+    expect((state.block_reason as { kind: string }).kind).toBe('verification-failed');
 
     // Duplicate evidence check during repairing phase (so it is not blocked by phase check)
     expect(() => {
@@ -185,6 +189,45 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     expect(state.completed_tasks).toContain('T2');
   });
 
+  test('P3.2 — abort-policy verification failure produces a typed BlockRecord, not a raw string', () => {
+    let state = initExecutionState();
+    state = transitionToReadyToExecute(state, true);
+    state = startTask(state, 'M1', 'T1', plan);
+    state = recordEvidence(state, {
+      task_id: 'T1',
+      command_id: 'test-index',
+      argv: ['npm', 'run', 'test:index'],
+      cwd: null,
+      exit_code: 0,
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: { 'T1-evidence.txt': 'hash-artifact' },
+      captured_at: '2026-07-13T09:00:00.000Z',
+      source: 'runner' as const,
+    }, plan);
+    state = startTask(state, 'M1', 'T2', plan);
+
+    const failEvidence = {
+      task_id: 'T2',
+      command_id: 'test-util',
+      argv: ['npm', 'run', 'test:util'],
+      cwd: null,
+      exit_code: 1,
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {},
+      captured_at: '2026-07-13T10:00:00.000Z',
+      source: 'runner' as const,
+    };
+
+    state = recordEvidence(state, failEvidence, plan);
+    expect(state.phase).toBe('blocked');
+    expect(typeof state.block_reason).toBe('object');
+    expect(state.block_reason).not.toBeNull();
+    expect((state.block_reason as { kind: string; task_id: string | null }).kind).toBe('verification-failed');
+    expect((state.block_reason as { kind: string; task_id: string | null }).task_id).toBe('T2');
+  });
+
   test('should load and save execution state to file system', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'exec-state-test-'));
     const statePath = join(tempDir, 'execution-state.json');
@@ -228,8 +271,11 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     expect(check2.allowed).toBe(false);
     expect(check2.reason).toContain('allows_paths');
 
-    // Null state is allowed
+    // P5.1 — null execution state must fail closed (deny), not blanket-allow.
+    // A missing execution state means the real production authority
+    // (evaluatePreAction) hasn't determined it's safe to write yet; a
+    // blanket allow here would bypass that entirely.
     const check3 = checkExecutionGate(null, policy, 'Write', 'src/util.ts');
-    expect(check3.allowed).toBe(true);
+    expect(check3.allowed).toBe(false);
   });
 });

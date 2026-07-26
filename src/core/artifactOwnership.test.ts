@@ -90,4 +90,39 @@ describe('B2a — Protected artifact ownership policy contract', () => {
     expect(res.decision).toBe('deny');
     expect(res.reason_code).toBe('CAPABILITY_TARGET_MISMATCH');
   });
+
+  describe('P4.2 — exact-path authority (no endsWith/includes substring matching)', () => {
+    test('classifyArtifact does not classify a lookalike path outside the catalog as managed-output via endsWith', () => {
+      const catalog = ['docs/01-vision.md'];
+      // Shares a suffix with the catalog entry but lives in a different
+      // directory entirely — must not be treated as the managed artifact.
+      expect(classifyArtifact('other/docs/01-vision.md', catalog)).toBe('user-owned');
+    });
+
+    test('classifyArtifact does not classify a lookalike path as managed-output via includes', () => {
+      const catalog = ['docs/01-vision.md'];
+      expect(classifyArtifact('notes/docs/01-vision.md-backup/x.txt', catalog)).toBe('user-owned');
+    });
+
+    test('authorizeMutation denies a core-transaction capability whose target merely ends with an allowed path', () => {
+      const cap: InternalMutationCapability = {
+        capability_id: 'cap-456',
+        operation: 'commit_step',
+        target_paths: ['.design-everything/interview-state.json'],
+        issued_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 60000).toISOString(),
+      };
+
+      // 'evil/.design-everything/interview-state.json' ends with the
+      // capability's allowed path but is a different file entirely.
+      const res = authorizeMutation(
+        'write',
+        'core-transaction',
+        'evil/.design-everything/interview-state.json',
+        cap
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('CAPABILITY_TARGET_MISMATCH');
+    });
+  });
 });

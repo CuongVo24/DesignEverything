@@ -1,9 +1,33 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { execSync } from 'child_process';
 
-const __dirname = dirname(fileURLToPath(import.meta.url)); // eslint-disable-line @typescript-eslint/no-unused-vars
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function resolveCorePath() {
+  const roots = [
+    process.env.CLAUDE_PLUGIN_ROOT,
+    process.env.PLUGIN_ROOT,
+    resolve(__dirname, '..'),
+  ].filter(Boolean);
+
+  const candidates = [];
+  for (const root of roots) {
+    candidates.push(join(root, 'core', 'index.js'));
+    candidates.push(join(root, 'dist', 'src', 'core', 'index.js'));
+    candidates.push(join(root, 'dist', 'core', 'index.js'));
+  }
+  candidates.push(resolve(__dirname, '../../../dist/src/core/index.js'));
+  candidates.push(resolve(__dirname, '../../../dist/core/index.js'));
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
 
 async function main() {
   try {
@@ -39,17 +63,12 @@ async function main() {
 
     const allowedPaths = activeTask.allowed_paths || [];
 
-    const matchGlob = (p, glob) => {
-      const normP = p.replace(/\\/g, '/');
-      const normG = glob.replace(/\\/g, '/');
-      if (normP === normG || normP.startsWith(normG + '/')) return true;
-      try {
-        const rStr = normG.replace(/\*\*\//g, '(?:.*/)?').replace(/\*/g, '[^/]*');
-        return new RegExp(`^${rStr}$`).test(normP);
-      } catch {
-        return false;
-      }
-    };
+    const corePath = resolveCorePath();
+    if (!corePath) {
+      console.error('[Audit Error] DesignEverything core runtime was not found next to the plugin; cannot verify allowed_paths for this audit pass.');
+      return;
+    }
+    const { matchesPathPattern } = await import(pathToFileURL(corePath).href);
 
     let modifiedFiles = [];
     try {
@@ -66,7 +85,8 @@ async function main() {
       if (file.startsWith('.design-everything/') || file === 'progress.json' || file.startsWith('docs/') || file.startsWith('Design/')) {
         return false;
       }
-      return !allowedPaths.some((allowedGlob) => matchGlob(file, allowedGlob));
+      const normFile = file.replace(/\\/g, '/');
+      return !allowedPaths.some((allowedGlob) => matchesPathPattern(normFile, allowedGlob));
     });
 
     if (unexpectedFiles.length > 0) {

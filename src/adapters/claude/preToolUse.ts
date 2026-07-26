@@ -8,6 +8,7 @@ export function onPreToolUse(ctx: {
   workspaceRoot: string;
   tool: 'Write' | 'Edit' | 'Bash';
   toolInput: unknown;
+  sessionId?: string;
 }): { decision: 'allow' | 'deny'; message?: string } {
   let actionKind: 'write' | 'read' | 'shell' = 'write';
   const toolName = ctx.tool.toLowerCase();
@@ -59,7 +60,7 @@ export function onPreToolUse(ctx: {
 
   const request: PreActionRequest = {
     runtime: 'claude',
-    session_id: 'default-session',
+    session_id: ctx.sessionId || 'unknown',
     workspace: ctx.workspaceRoot,
     action_kind: actionKind,
     tool_name: toolName,

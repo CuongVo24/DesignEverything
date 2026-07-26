@@ -49,9 +49,11 @@ export function classifyArtifact(path: string, catalogPaths: string[] = []): Art
     return 'interview-scratch';
   }
 
-  // 4. managed-output
-  const normCatalog = catalogPaths.map((p) => normalizePath(p));
-  if (normCatalog.some((cp) => norm.endsWith(cp) || norm.includes(cp))) {
+  // 4. managed-output — exact canonical path membership only. A
+  // suffix/substring match here would let a lookalike path in an unrelated
+  // directory (e.g. "other/docs/01-vision.md") impersonate a catalog entry.
+  const normCatalog = new Set(catalogPaths.map((p) => normalizePath(p)));
+  if (normCatalog.has(norm)) {
     return 'managed-output';
   }
 
@@ -99,8 +101,11 @@ export function authorizeMutation(
   // Protected classes: engine-state, engine-policy, managed-output
   if (actor === 'core-transaction' && capability) {
     const normTarget = normalizePath(targetPath);
-    const normAllowed = capability.target_paths.map((p) => normalizePath(p));
-    const isTargetAllowed = normAllowed.some((ap) => normTarget.endsWith(ap) || normTarget.includes(ap));
+    // Exact path-set membership only — a suffix/substring match would let a
+    // capability scoped to e.g. ".design-everything/interview-state.json"
+    // also authorize writes to "evil/.design-everything/interview-state.json".
+    const normAllowed = new Set(capability.target_paths.map((p) => normalizePath(p)));
+    const isTargetAllowed = normAllowed.has(normTarget);
 
     if (isTargetAllowed) {
       return {

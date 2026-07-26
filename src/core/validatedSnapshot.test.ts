@@ -90,7 +90,11 @@ describe('validatedSnapshot checks', () => {
       assertValidatedSnapshot({ docs, plan, state });
     }).toThrow(/snapshot-stale/i);
     expect(state.phase).toBe('blocked');
-    expect(state.block_reason).toContain('đã bị thay đổi');
+    // P3.2 — block_reason must be a typed BlockRecord, not a raw string.
+    expect(typeof state.block_reason).toBe('object');
+    const block = state.block_reason as unknown as { kind: string; detail: string };
+    expect(block.kind).toBe('snapshot-stale');
+    expect(block.detail).toContain('đã bị thay đổi');
   });
 
   test('should fail assertValidatedSnapshot and set state to blocked when docs digest mismatches', () => {
@@ -102,5 +106,7 @@ describe('validatedSnapshot checks', () => {
       assertValidatedSnapshot({ docs, plan, state });
     }).toThrow(/snapshot-stale/i);
     expect(state.phase).toBe('blocked');
+    expect(typeof state.block_reason).toBe('object');
+    expect((state.block_reason as unknown as { kind: string }).kind).toBe('snapshot-stale');
   });
 });

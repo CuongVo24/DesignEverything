@@ -34,6 +34,7 @@ export const blockKindSchema = z.enum([
   'policy-corrupt',
   'verification-failed',
   'verification-aborted',
+  'review-incomplete',
 ]);
 export type BlockKind = z.infer<typeof blockKindSchema>;
 

@@ -72,6 +72,10 @@ describe('B17a review state machine (fail-closed)', () => {
     const withBreak = applyReviewOutcome(reviewing, 'M4-search-recipe', ['C-search-recipe-fix-failing-tests']);
     expect(withBreak.phase).toBe('reviewing');
     expect(withBreak.open_break_tasks).toContain('C-search-recipe-fix-failing-tests');
+    // P3.2 — block_reason must always be a typed BlockRecord, never a raw string.
+    expect(typeof withBreak.block_reason).toBe('object');
+    expect(withBreak.block_reason).not.toBeNull();
+    expect((withBreak.block_reason as { kind: string }).kind).toBe('review-incomplete');
     // Fail-closed: đóng khi break-task chưa completed → throw
     expect(() => closeFeatureReview(withBreak, 'M4-search-recipe')).toThrow();
     // Sau khi break-task xong → đóng được

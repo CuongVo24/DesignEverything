@@ -150,7 +150,8 @@ describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
 
     expect(state.phase).toBe('repairing');
     expect(state.evidence[0].exit_code).toBe(1);
-    expect(state.block_reason).toContain('failed with exit code 1');
+    expect(typeof state.block_reason).toBe('object');
+    expect((state.block_reason as unknown as { detail: string }).detail).toContain('failed with exit code 1');
   });
 
   test('should fail when output includes expectation is not met', async () => {

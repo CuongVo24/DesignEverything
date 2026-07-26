@@ -28,7 +28,12 @@ export { loadQuestionSlots } from './loadQuestionSlots.js';
 export type { LoadSlotsResult } from './loadQuestionSlots.js';
 export { inspectRuntimeHealth, authorizeRecovery } from './runtimeHealth.js';
 export { runCliOperation } from '../adapters/shared/cliOperations.js';
-export { exitCodeFor, cliResultEnvelopeSchema, type CliResultEnvelope } from '../adapters/shared/cliResult.js';
+export {
+  exitCodeFor,
+  redactInternalError,
+  cliResultEnvelopeSchema,
+  type CliResultEnvelope,
+} from '../adapters/shared/cliResult.js';
 export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
 export type { ArtifactClass } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
@@ -62,6 +67,7 @@ export {
   closeFeatureReview,
   assertNoUnreviewedFeature,
   completeTier1Emit,
+  completeTier1Activation,
   evaluateBuildReadiness,
   blockExecution,
   recoverBlockedExecution,
@@ -152,6 +158,8 @@ export {
   invalidateSnapshotForTier2,
 } from './deepenLifecycle.js';
 export type { DeepenRuntimeSnapshot, CanStartDeepenDecision } from './deepenLifecycle.js';
+export { activateTier1Emit } from './emitTier1.js';
+export type { ActivateTier1EmitResult } from './emitTier1.js';
 
 
 

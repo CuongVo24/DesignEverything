@@ -89,11 +89,16 @@ async function main() {
   try {
     const workspace = payload.cwd || process.cwd();
     // P2.2a: canonical interview-state.json là nguồn thật; progress.json chỉ
-    // còn kiểm tra cho tương thích ngược với workspace chưa migrate.
+    // còn kiểm tra cho tương thích ngược với workspace chưa migrate. P8: một
+    // install-manifest tồn tại (bundle đã cài, chưa có state file nào) cũng
+    // phải bị coi là "đã involved" — nếu không, một project vừa install
+    // xong nhưng chưa init state sẽ bypass hoàn toàn hook này, khác hành vi
+    // với Claude side (xem pre-tool-use.mjs của claude-code).
     if (
       !existsSync(join(workspace, '.design-everything', 'interview-state.json')) &&
       !existsSync(join(workspace, 'progress.json')) &&
-      !existsSync(join(workspace, '.design-everything', 'execution-state.json'))
+      !existsSync(join(workspace, '.design-everything', 'execution-state.json')) &&
+      !existsSync(join(workspace, '.design-everything', 'install-manifest.json'))
     ) {
       allow();
       return;

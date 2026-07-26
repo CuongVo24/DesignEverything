@@ -12,6 +12,19 @@ export const cliResultEnvelopeSchema = z.object({
 });
 export type CliResultEnvelope = z.infer<typeof cliResultEnvelopeSchema>;
 
+// Redacts an uncaught error's raw message before it reaches CLI stdout/stderr.
+// err.message from Node's fs/module errors routinely embeds the full local
+// filesystem path (which on Windows/macOS/Linux includes the OS username),
+// and a rethrown error's message sometimes has a stack trace appended. Only
+// the first line is kept and only path-shaped substrings are stripped —
+// this is deliberately not a general secret scanner.
+export function redactInternalError(rawMessage: string): string {
+  const firstLine = String(rawMessage ?? '').split(/\r?\n/)[0];
+  return firstLine
+    .replace(/[A-Za-z]:[\\/][^\s'"]+/g, '<path>')
+    .replace(/\/(?:home|Users|root)\/[^\s'"]+/g, '<path>');
+}
+
 export function exitCodeFor(result: CliResultEnvelope): number {
   if (result.ok) {
     return 0;

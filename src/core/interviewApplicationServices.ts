@@ -168,7 +168,17 @@ export type CommitInterviewAnswerResult = CommitInterviewAnswerOk | CommitInterv
  */
 export function commitInterviewAnswer(
   workspaceRoot: string,
-  args: { capabilityToken: string; branchChoice?: string; answerText?: string }
+  args: {
+    capabilityToken: string;
+    branchChoice?: string;
+    answerText?: string;
+    /** Explicit re-submission after the caller has shown the user the
+     * warnings from a prior needs_user_ack result. The model can never set
+     * this on the first attempt — it only becomes meaningful once
+     * validateAnswer has already returned needs_user_ack once for this
+     * exact answer text. */
+    ackWarnings?: boolean;
+  }
 ): CommitInterviewAnswerResult {
   let envelope: InterviewStoreEnvelope;
   try {
@@ -187,13 +197,6 @@ export function commitInterviewAnswer(
     };
   }
 
-  if (args.answerText) {
-    const valRes = validateAnswer(null, args.answerText);
-    if (valRes.outcome === 'invalid') {
-      return { ok: false, reason_code: valRes.reason_code, message: valRes.message };
-    }
-  }
-
   const scriptPath = join(workspaceRoot, SCRIPT_REL_PATH);
   let script;
   try {
@@ -204,6 +207,27 @@ export function commitInterviewAnswer(
 
   const progress = envelope.payload.progress;
   const stepId = progress.current_step;
+
+  if (args.answerText) {
+    // P6.1 — the current question's real answer_contract (min length,
+    // pattern, enum, warning_rules from script.yaml) must gate the commit,
+    // not a hardcoded null that only ever catches empty/placeholder text.
+    const question = stepId ? script.questions.find((q) => q.id === stepId) : undefined;
+    const contract = question?.answer_contract ?? null;
+    const valRes = validateAnswer(contract, args.answerText);
+    if (valRes.outcome === 'invalid') {
+      return { ok: false, reason_code: valRes.reason_code, message: valRes.message };
+    }
+    if (valRes.outcome === 'needs_user_ack' && !args.ackWarnings) {
+      return {
+        ok: false,
+        reason_code: 'ANSWER_NEEDS_USER_ACK',
+        message:
+          `${valRes.message} Hỏi lại người dùng và chỉ commit lại với --ack-warnings sau khi họ xác nhận, ` +
+          'không tự ý bỏ qua cảnh báo.',
+      };
+    }
+  }
 
   let updatedProgress: Progress;
   try {

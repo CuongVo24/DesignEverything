@@ -3,12 +3,13 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { loadInterviewStore, transactInterviewStore } from './interviewStore.js';
 import { loadGatePolicy } from './loadGatePolicy.js';
 import { evaluateGate, isBlocked } from './evaluateGate.js';
-import { loadExecutionState } from './advanceExecutionState.js';
+import { buildGateSnapshot } from './gateSnapshot.js';
+import { loadExecutionState, allowedRemediation } from './advanceExecutionState.js';
 import { assertValidatedSnapshot, loadEmittedDocs } from './validatedSnapshot.js';
 import { loadDeepenState } from './deepenState.js';
 import { authorizeMutation } from './artifactOwnership.js';
 import { classifyCommand } from './classifyCommand.js';
-import { canonicalizeWorkspacePath } from './pathPolicy.js';
+import { canonicalizeWorkspacePath, matchesPathPattern } from './pathPolicy.js';
 import { inspectRuntimeHealth } from './runtimeHealth.js';
 import {
   PreActionRequest,
@@ -21,6 +22,20 @@ import {
  * Cảnh báo mềm B20a: module deepen đã opt-in nhưng chưa emit. Best-effort, không
  * bao giờ throw (deepen-state hỏng/thiếu → []). KHÔNG đổi decision/enforcement.
  */
+/**
+ * Proves the invocation is `node <cli.mjs|cli.js>` as the direct script
+ * argument to node — not merely a command whose argv happens to contain the
+ * literal string "cli.mjs"/"cli.js" somewhere (e.g. `node malicious.js
+ * cli.mjs`), which the previous `argv.includes('cli.mjs')` check allowed.
+ */
+function isCliInvocation(argv: string[]): boolean {
+  if (argv.length < 2) return false;
+  const exe = argv[0].toLowerCase().replace(/\.exe$/, '');
+  if (exe !== 'node') return false;
+  const script = argv[1].replace(/\\/g, '/');
+  return script === 'cli.mjs' || script === 'cli.js' || script.endsWith('/cli.mjs') || script.endsWith('/cli.js');
+}
+
 function collectDeepenPending(workspace: string): string[] {
   try {
     const state = loadDeepenState(workspace);
@@ -301,13 +316,21 @@ function evaluatePreActionInner(
       }
     }
 
+    // Build the snapshot once against the real workspace root (not
+    // process.cwd(), which evaluateGate's array-overload would otherwise
+    // fall back to — wrong whenever workspace !== process.cwd(), e.g. any
+    // installed-target or test workspace). Building it explicitly here also
+    // means every gate in the loop below is evaluated against identical
+    // bytes/digests.
+    const gateSnapshot = buildGateSnapshot(workspace, existingDocs, validationPass, completedTasks);
+
     let blockedGate = null;
     let progressModified = false;
     for (const gate of policy.gates) {
       if (gate.requires_validation || gate.task_id || gate.requires_evidence) {
         continue;
       }
-      const { open } = evaluateGate(gate, existingDocs, validationPass, completedTasks);
+      const { open } = evaluateGate(gate, gateSnapshot);
       if (open) {
         if (progress && !progress.gates_passed.includes(gate.id)) {
           progress.gates_passed.push(gate.id);
@@ -320,7 +343,7 @@ function evaluatePreActionInner(
         'shell': 'Bash',
       };
       const toolMapped = coreToolMap[request.action_kind];
-      if (toolMapped && isBlocked(gate, toolMapped, existingDocs, validationPass, completedTasks) && !blockedGate) {
+      if (toolMapped && isBlocked(gate, toolMapped, gateSnapshot) && !blockedGate) {
         blockedGate = gate;
       }
     }
@@ -357,6 +380,52 @@ function evaluatePreActionInner(
 
   // 7. Handle Blocked / Plan-Validating execution phase
   if (execState.phase === 'blocked') {
+    // P3.2: blocked no longer means deny-everything. The typed BlockRecord
+    // declares an exact remediation scope via allowedRemediation(); only
+    // that declared scope is allowed, everything else still denies. This is
+    // NOT a blanket recovery allow — allowedRemediation itself fails closed
+    // to read-only when the block has no usable reason.
+    const remediation = allowedRemediation(execState);
+
+    if (request.action_kind === 'read' && remediation.allowed_actions.includes('read')) {
+      return {
+        decision: 'allow',
+        reason_code: 'blocked-remediation-read-allowed',
+        user_message: 'Đọc tệp được phép trong khi quy trình đang blocked.',
+        enforcement: 'hard',
+      };
+    }
+
+    if (request.action_kind === 'write') {
+      const canWriteDocs =
+        remediation.allowed_actions.includes('write-docs') ||
+        remediation.allowed_actions.includes('write-task-scope');
+      const pathsMatchRemediation =
+        resolvedPaths.length > 0 &&
+        resolvedPaths.every((p) => remediation.allowed_paths.some((pattern) => matchesPathPattern(p, pattern)));
+      if (canWriteDocs && pathsMatchRemediation) {
+        return {
+          decision: 'allow',
+          reason_code: 'blocked-remediation-write-allowed',
+          user_message: 'Ghi trong phạm vi khắc phục được khai báo cho block hiện tại là được phép.',
+          enforcement: 'hard',
+        };
+      }
+    }
+
+    if (request.action_kind === 'shell' && remediation.allowed_actions.includes('verify')) {
+      const trimmedCmd = commandStr.trim();
+      const trimmedRecoverCmd = (remediation.next_command || '').trim();
+      if (trimmedCmd && trimmedRecoverCmd && trimmedCmd === trimmedRecoverCmd) {
+        return {
+          decision: 'allow',
+          reason_code: 'blocked-remediation-verify-allowed',
+          user_message: 'Lệnh khắc phục chính xác (recoverable_by) được phép.',
+          enforcement: 'hard',
+        };
+      }
+    }
+
     return {
       decision: 'deny',
       reason_code: 'state-blocked',
@@ -396,8 +465,7 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'shell') {
-      const isCliCommand = request.command_argv.includes('cli.mjs') || request.command_argv.includes('cli.js');
-      if (isCliCommand) {
+      if (isCliInvocation(request.command_argv)) {
         return {
           decision: 'allow',
           reason_code: 'cli-allowed',
@@ -405,19 +473,23 @@ function evaluatePreActionInner(
           enforcement: 'hard',
         };
       }
-      const safeCmds = ['cat', 'less', 'more', 'tail', 'head', 'ls', 'dir', 'find', 'pwd', 'git', 'grep', 'rg', 'echo'];
-      if (safeCmds.includes(baseCmd)) {
+      const classification = classifyCommand({
+        argv: request.command_argv,
+        raw: commandStr,
+        cwd: request.workspace,
+      });
+      if (classification.outcome === 'proven_read_only') {
         return {
           decision: 'allow',
-          reason_code: 'read-only-allowed',
-          user_message: 'Đọc thông tin qua shell được phép.',
+          reason_code: classification.reason_code,
+          user_message: classification.message,
           enforcement: 'hard',
         };
       }
       return {
         decision: 'deny',
-        reason_code: 'plan-validating-shell-blocked',
-        user_message: `Lệnh "${baseCmd}" bị chặn trong pha validate kế hoạch. Vui lòng chạy lệnh "validate" trước.`,
+        reason_code: classification.reason_code,
+        user_message: `Lệnh "${baseCmd}" bị chặn trong pha validate kế hoạch (${classification.message}). Vui lòng chạy lệnh "validate" trước.`,
         enforcement: 'hard',
       };
     }
@@ -478,21 +550,12 @@ function evaluatePreActionInner(
   }
 
   if (request.action_kind === 'write') {
-    // Check glob match for all resolvedPaths against allowedPaths
-    const matchGlob = (p: string, glob: string): boolean => {
-      const normP = p.replace(/\\/g, '/');
-      const normG = glob.replace(/\\/g, '/');
-      if (normP === normG || normP.startsWith(normG + '/')) return true;
-      try {
-        const rStr = normG.replace(/\*\*\//g, '(?:.*/)?').replace(/\*/g, '[^/]*');
-        return new RegExp(`^${rStr}$`).test(normP);
-      } catch {
-        return false;
-      }
-    };
-
+    // Check glob match for all resolvedPaths against allowedPaths using the
+    // shared canonical path matcher (segment-aware, regex-metacharacter-safe)
+    // instead of a homegrown regex that let literal dots/pluses in a glob
+    // act as unintended wildcards/quantifiers.
     const isAllPathsAllowed = resolvedPaths.every((path) =>
-      allowedPaths.some((allowedGlob: string) => matchGlob(path, allowedGlob))
+      allowedPaths.some((allowedGlob: string) => matchesPathPattern(path, allowedGlob))
     );
 
     if (!isAllPathsAllowed) {
@@ -515,8 +578,7 @@ function evaluatePreActionInner(
   }
 
   if (request.action_kind === 'shell') {
-    const isCliCommand = request.command_argv.includes('cli.mjs') || request.command_argv.includes('cli.js');
-    if (isCliCommand) {
+    if (isCliInvocation(request.command_argv)) {
       return {
         decision: 'allow',
         reason_code: 'cli-allowed',
@@ -525,12 +587,16 @@ function evaluatePreActionInner(
       };
     }
 
-    const safeCmds = ['cat', 'less', 'more', 'tail', 'head', 'ls', 'dir', 'find', 'pwd', 'git', 'grep', 'rg', 'echo'];
-    if (safeCmds.includes(baseCmd)) {
+    const shellClassification = classifyCommand({
+      argv: request.command_argv,
+      raw: commandStr,
+      cwd: request.workspace,
+    });
+    if (shellClassification.outcome === 'proven_read_only') {
       return {
         decision: 'allow',
-        reason_code: 'read-only-allowed',
-        user_message: 'Đọc thông tin được phép.',
+        reason_code: shellClassification.reason_code,
+        user_message: shellClassification.message,
         enforcement: 'hard',
         matched_task_id: execState.active_task,
       };
