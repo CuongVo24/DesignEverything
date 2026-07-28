@@ -28,6 +28,13 @@ export { loadQuestionSlots } from './loadQuestionSlots.js';
 export type { LoadSlotsResult } from './loadQuestionSlots.js';
 export { loadSlotsFile } from './loadSlotsFile.js';
 export type { LoadSlotsFileResult } from './loadSlotsFile.js';
+export { loadDerivedRecipes } from './loadDerivedRecipes.js';
+export { runDerivedRecipe } from './runDerivedRecipe.js';
+export type {
+  DerivedItemCoverageResult,
+  DerivedItemCoverageReason,
+  RunDerivedRecipeResult,
+} from './runDerivedRecipe.js';
 export { inspectRuntimeHealth, authorizeRecovery } from './runtimeHealth.js';
 export { runCliOperation } from '../adapters/shared/cliOperations.js';
 export {
