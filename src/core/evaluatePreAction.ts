@@ -227,6 +227,27 @@ function evaluatePreActionInner(
     }
   }
 
+  // P8.2/P8.4 — a CLI-shaped shell invocation gets Core's own subcommand+
+  // phase authority here, ahead of every phase-specific branch below
+  // (including the EXECUTION_STATE_REQUIRED gate immediately after this).
+  // CLI meta-operations (status/commit/deepen/...) manage state itself and
+  // were never meant to be blocked by "no execution-state.json yet" the
+  // same way an actual code write is — this mirrors exactly where the
+  // now-removed .mjs wrapper authority used to decide CLI commands:
+  // unconditionally, before any phase logic ran.
+  //
+  // Exception: a 'blocked' execState phase keeps its own, strictly tighter
+  // gate (allowedRemediation's exact recoverable_by match, P3.2) — the
+  // generic subcommand table would otherwise unconditionally allow e.g.
+  // any `verify` invocation, including a padded/lookalike one, which
+  // recoverable_by's exact-match check exists specifically to deny.
+  if (request.action_kind === 'shell' && execState?.phase !== 'blocked') {
+    const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
+    if (cliResult) {
+      return { ...cliResult, enforcement: 'hard' };
+    }
+  }
+
   if (!execState && progress && progress.phase !== 'interview' && progress.phase !== 'docs-emitted' && progress.phase !== 'ready-for-validation') {
     return {
       decision: 'deny',
@@ -283,17 +304,9 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'shell') {
-      // P8.2 — a CLI-shaped invocation (e.g. `node cli.mjs commit` during
-      // interview) gets Core's own subcommand+phase authority here instead
-      // of falling through to classifyCommand's generic non-read-only deny.
-      // Previously this branch had NO CLI awareness at all — only the
-      // .mjs wrapper's parallel authorizeCliOperation ever allowed it,
-      // which is exactly the divergence P8 unifies.
-      const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
-      if (cliResult) {
-        return { ...cliResult, enforcement: 'hard' };
-      }
-
+      // CLI-shaped invocations are already decided by the universal check
+      // right after progress was loaded, above — anything reaching here is
+      // confirmed non-CLI.
       const reqExt = request as unknown as { shell_kind?: string; command?: string };
       const classification = classifyCommand({
         shell: reqExt.shell_kind,
@@ -518,10 +531,8 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'shell') {
-      const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
-      if (cliResult) {
-        return { ...cliResult, enforcement: 'hard' };
-      }
+      // CLI-shaped invocations are already decided by the universal check
+      // right after progress was loaded, above.
       const classification = classifyCommand({
         argv: request.command_argv,
         raw: commandStr,
@@ -627,11 +638,8 @@ function evaluatePreActionInner(
   }
 
   if (request.action_kind === 'shell') {
-    const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
-    if (cliResult) {
-      return { ...cliResult, enforcement: 'hard' };
-    }
-
+    // CLI-shaped invocations are already decided by the universal check
+    // right after progress was loaded, above.
     const shellClassification = classifyCommand({
       argv: request.command_argv,
       raw: commandStr,

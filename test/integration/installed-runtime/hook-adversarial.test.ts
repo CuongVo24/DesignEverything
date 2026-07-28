@@ -209,6 +209,54 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res).toBeNull();
   });
 
+  it('P8.4 — PreToolUse denies CLI commit once the real phase is past interview, through the single collapsed authority', () => {
+    // authorizeCliOperation (deleted) used to decide this on its own,
+    // separately from evaluatePreAction. Now there is exactly one
+    // authority — this proves the real wrapper reaches the same
+    // COMMIT_NOT_ALLOWED decision evaluatePreAction.test.ts's unit-level
+    // "P8.2" suite already pins for the pure function.
+    const progress = {
+      version: '4.0.0',
+      phase: 'ready-to-build',
+      branch: 'web',
+      calibrate_mode: 'fast',
+      current_step: null,
+      answered: ['S0', 'S1'],
+      emitted_docs: ['docs/01-vision.md'],
+      gates_passed: ['interview_done'],
+      last_user_turn_id: 'turn-1',
+      answered_len_at_last_turn: 2,
+      updated_at: new Date().toISOString(),
+    };
+    writeFileSync(join(tmpDir, 'progress.json'), JSON.stringify(progress, null, 2), 'utf8');
+
+    const res = runHook(PRE_TOOL_HOOK, {
+      cwd: tmpDir,
+      tool_name: 'Bash',
+      tool_input: { command: 'node adapter/claude-code/cli.mjs commit --capability-token x' },
+    });
+    expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(res?.hookSpecificOutput.permissionDecisionReason).toContain('trong pha phỏng vấn');
+  });
+
+  it('P8.4 — a quoted CLI argument containing a space reaches Core intact through the real wrapper (not re-split)', () => {
+    // Regression guard for P8.3's commandArgv threading: before it, the
+    // wrapper's own quote-aware tokens were discarded and onPreToolUse
+    // re-split the raw command string, which would have torn
+    // "hello world" into separate broken tokens.
+    const res = runHook(PRE_TOOL_HOOK, {
+      cwd: tmpDir,
+      tool_name: 'Bash',
+      tool_input: {
+        command: 'node adapter/claude-code/cli.mjs commit --capability-token x --answer-text "hello world"',
+      },
+    });
+    // interview phase (this suite's default seeded progress.json) allows
+    // commit unconditionally — a real deny here would mean the quoted
+    // argument was mangled into something classifyCliSubcommand choked on.
+    expect(res).toBeNull();
+  });
+
   // --- Category B: Managed File Tampering Bypasses ---
 
   it('X05 — should deny direct Write to progress.json', () => {

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'url';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { readStdinJson, workspaceRootFrom, emitJson, resolveModule } from './_shared.mjs';
-import { resolveCliInvocation, authorizeCliOperation } from './resolve-cli-invocation.mjs';
+import { resolveCliInvocation } from './resolve-cli-invocation.mjs';
 
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
@@ -31,7 +31,16 @@ else if (toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'Notebo
 else if (toolName === 'Bash') coreTool = 'Bash';
 if (!coreTool) process.exit(0);
 
-// Phân tích và xác thực chính xác câu lệnh CLI nếu tool là Bash
+// P8.4 — resolveCliInvocation stays: it's a parsing-layer concern (quote-aware
+// tokenizer + shell-operator/launcher-path injection guard) Core has no
+// equivalent for. What it no longer does is decide allow/deny for a
+// recognized CLI operation itself (authorizeCliOperation, deleted) — that
+// subcommand/phase authority now lives solely in Core
+// (evaluatePreAction's classifyCliShellCommand / classifyCliSubcommand),
+// reached via the same onPreToolUse call every other Bash command goes
+// through below. Two authorities that could silently diverge collapse into
+// one.
+let preTokenizedArgv;
 if (coreTool === 'Bash') {
   const cliResolution = resolveCliInvocation(input, null, null);
   if (cliResolution.outcome === 'rejection') {
@@ -45,32 +54,11 @@ if (coreTool === 'Bash') {
     process.exit(0);
   }
   if (cliResolution.outcome === 'exact-operation') {
-    // Load the real canonical phase instead of always deciding on a null snapshot.
-    // A load failure (corrupt/missing store) falls back to `null`, which
-    // authorizeCliOperation already treats as a safe interview-phase default —
-    // that preserves prior behavior for a truly broken workspace instead of
-    // locking the user out of `init`/`repair`.
-    let runtimeSnapshot = null;
-    try {
-      const { loadInterviewStore } = await import(pathToFileURL(resolveModule('core/index.js')).href);
-      const envelope = loadInterviewStore(workspaceRoot);
-      runtimeSnapshot = { progress: envelope.payload.progress };
-    } catch {
-      runtimeSnapshot = null;
-    }
-    const auth = authorizeCliOperation(cliResolution, runtimeSnapshot);
-    if (auth.decision === 'deny') {
-      emitJson({
-        hookSpecificOutput: {
-          hookEventName: 'PreToolUse',
-          permissionDecision: 'deny',
-          permissionDecisionReason: `[DesignEverything CLI authorization] ${auth.message}`,
-        },
-      });
-      process.exit(0);
-    }
-    // Lệnh CLI chính xác và hợp lệ -> cho phép thực thi
-    process.exit(0);
+    // Reconstruct full argv (node <launcher> <subcommand> ...args) from
+    // resolveCliInvocation's own quote-aware tokens, so Core's
+    // isCliInvocation/classifyCliSubcommand see exactly what was actually
+    // typed — not a re-split, mangled version of it.
+    preTokenizedArgv = ['node', cliResolution.launcherPath, cliResolution.subcommand, ...cliResolution.args];
   }
 }
 
@@ -93,6 +81,7 @@ try {
     tool: coreTool,
     toolInput: normalizedInput,
     sessionId: typeof input.session_id === 'string' ? input.session_id : undefined,
+    commandArgv: preTokenizedArgv,
   });
 
   if (result.decision === 'deny') {

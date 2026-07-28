@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { resolveCliInvocation, authorizeCliOperation } from './resolve-cli-invocation.mjs';
+import { resolveCliInvocation } from './resolve-cli-invocation.mjs';
 
 describe('B4b — Exact Claude wrapper invocation contract', () => {
   describe('resolveCliInvocation', () => {
@@ -67,29 +67,11 @@ describe('B4b — Exact Claude wrapper invocation contract', () => {
     });
   });
 
-  describe('authorizeCliOperation', () => {
-    test('authorizes status and help subcommands', () => {
-      const auth = authorizeCliOperation({ subcommand: 'status' }, null);
-      expect(auth.decision).toBe('allow');
-    });
-
-    test('authorizes valid commit during interview phase', () => {
-      const auth = authorizeCliOperation(
-        { subcommand: 'commit' },
-        { progress: { phase: 'interview' } }
-      );
-      expect(auth.decision).toBe('allow');
-    });
-
-    test('denies commit outside interview phase', () => {
-      const auth = authorizeCliOperation(
-        { subcommand: 'commit' },
-        { progress: { phase: 'ready-to-build' } }
-      );
-      expect(auth.decision).toBe('deny');
-      if (auth.decision === 'deny') {
-        expect(auth.reason_code).toBe('COMMIT_NOT_ALLOWED');
-      }
-    });
-  });
+  // P8.4 — authorizeCliOperation deleted; its subcommand/phase table now
+  // lives once in src/core/classifyCliSubcommand.ts (pure-function coverage:
+  // classifyCliSubcommand.test.ts), reached through evaluatePreAction like
+  // any other Bash command (evaluatePreAction.test.ts's "P8.2" suite), and
+  // proven end-to-end through this real wrapper script in
+  // test/integration/installed-runtime/hook-adversarial.test.ts's "P8.4"
+  // tests.
 });
