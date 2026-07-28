@@ -3,7 +3,14 @@ import { z } from 'zod';
 export const preActionRequestSchema = z.object({
   runtime: z.enum(['claude', 'codex', 'mcp', 'generic']),
   tool_name: z.string(),
-  action_kind: z.enum(['read', 'write', 'shell', 'mcp', 'external']),
+  // P8.5 — 'delete'/'rename' added for typed-gap closure only (matches
+  // authorizeMutation's action union, artifactOwnership.ts). No caller
+  // constructs a request with these yet — no native Claude Code tool
+  // surfaces delete/rename distinct from Write/Edit/Bash today, and
+  // extracting rm/mv shell argv into per-target authorizeMutation calls is
+  // explicitly out of scope here (see artifactOwnership.test.ts's P8.5
+  // suite doc comment for why).
+  action_kind: z.enum(['read', 'write', 'shell', 'mcp', 'external', 'delete', 'rename']),
   target_paths: z.array(z.string()),
   command_argv: z.array(z.string()),
   workspace: z.string(),

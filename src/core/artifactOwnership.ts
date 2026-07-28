@@ -90,14 +90,22 @@ export function authorizeMutation(
   capability?: InternalMutationCapability,
   catalogEntries: (string | CatalogPathEntry)[] = []
 ): { decision: 'allow' | 'deny'; reason_code: string; user_message: string } {
-  void action;
+  // P8.5 — action is no longer discarded. Every branch below already
+  // treated write/delete/rename identically before this change (the
+  // parameter was simply never read) and still does — the protected-class
+  // fallthrough already denied an agent-host delete/rename exactly like a
+  // write, since it had no branch of its own to fall into. What changes is
+  // that the parameter is now real (typed callers can rely on it being
+  // consumed) and messages are accurate about which action was authorized,
+  // instead of silently degrading "delete"/"rename" callers to
+  // write-shaped wording.
   const artifactClass = classifyArtifact(targetPath, catalogEntries);
 
   if (artifactClass === 'user-owned') {
     return {
       decision: 'allow',
       reason_code: 'USER_OWNED_ALLOWED',
-      user_message: 'User-owned artifact mutation is allowed.',
+      user_message: `User-owned artifact ${action} is allowed.`,
     };
   }
 
@@ -109,7 +117,7 @@ export function authorizeMutation(
       return {
         decision: 'allow',
         reason_code: 'INTERVIEW_SCRATCH_ALLOWED',
-        user_message: 'Interview scratch file write is allowed.',
+        user_message: `Interview scratch file ${action} is allowed.`,
       };
     } else {
       return {
@@ -133,7 +141,7 @@ export function authorizeMutation(
       return {
         decision: 'allow',
         reason_code: 'INTERNAL_CAPABILITY_AUTHORIZED',
-        user_message: 'Core transaction authorized with valid internal capability.',
+        user_message: `Core transaction authorized ${action} with valid internal capability.`,
       };
     } else {
       return {
@@ -147,6 +155,6 @@ export function authorizeMutation(
   return {
     decision: 'deny',
     reason_code: 'PROTECTED_ARTIFACT_MUTATION_DENIED',
-    user_message: `Direct mutation of protected ${artifactClass} artifact (${targetPath}) by external actor is denied. Core transaction capability required.`,
+    user_message: `Direct ${action} of protected ${artifactClass} artifact (${targetPath}) by external actor is denied. Core transaction capability required.`,
   };
 }

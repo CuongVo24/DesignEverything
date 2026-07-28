@@ -3,6 +3,7 @@ import {
   classifyArtifact,
   authorizeMutation,
   InternalMutationCapability,
+  preActionRequestSchema,
 } from './index.js';
 
 describe('B2a — Protected artifact ownership policy contract', () => {
@@ -156,6 +157,58 @@ describe('B2a — Protected artifact ownership policy contract', () => {
       const res = authorizeMutation('write', 'agent-host', 'docs/design/adr/ADR-1.md', undefined, catalog);
       expect(res.decision).toBe('deny');
       expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+    });
+  });
+
+  // P8.5 — action_kind widened to include 'delete'/'rename' as a typed-gap
+  // closure only. No production caller constructs a request with these
+  // yet: no native Claude Code tool surfaces delete/rename distinct from
+  // Write/Edit/Bash today, and extracting rm/mv shell argv into per-target
+  // authorizeMutation calls is deliberately NOT done here — today,
+  // classifyCommand fail-closes every rm/mv invocation outright (falls
+  // into UNPROVEN_EXECUTABLE), including a delete of the user's own file.
+  // Wiring action_kind:'delete' for shell commands would, if done here,
+  // *loosen* that default (let a user-owned-path rm through
+  // authorizeMutation's always-allow branch) — a security-relevant
+  // behavior change the plan's P8 checklist never asked for, so it's left
+  // as an explicit, separately-scoped follow-up.
+  describe('P8.5 — action-aware authorizeMutation (delete/rename)', () => {
+    test('authorizeMutation("delete", ...) denies a protected engine-state path from agent-host, same as write already did', () => {
+      const writeRes = authorizeMutation('write', 'agent-host', 'progress.json');
+      const deleteRes = authorizeMutation('delete', 'agent-host', 'progress.json');
+      expect(deleteRes.decision).toBe(writeRes.decision);
+      expect(deleteRes.reason_code).toBe(writeRes.reason_code);
+      expect(deleteRes.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+      expect(deleteRes.user_message).toContain('delete');
+    });
+
+    test('authorizeMutation("rename", ...) denies a protected engine-policy path from agent-host, same as write already did', () => {
+      const res = authorizeMutation('rename', 'agent-host', 'gate-policy.yaml');
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+      expect(res.user_message).toContain('rename');
+    });
+
+    test('authorizeMutation("delete", ...) still allows a user-owned path, message reflects the real action', () => {
+      const res = authorizeMutation('delete', 'agent-host', 'src/index.ts');
+      expect(res.decision).toBe('allow');
+      expect(res.reason_code).toBe('USER_OWNED_ALLOWED');
+      expect(res.user_message).toContain('delete');
+    });
+
+    test('a PreActionRequest with action_kind "delete"/"rename" validates against the schema', () => {
+      const base = {
+        runtime: 'claude' as const,
+        tool_name: 'Bash',
+        target_paths: ['src/index.ts'],
+        command_argv: [],
+        workspace: '/tmp/ws',
+        session_id: 'test-session',
+      };
+      for (const kind of ['delete', 'rename'] as const) {
+        const parsed = preActionRequestSchema.safeParse({ ...base, action_kind: kind });
+        expect(parsed.success).toBe(true);
+      }
     });
   });
 });
