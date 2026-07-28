@@ -108,4 +108,70 @@ describe('B3a — Answer and slot validation engine contract (validateAnswer)', 
     const res = validateAnswer(contract, '');
     expect(res.outcome).toBe('valid');
   });
+
+  test('P6 10.1 — rejects a structured (array) answer below contract min_items', () => {
+    const contract: AnswerContract = {
+      required: true,
+      min_trimmed_chars: 0,
+      min_items: 2,
+      warning_rules: [],
+    };
+
+    const tooFew = validateAnswer(contract, [{ title: 'only one' }]);
+    expect(tooFew.outcome).toBe('invalid');
+    expect(tooFew.reason_code).toBe('MIN_ITEMS_VIOLATION');
+
+    const nonArray = validateAnswer(contract, { title: 'not an array at all' });
+    expect(nonArray.outcome).toBe('invalid');
+    expect(nonArray.reason_code).toBe('MIN_ITEMS_VIOLATION');
+
+    const enough = validateAnswer(contract, [{ title: 'first' }, { title: 'second' }]);
+    expect(enough.outcome).toBe('valid');
+  });
+
+  test('P6 10.1 — rejects a structured answer missing a contract required_fields entry', () => {
+    const contract: AnswerContract = {
+      required: true,
+      min_trimmed_chars: 0,
+      required_fields: ['task_id', 'title'],
+      warning_rules: [],
+    };
+
+    const missingField = validateAnswer(contract, { task_id: 'T1' });
+    expect(missingField.outcome).toBe('invalid');
+    expect(missingField.reason_code).toBe('REQUIRED_FIELD_MISSING');
+
+    const blankField = validateAnswer(contract, { task_id: 'T1', title: '   ' });
+    expect(blankField.outcome).toBe('invalid');
+    expect(blankField.reason_code).toBe('REQUIRED_FIELD_MISSING');
+
+    const notAnObject = validateAnswer(contract, 'plain string answer');
+    expect(notAnObject.outcome).toBe('invalid');
+    expect(notAnObject.reason_code).toBe('REQUIRED_FIELD_MISSING');
+
+    const complete = validateAnswer(contract, { task_id: 'T1', title: 'Build the thing' });
+    expect(complete.outcome).toBe('valid');
+  });
+
+  test('P6 10.1 — required_fields checks every item when the payload is an array', () => {
+    const contract: AnswerContract = {
+      required: true,
+      min_trimmed_chars: 0,
+      required_fields: ['term', 'definition'],
+      warning_rules: [],
+    };
+
+    const oneBad = validateAnswer(contract, [
+      { term: 'API', definition: 'Application Programming Interface' },
+      { term: 'CLI' },
+    ]);
+    expect(oneBad.outcome).toBe('invalid');
+    expect(oneBad.reason_code).toBe('REQUIRED_FIELD_MISSING');
+
+    const allGood = validateAnswer(contract, [
+      { term: 'API', definition: 'Application Programming Interface' },
+      { term: 'CLI', definition: 'Command Line Interface' },
+    ]);
+    expect(allGood.outcome).toBe('valid');
+  });
 });

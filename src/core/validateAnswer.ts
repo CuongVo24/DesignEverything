@@ -23,7 +23,7 @@ const PLACEHOLDER_PATTERNS = [
 
 export function validateAnswer(
   contract: AnswerContract | null | undefined,
-  payload: string | Record<string, unknown>
+  payload: string | Record<string, unknown> | unknown[]
 ): AnswerValidationResult {
   const trimmed = typeof payload === 'string' ? payload.trim() : JSON.stringify(payload).trim();
 
@@ -69,6 +69,44 @@ export function validateAnswer(
       reason_code: 'MIN_CHARS_VIOLATION',
       message: `Câu trả lời phải có tối thiểu ${contract.min_trimmed_chars} ký tự (hiện tại: ${trimmed.length}).`,
     };
+  }
+
+  // 3b. Structured payload — minimum item count (arrays only)
+  if (contract.min_items !== undefined) {
+    if (!Array.isArray(payload) || payload.length < contract.min_items) {
+      return {
+        outcome: 'invalid',
+        reason_code: 'MIN_ITEMS_VIOLATION',
+        message: `Câu trả lời phải có tối thiểu ${contract.min_items} mục (hiện tại: ${
+          Array.isArray(payload) ? payload.length : 0
+        }).`,
+      };
+    }
+  }
+
+  // 3c. Structured payload — required fields present on each item/object
+  if (contract.required_fields && contract.required_fields.length > 0) {
+    const items = Array.isArray(payload) ? payload : [payload];
+    for (const item of items) {
+      if (typeof item !== 'object' || item === null) {
+        return {
+          outcome: 'invalid',
+          reason_code: 'REQUIRED_FIELD_MISSING',
+          message: `Câu trả lời phải là đối tượng có các trường bắt buộc: ${contract.required_fields.join(', ')}.`,
+        };
+      }
+      const missing = contract.required_fields.filter((field) => {
+        const value = (item as Record<string, unknown>)[field];
+        return value === undefined || value === null || (typeof value === 'string' && value.trim().length === 0);
+      });
+      if (missing.length > 0) {
+        return {
+          outcome: 'invalid',
+          reason_code: 'REQUIRED_FIELD_MISSING',
+          message: `Thiếu trường bắt buộc: ${missing.join(', ')}.`,
+        };
+      }
+    }
   }
 
   // 4. Enum values check
