@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, existsSync, mkdtempSync } from 'fs';
+import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, existsSync, mkdtempSync, cpSync } from 'fs';
 import { tmpdir } from 'os';
 import { emitTier2 } from './emitTier2.js';
 import { checkTier2Consistency } from './checkDocsConsistency.js';
@@ -63,6 +63,12 @@ function buildWorkspace(answers: Record<string, string>): string {
   const ansDir = join(ws, 'Design/.interview');
   mkdirSync(ansDir, { recursive: true });
   writeFileSync(join(ansDir, 'answers.json'), JSON.stringify(answers, null, 2));
+  // P7.2.3 — emitTier2 now stages/activates through the shared transaction
+  // kernel, which needs a real compiled catalog (artifact-catalog.yaml +
+  // script.yaml + shapes.yaml), not just docs/.
+  const contentDir = join(ws, 'Design/Content');
+  mkdirSync(contentDir, { recursive: true });
+  cpSync(join(__dirname, '../../Design/Content'), contentDir, { recursive: true });
   return ws;
 }
 
@@ -134,6 +140,58 @@ describe('emitTier2 transaction', () => {
     expect(second.emitted[0].removed).toContain('design/features/t-m-ki-m.md');
     expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(false);
     expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
+  });
+
+  it('P7.2.3 — re-emitting module glossary does not touch module feature-spec\'s manifest/generation', () => {
+    const answers: Record<string, string> = {
+      ...baseAnswers,
+      DS1a: 'Recipe, ShoppingList',
+      DS1b: 'Định nghĩa',
+      'DS2a@ng-nh-p': 'a',
+      'DS2b@ng-nh-p': 'b',
+      'DS2c@ng-nh-p': 'c',
+      'DS2a@t-m-ki-m': 'a',
+      'DS2b@t-m-ki-m': 'b',
+      'DS2c@t-m-ki-m': 'c',
+    };
+    const ws = buildWorkspace(answers);
+    let state = optInModule(defaultDeepenState(), 'glossary', 'explicit');
+    state = optInModule(state, 'feature-spec', 'explicit');
+    state = commitDeepen(state, { module: 'glossary', questionId: 'DS1a', subjectId: null });
+    state = commitDeepen(state, { module: 'glossary', questionId: 'DS1b', subjectId: null });
+    for (const subj of ['ng-nh-p', 't-m-ki-m']) {
+      for (const q of ['DS2a', 'DS2b', 'DS2c']) {
+        state = commitDeepen(state, { module: 'feature-spec', questionId: q, subjectId: subj });
+      }
+    }
+    saveDeepenState(ws, state);
+
+    const first = emitTier2({ workspace: ws, modules: ['glossary', 'feature-spec'], script, state });
+    expect(first.emitted.map((e) => e.module).sort()).toEqual(['feature-spec', 'glossary']);
+
+    const featureSpecManifestPath = join(ws, '.design-everything/emit-manifest-tier2-feature-spec.json');
+    const glossaryManifestPath = join(ws, '.design-everything/emit-manifest-tier2-glossary.json');
+    expect(existsSync(featureSpecManifestPath)).toBe(true);
+    expect(existsSync(glossaryManifestPath)).toBe(true);
+    const featureSpecManifestBefore = readFileSync(featureSpecManifestPath, 'utf8');
+    const glossaryGenerationBefore = JSON.parse(readFileSync(glossaryManifestPath, 'utf8')).generation_id;
+
+    // Re-emit glossary ONLY, with a changed glossary-affecting answer so it
+    // actually produces a new generation.
+    const state2 = loadDeepenState(ws);
+    const answers2 = { ...answers, DS1a: 'Recipe, ShoppingList, Order' };
+    writeFileSync(join(ws, 'Design/.interview/answers.json'), JSON.stringify(answers2));
+    const second = emitTier2({ workspace: ws, modules: ['glossary'], script, state: state2 });
+    expect(second.emitted[0].module).toBe('glossary');
+
+    const glossaryGenerationAfter = JSON.parse(readFileSync(glossaryManifestPath, 'utf8')).generation_id;
+    expect(glossaryGenerationAfter).not.toBe(glossaryGenerationBefore);
+
+    // feature-spec's own manifest/generation must be completely untouched.
+    const featureSpecManifestAfter = readFileSync(featureSpecManifestPath, 'utf8');
+    expect(featureSpecManifestAfter).toBe(featureSpecManifestBefore);
+    expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
+    expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(true);
   });
 });
 

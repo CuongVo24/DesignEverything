@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, renameSync, mkdirSync, rmSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { join } from 'path';
 import type { DeepenScript, DeepenModuleId } from './schemas/deepenScript.js';
 import type { DeepenState } from './schemas/deepenState.js';
 import type { RenderedArtifact, ConsistencyIssue, Tier2RenderInput } from './schemas/tier2Render.js';
@@ -15,14 +15,28 @@ import { renderGlossary } from './renderGlossary.js';
 import { renderFeatureSpec } from './renderFeatureSpec.js';
 import { renderAdr } from './renderAdr.js';
 import { renderTestStrategy } from './renderTestStrategy.js';
+import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
+import { prepareEmit, type StagedGeneration } from './emitTransactionStage.js';
+import { activateEmit, manifestPath, type EmitChannel } from './emitTransactionActivate.js';
+import { emitManifestSchema } from './schemas/emitManifest.js';
+import type { EmittedDoc } from './emit.js';
+
+export type EmitTier2SkipReason =
+  | 'not-opted-in'
+  | 'missing-answers'
+  | 'consistency-error'
+  | 'catalog-load-failed'
+  | 'stage-failed'
+  | 'activation-blocked';
 
 export interface EmitTier2Result {
   emitted: { module: DeepenModuleId; files: string[]; warnings: ConsistencyIssue[]; removed?: string[] }[];
   skipped: {
     module: DeepenModuleId;
-    reason: 'not-opted-in' | 'missing-answers' | 'consistency-error';
+    reason: EmitTier2SkipReason;
     missing?: QuestionInstance[];
     issues?: ConsistencyIssue[];
+    detail?: string;
   }[];
 }
 
@@ -61,17 +75,23 @@ function loadTier1Docs(workspace: string): Record<string, string> {
   return out;
 }
 
-/** Ghi atomic một file (tmp cùng thư mục + rename), tự tạo thư mục cha. */
-function writeAtomic(absPath: string, content: string): void {
-  mkdirSync(dirname(absPath), { recursive: true });
-  const tmp = `${absPath}.tmp`;
-  writeFileSync(tmp, content, 'utf8');
-  renameSync(tmp, absPath);
+// Each module gets its own manifest/journal/backup namespace (P7.2.1) so
+// re-emitting one module's docs can never treat another module's managed
+// files as stale, and each module's activation is independently CAS-guarded.
+function tier2ChannelFor(module: DeepenModuleId): EmitChannel {
+  return `tier2-${module}`;
 }
 
 /**
  * Emit tầng 2, all-or-nothing theo module. Thứ tự BẮT BUỘC: check opt-in/đủ câu →
- * render thuần → consistency → chỉ khi sạch error mới ghi file + cập nhật state.
+ * render thuần → consistency → chỉ khi sạch mới stage → activate qua transaction
+ * kernel dùng chung với tier-1 (prepareEmit/activateEmit — stage→CAS-guarded
+ * backup→promote→manifest, không còn writeFileSync loop trực tiếp vào docs/ sống).
+ *
+ * Deliberately does NOT call tier-1's validateStagedEmit: that function's
+ * catalog-completeness check is hardcoded to tier:1, and its cross-doc
+ * consistency check is tier-1-shaped. Tier-2 already has its own gate
+ * (checkTier2Consistency) run before staging even begins.
  */
 export function emitTier2(args: {
   workspace: string;
@@ -113,21 +133,50 @@ export function emitTier2(args: {
       continue;
     }
 
-    // (5) sạch lỗi → ghi file, dọn file mồ côi theo manifest, cập nhật state.
-    const newPaths = artifacts.map((a) => a.path);
-    for (const art of artifacts) {
-      writeAtomic(join(workspace, 'docs', art.path), art.content);
+    let catalog;
+    try {
+      catalog = loadRuntimeCatalogFor(workspace);
+    } catch (err: unknown) {
+      result.skipped.push({ module, reason: 'catalog-load-failed', detail: (err as Error).message });
+      continue;
     }
-    const removed: string[] = [];
-    for (const old of mod.artifacts) {
-      if (!newPaths.includes(old)) {
-        const abs = join(workspace, 'docs', old);
-        if (existsSync(abs)) {
-          rmSync(abs);
-          removed.push(old);
-        }
+
+    const channel = tier2ChannelFor(module);
+    const docs: EmittedDoc[] = artifacts.map((a) => ({ file: a.path, content: a.content }));
+
+    let generation: StagedGeneration;
+    try {
+      generation = prepareEmit(workspace, { docs, shape: module, inputDigest: digest }, catalog);
+    } catch (err: unknown) {
+      result.skipped.push({ module, reason: 'stage-failed', detail: (err as Error).message });
+      continue;
+    }
+
+    const manifestFile = manifestPath(workspace, channel);
+    let expectedRevision: string | null = null;
+    if (existsSync(manifestFile)) {
+      const parsed = emitManifestSchema.safeParse(JSON.parse(readFileSync(manifestFile, 'utf8')));
+      if (parsed.success) {
+        expectedRevision = parsed.data.generation_id;
       }
     }
+
+    const activation = activateEmit(workspace, generation, expectedRevision, channel);
+    if (activation.status === 'blocked') {
+      result.skipped.push({
+        module,
+        reason: 'activation-blocked',
+        detail: `${activation.reason}: ${activation.details.join('; ')}`,
+      });
+      continue;
+    }
+
+    // (5) sạch lỗi + activated → cập nhật state. Xoá file mồ côi giờ do
+    // activateEmit tự làm (diff staleManagedPaths so với manifest active
+    // TRƯỚC của đúng channel này); `removed` ở đây chỉ để báo cáo, so với
+    // danh sách DeepenState đã ghi nhận trước đó.
+    const newPaths = artifacts.map((a) => a.path);
+    const removed = mod.artifacts.filter((p) => !newPaths.includes(p));
 
     mod.emitted_at = new Date().toISOString();
     mod.source_digest = digest;

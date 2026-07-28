@@ -9,6 +9,7 @@ import {
   writeFileSync,
   mkdirSync,
   rmSync,
+  cpSync,
 } from 'fs';
 import {
   loadDeepenScript,
@@ -59,6 +60,12 @@ function setup(ans: Record<string, string>): void {
   copy(GOLDEN_DOCS, '');
   mkdirSync(join(ws, 'Design/.interview'), { recursive: true });
   writeFileSync(join(ws, 'Design/.interview/answers.json'), JSON.stringify(ans, null, 2));
+  // P7.2.3 — emitTier2 now stages/activates through the shared transaction
+  // kernel, which needs a real compiled catalog (artifact-catalog.yaml +
+  // script.yaml + shapes.yaml), not just docs/.
+  const contentDir = join(ws, 'Design/Content');
+  mkdirSync(contentDir, { recursive: true });
+  cpSync(join(projectRoot, 'Design/Content'), contentDir, { recursive: true });
 }
 
 /** Issues a real deepen capability then commits it in one call (mirrors production flow). */
