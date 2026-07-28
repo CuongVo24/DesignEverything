@@ -97,4 +97,42 @@ describe('P6 10.1 — commitInterviewAnswer atomically commits slots with the an
     expect(after.state_revision).toBe(before);
     expect(after.payload.slots.vision_elevator_pitch).toBeUndefined();
   });
+
+  test('P6 10.1 — resubmitting a slot key at a later step records a correction instead of silently overwriting it', () => {
+    initializeInterviewStore(tempDir);
+
+    const capRes1 = issuePromptCapability(tempDir);
+    expect(capRes1.ok).toBe(true);
+    if (!capRes1.ok) return;
+
+    const first = commitInterviewAnswer(tempDir, {
+      capabilityToken: capRes1.token,
+      answerText: 'Câu trả lời đầu tiên hợp lệ.',
+      slotsPayload: { shared_key: 'Giá trị ban đầu.' },
+    });
+    expect(first.ok).toBe(true);
+
+    // A second, later step resubmits the SAME slot key with a different
+    // value — nothing in loadSlotsFile/commitInterviewAnswer scopes a slot
+    // key to the step that first wrote it, so this is a real, reachable
+    // path (unlike re-committing an already-confirmed answers[stepId]).
+    const capRes2 = issuePromptCapability(tempDir);
+    expect(capRes2.ok).toBe(true);
+    if (!capRes2.ok) return;
+
+    const second = commitInterviewAnswer(tempDir, {
+      capabilityToken: capRes2.token,
+      answerText: 'Câu trả lời thứ hai hợp lệ.',
+      slotsPayload: { shared_key: 'Giá trị đã sửa lại.' },
+    });
+    expect(second.ok).toBe(true);
+
+    const after = loadInterviewStore(tempDir);
+    // Latest value wins in the live slots map...
+    expect(after.payload.slots.shared_key.value).toBe('Giá trị đã sửa lại.');
+    // ...but the value it replaced is preserved, not destroyed.
+    expect(after.payload.corrections?.slots.shared_key).toEqual([
+      expect.objectContaining({ previous_value: 'Giá trị ban đầu.' }),
+    ]);
+  });
 });

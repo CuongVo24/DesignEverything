@@ -273,20 +273,40 @@ export function commitInterviewAnswer(
   }
 
   const newEnvelope = transactInterviewStore(workspaceRoot, envelope.state_revision, (env) => {
+    const now = new Date().toISOString();
     const answers = { ...env.payload.answers };
     if (stepId && args.answerText) {
       answers[stepId] = args.answerText;
     }
+
+    // P6 10.1 — a slot key resubmitted with a different value (legitimately
+    // reachable across two different steps in the same session, unlike
+    // answers[stepId] — see interviewStoreCorrectionsSchema's doc comment)
+    // appends what it replaces instead of silently destroying it.
+    const correctionSlots = { ...(env.payload.corrections?.slots ?? {}) };
     const slots = { ...env.payload.slots };
     if (stepId && args.slotsPayload) {
-      const now = new Date().toISOString();
       for (const [key, value] of Object.entries(args.slotsPayload)) {
+        const priorSlot = slots[key];
+        if (priorSlot !== undefined && priorSlot.value !== value) {
+          correctionSlots[key] = [
+            ...(correctionSlots[key] ?? []),
+            { previous_value: priorSlot.value, previous_revision: env.state_revision, corrected_at: now },
+          ];
+        }
         slots[key] = { value, provenance: `interview:${stepId}`, updated_at: now };
       }
     }
+
     return {
       ...env,
-      payload: { ...env.payload, progress: updatedProgress, answers, slots },
+      payload: {
+        ...env.payload,
+        progress: updatedProgress,
+        answers,
+        slots,
+        corrections: { slots: correctionSlots },
+      },
     };
   });
 

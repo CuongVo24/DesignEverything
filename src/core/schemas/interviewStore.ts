@@ -8,10 +8,30 @@ export const slotProvenanceRecordSchema = z.object({
   producer_version: z.string().optional(),
 });
 
+export const correctionEntrySchema = z.object({
+  previous_value: z.string(),
+  previous_revision: z.number().int().min(0),
+  corrected_at: z.string().datetime(),
+});
+
+// Additive, backward-compatible: envelopes written before this field existed
+// simply omit it (optional). Scoped to slots only, not answers[stepId] —
+// commitStep's capability is bound to (and always advances) current_step,
+// so re-committing an already-confirmed answers[stepId] is not reachable
+// through the public commit flow. A slot key has no such constraint: it's
+// an arbitrary caller-supplied key that can legitimately be resubmitted
+// across two different steps in the same session, so a correction there
+// appends what it replaced instead of silently destroying it. slots stays
+// "latest value only" so every existing reader is unaffected.
+export const interviewStoreCorrectionsSchema = z.object({
+  slots: z.record(z.string(), z.array(correctionEntrySchema)).default({}),
+});
+
 export const interviewStorePayloadSchema = z.object({
   progress: progressSchema,
   answers: z.record(z.string(), z.string()),
   slots: z.record(z.string(), slotProvenanceRecordSchema),
+  corrections: interviewStoreCorrectionsSchema.optional(),
 });
 
 export const interviewStoreEnvelopeSchema = z.object({
@@ -24,6 +44,8 @@ export const interviewStoreEnvelopeSchema = z.object({
 });
 
 export type SlotProvenanceRecord = z.infer<typeof slotProvenanceRecordSchema>;
+export type CorrectionEntry = z.infer<typeof correctionEntrySchema>;
+export type InterviewStoreCorrections = z.infer<typeof interviewStoreCorrectionsSchema>;
 export type InterviewStorePayload = z.infer<typeof interviewStorePayloadSchema>;
 export type InterviewStoreEnvelope = z.infer<typeof interviewStoreEnvelopeSchema>;
 
