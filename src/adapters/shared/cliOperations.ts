@@ -35,6 +35,7 @@ import {
   evaluateBuildReadiness,
   ExecutionState,
   BlockRecord,
+  deepenModuleIdSchema,
 } from '../../core/index.js';
 import { renderNextStep } from './renderNextStep.js';
 import { CliResultEnvelope, redactInternalError } from './cliResult.js';
@@ -386,7 +387,13 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
 function handleRepair(workspaceRoot: string): CliResultEnvelope {
   try {
     recoverEmit(workspaceRoot, 'tier1');
-    recoverEmit(workspaceRoot, 'tier2');
+    // P7.2.4 — the coarse 'tier2' channel is dead: emitTier2 (P7.2.3) writes
+    // generation/journal files per module (tier2-${module}), so recovering
+    // only the coarse channel was always a no-op. Recover every module's
+    // own channel instead.
+    for (const module of deepenModuleIdSchema.options) {
+      recoverEmit(workspaceRoot, `tier2-${module}`);
+    }
     migrateInterviewStore(workspaceRoot);
     const health = inspectRuntimeHealth(workspaceRoot);
 
