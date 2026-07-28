@@ -2,12 +2,19 @@ import fs from 'fs';
 import { join, dirname } from 'path';
 import type { StagedGeneration } from './emitTransactionStage.js';
 import { emitManifestSchema, type EmitManifest, type EmitJournal } from './schemas/emitManifest.js';
+import type { DeepenModuleId } from './schemas/deepenScript.js';
 
 export type ActivateEmitResult =
   | { status: 'activated'; manifest: EmitManifest }
   | { status: 'blocked'; reason: 'revision-mismatch' | 'user-file-collision'; details: string[] };
 
-export type EmitChannel = 'tier1' | 'tier2';
+// P7.2 — `tier2-${module}` gives each tier-2 module its own manifest/
+// journal/backup namespace (re-emitting one module must never treat
+// another module's managed files as stale). A hyphen, not a colon, is the
+// separator deliberately — `:` is invalid inside a Windows filename
+// component, and manifestPath/journalPath/backupDirFor below splice the
+// channel directly into one.
+export type EmitChannel = 'tier1' | 'tier2' | `tier2-${DeepenModuleId}`;
 
 /**
  * Tier-1 and tier-2 (deepen) each get their own manifest/journal/backup
