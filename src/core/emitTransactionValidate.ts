@@ -7,6 +7,7 @@ import { executionPlanSchemaV3 } from './schemas/executionPlan.js';
 import { checkDocsConsistency } from './checkDocsConsistency.js';
 import type { EmittedDoc } from './emit.js';
 import type { ProjectProfile } from './schemas/index.js';
+import type { DerivedRecipe } from './schemas/derivedRecipes.js';
 
 export interface StageValidationIssue {
   id: string;
@@ -29,7 +30,8 @@ export interface StageValidationResult {
 export function validateStagedEmit(
   generation: StagedGeneration,
   catalog: RuntimeCatalog,
-  profile?: Pick<ProjectProfile, 'language'> | null
+  profile?: Pick<ProjectProfile, 'language'> | null,
+  derivedRecipes: DerivedRecipe[] = []
 ): StageValidationResult {
   const issues: StageValidationIssue[] = [];
   const { manifest, stagingDir } = generation;
@@ -95,6 +97,46 @@ export function validateStagedEmit(
       severity: 'warning',
       message: warning.message,
     });
+  }
+
+  // 4. Derived-recipe provenance (P6 10.2) — an artifact whose catalog entry
+  // declares source.recipe_ids must show SOME provenance signal (a
+  // "> Nguồn:" line, tier2RenderHelpers' established convention, or the
+  // recipe's own fallback.on_missing_source text) somewhere in the staged
+  // content. Deliberately coarse and warning-only: no tier-1 doc-template
+  // emits per-item SourceRef markers yet (that convention only exists for
+  // tier-2 render today, via assembleArtifact), so a hard per-item check via
+  // runDerivedRecipe would need structured items no current renderer
+  // produces — promoting this to error-severity needs template-authoring
+  // work, tracked separately.
+  if (derivedRecipes.length > 0) {
+    const recipesById = new Map(derivedRecipes.map((r) => [r.id, r]));
+    for (const artifact of manifest.artifacts) {
+      const catalogEntry = catalog.artifacts.find((a) => a.id === artifact.id);
+      const recipeIds = catalogEntry?.source.recipe_ids ?? [];
+      if (recipeIds.length === 0) continue;
+
+      let content: string;
+      try {
+        content = readFileSync(join(stagingDir, artifact.path), 'utf8');
+      } catch {
+        continue; // unreadable staged file is already reported elsewhere
+      }
+      const hasSourceMarker = /^>\s*Nguồn:/m.test(content);
+
+      for (const recipeId of recipeIds) {
+        const recipe = recipesById.get(recipeId);
+        if (!recipe) continue;
+        const hasUnknownMarker = content.includes(recipe.fallback.on_missing_source.trim());
+        if (!hasSourceMarker && !hasUnknownMarker) {
+          issues.push({
+            id: 'derived-recipe-provenance-missing',
+            severity: 'warning',
+            message: `Artifact "${artifact.id}" được recipe "${recipeId}" khai báo nguồn, nhưng nội dung staged không có dấu hiệu provenance nào ("> Nguồn:" hoặc fallback unknown).`,
+          });
+        }
+      }
+    }
   }
 
   const pass = !issues.some((i) => i.severity === 'error');
