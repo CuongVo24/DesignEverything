@@ -28,6 +28,7 @@ export { loadQuestionSlots } from './loadQuestionSlots.js';
 export type { LoadSlotsResult } from './loadQuestionSlots.js';
 export { loadSlotsFile } from './loadSlotsFile.js';
 export type { LoadSlotsFileResult } from './loadSlotsFile.js';
+export { patternToRegex, matchesCatalogPattern } from './catalogPathMatch.js';
 export { loadDerivedRecipes } from './loadDerivedRecipes.js';
 export { runDerivedRecipe } from './runDerivedRecipe.js';
 export type {

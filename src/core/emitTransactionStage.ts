@@ -5,6 +5,7 @@ import type { EmittedDoc } from './emit.js';
 import type { RuntimeCatalog } from './compileRuntimeCatalog.js';
 import type { ArtifactRecord } from './schemas/artifactCatalog.js';
 import type { EmitManifest, EmitManifestArtifact } from './schemas/emitManifest.js';
+import { patternToRegex } from './catalogPathMatch.js';
 
 export interface StagedGeneration {
   generation_id: string;
@@ -19,12 +20,6 @@ function normalizePath(file: string): string {
     return posix;
   }
   return `docs/${posix}`;
-}
-
-function patternToRegex(pattern: string): RegExp {
-  const escaped = pattern.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
-  const withPlaceholders = escaped.replace(/\\\{[^}]+\\\}/g, '[^/]+');
-  return new RegExp(`^${withPlaceholders}$`);
 }
 
 function findCatalogArtifact(catalog: RuntimeCatalog, path: string): ArtifactRecord | undefined {
