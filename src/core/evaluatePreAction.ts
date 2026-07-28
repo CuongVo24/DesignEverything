@@ -10,6 +10,7 @@ import { loadDeepenState } from './deepenState.js';
 import { authorizeMutation, type CatalogPathEntry } from './artifactOwnership.js';
 import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
 import { classifyCommand } from './classifyCommand.js';
+import { classifyCliSubcommand } from './classifyCliSubcommand.js';
 import { canonicalizeWorkspacePath, matchesPathPattern } from './pathPolicy.js';
 import { inspectRuntimeHealth } from './runtimeHealth.js';
 import {
@@ -35,6 +36,23 @@ function isCliInvocation(argv: string[]): boolean {
   if (exe !== 'node') return false;
   const script = argv[1].replace(/\\/g, '/');
   return script === 'cli.mjs' || script === 'cli.js' || script.endsWith('/cli.mjs') || script.endsWith('/cli.js');
+}
+
+type CliShellDecision = { decision: 'allow' | 'deny'; reason_code: string; user_message: string };
+
+// P8.2 — the subcommand-level authority resolve-cli-invocation.mjs's
+// authorizeCliOperation applies on its own, now applied by Core so the
+// wrapper's decision and Core's decision can never diverge. Returns null for
+// a non-CLI shell command (fall through to classifyCommand as before); a
+// missing subcommand defaults to 'status', mirroring resolveCliInvocation.mjs.
+function classifyCliShellCommand(argv: string[], phase: string | null | undefined): CliShellDecision | null {
+  if (!isCliInvocation(argv)) return null;
+  const subcommand = argv[2] || 'status';
+  const result = classifyCliSubcommand(subcommand, phase);
+  if (result.decision === 'allow') {
+    return { decision: 'allow', reason_code: 'cli-allowed', user_message: 'CLI tool execution allowed.' };
+  }
+  return { decision: 'deny', reason_code: result.reason_code, user_message: result.message };
 }
 
 // P6 10.3 — best-effort, same degrade-to-empty pattern as
@@ -265,6 +283,17 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'shell') {
+      // P8.2 — a CLI-shaped invocation (e.g. `node cli.mjs commit` during
+      // interview) gets Core's own subcommand+phase authority here instead
+      // of falling through to classifyCommand's generic non-read-only deny.
+      // Previously this branch had NO CLI awareness at all — only the
+      // .mjs wrapper's parallel authorizeCliOperation ever allowed it,
+      // which is exactly the divergence P8 unifies.
+      const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
+      if (cliResult) {
+        return { ...cliResult, enforcement: 'hard' };
+      }
+
       const reqExt = request as unknown as { shell_kind?: string; command?: string };
       const classification = classifyCommand({
         shell: reqExt.shell_kind,
@@ -489,13 +518,9 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'shell') {
-      if (isCliInvocation(request.command_argv)) {
-        return {
-          decision: 'allow',
-          reason_code: 'cli-allowed',
-          user_message: 'CLI tool execution allowed.',
-          enforcement: 'hard',
-        };
+      const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
+      if (cliResult) {
+        return { ...cliResult, enforcement: 'hard' };
       }
       const classification = classifyCommand({
         argv: request.command_argv,
@@ -602,13 +627,9 @@ function evaluatePreActionInner(
   }
 
   if (request.action_kind === 'shell') {
-    if (isCliInvocation(request.command_argv)) {
-      return {
-        decision: 'allow',
-        reason_code: 'cli-allowed',
-        user_message: 'CLI tool execution allowed.',
-        enforcement: 'hard',
-      };
+    const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
+    if (cliResult) {
+      return { ...cliResult, enforcement: 'hard' };
     }
 
     const shellClassification = classifyCommand({

@@ -160,6 +160,129 @@ describe('evaluatePreAction core engine', () => {
     };
   }
 
+  function baseProgress(overrides: Partial<import('./schemas/index.js').Progress> = {}) {
+    return {
+      version: '7.0.0',
+      phase: 'interview' as const,
+      session_id: 'test-session',
+      state_revision: 0,
+      branch: null,
+      current_step: 'S0',
+      answered: [],
+      emitted_docs: [],
+      gates_passed: [],
+      pending_turn_capability: null,
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 0,
+      updated_at: new Date().toISOString(),
+      calibrate_mode: null,
+      ...overrides,
+    };
+  }
+
+  describe('P8.2 — CLI shell commands get Core\'s own subcommand+phase authority', () => {
+    test('a CLI commit invocation during interview (no execution state) is allowed directly by Core', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['node', 'adapter/claude-code/cli.mjs', 'commit', '--capability-token', 'x'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('allow');
+      expect(decision.reason_code).toBe('cli-allowed');
+    });
+
+    test('a CLI deepen invocation during interview (no execution state) is denied with the typed reason, not just generically', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['node', 'adapter/claude-code/cli.mjs', 'deepen', '--module', 'glossary'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('DEEPEN_NOT_ALLOWED');
+    });
+
+    test('a CLI commit invocation is denied once the real phase is past interview, even during active-task execution (previous blanket-allow gap)', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['node', 'adapter/claude-code/cli.mjs', 'commit', '--capability-token', 'x'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'executing', active_task: 'T1' }),
+        plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
+        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('COMMIT_NOT_ALLOWED');
+    });
+
+    test('a CLI deepen invocation is allowed during active-task execution once the real phase is past interview', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['node', 'adapter/claude-code/cli.mjs', 'deepen', '--module', 'glossary'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'executing', active_task: 'T1' }),
+        plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
+        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('allow');
+      expect(decision.reason_code).toBe('cli-allowed');
+    });
+
+    test('an unrecognized CLI subcommand is denied during active-task execution, not blanket-allowed as any CLI launch was before', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['node', 'adapter/claude-code/cli.mjs', 'totally-not-a-real-subcommand'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'executing', active_task: 'T1' }),
+        plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
+        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('UNRECOGNIZED_CLI_SUBCOMMAND');
+    });
+
+    test('an unrecognized CLI subcommand is denied during plan-validating, not blanket-allowed as any CLI launch was before', () => {
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Bash',
+        action_kind: 'shell',
+        target_paths: [],
+        command_argv: ['node', 'adapter/claude-code/cli.mjs', 'totally-not-a-real-subcommand'],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+        state: baseExecState({ phase: 'plan-validating' }),
+        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('UNRECOGNIZED_CLI_SUBCOMMAND');
+    });
+  });
+
   describe('P4.3 — shell classifier must be the sole authority (no basename safe-list bypass)', () => {
     test('plan-validating phase denies git branch -D via the real classifier, not a basename safe-list', () => {
       const request: PreActionRequest = {
