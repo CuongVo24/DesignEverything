@@ -20,6 +20,8 @@ import { prepareEmit, type StagedGeneration } from './emitTransactionStage.js';
 import { activateEmit, manifestPath, type EmitChannel } from './emitTransactionActivate.js';
 import { emitManifestSchema } from './schemas/emitManifest.js';
 import type { EmittedDoc } from './emit.js';
+import { loadExecutionState, saveExecutionState } from './advanceExecutionState.js';
+import { isPlanAffectingModule, invalidateSnapshotForTier2 } from './deepenLifecycle.js';
 
 export type EmitTier2SkipReason =
   | 'not-opted-in'
@@ -182,6 +184,29 @@ export function emitTier2(args: {
     mod.source_digest = digest;
     mod.artifacts = newPaths;
     stateChanged = true;
+
+    // (6) P7.2.5 — a plan-affecting module (adr/test-strategy) that just
+    // activated can contradict architecture/test assumptions a validated
+    // execution plan relied on. invalidateSnapshotForTier2 already existed
+    // (deepenLifecycle.ts) and was fully unit-tested, but had zero
+    // production caller — this is its first one. Best-effort: no
+    // execution-state.json yet (build hasn't started) is not an error.
+    if (isPlanAffectingModule(module)) {
+      const execStatePath = join(workspace, '.design-everything/execution-state.json');
+      if (existsSync(execStatePath)) {
+        try {
+          const execState = loadExecutionState(execStatePath);
+          const invalidated = invalidateSnapshotForTier2(execState, module);
+          if (invalidated !== execState) {
+            saveExecutionState(execStatePath, invalidated);
+          }
+        } catch {
+          // Corrupt/unreadable execution state is a separate concern
+          // (surfaced by health checks elsewhere) — must never block an
+          // otherwise-successful tier-2 activation.
+        }
+      }
+    }
 
     result.emitted.push({
       module,

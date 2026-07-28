@@ -15,6 +15,8 @@ import {
 import { issueTurnCapability } from './turnCapability.js';
 import { defaultDeepenState } from './schemas/deepenState.js';
 import type { DeepenState, DeepenModuleId } from './schemas/deepenState.js';
+import { loadExecutionState, saveExecutionState } from './advanceExecutionState.js';
+import type { ExecutionState } from './schemas/executionState.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const script = loadDeepenScript(join(__dirname, '../../Design/Content/interview-script/deepen-script.yaml'));
@@ -76,6 +78,27 @@ const baseAnswers: Record<string, string> = {
   S3: 'Must: Đăng nhập, Tìm kiếm. Should: Shopping List.',
   ...ARCH,
 };
+
+function baseExecState(overrides: Partial<ExecutionState> = {}): ExecutionState {
+  return {
+    version: '1.0.0',
+    phase: 'ready-to-execute',
+    active_task: null,
+    active_milestone: null,
+    completed_tasks: [],
+    evidence: [],
+    block_reason: null,
+    validated_plan_digest: 'digest',
+    validated_docs_digest: 'digest',
+    validation_result_digest: 'digest',
+    plan_revision: 1,
+    amendment_history: [],
+    open_break_tasks: [],
+    reviewed_milestones: [],
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 describe('emitTier2 transaction', () => {
   it('module chưa opt-in → skipped not-opted-in, không ghi file', () => {
@@ -192,6 +215,48 @@ describe('emitTier2 transaction', () => {
     expect(featureSpecManifestAfter).toBe(featureSpecManifestBefore);
     expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
     expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(true);
+  });
+
+  it('P7.2.5 — a plan-affecting module (test-strategy) invalidates execution state past plan-validating', () => {
+    const ws = buildWorkspace(baseAnswers);
+    const execStatePath = join(ws, '.design-everything/execution-state.json');
+    mkdirSync(dirname(execStatePath), { recursive: true });
+    saveExecutionState(execStatePath, baseExecState());
+
+    let state = optInModule(defaultDeepenState(), 'test-strategy', 'explicit');
+    state = commitDeepen(state, { module: 'test-strategy', questionId: 'DS4a', subjectId: null });
+    state = commitDeepen(state, { module: 'test-strategy', questionId: 'DS4b', subjectId: null });
+    saveDeepenState(ws, state);
+
+    const res = emitTier2({ workspace: ws, modules: ['test-strategy'], script, state });
+    expect(res.emitted[0]?.module).toBe('test-strategy');
+
+    const after = loadExecutionState(execStatePath);
+    expect(after.phase).toBe('blocked');
+    expect(after.block_reason).toMatchObject({
+      kind: 'snapshot-stale',
+      reason_code: 'TIER2_PLAN_AFFECTING_CHANGE',
+    });
+  });
+
+  it('P7.2.5 — a non-plan-affecting module (glossary) does not touch execution state', () => {
+    const answers = { ...baseAnswers, DS1a: 'Recipe, ShoppingList', DS1b: 'Định nghĩa' };
+    const ws = buildWorkspace(answers);
+    const execStatePath = join(ws, '.design-everything/execution-state.json');
+    mkdirSync(dirname(execStatePath), { recursive: true });
+    saveExecutionState(execStatePath, baseExecState());
+
+    let state = optInModule(defaultDeepenState(), 'glossary', 'explicit');
+    state = commitDeepen(state, { module: 'glossary', questionId: 'DS1a', subjectId: null });
+    state = commitDeepen(state, { module: 'glossary', questionId: 'DS1b', subjectId: null });
+    saveDeepenState(ws, state);
+
+    const res = emitTier2({ workspace: ws, modules: ['glossary'], script, state });
+    expect(res.emitted[0]?.module).toBe('glossary');
+
+    const after = loadExecutionState(execStatePath);
+    expect(after.phase).toBe('ready-to-execute');
+    expect(after.block_reason).toBeNull();
   });
 });
 
