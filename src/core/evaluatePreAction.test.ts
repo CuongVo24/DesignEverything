@@ -2,9 +2,14 @@ import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 import { evaluatePreAction } from './evaluatePreAction.js';
 import { PreActionRequest, AdapterCapability } from './schemas/index.js';
 import { initializeInterviewStore, transactInterviewStore } from './interviewStore.js';
-import { join } from 'path';
+import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
+import { join, dirname } from 'path';
 import { tmpdir } from 'os';
-import { mkdtempSync, rmSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { mkdtempSync, mkdirSync, cpSync, rmSync } from 'fs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const projectRoot = join(__dirname, '../..');
 
 describe('evaluatePreAction core engine', () => {
   let testWorkspace: string;
@@ -334,6 +339,103 @@ describe('evaluatePreAction core engine', () => {
       const decision = evaluatePreAction(request);
       expect(decision.decision).toBe('deny');
       expect(decision.reason_code).toBe('state-blocked');
+    });
+  });
+
+  describe('P6 10.3 — real compiled catalog wired into the write pre-action gate', () => {
+    let catalogWorkspace: string;
+
+    beforeAll(() => {
+      catalogWorkspace = mkdtempSync(join(tmpdir(), 'pre-action-catalog-test-'));
+      const designDir = join(catalogWorkspace, 'Design/Content');
+      mkdirSync(designDir, { recursive: true });
+      cpSync(join(projectRoot, 'Design/Content'), designDir, { recursive: true });
+
+      const base = initializeInterviewStore(catalogWorkspace).payload.progress;
+      transactInterviewStore(catalogWorkspace, 0, (env) => ({
+        ...env,
+        payload: { ...env.payload, progress: { ...base, phase: 'interview', current_step: 'S0' } },
+      }));
+    });
+
+    afterAll(() => {
+      rmSync(catalogWorkspace, { recursive: true, force: true });
+    });
+
+    test('the write-gate catalog loader and the emit catalog loader are the same function — digest is identical by construction', () => {
+      // "Giữ một compiler/catalog authority" (P6 10.3 exit criteria): both
+      // evaluatePreAction and emitTier1 import loadRuntimeCatalogFor from
+      // the same runtimeCatalogLoader.ts module, so there is no separate
+      // digest-reconciliation mechanism to test — there is only one loader.
+      const first = loadRuntimeCatalogFor(catalogWorkspace);
+      const second = loadRuntimeCatalogFor(catalogWorkspace);
+      expect(first.digest).toBe(second.digest);
+      expect(first.digest).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    test('interview-phase doc writes are still bypassed with the real catalog present (deliberately-deferred gap, untouched by this wiring)', () => {
+      // Every real catalog artifact today lives under docs/ — exactly what
+      // the interview-phase bypass covers — so this pins that wiring the
+      // real catalog in did not silently start denying it. Closing that
+      // known gap (plan-v1-bonus-tasks.md P4.2) is explicitly out of scope
+      // here; it needs its own task/gate-based authorization redesign.
+      const request: PreActionRequest = {
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['docs/00-vision.md'],
+        command_argv: [],
+        workspace: catalogWorkspace,
+        session_id: 'test-session',
+      };
+      const decision = evaluatePreAction(request);
+      expect(decision.decision).toBe('allow');
+      expect(decision.reason_code).toBe('interview-doc-write-allowed');
+    });
+
+    test('a missing artifact-catalog.yaml degrades to empty catalog entries rather than crashing the write gate', () => {
+      const brokenWorkspace = mkdtempSync(join(tmpdir(), 'pre-action-catalog-broken-'));
+      try {
+        // Otherwise-healthy workspace (script.yaml/shapes.yaml present, so
+        // inspectRuntimeHealth doesn't deny writes outright) but with only
+        // artifact-catalog.yaml removed — isolates catalog-load failure
+        // specifically from "no Design/Content at all".
+        const designDir = join(brokenWorkspace, 'Design/Content');
+        mkdirSync(designDir, { recursive: true });
+        cpSync(join(projectRoot, 'Design/Content'), designDir, { recursive: true });
+        rmSync(join(designDir, 'artifact-catalog.yaml'), { force: true });
+
+        const base = initializeInterviewStore(brokenWorkspace).payload.progress;
+        transactInterviewStore(brokenWorkspace, 0, (env) => ({
+          ...env,
+          payload: { ...env.payload, progress: { ...base, phase: 'interview', current_step: 'S0' } },
+        }));
+
+        // A non-doc-write path (src/index.ts) is used specifically so the
+        // request reaches collectCatalogEntries's real catalog load (a
+        // docs/-prefixed path would take the untouched interview-doc-write
+        // bypass instead, see the previous test) — but this early in the
+        // interview, a non-doc write is denied by an unrelated gate-policy
+        // scope check regardless of catalog/ownership. The point here is
+        // only that a missing artifact-catalog.yaml must not make that
+        // evaluation throw; it must still resolve to a well-formed decision.
+        const request: PreActionRequest = {
+          runtime: 'claude',
+          tool_name: 'Write',
+          action_kind: 'write',
+          target_paths: ['src/index.ts'],
+          command_argv: [],
+          workspace: brokenWorkspace,
+          session_id: 'test-session',
+        };
+        let decision: ReturnType<typeof evaluatePreAction> | undefined;
+        expect(() => {
+          decision = evaluatePreAction(request);
+        }).not.toThrow();
+        expect(decision?.decision === 'allow' || decision?.decision === 'deny').toBe(true);
+      } finally {
+        rmSync(brokenWorkspace, { recursive: true, force: true });
+      }
     });
   });
 });

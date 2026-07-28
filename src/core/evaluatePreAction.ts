@@ -7,7 +7,8 @@ import { buildGateSnapshot } from './gateSnapshot.js';
 import { loadExecutionState, allowedRemediation } from './advanceExecutionState.js';
 import { assertValidatedSnapshot, loadEmittedDocs } from './validatedSnapshot.js';
 import { loadDeepenState } from './deepenState.js';
-import { authorizeMutation } from './artifactOwnership.js';
+import { authorizeMutation, type CatalogPathEntry } from './artifactOwnership.js';
+import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
 import { classifyCommand } from './classifyCommand.js';
 import { canonicalizeWorkspacePath, matchesPathPattern } from './pathPolicy.js';
 import { inspectRuntimeHealth } from './runtimeHealth.js';
@@ -34,6 +35,18 @@ function isCliInvocation(argv: string[]): boolean {
   if (exe !== 'node') return false;
   const script = argv[1].replace(/\\/g, '/');
   return script === 'cli.mjs' || script === 'cli.js' || script.endsWith('/cli.mjs') || script.endsWith('/cli.js');
+}
+
+// P6 10.3 — best-effort, same degrade-to-empty pattern as
+// collectDeepenPending: a missing/broken catalog must never turn the write
+// gate into a hard crash, it just falls back to exact-path-only
+// classification (today's behavior) for that call.
+function collectCatalogEntries(workspace: string): CatalogPathEntry[] {
+  try {
+    return loadRuntimeCatalogFor(workspace).artifacts;
+  } catch {
+    return [];
+  }
 }
 
 function collectDeepenPending(workspace: string): string[] {
@@ -216,8 +229,22 @@ function evaluatePreActionInner(
     }
 
     if (request.action_kind === 'write') {
+      const isDocWrite = resolvedPaths.every(
+        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/scratch/') || p === 'progress.json'
+      );
+      // P6 10.3 — the real catalog's managed-output protection only applies
+      // OUTSIDE the interview-phase doc-write bypass below. That bypass is a
+      // known, deliberately-deferred design gap (plan-v1-bonus-tasks.md
+      // P4.2: "plan-validating blanket-allow Design/**/docs/**/
+      // .design-everything/**" is confirmed still present and explicitly
+      // NOT fixed in this batch — it needs a real task/gate-based
+      // authorization redesign, bigger than a catalog-wiring change).
+      // Passing the real catalog here regardless would silently start
+      // closing that gap as an unplanned side effect, since every current
+      // catalog artifact lives under docs/ — exactly what the bypass covers.
+      const catalogEntries = isDocWrite ? [] : collectCatalogEntries(request.workspace);
       for (const targetPath of resolvedPaths) {
-        const auth = authorizeMutation('write', 'agent-host', targetPath);
+        const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries);
         if (auth.decision === 'deny') {
           return {
             decision: 'deny',
@@ -227,9 +254,6 @@ function evaluatePreActionInner(
           };
         }
       }
-      const isDocWrite = resolvedPaths.every(
-        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/scratch/') || p === 'progress.json'
-      );
       if (isDocWrite) {
         return {
           decision: 'allow',

@@ -2,10 +2,8 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
 import { emitTree, type InterviewAnswers, type EmittedDoc } from './emit.js';
-import { loadArtifactCatalog } from './loadArtifactCatalog.js';
-import { compileRuntimeCatalog, type RuntimeCatalog } from './compileRuntimeCatalog.js';
-import { loadScript } from './loadScript.js';
-import { loadShapes } from './loadShapes.js';
+import { type RuntimeCatalog } from './compileRuntimeCatalog.js';
+import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
 import { prepareEmit, type StagedGeneration } from './emitTransactionStage.js';
 import { validateStagedEmit, type StageValidationIssue } from './emitTransactionValidate.js';
 import { activateEmit, manifestPath } from './emitTransactionActivate.js';
@@ -25,13 +23,6 @@ export type ActivateTier1EmitResult =
       message: string;
       issues?: StageValidationIssue[];
     };
-
-function loadRuntimeCatalogFor(workspaceRoot: string): RuntimeCatalog {
-  const catalog = loadArtifactCatalog(join(workspaceRoot, 'Design/Content/artifact-catalog.yaml'));
-  const script = loadScript(join(workspaceRoot, 'Design/Content/interview-script/script.yaml'));
-  const shapes = loadShapes(join(workspaceRoot, 'Design/Content/interview-script/shapes.yaml'));
-  return compileRuntimeCatalog({ catalog, script, shapes });
-}
 
 /**
  * The sole production authority for tier-1 emit. Renders through emitTree,
