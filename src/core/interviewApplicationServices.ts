@@ -178,6 +178,12 @@ export function commitInterviewAnswer(
      * validateAnswer has already returned needs_user_ack once for this
      * exact answer text. */
     ackWarnings?: boolean;
+    /** Parsed content of --slots-file (adapter/claude-code/skill/SKILL.md's
+     * documented flat slot-key -> value map), already read off disk by the
+     * caller. Each value is quality-checked the same way the main answer
+     * is, then merged into payload.slots in the same CAS transaction as
+     * answers[stepId] — one revision bump, not two. */
+    slotsPayload?: Record<string, string>;
   }
 ): CommitInterviewAnswerResult {
   let envelope: InterviewStoreEnvelope;
@@ -229,6 +235,31 @@ export function commitInterviewAnswer(
     }
   }
 
+  if (args.slotsPayload && !stepId) {
+    return {
+      ok: false,
+      reason_code: 'SLOTS_WITHOUT_CURRENT_STEP',
+      message: 'Không có câu hỏi hiện tại để gắn slots — không có gì để commit.',
+    };
+  }
+
+  if (args.slotsPayload) {
+    // Slot values get the same basic quality bar as the main answer text
+    // (empty/placeholder rejection) — they don't carry a per-key
+    // answer_contract of their own, so contract-specific rules
+    // (min_trimmed_chars/pattern/enum/warning_rules) don't apply here.
+    for (const [key, value] of Object.entries(args.slotsPayload)) {
+      const slotRes = validateAnswer(null, value);
+      if (slotRes.outcome === 'invalid') {
+        return {
+          ok: false,
+          reason_code: slotRes.reason_code,
+          message: `Slot "${key}": ${slotRes.message}`,
+        };
+      }
+    }
+  }
+
   let updatedProgress: Progress;
   try {
     updatedProgress = commitStep(progress, script, {
@@ -246,9 +277,16 @@ export function commitInterviewAnswer(
     if (stepId && args.answerText) {
       answers[stepId] = args.answerText;
     }
+    const slots = { ...env.payload.slots };
+    if (stepId && args.slotsPayload) {
+      const now = new Date().toISOString();
+      for (const [key, value] of Object.entries(args.slotsPayload)) {
+        slots[key] = { value, provenance: `interview:${stepId}`, updated_at: now };
+      }
+    }
     return {
       ...env,
-      payload: { ...env.payload, progress: updatedProgress, answers },
+      payload: { ...env.payload, progress: updatedProgress, answers, slots },
     };
   });
 

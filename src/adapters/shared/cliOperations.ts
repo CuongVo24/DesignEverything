@@ -29,6 +29,7 @@ import {
   initializeInterviewStore,
   ensureCanonicalStore,
   commitInterviewAnswer,
+  loadSlotsFile,
   activateTier1Emit,
   completeTier1Activation,
   evaluateBuildReadiness,
@@ -226,6 +227,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
     };
   }
 
+  let slotsPayload: Record<string, string> | undefined;
   if (slotsFileArg) {
     const canon = canonicalizeWorkspacePath(workspaceRoot, slotsFileArg);
     if (!canon.ok) {
@@ -238,19 +240,33 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
         runtime_version: '6.0.0',
       };
     }
-    if (!existsSync(canon.canonicalPath)) {
+    // P6.3 — the file's content is now actually read and committed, not
+    // just checked for existence. join() against workspaceRoot also fixes
+    // a latent bug: canon.canonicalPath is workspace-relative, so the prior
+    // existsSync(canon.canonicalPath) resolved against process.cwd()
+    // instead of the target workspace.
+    const absSlotsPath = join(workspaceRoot, canon.canonicalPath);
+    const loaded = loadSlotsFile(absSlotsPath);
+    if (!loaded.ok) {
       return {
         ok: false,
         operation: 'commit',
-        reason_code: 'SLOTS_FILE_NOT_FOUND',
+        reason_code: loaded.reason_code,
         severity: 'error',
-        message: `Không tìm thấy tệp slots tại ${slotsFileArg}.`,
+        message: loaded.message,
         runtime_version: '6.0.0',
       };
     }
+    slotsPayload = loaded.slots;
   }
 
-  const result = commitInterviewAnswer(workspaceRoot, { capabilityToken, branchChoice, answerText, ackWarnings });
+  const result = commitInterviewAnswer(workspaceRoot, {
+    capabilityToken,
+    branchChoice,
+    answerText,
+    ackWarnings,
+    slotsPayload,
+  });
 
   if (!result.ok) {
     if (result.reason_code === 'STORE_MISSING') {

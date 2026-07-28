@@ -26,6 +26,8 @@ export { validateAnswer } from './validateAnswer.js';
 export type { AnswerValidationOutcome, AnswerValidationResult } from './validateAnswer.js';
 export { loadQuestionSlots } from './loadQuestionSlots.js';
 export type { LoadSlotsResult } from './loadQuestionSlots.js';
+export { loadSlotsFile } from './loadSlotsFile.js';
+export type { LoadSlotsFileResult } from './loadSlotsFile.js';
 export { inspectRuntimeHealth, authorizeRecovery } from './runtimeHealth.js';
 export { runCliOperation } from '../adapters/shared/cliOperations.js';
 export {

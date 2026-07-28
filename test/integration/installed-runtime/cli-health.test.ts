@@ -4,6 +4,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { runCliOperation } from '../../../src/adapters/shared/cliOperations.js';
 import { issueTurnCapability } from '../../../src/core/turnCapability.js';
+import { loadInterviewStore } from '../../../src/core/interviewStore.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
 
@@ -155,6 +156,65 @@ describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
     expect(res.ok).toBe(false);
     expect(res.reason_code).toBe('INVALID_SLOTS_FILE');
     expect(res.message).toContain('nằm ngoài workspace');
+  });
+
+  it('P6 10.1 — a valid --slots-file commits its content atomically alongside the answer', async () => {
+    const issued = issueTurnCapability(0, {
+      sessionId: 'default-session',
+      operationKind: 'interview',
+      questionId: 'S1',
+    });
+    const progress = {
+      version: '4.0.0',
+      phase: 'interview',
+      branch: 'web',
+      session_id: 'default-session',
+      state_revision: 0,
+      calibrate_mode: 'fast',
+      current_step: 'S1',
+      answered: [],
+      emitted_docs: [],
+      gates_passed: [],
+      pending_turn_capability: issued.capability,
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 0,
+      updated_at: new Date().toISOString(),
+    };
+    writeFileSync(join(tmpDir, 'progress.json'), JSON.stringify(progress, null, 2), 'utf8');
+
+    const interviewDir = join(tmpDir, 'Design/.interview');
+    mkdirSync(interviewDir, { recursive: true });
+    writeFileSync(
+      join(interviewDir, 'slots-S1.json'),
+      JSON.stringify({
+        problem_summary: 'Người dùng mất nhiều thời gian nhập liệu thủ công.',
+        current_workaround: 'Hiện đang dùng bảng tính Excel chia sẻ qua email.',
+      }),
+      'utf8'
+    );
+
+    const res = await runCliOperation(tmpDir, [
+      'commit',
+      '--capability-token',
+      issued.token,
+      '--answer',
+      'Người dùng mất nhiều thời gian và hay nhập sai.',
+      '--slots-file',
+      'Design/.interview/slots-S1.json',
+    ]);
+
+    expect(res.ok).toBe(true);
+    expect(res.reason_code).toBe('COMMIT_SUCCESS');
+
+    const envelope = loadInterviewStore(tmpDir);
+    expect(envelope.payload.answers.S1).toBe('Người dùng mất nhiều thời gian và hay nhập sai.');
+    expect(envelope.payload.slots.problem_summary).toMatchObject({
+      value: 'Người dùng mất nhiều thời gian nhập liệu thủ công.',
+      provenance: 'interview:S1',
+    });
+    expect(envelope.payload.slots.current_workaround).toMatchObject({
+      value: 'Hiện đang dùng bảng tính Excel chia sẻ qua email.',
+    });
   });
 
   it('should return UNKNOWN_SUBCOMMAND envelope for unknown subcommand', async () => {
