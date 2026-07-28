@@ -9,6 +9,12 @@ export function onPreToolUse(ctx: {
   tool: 'Write' | 'Edit' | 'Bash';
   toolInput: unknown;
   sessionId?: string;
+  /** Pre-tokenized argv (e.g. resolveCliInvocation.mjs's quote-aware
+   * tokenizer), used verbatim when present instead of the naive
+   * commandStr.split(/\s+/) below — P8.3, so a quoted argument containing a
+   * space (e.g. --answer-text "hello world") reaches Core correctly split
+   * instead of torn apart. Falls back to the naive split when absent. */
+  commandArgv?: string[];
 }): { decision: 'allow' | 'deny'; message?: string } {
   let actionKind: 'write' | 'read' | 'shell' = 'write';
   const toolName = ctx.tool.toLowerCase();
@@ -47,7 +53,7 @@ export function onPreToolUse(ctx: {
       return { decision: 'deny', message: 'Không chỉ định lệnh thực thi.' };
     }
     commandStr = commandStr.trim();
-    commandArgv = commandStr.split(/\s+/);
+    commandArgv = ctx.commandArgv && ctx.commandArgv.length > 0 ? ctx.commandArgv : commandStr.split(/\s+/);
   }
 
   const capability: AdapterCapability = {

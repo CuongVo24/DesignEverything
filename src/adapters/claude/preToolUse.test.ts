@@ -183,6 +183,50 @@ describe('onPreToolUse hook', () => {
     }
   });
 
+  test('P8.3 — a pre-tokenized commandArgv is passed through verbatim instead of being re-split', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Bash',
+        toolInput: { command: 'node cli.mjs commit --answer-text "hello world"' },
+        // The naive commandStr.split(/\s+/) would tear "hello world" into
+        // two tokens (plus stray quote characters); a caller supplying its
+        // own quote-aware tokens must have them reach Core intact.
+        commandArgv: ['node', 'cli.mjs', 'commit', '--answer-text', 'hello world'],
+      });
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command_argv: ['node', 'cli.mjs', 'commit', '--answer-text', 'hello world'],
+        }),
+        expect.anything()
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('P8.3 — without a pre-tokenized commandArgv, the naive whitespace split is used unchanged', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Bash',
+        toolInput: { command: 'ls -la' },
+      });
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({ command_argv: ['ls', '-la'] }),
+        expect.anything()
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test('should deny path traversal and drives on Write/Edit tools', () => {
     // 1. Path traversal via relative parent dir
     const result1 = onPreToolUse({
