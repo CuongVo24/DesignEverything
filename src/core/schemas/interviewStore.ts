@@ -5,6 +5,7 @@ export const slotProvenanceRecordSchema = z.object({
   value: z.string(),
   provenance: z.string(),
   updated_at: z.string().datetime(),
+  producer_version: z.string().optional(),
 });
 
 export const interviewStorePayloadSchema = z.object({
