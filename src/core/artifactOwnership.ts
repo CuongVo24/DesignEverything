@@ -1,7 +1,17 @@
 import { normalize } from 'path';
 import { InternalMutationCapability } from './schemas/index.js';
+import { matchesCatalogPattern } from './catalogPathMatch.js';
 
 export type ArtifactClass = 'engine-state' | 'engine-policy' | 'managed-output' | 'interview-scratch' | 'user-owned';
+
+// A catalog entry as far as ownership classification cares: either a bare
+// exact-path string (the original, still-supported shape), or an object
+// carrying `path` and/or `path_pattern` — real ArtifactRecord values from
+// compileRuntimeCatalog satisfy this structurally, extra fields ignored.
+export interface CatalogPathEntry {
+  path?: string;
+  path_pattern?: string;
+}
 
 export function normalizePath(path: string): string {
   const norm = normalize(path).replace(/\\/g, '/');
@@ -11,7 +21,7 @@ export function normalizePath(path: string): string {
   return norm;
 }
 
-export function classifyArtifact(path: string, catalogPaths: string[] = []): ArtifactClass {
+export function classifyArtifact(path: string, catalogEntries: (string | CatalogPathEntry)[] = []): ArtifactClass {
   const norm = normalizePath(path);
 
   // 1. engine-state
@@ -49,11 +59,23 @@ export function classifyArtifact(path: string, catalogPaths: string[] = []): Art
     return 'interview-scratch';
   }
 
-  // 4. managed-output — exact canonical path membership only. A
-  // suffix/substring match here would let a lookalike path in an unrelated
-  // directory (e.g. "other/docs/01-vision.md") impersonate a catalog entry.
-  const normCatalog = new Set(catalogPaths.map((p) => normalizePath(p)));
-  if (normCatalog.has(norm)) {
+  // 4. managed-output — exact canonical path membership, or a declared
+  // {placeholder} path_pattern match (P6 10.3 — e.g. artifact-catalog.yaml's
+  // ADR/feature-spec entries, which only declare path_pattern, never path).
+  // Exact match stays a Set for O(1) lookup and is never substring/suffix
+  // based — a lookalike path in an unrelated directory (e.g.
+  // "other/docs/01-vision.md") must not impersonate a catalog entry.
+  const exactPaths = new Set<string>();
+  const patterns: string[] = [];
+  for (const entry of catalogEntries) {
+    if (typeof entry === 'string') {
+      exactPaths.add(normalizePath(entry));
+    } else {
+      if (entry.path) exactPaths.add(normalizePath(entry.path));
+      if (entry.path_pattern) patterns.push(entry.path_pattern);
+    }
+  }
+  if (exactPaths.has(norm) || patterns.some((p) => matchesCatalogPattern(norm, p))) {
     return 'managed-output';
   }
 
@@ -66,10 +88,10 @@ export function authorizeMutation(
   actor: 'agent-host' | 'core-transaction',
   targetPath: string,
   capability?: InternalMutationCapability,
-  catalogPaths: string[] = []
+  catalogEntries: (string | CatalogPathEntry)[] = []
 ): { decision: 'allow' | 'deny'; reason_code: string; user_message: string } {
   void action;
-  const artifactClass = classifyArtifact(targetPath, catalogPaths);
+  const artifactClass = classifyArtifact(targetPath, catalogEntries);
 
   if (artifactClass === 'user-owned') {
     return {

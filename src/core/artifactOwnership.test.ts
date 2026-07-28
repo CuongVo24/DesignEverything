@@ -125,4 +125,37 @@ describe('B2a — Protected artifact ownership policy contract', () => {
       expect(res.reason_code).toBe('CAPABILITY_TARGET_MISMATCH');
     });
   });
+
+  describe('P6 10.3 — pattern-declared catalog artifacts (path_pattern)', () => {
+    test('classifyArtifact classifies a path matching a catalog path_pattern as managed-output', () => {
+      const catalog = [{ id: 'adr', path_pattern: 'docs/design/adr/ADR-{seq}.md', tier: 1 as const }];
+      expect(classifyArtifact('docs/design/adr/ADR-1.md', catalog)).toBe('managed-output');
+      expect(classifyArtifact('docs/design/adr/ADR-42.md', catalog)).toBe('managed-output');
+    });
+
+    test('classifyArtifact does not match a path outside the declared pattern', () => {
+      const catalog = [{ path_pattern: 'docs/design/adr/ADR-{seq}.md' }];
+      expect(classifyArtifact('docs/design/adr/nested/ADR-1.md', catalog)).toBe('user-owned');
+      expect(classifyArtifact('docs/design/other/ADR-1.md', catalog)).toBe('user-owned');
+    });
+
+    test('classifyArtifact still accepts a plain string array for exact paths (backward compatible)', () => {
+      const catalog = ['docs/01-vision.md'];
+      expect(classifyArtifact('docs/01-vision.md', catalog)).toBe('managed-output');
+    });
+
+    test('classifyArtifact accepts a mix of exact-path and pattern catalog entries', () => {
+      const catalog = [{ path: 'docs/01-vision.md' }, { path_pattern: 'docs/design/adr/ADR-{seq}.md' }];
+      expect(classifyArtifact('docs/01-vision.md', catalog)).toBe('managed-output');
+      expect(classifyArtifact('docs/design/adr/ADR-7.md', catalog)).toBe('managed-output');
+      expect(classifyArtifact('docs/02-scope.md', catalog)).toBe('user-owned');
+    });
+
+    test('authorizeMutation denies a direct agent-host write to a pattern-matched managed artifact', () => {
+      const catalog = [{ path_pattern: 'docs/design/adr/ADR-{seq}.md' }];
+      const res = authorizeMutation('write', 'agent-host', 'docs/design/adr/ADR-1.md', undefined, catalog);
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+    });
+  });
 });

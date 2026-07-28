@@ -45,7 +45,7 @@ export {
   type CliResultEnvelope,
 } from '../adapters/shared/cliResult.js';
 export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
-export type { ArtifactClass } from './artifactOwnership.js';
+export type { ArtifactClass, CatalogPathEntry } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
 export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';
 export { canonicalizeWorkspacePath, matchesPathPattern, isContainedRealPath } from './pathPolicy.js';
