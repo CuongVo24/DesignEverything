@@ -1,4 +1,15 @@
 export * from './schemas/index.js';
+// P9 — RUNTIME_VERSION lives in src/version.ts (single source of truth,
+// commit 564c204) but was never actually re-exported through this barrel
+// despite runtimeBundleEntry.ts's doc comment claiming it is one of the
+// symbols `export * from './core/index.js'` surfaces. Every adapter
+// (cliOperations.ts, cliResult.ts, deepenCliOperations.ts, runtimeHealth.ts)
+// imports it directly from '../version.js'/'../../version.js', so this gap
+// was invisible until something needed RUNTIME_VERSION from the compiled
+// bundle's own export surface (runtime-bundle.test.ts, tampered-runtime.test.ts)
+// — a fresh `npm run build:bundle` silently ships a bundle with no
+// RUNTIME_VERSION export at all.
+export { RUNTIME_VERSION } from '../version.js';
 export { loadScript } from './loadScript.js';
 export { loadGatePolicy } from './loadGatePolicy.js';
 export { loadProgress, saveProgress } from './loadProgress.js';
@@ -51,6 +62,7 @@ export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
 export type { ArtifactClass, CatalogPathEntry } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
 export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';
+export { tokenizeShellCommand, stripQuotedContent } from './tokenizeShellCommand.js';
 export { canonicalizeWorkspacePath, matchesPathPattern, isContainedRealPath } from './pathPolicy.js';
 export { loadDeepenScript } from './loadDeepenScript.js';
 export {
