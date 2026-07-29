@@ -65,6 +65,7 @@ export type { CommandClassification, CommandClassificationOutcome, ClassifyComma
 export { tokenizeShellCommand, stripQuotedContent } from './tokenizeShellCommand.js';
 export { ensureTier1Handoff } from './ensureTier1Handoff.js';
 export { canonicalizeWorkspacePath, matchesPathPattern, isContainedRealPath } from './pathPolicy.js';
+export type { CanonicalWorkspacePath, PathCanonicalizationResult } from './pathPolicy.js';
 export { loadDeepenScript } from './loadDeepenScript.js';
 export {
   loadDeepenState,

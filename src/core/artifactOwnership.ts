@@ -130,6 +130,27 @@ export function authorizeMutation(
 
   // Protected classes: engine-state, engine-policy, managed-output
   if (actor === 'core-transaction' && capability) {
+    // A capability is a scaffold for a future architecture right now: no
+    // production caller ever constructs one (both call sites in
+    // evaluatePreAction.ts pass `undefined`), so `expires_at`/`operation`
+    // being unread was previously invisible dead-branch debt rather than an
+    // active exploit — nothing currently relies on an expired capability
+    // being accepted. Enforcing expiry here closes that gap the moment a
+    // real issuer does show up, without having to invent one now.
+    // `operation` is intentionally NOT cross-validated against `action`:
+    // the two are different dimensions (why a capability was minted vs.
+    // what kind of filesystem mutation is being attempted) and no mapping
+    // between them is declared anywhere in the schema or callers — checking
+    // one against the other would fabricate a policy that doesn't exist
+    // rather than enforce a real one.
+    if (new Date(capability.expires_at).getTime() <= Date.now()) {
+      return {
+        decision: 'deny',
+        reason_code: 'CAPABILITY_EXPIRED',
+        user_message: `Internal capability expired at ${capability.expires_at}; a fresh capability must be issued for this transaction.`,
+      };
+    }
+
     const normTarget = normalizePath(targetPath);
     // Exact path-set membership only — a suffix/substring match would let a
     // capability scoped to e.g. ".design-everything/interview-state.json"

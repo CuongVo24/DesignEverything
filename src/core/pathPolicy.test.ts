@@ -27,6 +27,45 @@ describe('B2c — Canonical workspace path matcher contract', () => {
     }
   });
 
+  describe('UNC / device path rejection', () => {
+    // The generic PATH_OUTSIDE_WORKSPACE boundary check already denies
+    // every one of these (resolve() treats them as already-absolute, never
+    // joined with workspaceRoot, so their normalized form never textually
+    // starts with the workspace root) — verified empirically before adding
+    // this test, not assumed. These earlier, specific checks change no
+    // security outcome; they only give a caller a clearer reason code than
+    // the generic one, and lock in the already-correct deny with an
+    // explicit regression test (none existed before).
+    test('rejects a UNC network path with a dedicated reason code', () => {
+      const res = canonicalizeWorkspacePath(workspaceRoot, String.raw`\\server\share\x`);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason_code).toBe('UNC_PATH_DENIED');
+    });
+
+    test('rejects a \\\\.\\ device path with a dedicated reason code', () => {
+      const res = canonicalizeWorkspacePath(workspaceRoot, String.raw`\\.\PhysicalDrive0`);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason_code).toBe('DEVICE_PATH_DENIED');
+    });
+
+    test('rejects a \\\\?\\ extended-length device path with a dedicated reason code', () => {
+      const res = canonicalizeWorkspacePath(workspaceRoot, String.raw`\\?\C:\x`);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason_code).toBe('DEVICE_PATH_DENIED');
+    });
+
+    test('rejects a \\\\?\\UNC\\ extended-length UNC path with a dedicated reason code', () => {
+      const res = canonicalizeWorkspacePath(workspaceRoot, String.raw`\\?\UNC\server\share\x`);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason_code).toBe('DEVICE_PATH_DENIED');
+    });
+
+    test('an ordinary relative path is unaffected by the new UNC/device checks', () => {
+      const res = canonicalizeWorkspacePath(workspaceRoot, 'src/index.ts');
+      expect(res.ok).toBe(true);
+    });
+  });
+
   test('isContainedRealPath verifies containment', () => {
     expect(isContainedRealPath(workspaceRoot, 'src/index.ts')).toBe(true);
     expect(isContainedRealPath(workspaceRoot, '../../outside.txt')).toBe(false);

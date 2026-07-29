@@ -78,6 +78,38 @@ describe('B2a — Protected artifact ownership policy contract', () => {
     expect(res.reason_code).toBe('INTERNAL_CAPABILITY_AUTHORIZED');
   });
 
+  test('authorizeMutation denies an expired capability even with a matching target_paths entry', () => {
+    // Before this fix, `expires_at` was parsed into the schema but never
+    // actually read by authorizeMutation — an expired capability authorized
+    // exactly like a fresh one as long as target_paths matched.
+    const cap: InternalMutationCapability = {
+      capability_id: 'cap-expired',
+      operation: 'commit_step',
+      target_paths: ['progress.json'],
+      issued_at: new Date(Date.now() - 120000).toISOString(),
+      expires_at: new Date(Date.now() - 60000).toISOString(),
+    };
+
+    const res = authorizeMutation('write', 'core-transaction', 'progress.json', cap);
+    expect(res.decision).toBe('deny');
+    expect(res.reason_code).toBe('CAPABILITY_EXPIRED');
+  });
+
+  test('authorizeMutation denies a capability that expires at exactly the current instant (boundary, not strictly in the future)', () => {
+    const now = new Date().toISOString();
+    const cap: InternalMutationCapability = {
+      capability_id: 'cap-boundary',
+      operation: 'commit_step',
+      target_paths: ['progress.json'],
+      issued_at: now,
+      expires_at: now,
+    };
+
+    const res = authorizeMutation('write', 'core-transaction', 'progress.json', cap);
+    expect(res.decision).toBe('deny');
+    expect(res.reason_code).toBe('CAPABILITY_EXPIRED');
+  });
+
   test('authorizeMutation denies core-transaction when capability target mismatches', () => {
     const cap: InternalMutationCapability = {
       capability_id: 'cap-123',
