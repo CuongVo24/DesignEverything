@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import {
@@ -7,6 +7,48 @@ import {
   authorizeRecovery,
   evaluatePreAction,
 } from './index.js';
+import { RUNTIME_VERSION } from '../version.js';
+import { createHash } from 'crypto';
+
+function validProgress(overrides: Record<string, unknown> = {}) {
+  return {
+    version: '4.0.0',
+    phase: 'ready-to-build',
+    branch: 'web',
+    calibrate_mode: 'fast',
+    current_step: null,
+    answered: [],
+    emitted_docs: [],
+    gates_passed: [],
+    last_user_turn_id: null,
+    answered_len_at_last_turn: 0,
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+// DEBT3.2 — a real install-manifest.json is now parsed and hash-verified
+// (Phase 5), so the old fabricated `{ version: '6.0.0' }` stub (which never
+// matched the real schema) would report CORRUPT_INSTALL_MANIFEST for every
+// test in this file. This builds a fully schema-valid manifest with no
+// assets/hook_ids declared, so it trivially passes the new integrity checks
+// and each test still only exercises what it's actually testing.
+function validManifest(overrides: Record<string, unknown> = {}) {
+  return {
+    version: '1.0.0',
+    adapter: 'claude-code',
+    runtime_version: RUNTIME_VERSION,
+    catalog_version: 'test',
+    catalog_digest: '0'.repeat(64),
+    build_hash: '0'.repeat(64),
+    engine_range: `^${RUNTIME_VERSION}`,
+    target_root: 'test',
+    hook_ids: [],
+    assets: [],
+    installed_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 describe('B2e — Installed runtime health and fail-closed recovery contract', () => {
   let tempDir: string;
@@ -35,7 +77,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
 
     const report = inspectRuntimeHealth(tempDir);
@@ -48,7 +90,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
     writeFileSync(join(tempDir, 'progress.json'), '{ CORRUPT_JSON ...');
 
@@ -61,7 +103,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
     writeFileSync(join(tempDir, 'progress.json'), '{ INVALID_JSON }');
 
@@ -80,7 +122,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
 
     const report = inspectRuntimeHealth(tempDir);
@@ -96,7 +138,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
 
     const report = inspectRuntimeHealth(tempDir);
@@ -112,7 +154,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
 
     const report = inspectRuntimeHealth(tempDir);
@@ -125,7 +167,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
-      JSON.stringify({ version: '6.0.0' }, null, 2)
+      JSON.stringify(validManifest(), null, 2)
     );
     writeFileSync(
       join(tempDir, 'progress.json'),
@@ -169,5 +211,149 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     const report = inspectRuntimeHealth(tempDir);
     expect(report.issues.some((i) => i.reason_code === 'MISSING_DEEPEN_SCRIPT')).toBe(false);
     expect(report.issues.some((i) => i.reason_code === 'CORRUPT_DEEPEN_SCRIPT')).toBe(false);
+  });
+});
+
+describe('DEBT3.2 — install-manifest.json is parsed and hash-verified, not just existsSync-checked', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = join(tmpdir(), `de-test-debt3.2-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
+    mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
+    writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(validProgress(), null, 2));
+    return () => {
+      if (existsSync(tempDir)) {
+        try {
+          rmSync(tempDir, { recursive: true, force: true });
+        } catch {
+          // Ignore
+        }
+      }
+    };
+  });
+
+  test('a fully valid manifest with no declared assets/hooks reports healthy', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest(), null, 2)
+    );
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('healthy');
+    expect(report.issues).toEqual([]);
+  });
+
+  test('corrupt (non-JSON) install-manifest.json reports broken with CORRUPT_INSTALL_MANIFEST', () => {
+    writeFileSync(join(tempDir, '.design-everything/install-manifest.json'), '{ not valid json ...');
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_INSTALL_MANIFEST')).toBe(true);
+  });
+
+  test('a manifest missing required schema fields reports broken with CORRUPT_INSTALL_MANIFEST', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify({ version: '6.0.0' }, null, 2)
+    );
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_INSTALL_MANIFEST')).toBe(true);
+  });
+
+  test('a one-byte tamper of a declared asset reports broken with TAMPERED_RUNTIME_ASSET', () => {
+    writeFileSync(join(tempDir, 'runtime.mjs'), 'export const x = 1;\n');
+    const originalHash = createHash('sha256')
+      .update(readFileSync(join(tempDir, 'runtime.mjs')))
+      .digest('hex');
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(
+        validManifest({ assets: [{ path: 'runtime.mjs', sha256: originalHash, kind: 'runtime' }] }),
+        null,
+        2
+      )
+    );
+
+    // Sanity: healthy before tampering.
+    expect(inspectRuntimeHealth(tempDir).status).toBe('healthy');
+
+    writeFileSync(join(tempDir, 'runtime.mjs'), 'export const x = 2;\n');
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    const issue = report.issues.find((i) => i.reason_code === 'TAMPERED_RUNTIME_ASSET');
+    expect(issue).toBeDefined();
+    expect(issue!.detail).toContain('runtime.mjs');
+  });
+
+  test('a declared asset that no longer exists on disk reports broken with TAMPERED_RUNTIME_ASSET', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(
+        validManifest({ assets: [{ path: 'cli.mjs', sha256: '0'.repeat(64), kind: 'launcher' }] }),
+        null,
+        2
+      )
+    );
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'TAMPERED_RUNTIME_ASSET')).toBe(true);
+  });
+
+  test('a Claude-adapter manifest declaring hook_ids with no matching command in settings.json reports MISSING_HOOK_WIRING', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest({ hook_ids: ['claude:pre-tool-use'] }), null, 2)
+    );
+    // No .claude/settings.json at all.
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'MISSING_HOOK_WIRING')).toBe(true);
+  });
+
+  test('a Claude-adapter manifest whose hook_ids are all wired in settings.json reports no MISSING_HOOK_WIRING', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest({ hook_ids: ['claude:pre-tool-use'] }), null, 2)
+    );
+    mkdirSync(join(tempDir, '.claude'), { recursive: true });
+    writeFileSync(
+      join(tempDir, '.claude/settings.json'),
+      JSON.stringify(
+        {
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: 'Write|Edit|Bash',
+                hooks: [{ type: 'command', command: 'node ".design-everything/runtime/6.0.0/hooks/pre-tool-use.mjs"' }],
+              },
+            ],
+          },
+        },
+        null,
+        2
+      )
+    );
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'MISSING_HOOK_WIRING')).toBe(false);
+  });
+
+  test('a corrupt tier2 emit manifest reports broken with CORRUPT_EMIT_MANIFEST', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest(), null, 2)
+    );
+    writeFileSync(join(tempDir, '.design-everything/emit-manifest-tier2.json'), '{ CORRUPT ...');
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_EMIT_MANIFEST')).toBe(true);
+  });
+
+  test('a stale runtime_version reports INSTALL_MANIFEST_STALE as a warning, not broken', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest({ runtime_version: '0.0.1' }), null, 2)
+    );
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'INSTALL_MANIFEST_STALE')).toBe(true);
+    expect(report.status).toBe('warning');
   });
 });

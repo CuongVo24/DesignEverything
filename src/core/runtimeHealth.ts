@@ -1,14 +1,166 @@
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { createHash } from 'crypto';
 import {
   HealthReport,
   HealthIssue,
   loadProgress,
   loadExecutionState,
   loadInterviewStore,
+  installManifestSchema,
+  type InstallManifest,
 } from './index.js';
 import { loadDeepenState } from './deepenState.js';
 import { loadDeepenScript } from './loadDeepenScript.js';
+import { emitManifestSchema } from './schemas/emitManifest.js';
+import { RUNTIME_VERSION } from '../version.js';
+
+function sha256File(p: string): string {
+  return createHash('sha256').update(readFileSync(p)).digest('hex');
+}
+
+/**
+ * DEBT3.2 (bonus-plan Phase 5) — install-manifest.json used to only be
+ * `existsSync`-checked (a boolean "is this workspace installed" marker);
+ * every field inside it was trusted blindly. This parses it for real,
+ * hash-verifies every declared asset against the bytes actually on disk,
+ * and (for the Claude adapter) confirms every declared hook is still wired
+ * in .claude/settings.json — so a manifest that's present but stale,
+ * corrupt, or describing tampered/missing files reports broken instead of
+ * silently passing as "installed".
+ */
+function checkInstallManifestIntegrity(workspaceRoot: string, installManifestPath: string): HealthIssue[] {
+  const issues: HealthIssue[] = [];
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(installManifestPath, 'utf8'));
+  } catch (err: unknown) {
+    return [
+      {
+        severity: 'error',
+        reason_code: 'CORRUPT_INSTALL_MANIFEST',
+        artifact: 'install-manifest.json',
+        detail: `install-manifest.json is not valid JSON: ${(err as Error).message}`,
+        safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+        can_auto_repair: false,
+      },
+    ];
+  }
+
+  const parsed = installManifestSchema.safeParse(raw);
+  if (!parsed.success) {
+    return [
+      {
+        severity: 'error',
+        reason_code: 'CORRUPT_INSTALL_MANIFEST',
+        artifact: 'install-manifest.json',
+        detail: `install-manifest.json does not match the expected schema: ${JSON.stringify(parsed.error.format())}`,
+        safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+        can_auto_repair: false,
+      },
+    ];
+  }
+
+  const manifest: InstallManifest = parsed.data;
+
+  if (manifest.runtime_version !== RUNTIME_VERSION) {
+    issues.push({
+      severity: 'warning',
+      reason_code: 'INSTALL_MANIFEST_STALE',
+      artifact: 'install-manifest.json',
+      detail: `Installed runtime_version "${manifest.runtime_version}" does not match the running engine's version "${RUNTIME_VERSION}".`,
+      safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+      can_auto_repair: true,
+    });
+  }
+
+  const tamperedOrMissing: string[] = [];
+  for (const asset of manifest.assets) {
+    const assetPath = join(workspaceRoot, asset.path);
+    if (!existsSync(assetPath)) {
+      tamperedOrMissing.push(`${asset.path} (missing)`);
+      continue;
+    }
+    if (sha256File(assetPath) !== asset.sha256) {
+      tamperedOrMissing.push(asset.path);
+    }
+  }
+  if (tamperedOrMissing.length > 0) {
+    issues.push({
+      severity: 'error',
+      reason_code: 'TAMPERED_RUNTIME_ASSET',
+      artifact: 'install-manifest.json',
+      detail: `Installed asset(s) no longer match the manifest's recorded hash: ${tamperedOrMissing.join(', ')}.`,
+      safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+      can_auto_repair: true,
+    });
+  }
+
+  if (manifest.adapter === 'claude-code' && manifest.hook_ids.length > 0) {
+    const settingsPath = join(workspaceRoot, '.claude/settings.json');
+    let wiredHookCommandCount = 0;
+    if (existsSync(settingsPath)) {
+      try {
+        const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+        const allCommands: string[] = Object.values(settings.hooks ?? {})
+          .flatMap((entries) => entries as Array<{ hooks?: Array<{ command?: string }> }>)
+          .flatMap((entry) => entry.hooks ?? [])
+          .map((h) => h.command)
+          .filter((c): c is string => typeof c === 'string');
+        wiredHookCommandCount = allCommands.filter((c) => c.includes('.design-everything/runtime/')).length;
+      } catch {
+        wiredHookCommandCount = 0;
+      }
+    }
+    if (wiredHookCommandCount < manifest.hook_ids.length) {
+      issues.push({
+        severity: 'error',
+        reason_code: 'MISSING_HOOK_WIRING',
+        artifact: '.claude/settings.json',
+        detail: `Install manifest declares ${manifest.hook_ids.length} hook(s) (${manifest.hook_ids.join(', ')}) but only ${wiredHookCommandCount} are wired in .claude/settings.json.`,
+        safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+        can_auto_repair: true,
+      });
+    }
+  }
+
+  return issues;
+}
+
+function checkEmitManifestIntegrity(workspaceRoot: string): HealthIssue[] {
+  const issues: HealthIssue[] = [];
+  for (const [channel, relPath] of [
+    ['tier1', '.design-everything/emit-manifest.json'],
+    ['tier2', '.design-everything/emit-manifest-tier2.json'],
+  ] as const) {
+    const p = join(workspaceRoot, relPath);
+    if (!existsSync(p)) continue;
+    try {
+      const parsed = emitManifestSchema.safeParse(JSON.parse(readFileSync(p, 'utf8')));
+      if (!parsed.success) {
+        issues.push({
+          severity: 'error',
+          reason_code: 'CORRUPT_EMIT_MANIFEST',
+          artifact: relPath,
+          detail: `${channel} emit manifest does not match the expected schema: ${JSON.stringify(parsed.error.format())}`,
+          safe_next_command: 'node adapter/claude-code/cli.mjs validate',
+          can_auto_repair: false,
+        });
+      }
+    } catch (err: unknown) {
+      issues.push({
+        severity: 'error',
+        reason_code: 'CORRUPT_EMIT_MANIFEST',
+        artifact: relPath,
+        detail: `Failed to parse ${channel} emit manifest: ${(err as Error).message}`,
+        safe_next_command: 'node adapter/claude-code/cli.mjs validate',
+        can_auto_repair: false,
+      });
+    }
+  }
+  return issues;
+}
 
 export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
   const issues: HealthIssue[] = [];
@@ -129,6 +281,15 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
       }
     }
   }
+
+  // DEBT3.2 — appended last so they never shift the index of the
+  // pre-existing progress/interview-store/execution-state checks above
+  // (existing callers rely on issues[0] staying MISSING_INTERVIEW_STORE
+  // when that's the only real problem).
+  if (hasInstallManifest) {
+    issues.push(...checkInstallManifestIntegrity(workspaceRoot, installManifestPath));
+  }
+  issues.push(...checkEmitManifestIntegrity(workspaceRoot));
 
   const hasErrors = issues.some((i) => i.severity === 'error');
   const hasWarnings = issues.some((i) => i.severity === 'warning');
