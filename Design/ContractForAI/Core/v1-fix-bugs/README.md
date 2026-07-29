@@ -27,8 +27,12 @@ plan-v1-fix.md §3, mỗi contract có ba trục:
 
 - **Spec**: `DRAFT` → `WAITING_FOR_APPROVAL` → `APPROVED`. Ý định đã được người duyệt hay chưa.
 - **Implementation**: `NOT_STARTED` → `PARTIAL` → `IMPLEMENTED`. Code tồn tại và đạt checklist nội bộ.
-- **Proof**: `MISSING` → `UNIT_ONLY` → `SEAM_PARTIAL` → `VERIFIED` (hoặc `INVALID_FOR_CLAIM` khi
-  evidence hiện có sai seam/không map đúng finding). Bằng chứng đang ở đâu trên trục unit→installed seam.
+- **Proof**: `MISSING` → `SNAPSHOT_ONLY` → `UNIT_ONLY` → `SEAM_PARTIAL` → `VERIFIED`. `SNAPSHOT_ONLY`
+  là bằng chứng yếu hơn cả `UNIT_ONLY` — chỉ so khớp văn bản/snapshot, không chạy hành vi thật.
+  `INVALID_FOR_CLAIM` và `INVALID_FOR_PRODUCTION_SEAM` là hai nhánh rẽ khỏi trục, không phải một nấc
+  trên đó: cả hai đánh dấu bằng chứng hiện có **không được tính** cho DONE — `INVALID_FOR_CLAIM` khi
+  evidence sai seam/không map đúng finding, `INVALID_FOR_PRODUCTION_SEAM` khi evidence chạy đúng
+  hành vi nhưng gọi thẳng Core thay vì qua CLI/wrapper production thật.
 
 **Quy tắc khóa:** một contract chỉ được ghi `DONE` khi cả ba trục đạt `APPROVED + IMPLEMENTED +
 VERIFIED`. Không dùng `DONE` để che việc chưa approve hoặc chưa có seam evidence. `DONE` không được
@@ -55,7 +59,7 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B4 | B4a — Claude hook policy integration | Adapter | B1–B3 | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4b — Exact wrapper invocation | Adapter | B2b, B4a | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4c — CLI exit/output/health protocol | Adapter | B2e, B3d, B3e | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
-| B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | WAITING_FOR_APPROVAL | NOT_STARTED/PARTIAL | MISSING |
+| B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | WAITING_FOR_APPROVAL | PARTIAL | MISSING |
 | B4 | B4e — Codex parity and shared runtime | Adapter | B4c, B4d | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4f — Skill handoff and wording truth | Adapter | B1c, B3e, B4c | WAITING_FOR_APPROVAL | PARTIAL | SNAPSHOT_ONLY |
 | B5 | B5a — Adversarial installed-runtime integration | QA | B4a–B4f | WAITING_FOR_APPROVAL | PARTIAL | INVALID_FOR_CLAIM |
