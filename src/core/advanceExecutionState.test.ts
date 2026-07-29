@@ -228,6 +228,53 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     expect((state.block_reason as { kind: string; task_id: string | null }).task_id).toBe('T2');
   });
 
+  test('X06 — a passing validate call must NOT clear a verification-failed block (validation and execution failure are distinct)', () => {
+    let state = initExecutionState();
+    state = transitionToReadyToExecute(state, true);
+    state = startTask(state, 'M1', 'T1', plan);
+    state = recordEvidence(state, {
+      task_id: 'T1',
+      command_id: 'test-index',
+      argv: ['npm', 'run', 'test:index'],
+      cwd: null,
+      exit_code: 0,
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: { 'T1-evidence.txt': 'hash-artifact' },
+      captured_at: '2026-07-13T09:00:00.000Z',
+      source: 'runner' as const,
+    }, plan);
+    state = startTask(state, 'M1', 'T2', plan);
+    // T2's failure_policy is 'abort' (unlike T1's 'debug'), so a failed
+    // command here lands in 'blocked' with a 'verification-failed' block —
+    // the exact conflation X06 warns against.
+    state = recordEvidence(state, {
+      task_id: 'T2',
+      command_id: 'test-util',
+      argv: ['npm', 'run', 'test:util'],
+      cwd: null,
+      exit_code: 1,
+      stdout_sha256: 'hash1',
+      stderr_sha256: 'hash2',
+      artifact_digests: {},
+      captured_at: '2026-07-13T10:00:00.000Z',
+      source: 'runner' as const,
+    }, plan);
+    expect(state.phase).toBe('blocked');
+    expect((state.block_reason as { kind: string }).kind).toBe('verification-failed');
+    const blockedActiveTask = state.active_task;
+
+    // A subsequent /build re-running semantic plan validation with a PASS
+    // result must not be able to reopen execution — verification failure
+    // is a distinct failure mode from plan validation and can only be
+    // recovered by fixing the underlying task, not by re-validating.
+    const reValidated = transitionToReadyToExecute(state, true);
+
+    expect(reValidated.phase).toBe('blocked');
+    expect((reValidated.block_reason as { kind: string }).kind).toBe('verification-failed');
+    expect(reValidated.active_task).toBe(blockedActiveTask);
+  });
+
   test('should load and save execution state to file system', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'exec-state-test-'));
     const statePath = join(tempDir, 'execution-state.json');

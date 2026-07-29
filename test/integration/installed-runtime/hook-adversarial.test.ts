@@ -29,7 +29,7 @@ interface HookOutput {
  * runtime/hooks/cli.mjs themselves live — that separation is exactly what
  * lets one install serve every test cheaply.
  */
-describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
+describe('B5a — Adversarial Hook Protection Suite (real finding IDs: X01, X02, X04, X05; see finding-coverage-matrix.md for others)', () => {
   let installedRoot: string;
   let cliPath: string;
   let preToolHook: string;
@@ -291,8 +291,15 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   });
 
   // --- Category B: Managed File Tampering Bypasses ---
+  //
+  // The four tests below were previously mislabeled X05/X06/X07 (finding IDs
+  // whose actual description is unrelated — see finding-coverage-matrix.md).
+  // What they actually demonstrate is X02 ("hook allows direct writes to
+  // state/docs/policy") being denied, plus a plain phase-gate sanity check.
+  // X07's real finding (custom glob matcher mishandling dot/metachar/
+  // double-star) is unit-tested directly at src/core/pathPolicy.test.ts:74-100.
 
-  it('X05 — should deny direct Write to progress.json', () => {
+  it('X02 — should deny direct Write to progress.json (managed engine state)', () => {
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
@@ -301,7 +308,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X06 — should deny direct Edit to Design/.interview/answers.json', () => {
+  it('X02b — should deny direct Edit to Design/.interview/answers.json (managed engine state)', () => {
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Edit',
@@ -310,7 +317,24 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X07 — should deny direct Write to src/app.ts during interview phase', () => {
+  it('X02 — should still allow pre-creating a doc at a future managed-catalog path during interview (known open gap, not yet gated)', () => {
+    // Per finding-coverage-matrix.md X02: evaluatePreAction.ts:282-296
+    // deliberately forces catalogEntries=[] during the interview-phase
+    // doc-write bypass, so authorizeMutation never classifies a real
+    // catalog path (e.g. docs/00-vision.md, not yet emitted) as a managed
+    // output — an agent can pre-create it as if it were a plain user file.
+    // This assertion documents the CURRENT (still-open) behavior so a
+    // future fix is a deliberate, visible change to this test, not a
+    // silent regression discovered later.
+    const res = runHook(preToolHook, {
+      cwd: tmpDir,
+      tool_name: 'Write',
+      tool_input: { file_path: join(tmpDir, 'docs/00-vision.md') },
+    });
+    expect(res).toBeNull();
+  });
+
+  it('Phase gate — should deny code write to an unrelated path during interview phase', () => {
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
@@ -319,9 +343,44 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  // --- Category C: Command Chaining & Destruction Bypasses ---
+  // --- Category B2: Missing/partial install state (X05) ---
 
-  it('X10 — should deny destructive git commands (git clean -fdx, git restore)', () => {
+  it('X05 — should NOT fail open when progress.json is missing but the workspace is a real install (has install-manifest.json)', () => {
+    // Real X05 bug: the hook used to skip entirely (exit 0 / silent allow)
+    // the instant progress.json alone was absent, treating an installed
+    // project mid-migration (or with progress.json merely deleted) the same
+    // as an uninvolved directory. adapter/claude-code/hooks/pre-tool-use.mjs
+    // now only skips when ALL THREE of interview-state.json/progress.json/
+    // install-manifest.json are absent. Delete progress.json but leave
+    // install-manifest.json (a real install marker) — the hook must still
+    // evaluate and deny, not silently allow.
+    rmSync(join(tmpDir, 'progress.json'));
+    mkdirSync(join(tmpDir, '.design-everything'), { recursive: true });
+    writeFileSync(
+      join(tmpDir, '.design-everything/install-manifest.json'),
+      JSON.stringify({ runtime_version: '6.0.0' }),
+      'utf8'
+    );
+
+    const res = runHook(preToolHook, {
+      cwd: tmpDir,
+      tool_name: 'Write',
+      tool_input: { file_path: join(tmpDir, 'src/index.ts') },
+    });
+    expect(res).not.toBeNull();
+    expect(res!.hookSpecificOutput.permissionDecision).toBe('deny');
+  });
+
+  // --- Category C: Command Chaining & Destruction Bypasses ---
+  //
+  // X10/X12/X15/X18 below were previously mislabeled — see
+  // finding-coverage-matrix.md. What they actually demonstrate: X04 (git/find
+  // treated as read-only by basename despite a destructive command) for the
+  // git/find cases, and general shell-chaining/nested-invocation robustness
+  // (P4.3 tokenizer work) for the rest — none of which is what X15/X18's own
+  // descriptions are about.
+
+  it('X04 — should deny destructive git commands (git clean -fdx, git restore) despite basename-only read-only heuristics', () => {
     const resClean = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
@@ -337,7 +396,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(resRestore?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X12 — should deny find -delete / find -exec destructive commands', () => {
+  it('X04b — should deny find -delete / find -exec destructive commands despite basename-only read-only heuristics', () => {
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
@@ -346,7 +405,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X15 — should deny command chaining (&&, ;, |) wrapping CLI calls', () => {
+  it('P4.3 — should deny command chaining (&&, ;, |) wrapping CLI calls', () => {
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
@@ -355,7 +414,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X18 — should deny nested powershell/cmd invocation attempting shell bypass', () => {
+  it('Adversarial — should deny nested shell invocation (powershell/cmd) attempting bypass', () => {
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
@@ -366,7 +425,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
 
   // --- Category D: Corrupted & Missing Assets ---
 
-  it('X20 — should fail closed (deny code write) when progress.json is corrupt', () => {
+  it('Corruption handling — should fail closed (deny code write) when progress.json is corrupt', () => {
     writeFileSync(join(tmpDir, 'progress.json'), 'invalid json{', 'utf8');
 
     const res = runHook(preToolHook, {
@@ -378,8 +437,12 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   });
 
   // --- Category E: Phase Gate Transitions ---
+  //
+  // X22/X24 below were previously mislabeled — see finding-coverage-matrix.md.
+  // X22's real finding (re-emit cleanup must never delete user-owned docs) is
+  // covered directly at src/core/emitTransaction.test.ts:96,141.
 
-  it('X22 — should deny code write when docs are emitted but plan is NOT validated (needs-validation)', () => {
+  it('Phase gate — should deny code write when docs are emitted but plan is NOT validated (needs-validation)', () => {
     // Set state to docs-emitted / plan-validating
     const progress = {
       version: '4.0.0',
@@ -404,7 +467,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X24 — should ALLOW code write ONLY when state is ready-to-execute or executing AND path is in allowed_paths', () => {
+  it('Execution gate — should ALLOW code write ONLY when state is ready-to-execute or executing AND path is in allowed_paths', () => {
     const plan: ExecutionPlanV3 = {
       metadata: { version: '3.0.0', updated_at: new Date().toISOString() },
       trace_links: [],

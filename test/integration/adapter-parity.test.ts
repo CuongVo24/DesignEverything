@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { existsSync, mkdirSync, rmSync, writeFileSync, cpSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { CliResultEnvelope } from '../../src/adapters/shared/cliResult.js';
 import { issueTurnCapability } from '../../src/core/turnCapability.js';
 
@@ -150,5 +150,40 @@ describe('Claude & Codex CLI Adapter Parity', () => {
 
     expect(codexRes?.ok).toBe(false);
     expect(codexRes?.reason_code).toBe('TURN_CAPABILITY_REPLAY');
+  });
+});
+
+// X24 — deepen-script.yaml (the tier-2 module script both adapters' `deepen`
+// subcommand loads at runtime) is staged by each install.mjs individually;
+// nothing before this asserted the two installers actually produce identical
+// bytes on a real target, only that the source tree has one copy they both
+// read from in dev mode.
+describe('X24 — deepen asset parity between installed Claude and Codex targets', () => {
+  let claudeRoot: string;
+  let codexRoot: string;
+
+  beforeAll(() => {
+    claudeRoot = join(tmpdir(), `de-x24-claude-${Date.now()}`);
+    codexRoot = join(tmpdir(), `de-x24-codex-${Date.now()}`);
+    mkdirSync(claudeRoot, { recursive: true });
+    mkdirSync(codexRoot, { recursive: true });
+    execFileSync('node', [join(REPO_ROOT, 'adapter/claude-code/install.mjs'), claudeRoot], { encoding: 'utf8' });
+    execFileSync('node', [join(REPO_ROOT, 'adapter/codex-plugin/install.mjs'), codexRoot], { encoding: 'utf8' });
+  });
+
+  afterAll(() => {
+    if (existsSync(claudeRoot)) rmSync(claudeRoot, { recursive: true, force: true });
+    if (existsSync(codexRoot)) rmSync(codexRoot, { recursive: true, force: true });
+  });
+
+  it('stages an identical deepen-script.yaml for both adapters', () => {
+    const claudeAsset = join(claudeRoot, 'Design/Content/interview-script/deepen-script.yaml');
+    const codexAsset = join(codexRoot, 'Design/Content/interview-script/deepen-script.yaml');
+    expect(existsSync(claudeAsset)).toBe(true);
+    expect(existsSync(codexAsset)).toBe(true);
+    expect(readFileSync(claudeAsset, 'utf8')).toBe(readFileSync(codexAsset, 'utf8'));
+    expect(readFileSync(claudeAsset, 'utf8')).toBe(
+      readFileSync(join(REPO_ROOT, 'Design/Content/interview-script/deepen-script.yaml'), 'utf8')
+    );
   });
 });
