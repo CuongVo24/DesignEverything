@@ -403,17 +403,23 @@ function evaluatePreActionInner(
     const gateSnapshot = buildGateSnapshot(workspace, existingDocs, validationPass, completedTasks);
 
     let blockedGate = null;
-    let progressModified = false;
+    // X11 — gates_passed must be recomputed fresh from the current snapshot
+    // every call, not appended to forever. The old code only ever pushed a
+    // gate id in and never removed one, so a doc deleted/corrupted after its
+    // gate opened left that gate id stuck in gates_passed, and advanceState's
+    // hasAllGates check (which treats gates_passed as authoritative) kept
+    // reporting the phase as ready even though the gate would evaluate
+    // closed again right now. This loop is still the sole authority that
+    // writes gates_passed (grep-confirmed: no other production call site
+    // mutates it), so a full replace — not a merge — is safe and correct.
+    const openGateIds: string[] = [];
     for (const gate of policy.gates) {
       if (gate.requires_validation || gate.task_id || gate.requires_evidence) {
         continue;
       }
       const { open } = evaluateGate(gate, gateSnapshot);
       if (open) {
-        if (progress && !progress.gates_passed.includes(gate.id)) {
-          progress.gates_passed.push(gate.id);
-          progressModified = true;
-        }
+        openGateIds.push(gate.id);
       }
 
       const coreToolMap: Record<string, 'Write' | 'Edit' | 'Bash'> = {
@@ -426,16 +432,21 @@ function evaluatePreActionInner(
       }
     }
 
-    if (progressModified && progress && canonicalRevision !== null) {
+    const gatesPassedChanged =
+      !!progress &&
+      (openGateIds.length !== progress.gates_passed.length ||
+        openGateIds.some((id) => !progress!.gates_passed.includes(id)) ||
+        progress.gates_passed.some((id) => !openGateIds.includes(id)));
+
+    if (gatesPassedChanged && progress && canonicalRevision !== null) {
       try {
-        const passedGates = progress.gates_passed;
         transactInterviewStore(workspace, canonicalRevision, (env) => ({
           ...env,
-          payload: { ...env.payload, progress: { ...env.payload.progress, gates_passed: passedGates } },
+          payload: { ...env.payload, progress: { ...env.payload.progress, gates_passed: openGateIds } },
         }));
       } catch {
         // best-effort — a concurrent writer already advanced the revision;
-        // gates_passed is recomputed on the next evaluatePreAction call.
+        // gates_passed is recomputed fresh on the next evaluatePreAction call.
       }
     }
 

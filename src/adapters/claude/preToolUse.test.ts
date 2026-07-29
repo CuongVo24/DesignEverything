@@ -145,6 +145,35 @@ describe('onPreToolUse hook', () => {
     expect(updated.payload.progress.gates_passed).toContain('scope-locked');
   });
 
+  test('X11 — gates_passed shrinks again once a previously-satisfying doc is deleted (derive-fresh, not append-only)', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+
+    mkdirSync(docsDir, { recursive: true });
+    writeFileSync(join(docsDir, '00-vision.md'), 'Content', 'utf8');
+    writeFileSync(join(docsDir, '01-personas.md'), 'Content', 'utf8');
+    writeFileSync(join(docsDir, '02-scope.md'), 'Content', 'utf8');
+
+    onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Write',
+      toolInput: { path: 'src/index.ts' },
+    });
+    expect(core.loadInterviewStore(testWorkspaceRoot).payload.progress.gates_passed).toContain('scope-locked');
+
+    // Before X11, gates_passed only ever grew: once a gate id was pushed it
+    // stayed forever, even after the artifact backing it was deleted. So
+    // advanceState's hasAllGates check kept treating scope-locked as
+    // satisfied — a bug a real user hits the moment they delete/rewrite a
+    // doc mid-interview.
+    rmSync(join(docsDir, '00-vision.md'));
+    onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Write',
+      toolInput: { path: 'src/index.ts' },
+    });
+    expect(core.loadInterviewStore(testWorkspaceRoot).payload.progress.gates_passed).not.toContain('scope-locked');
+  });
+
   test('P8 — passes the real host session id through to the Core request instead of a hardcoded value', () => {
     seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
     mkdirSync(docsDir, { recursive: true });
