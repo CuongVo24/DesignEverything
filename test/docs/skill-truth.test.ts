@@ -39,7 +39,12 @@ function extractTaughtInvocations(): TaughtInvocation[] {
   const out: TaughtInvocation[] = [];
   for (const file of SKILL_FILES) {
     const content = readFileSync(file, 'utf8');
-    for (const line of content.split('\n')) {
+    // Split on \r?\n and trim: files checked out with CRLF line endings
+    // (the norm on Windows) leave a trailing \r on every line otherwise,
+    // and JS regex `.`/`$` treat \r as a line terminator too — so `(.*)$`
+    // below would silently fail to match every single line without this.
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trimEnd();
       // Only real `cli.mjs" <sub> ...` invocation lines — deliberately
       // excludes install-instruction lines like `cp -r .../cli.mjs ...`
       // (no closing quote immediately before a subcommand token there).
