@@ -272,6 +272,31 @@ export function transactInterviewStore(
 }
 
 /**
+ * Windows can transiently hold a lock on a just-fsync'd file (antivirus/
+ * indexer scanning it) for a few milliseconds right as rename is attempted,
+ * surfacing as EPERM/EBUSY even though nothing in this process still has it
+ * open — this writer already holds the interview-store lock, so it's never
+ * racing its own concurrent writer. A brief bounded retry rides out that
+ * external hold instead of failing a commit outright; a real, persistent
+ * failure (e.g. permissions) still throws once the budget is exhausted.
+ */
+function renameSyncWithRetry(from: string, to: string, attempts = 5): void {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      fs.renameSync(from, to);
+      return;
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (i === attempts - 1 || (code !== 'EPERM' && code !== 'EBUSY')) {
+        throw err;
+      }
+      const wait = new Int32Array(new SharedArrayBuffer(4));
+      Atomics.wait(wait, 0, 0, 20 * (i + 1));
+    }
+  }
+}
+
+/**
  * Durable atomic write (P2.2b): open -> write -> fsync -> close the temp
  * file (so its bytes are actually on disk, not just past writeFileSync's
  * buffered write) before the atomic rename makes it the canonical store.
@@ -301,7 +326,7 @@ export function writeEnvelopeAtomic(workspaceRoot: string, envelope: InterviewSt
     fs.closeSync(fd);
   }
 
-  fs.renameSync(tmpPath, canonicalPath);
+  renameSyncWithRetry(tmpPath, canonicalPath);
 
   try {
     const dirFd = fs.openSync(dir, 'r');

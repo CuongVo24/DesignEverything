@@ -28,6 +28,7 @@ import {
   migrateInterviewStore,
   initializeInterviewStore,
   ensureCanonicalStore,
+  transactInterviewStore,
   commitInterviewAnswer,
   loadSlotsFile,
   activateTier1Emit,
@@ -43,6 +44,43 @@ import { renderNextStep } from './renderNextStep.js';
 import { CliResultEnvelope, redactInternalError } from './cliResult.js';
 import { handleDeepen } from './deepenCliOperations.js';
 import { RUNTIME_VERSION } from '../../version.js';
+
+/**
+ * P10 (bonus-plan Phase 6, item 3) — the machine-checkable inventory of
+ * every subcommand + flag the dispatcher actually recognizes (getArg/
+ * hasFlag call sites in this file and deepenCliOperations.ts). `--json` is
+ * global (handled by cli.mjs's launcher, not this dispatcher) and legal on
+ * every subcommand, so it's tracked separately rather than repeated below.
+ * test/docs/skill-truth.test.ts cross-checks this table against both the
+ * three adapter SKILL.md files (nothing taught that doesn't exist) and the
+ * real getArg/hasFlag source (nothing here that isn't actually parsed) —
+ * that second direction is what keeps this table itself from drifting.
+ */
+export const CLI_COMMAND_SURFACE: Record<string, readonly string[]> = {
+  status: [],
+  init: [],
+  commit: ['--branch', '--calibrate', '--capability-token', '--answer', '--slots-file', '--ack-warnings'],
+  validate: [],
+  build: [],
+  repair: [],
+  emit: ['--slots-file'],
+  next: [],
+  start: ['--task'],
+  verify: ['--task', '--command', '--confirm'],
+  review: ['--milestone'],
+  deepen: [
+    '--module',
+    '--opt-in',
+    '--next',
+    '--commit',
+    '--capability-token',
+    '--question',
+    '--answer',
+    '--subject',
+    '--emit',
+  ],
+};
+export const CLI_GLOBAL_FLAGS: readonly string[] = ['--json'];
 
 function getArg(argv: string[], flag: string): string | undefined {
   const idx = argv.indexOf(flag);
@@ -92,7 +130,7 @@ export async function runCliOperation(workspaceRoot: string, argv: string[]): Pr
     case 'repair':
       return handleRepair(workspaceRoot);
     case 'emit':
-      return handleEmit(workspaceRoot);
+      return handleEmit(workspaceRoot, argv);
     case 'next':
       return handleNext(workspaceRoot);
     case 'start':
@@ -216,6 +254,7 @@ function handleInit(workspaceRoot: string): CliResultEnvelope {
 
 function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
   const branchChoice = getArg(argv, '--branch');
+  const calibrateChoice = getArg(argv, '--calibrate');
   const capabilityToken = getArg(argv, '--capability-token');
   const answerText = getArg(argv, '--answer');
   const slotsFileArg = getArg(argv, '--slots-file');
@@ -270,6 +309,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
   const result = commitInterviewAnswer(workspaceRoot, {
     capabilityToken,
     branchChoice,
+    calibrateChoice,
     answerText,
     ackWarnings,
     slotsPayload,
@@ -483,7 +523,7 @@ function handleRepair(workspaceRoot: string): CliResultEnvelope {
   }
 }
 
-function handleEmit(workspaceRoot: string): CliResultEnvelope {
+function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
   const canonicalOutcome = ensureCanonicalStore(workspaceRoot);
   if (canonicalOutcome.status === 'uninvolved') {
     return {
@@ -520,14 +560,65 @@ function handleEmit(workspaceRoot: string): CliResultEnvelope {
     };
   }
 
-  const answersDir = join(workspaceRoot, 'Design/.interview');
-  let answers: Record<string, string> = {};
-  const answersPath = join(answersDir, 'answers.json');
-  if (existsSync(answersPath)) {
+  // P10 — tier-1 answers come from the canonical interview store
+  // (payload.answers keyed by step id, plus payload.slots keyed by the
+  // fine-grained slot names doc-templates actually read), never the legacy
+  // Design/.interview/answers.json file: that file has been dead for tier-1
+  // purposes since the P2.2a canonical-authority cutover (commit only ever
+  // writes payload.answers/slots now) and today is exclusively owned by
+  // tier-2 deepen answers (see deepenApplicationServices.ts /
+  // emitTier2.ts's loadAnswers, which never run before a tier-1 emit).
+  let answers: Record<string, string> = { ...canonicalOutcome.envelope.payload.answers };
+  for (const [key, rec] of Object.entries(canonicalOutcome.envelope.payload.slots)) {
+    answers[key] = rec.value;
+  }
+
+  // --slots-file: build-plan-derived slots computed by the model AFTER the
+  // interview is complete (SKILL.md's handoff step) — they can't have been
+  // committed as part of any single question, so this is the one place
+  // they're merged in. Same load pipeline as `commit --slots-file`. Also
+  // persisted into canonical payload.slots (own transaction, best-effort)
+  // for the same audit/provenance trail per-question slots already get.
+  const slotsFileArg = getArg(argv, '--slots-file');
+  if (slotsFileArg) {
+    const canon = canonicalizeWorkspacePath(workspaceRoot, slotsFileArg);
+    if (!canon.ok) {
+      return {
+        ok: false,
+        operation: 'emit',
+        reason_code: 'INVALID_SLOTS_FILE',
+        severity: 'error',
+        message: `Tệp slots nằm ngoài workspace: ${canon.message}`,
+        runtime_version: RUNTIME_VERSION,
+      };
+    }
+    const absSlotsPath = join(workspaceRoot, canon.canonicalPath);
+    const loaded = loadSlotsFile(absSlotsPath);
+    if (!loaded.ok) {
+      return {
+        ok: false,
+        operation: 'emit',
+        reason_code: loaded.reason_code,
+        severity: 'error',
+        message: loaded.message,
+        runtime_version: RUNTIME_VERSION,
+      };
+    }
+    answers = { ...answers, ...loaded.slots };
+
     try {
-      answers = JSON.parse(readFileSync(answersPath, 'utf8'));
+      const now = new Date().toISOString();
+      transactInterviewStore(workspaceRoot, canonicalOutcome.envelope.state_revision, (env) => {
+        const slots = { ...env.payload.slots };
+        for (const [key, value] of Object.entries(loaded.slots)) {
+          slots[key] = { value, provenance: 'emit:slots-file', updated_at: now };
+        }
+        return { ...env, payload: { ...env.payload, slots } };
+      });
     } catch {
-      // Ignore
+      // best-effort — a concurrent writer already advanced the revision;
+      // the emit still proceeds with the in-memory merged answers, only the
+      // canonical audit trail for these slots is skipped this time.
     }
   }
 

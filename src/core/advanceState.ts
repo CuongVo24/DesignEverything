@@ -31,7 +31,7 @@ import { verifyTurnCapability } from './turnCapability.js';
 export function commitStep(
   progress: Progress,
   script: Script,
-  args: { capabilityToken: string; branchChoice?: string }
+  args: { capabilityToken: string; branchChoice?: string; calibrateChoice?: string }
 ): Progress {
   const currentStepId = progress.current_step;
   if (currentStepId === null) {
@@ -94,6 +94,18 @@ export function commitStep(
     if (progress.branch !== null && args.branchChoice && progress.branch !== args.branchChoice) {
       throw new Error(`Cannot change branch once set. Current: ${progress.branch}, New: ${args.branchChoice}`);
     }
+  }
+
+  // 4b. Calibrate logic at CAL0 — mirrors the S7 branch pattern above.
+  // Unlike branch, a calibrate choice is never required: script.yaml gives
+  // CAL0 a "fast" default, so an omitted --calibrate commits that default
+  // rather than failing the step.
+  if (currentStepId === 'CAL0') {
+    const calibrateChoice = args.calibrateChoice ?? 'fast';
+    if (calibrateChoice !== 'deep' && calibrateChoice !== 'fast') {
+      throw new Error(`Invalid calibrate choice: ${calibrateChoice}. Must be one of: deep, fast`);
+    }
+    nextProgress.calibrate_mode = calibrateChoice;
   }
 
   // 5. Calculate next current_step

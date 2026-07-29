@@ -63,7 +63,7 @@ Người dùng CÓ THỂ đào sâu 4 module dưới `docs/design/` (`glossary`,
 node "<pluginRoot>/cli.mjs" deepen --json
 node "<pluginRoot>/cli.mjs" deepen --module <id> --opt-in --json
 node "<pluginRoot>/cli.mjs" deepen --module <id> --next --json
-node "<pluginRoot>/cli.mjs" deepen --module <id> --commit --capability-token <TOKEN> --question <qid> --answer "..." --json
+node "<pluginRoot>/cli.mjs" deepen --module <id> --commit --capability-token <TOKEN> --question <qid> [--subject <sid>] --answer "..." --json
 node "<pluginRoot>/cli.mjs" deepen --module <id> --emit --json
 ```
 

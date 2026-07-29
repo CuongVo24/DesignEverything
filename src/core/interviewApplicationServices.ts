@@ -171,6 +171,7 @@ export function commitInterviewAnswer(
   args: {
     capabilityToken: string;
     branchChoice?: string;
+    calibrateChoice?: string;
     answerText?: string;
     /** Explicit re-submission after the caller has shown the user the
      * warnings from a prior needs_user_ack result. The model can never set
@@ -265,6 +266,7 @@ export function commitInterviewAnswer(
     updatedProgress = commitStep(progress, script, {
       capabilityToken: args.capabilityToken,
       branchChoice: args.branchChoice,
+      calibrateChoice: args.calibrateChoice,
     });
   } catch (err: unknown) {
     const msg = (err as Error).message;

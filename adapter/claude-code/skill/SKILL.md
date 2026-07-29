@@ -14,14 +14,14 @@ CLI (mọi thao tác state đều qua đây, KHÔNG tự sửa `progress.json`):
 
 ```bash
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status --json
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --capability-token <TOKEN> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>] --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --capability-token <TOKEN> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>] [--ack-warnings] --json
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --json
 ```
 
 ## Bắt đầu
 
 1. Chạy `status --json` để kiểm tra sức khỏe hệ thống và câu hỏi hiện tại.
-2. Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG NGAY**, hiển thị thông báo lỗi `message` và hướng dẫn khắc phục `next_command` hoặc `safe_next_command` từ Core. KHÔNG tiếp tục phỏng vấn khi state bị hỏng.
+2. Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG NGAY**, hiển thị thông báo lỗi `message` và hướng dẫn khắc phục `next_command` hoặc `safe_next_command` từ Core. KHÔNG tiếp tục phỏng vấn khi state bị hỏng. Với dự án hoàn toàn mới (`reason_code: UNINVOLVED`), `next_command` sẽ là `init --json` — chạy đúng lệnh đó trước, đừng tự khởi tạo state theo cách khác.
 3. Nếu `current_step = null` và `phase = interview` → state lỗi, báo người dùng chạy lệnh khắc phục (`repair`).
 4. Nếu phỏng vấn đã xong (`current_step = null`, chưa emit) → xác nhận với người dùng rồi chạy `emit --json`.
 5. Ngược lại: hỏi câu `current_step` theo đúng 4 quy tắc vàng bên dưới.
@@ -45,6 +45,10 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --
 - Chạy `commit` với cờ `--json` để nhận kết quả dạng structured envelope.
 - Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG NGAY**, hiển thị thông báo lỗi và
   hướng dẫn khắc phục từ Core (`next_command`).
+- Nếu `commit` trả về `reason_code: ANSWER_NEEDS_USER_ACK`: câu trả lời khớp một `warning_rules`
+  của câu hỏi (vd trả lời chung chung, thiếu chi tiết quan trọng). Đọc `message`, trình bày cảnh
+  báo cho người dùng, chờ họ xác nhận muốn giữ nguyên hay sửa lại — CHỈ khi họ xác nhận giữ
+  nguyên mới commit lại **cùng answer đó** kèm thêm cờ `--ack-warnings`. KHÔNG tự ý thêm cờ này.
 - Người dùng trả lời lan man/chưa xác nhận → KHÔNG commit, hỏi lại cho rõ.
 - Người dùng trả lời trước nhiều câu một lúc → vẫn chỉ commit câu hiện tại; giữ các ý còn lại
   để đối chiếu khi đến câu tương ứng (vẫn phải hỏi + dịch ngược từng câu).
@@ -133,6 +137,18 @@ Quy tắc:
 2. Nếu dự án đang ở pha phỏng vấn (`interview`) hoặc đang trong chu trình build/repair (`executing`,
    `verifying`, `repairing`, `reviewing`, `blocked`): giải thích rõ lý do deepen chưa khả dụng và khi nào quay lại.
 3. Mọi thao tác commit/emit tầng 2 đều qua CLI `deepen`, hỏi từng câu và chờ xác nhận.
+
+```bash
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --opt-in --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --next --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --commit --capability-token <TOKEN> --question <qid> [--subject <sid>] --answer "..." --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" deepen --module <id> --emit --json
+```
+
+Token đến từ `--next` cho đúng câu hỏi hiện tại — KHÔNG tự bịa token, KHÔNG tái dùng token đã
+commit. `--subject <sid>` chỉ cần khi `--next` trả về một `subject_id` khác null (câu hỏi lặp
+theo từng thực thể).
 
 ## Điều cấm
 

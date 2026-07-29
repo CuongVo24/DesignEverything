@@ -27,9 +27,13 @@ function issueFor(progress: Progress): { progress: Progress; token: string } {
 }
 
 /** Issues a capability for the current step and commits it in one call. */
-function commit(progress: Progress, opts: { branchChoice?: string } = {}): Progress {
+function commit(progress: Progress, opts: { branchChoice?: string; calibrateChoice?: string } = {}): Progress {
   const { progress: withCap, token } = issueFor(progress);
-  return commitStep(withCap, script, { capabilityToken: token, branchChoice: opts.branchChoice });
+  return commitStep(withCap, script, {
+    capabilityToken: token,
+    branchChoice: opts.branchChoice,
+    calibrateChoice: opts.calibrateChoice,
+  });
 }
 
 describe('advanceState engine', () => {
@@ -43,6 +47,25 @@ describe('advanceState engine', () => {
       progress = commit(progress);
     }
     expect(progress.current_step).toBe('S7');
+  });
+
+  test('should default calibrate_mode to fast at CAL0 when --calibrate is omitted, and honor an explicit deep/fast choice', () => {
+    const progressDefault = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progressDefault.current_step = 'CAL0';
+    const afterDefault = commit(progressDefault);
+    expect(afterDefault.calibrate_mode).toBe('fast');
+
+    const progressDeep = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progressDeep.current_step = 'CAL0';
+    const afterDeep = commit(progressDeep, { calibrateChoice: 'deep' });
+    expect(afterDeep.calibrate_mode).toBe('deep');
+
+    const progressInvalid = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progressInvalid.current_step = 'CAL0';
+    const { progress: withCap, token } = issueFor(progressInvalid);
+    expect(() =>
+      commitStep(withCap, script, { capabilityToken: token, calibrateChoice: 'medium' })
+    ).toThrow(/Invalid calibrate choice: medium/);
   });
 
   test('should require branchChoice when committing S7 and enforce immutability of branch', () => {

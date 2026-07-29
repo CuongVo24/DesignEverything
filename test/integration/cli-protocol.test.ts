@@ -6,7 +6,7 @@ import { tmpdir } from 'os';
 import { runCliOperation } from '../../src/adapters/shared/cliOperations.js';
 import { exitCodeFor } from '../../src/adapters/shared/cliResult.js';
 import { manifestPath } from '../../src/core/emitTransactionActivate.js';
-import { seedCanonicalProgress } from '../helpers/canonicalProgress.js';
+import { seedCanonicalProgress, seedCanonicalAnswers } from '../helpers/canonicalProgress.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '../..');
@@ -61,26 +61,23 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
   function seedEmitReadyWorkspace(workspace: string): void {
     cpSync(join(REPO_ROOT, 'Design/Content'), join(workspace, 'Design/Content'), { recursive: true });
     seedCanonicalProgress(workspace, { branch: 'cli' });
-    const interviewDir = join(workspace, 'Design/.interview');
-    mkdirSync(interviewDir, { recursive: true });
-    writeFileSync(
-      join(interviewDir, 'answers.json'),
-      JSON.stringify({
-        S0: 'CLI tool',
-        S1: 'Nỗi đau A, xoay xở B',
-        S2: 'Dev (Contributor)',
-        S3: 'Must: chạy lệnh chính. Should: log đẹp.',
-        S4: 'Config, Job',
-        S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
-        S6: 'Solo, 2 tuần',
-        C1: 'Node.js (TypeScript)',
-        C2: 'flags/arguments',
-        C3: 'file config JSON ~/.config/myapp.json',
-        C4: 'macOS',
-        C5: 'NPM registry',
-      }),
-      'utf8'
-    );
+    // P10 — tier-1 emit reads payload.answers off the canonical store, not
+    // the legacy Design/.interview/answers.json file (dead for tier-1 since
+    // the P2.2a canonical-authority cutover; see handleEmit).
+    seedCanonicalAnswers(workspace, {
+      S0: 'CLI tool',
+      S1: 'Nỗi đau A, xoay xở B',
+      S2: 'Dev (Contributor)',
+      S3: 'Must: chạy lệnh chính. Should: log đẹp.',
+      S4: 'Config, Job',
+      S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
+      S6: 'Solo, 2 tuần',
+      C1: 'Node.js (TypeScript)',
+      C2: 'flags/arguments',
+      C3: 'file config JSON ~/.config/myapp.json',
+      C4: 'macOS',
+      C5: 'NPM registry',
+    });
   }
 
   test('P7.1 — production emit activates through the real transaction kernel, not a direct write loop', async () => {
@@ -97,6 +94,52 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
     expect(existsSync(manifestPath(tempDir, 'tier1'))).toBe(true);
     expect(existsSync(join(tempDir, '.design-everything/emit-journal.json'))).toBe(true);
     expect(existsSync(join(tempDir, 'docs/00-vision.md'))).toBe(true);
+  });
+
+  test('P10 — emit sources tier-1 answers from the canonical store, not the dead legacy Design/.interview/answers.json file', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    // No legacy file exists at all — a real post-canonical-cutover project
+    // never writes one. If emit still read it, S0's answer would never
+    // reach the rendered doc and this assertion would fail on blank content.
+    expect(existsSync(join(tempDir, 'Design/.interview/answers.json'))).toBe(false);
+
+    const res = await runCliOperation(tempDir, ['emit']);
+    expect(res.ok).toBe(true);
+
+    const vision = readFileSync(join(tempDir, 'docs/00-vision.md'), 'utf8');
+    expect(vision).toContain('CLI tool');
+  });
+
+  test('P10 — emit --slots-file merges build-plan-derived slots into the rendered doc and into canonical payload.slots', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    const interviewDir = join(tempDir, 'Design/.interview');
+    mkdirSync(interviewDir, { recursive: true });
+    writeFileSync(
+      join(interviewDir, 'slots-buildplan.json'),
+      JSON.stringify({
+        build_plan_principles: 'Nguyên tắc: nhỏ, có test, review từng bước.',
+        build_milestones: 'M1: dựng khung CLI. M2: hoàn thiện lệnh chính.',
+      }),
+      'utf8'
+    );
+
+    const res = await runCliOperation(tempDir, [
+      'emit',
+      '--slots-file',
+      'Design/.interview/slots-buildplan.json',
+    ]);
+    expect(res.ok).toBe(true);
+
+    const buildPlan = readFileSync(join(tempDir, 'docs/08-build-plan.md'), 'utf8');
+    expect(buildPlan).toContain('Nguyên tắc: nhỏ, có test, review từng bước.');
+    expect(buildPlan).toContain('M1: dựng khung CLI. M2: hoàn thiện lệnh chính.');
+
+    const canonical = JSON.parse(
+      readFileSync(join(tempDir, '.design-everything/interview-state.json'), 'utf8')
+    );
+    expect(canonical.payload.slots.build_plan_principles.value).toBe(
+      'Nguyên tắc: nhỏ, có test, review từng bước.'
+    );
   });
 
   test('P3.1 — a successful tier-1 activation creates execution-state.json at plan-validating', async () => {
