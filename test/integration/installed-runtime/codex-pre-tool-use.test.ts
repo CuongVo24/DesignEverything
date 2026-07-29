@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -6,7 +6,7 @@ import { execFileSync } from 'child_process';
 import { seedCanonicalProgress } from '../../helpers/canonicalProgress.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
-const PRE_TOOL_HOOK = join(REPO_ROOT, 'adapter/codex-plugin/hooks/pre-tool-use.mjs');
+const INSTALLER = join(REPO_ROOT, 'adapter/codex-plugin/install.mjs');
 
 interface HookOutput {
   hookSpecificOutput: {
@@ -16,8 +16,32 @@ interface HookOutput {
   };
 }
 
+// X18 fix — every test below spawns the real installed target-local Codex
+// hook (adapter/codex-plugin/install.mjs's output), not the repo-root
+// dev-mode hook. Installed once here and shared by both describe blocks
+// below (an install takes real wall-clock time); each test still gets its
+// own fresh workspace directory for state.
+let installedRoot: string;
+let preToolHook: string;
+
+beforeAll(() => {
+  installedRoot = join(tmpdir(), `de-codex-adversarial-install-${Date.now()}`);
+  mkdirSync(installedRoot, { recursive: true });
+  execFileSync('node', [INSTALLER, installedRoot], { encoding: 'utf8' });
+
+  const manifest = JSON.parse(
+    readFileSync(join(installedRoot, '.design-everything/install-manifest.json'), 'utf8')
+  );
+  const version = manifest.runtime_version as string;
+  preToolHook = join(installedRoot, '.design-everything/runtime', version, 'hooks/pre-tool-use.mjs');
+});
+
+afterAll(() => {
+  if (existsSync(installedRoot)) rmSync(installedRoot, { recursive: true, force: true });
+});
+
 function runHook(tmpDir: string, payload: Record<string, unknown>): HookOutput {
-  const raw = execFileSync('node', [PRE_TOOL_HOOK], {
+  const raw = execFileSync('node', [preToolHook], {
     input: JSON.stringify(payload),
     encoding: 'utf8',
     cwd: tmpDir,

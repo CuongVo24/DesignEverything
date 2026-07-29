@@ -1,16 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, rmSync, writeFileSync, cpSync } from 'fs';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdirSync, rmSync, writeFileSync, cpSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execSync } from 'child_process';
-import { runCliOperation } from '../../../src/adapters/shared/cliOperations.js';
+import { execSync, execFileSync } from 'child_process';
 import { calculatePlanDigest, calculateDocsDigest, loadEmittedDocs } from '../../../src/core/validatedSnapshot.js';
 import { ExecutionPlanV3 } from '../../../src/core/schemas/index.js';
 import { initializeInterviewStore } from '../../../src/core/interviewStore.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
-const PRE_TOOL_HOOK = join(REPO_ROOT, 'adapter/claude-code/hooks/pre-tool-use.mjs');
-const USER_PROMPT_HOOK = join(REPO_ROOT, 'adapter/claude-code/hooks/user-prompt-submit.mjs');
+const INSTALLER = join(REPO_ROOT, 'adapter/claude-code/install.mjs');
 
 interface HookOutput {
   hookSpecificOutput: {
@@ -20,8 +18,42 @@ interface HookOutput {
   };
 }
 
+/**
+ * B5a (X18 fix) — every test below runs against a REAL installed target
+ * (adapter/claude-code/install.mjs), spawning the actual target-local
+ * hooks/CLI it produces, not the repo-root dev-mode hooks and not an
+ * in-process TS import. Installing is done ONCE in beforeAll (an install
+ * takes real wall-clock time); each test still gets its own fresh
+ * workspace directory for state (progress.json / canonical store /
+ * execution-state), completely separate from where the installed
+ * runtime/hooks/cli.mjs themselves live — that separation is exactly what
+ * lets one install serve every test cheaply.
+ */
 describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
+  let installedRoot: string;
+  let cliPath: string;
+  let preToolHook: string;
+  let userPromptHook: string;
   let tmpDir: string;
+
+  beforeAll(() => {
+    installedRoot = join(tmpdir(), `de-adversarial-install-${Date.now()}`);
+    mkdirSync(installedRoot, { recursive: true });
+    execFileSync('node', [INSTALLER, installedRoot], { encoding: 'utf8' });
+
+    const manifest = JSON.parse(
+      readFileSync(join(installedRoot, '.design-everything/install-manifest.json'), 'utf8')
+    );
+    const version = manifest.runtime_version as string;
+    const runtimeDir = join(installedRoot, '.design-everything/runtime', version);
+    cliPath = join(runtimeDir, 'cli.mjs');
+    preToolHook = join(runtimeDir, 'hooks/pre-tool-use.mjs');
+    userPromptHook = join(runtimeDir, 'hooks/user-prompt-submit.mjs');
+  });
+
+  afterAll(() => {
+    if (existsSync(installedRoot)) rmSync(installedRoot, { recursive: true, force: true });
+  });
 
   beforeEach(() => {
     tmpDir = join(tmpdir(), `de-adversarial-test-${Date.now()}`);
@@ -64,6 +96,17 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     return raw && raw.trim() ? (JSON.parse(raw) as HookOutput) : null;
   }
 
+  function runCli(args: string[]): Record<string, unknown> {
+    try {
+      const out = execFileSync('node', [cliPath, ...args, '--json'], { encoding: 'utf8', cwd: tmpDir });
+      return JSON.parse(out);
+    } catch (err: unknown) {
+      const stdout = (err as { stdout?: string }).stdout;
+      if (stdout) return JSON.parse(stdout);
+      throw err;
+    }
+  }
+
   // --- Category A0: canonical-only workspace must not bypass the hooks ---
   // (P2.2a) The .mjs hook wrappers used to fast-exit whenever progress.json
   // was absent — a real production regression once progress.json stops
@@ -81,7 +124,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(existsSync(join(canonicalOnlyDir, 'progress.json'))).toBe(false);
 
     try {
-      const raw = execSync(`node "${PRE_TOOL_HOOK}"`, {
+      const raw = execSync(`node "${preToolHook}"`, {
         input: JSON.stringify({
           cwd: canonicalOnlyDir,
           tool_name: 'Write',
@@ -106,7 +149,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     initializeInterviewStore(canonicalOnlyDir);
 
     try {
-      const raw = execSync(`node "${USER_PROMPT_HOOK}"`, {
+      const raw = execSync(`node "${userPromptHook}"`, {
         input: JSON.stringify({ cwd: canonicalOnlyDir, prompt: 'Hello' }),
         encoding: 'utf8',
       });
@@ -122,38 +165,28 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
 
   // --- Category A: TURN Token & Session Integrity ---
 
-  it('X01 — should deny forged capability token in commit CLI call', async () => {
+  it('X01 — should deny forged capability token in commit CLI call', () => {
     // Real UserPromptSubmit issues a real capability for the current step.
-    runHook(USER_PROMPT_HOOK, { cwd: tmpDir, prompt: 'Hello' });
+    runHook(userPromptHook, { cwd: tmpDir, prompt: 'Hello' });
 
     // Attempting to run CLI commit with a forged capability token — the
     // exact TURN_CAPABILITY_FORGED reason code must surface, not a generic
     // COMMIT_FAILED (B1a/B4c: --turn is no longer a recognized flag at all).
-    const res = await runCliOperation(tmpDir, [
-      'commit',
-      '--capability-token',
-      'forged-token-xyz',
-      '--answer',
-      'Dự án hệ thống quản lý dữ liệu lớn',
-    ]);
+    const res = runCli(['commit', '--capability-token', 'forged-token-xyz', '--answer', 'Dự án hệ thống quản lý dữ liệu lớn']);
 
     expect(res.ok).toBe(false);
     expect(res.reason_code).toBe('TURN_CAPABILITY_FORGED');
   });
 
-  it('X01b — should deny commit with missing capability token entirely', async () => {
-    const res = await runCliOperation(tmpDir, [
-      'commit',
-      '--answer',
-      'Dự án hệ thống quản lý dữ liệu lớn',
-    ]);
+  it('X01b — should deny commit with missing capability token entirely', () => {
+    const res = runCli(['commit', '--answer', 'Dự án hệ thống quản lý dữ liệu lớn']);
 
     expect(res.ok).toBe(false);
     expect(res.reason_code).toBe('TURN_CAPABILITY_MISSING');
   });
 
-  it('X01c — should deny replay of an already-consumed capability token via CLI commit', async () => {
-    const promptRaw = runHook(USER_PROMPT_HOOK, { cwd: tmpDir, prompt: 'Hello' }) as unknown as {
+  it('X01c — should deny replay of an already-consumed capability token via CLI commit', () => {
+    const promptRaw = runHook(userPromptHook, { cwd: tmpDir, prompt: 'Hello' }) as unknown as {
       hookSpecificOutput?: { additionalContext?: string };
     } | null;
     const additionalContext = promptRaw?.hookSpecificOutput?.additionalContext ?? '';
@@ -161,19 +194,19 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(tokenMatch).toBeTruthy();
     const token = tokenMatch![1];
 
-    const first = await runCliOperation(tmpDir, ['commit', '--capability-token', token, '--answer', 'Answer A']);
+    const first = runCli(['commit', '--capability-token', token, '--answer', 'Answer A']);
     expect(first.ok).toBe(true);
 
-    const replay = await runCliOperation(tmpDir, ['commit', '--capability-token', token, '--answer', 'Answer B']);
+    const replay = runCli(['commit', '--capability-token', token, '--answer', 'Answer B']);
     expect(replay.ok).toBe(false);
     expect(replay.reason_code).toBe('TURN_CAPABILITY_REPLAY');
   });
 
   it('P8 — PreToolUse denies an unrecognized CLI subcommand instead of defaulting to allow', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
-      tool_input: { command: 'node adapter/claude-code/cli.mjs totally-not-a-real-subcommand' },
+      tool_input: { command: `node "${cliPath}" totally-not-a-real-subcommand` },
     });
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(res?.hookSpecificOutput.permissionDecisionReason).toContain('totally-not-a-real-subcommand');
@@ -201,10 +234,10 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
 
     // Allow produces no stdout at all (early process.exit(0)), so a null
     // result IS the positive assertion here — a deny would emit JSON.
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
-      tool_input: { command: 'node adapter/claude-code/cli.mjs deepen --module m1' },
+      tool_input: { command: `node "${cliPath}" deepen --module m1` },
     });
     expect(res).toBeNull();
   });
@@ -230,10 +263,10 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     };
     writeFileSync(join(tmpDir, 'progress.json'), JSON.stringify(progress, null, 2), 'utf8');
 
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
-      tool_input: { command: 'node adapter/claude-code/cli.mjs commit --capability-token x' },
+      tool_input: { command: `node "${cliPath}" commit --capability-token x` },
     });
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(res?.hookSpecificOutput.permissionDecisionReason).toContain('trong pha phỏng vấn');
@@ -244,11 +277,11 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     // wrapper's own quote-aware tokens were discarded and onPreToolUse
     // re-split the raw command string, which would have torn
     // "hello world" into separate broken tokens.
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
       tool_input: {
-        command: 'node adapter/claude-code/cli.mjs commit --capability-token x --answer-text "hello world"',
+        command: `node "${cliPath}" commit --capability-token x --answer-text "hello world"`,
       },
     });
     // interview phase (this suite's default seeded progress.json) allows
@@ -260,7 +293,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   // --- Category B: Managed File Tampering Bypasses ---
 
   it('X05 — should deny direct Write to progress.json', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'progress.json') },
@@ -269,7 +302,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   });
 
   it('X06 — should deny direct Edit to Design/.interview/answers.json', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Edit',
       tool_input: { file_path: join(tmpDir, 'Design/.interview/answers.json') },
@@ -278,7 +311,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   });
 
   it('X07 — should deny direct Write to src/app.ts during interview phase', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'src/app.ts') },
@@ -289,14 +322,14 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   // --- Category C: Command Chaining & Destruction Bypasses ---
 
   it('X10 — should deny destructive git commands (git clean -fdx, git restore)', () => {
-    const resClean = runHook(PRE_TOOL_HOOK, {
+    const resClean = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
       tool_input: { command: 'git clean -fdx' },
     });
     expect(resClean?.hookSpecificOutput.permissionDecision).toBe('deny');
 
-    const resRestore = runHook(PRE_TOOL_HOOK, {
+    const resRestore = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
       tool_input: { command: 'git restore progress.json' },
@@ -305,7 +338,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   });
 
   it('X12 — should deny find -delete / find -exec destructive commands', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
       tool_input: { command: 'find . -name "*.json" -delete' },
@@ -314,16 +347,16 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   });
 
   it('X15 — should deny command chaining (&&, ;, |) wrapping CLI calls', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
-      tool_input: { command: 'echo hello && node adapter/claude-code/cli.mjs status' },
+      tool_input: { command: `echo hello && node "${cliPath}" status` },
     });
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
   it('X18 — should deny nested powershell/cmd invocation attempting shell bypass', () => {
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Bash',
       tool_input: { command: 'powershell -Command "Remove-Item progress.json"' },
@@ -336,7 +369,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
   it('X20 — should fail closed (deny code write) when progress.json is corrupt', () => {
     writeFileSync(join(tmpDir, 'progress.json'), 'invalid json{', 'utf8');
 
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'src/index.ts') },
@@ -363,7 +396,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     };
     writeFileSync(join(tmpDir, 'progress.json'), JSON.stringify(progress, null, 2), 'utf8');
 
-    const res = runHook(PRE_TOOL_HOOK, {
+    const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'src/app.ts') },
@@ -422,7 +455,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     writeFileSync(join(execDir, 'execution-state.json'), JSON.stringify(state, null, 2), 'utf8');
 
     // Allowed path src/app.ts -> exit 0 without deny payload (null)
-    const resAllowed = runHook(PRE_TOOL_HOOK, {
+    const resAllowed = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'src/app.ts') },
@@ -430,7 +463,7 @@ describe('B5a — Adversarial Hook Protection Suite (U01-U04, X01-X24)', () => {
     expect(resAllowed).toBeNull(); // exit 0 allows
 
     // Unallowed path src/unauthorized.ts -> should deny
-    const resDenied = runHook(PRE_TOOL_HOOK, {
+    const resDenied = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'src/unauthorized.ts') },
