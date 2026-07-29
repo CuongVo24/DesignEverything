@@ -61,4 +61,11 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md. X18 (test chưa chạy installer/wrapper/adversarial thật) nay đã CLOSED —
+`hook-adversarial.test.ts`/`codex-pre-tool-use.test.ts` cài thật qua `install.mjs` trong `beforeAll`
+rồi spawn hook target-local. X02 (hook allow ghi thẳng state/docs, pre-create managed docs) một
+phần FIXED — direct write/edit vào progress.json/answers.json bị deny; pre-create doc tại catalog
+path trước khi emit vẫn allow (finding-coverage-matrix.md X02 PARTIAL). R03/R04 vẫn OPEN.

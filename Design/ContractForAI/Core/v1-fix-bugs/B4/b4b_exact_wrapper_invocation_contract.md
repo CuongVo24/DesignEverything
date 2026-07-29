@@ -57,4 +57,10 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md. Bug X18/CLI-launcher-path — hook từng chỉ nhận diện literal đường dẫn dev-mode
+(`adapter/claude-code/cli.mjs`), khiến target đã cài tự deny lệnh CLI tuyệt đối chính SKILL.md của
+nó dạy — đã FIXED (0f9945b) và có test `cli-invocation-recognition.test.ts`. X03 (wrapper allow
+command chỉ vì chứa substring adapter CLI) vẫn PARTIAL — Core còn `includes('cli.mjs')`.

@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -227,7 +227,88 @@ function checkReadmeDependencyOrder() {
   return errors;
 }
 
-const errors = [...checkMatrix(), ...checkReadmeDependencyOrder()];
+/**
+ * Every B1a..B5d contract file has its own "## 7. Status" section, meant to
+ * mirror the Spec/Implementation/Proof cells for that same code in README's
+ * table. The two drifted apart in practice (stale/deprecated single-value
+ * status strings, or a contract file's Implementation disagreeing with
+ * README's) — this makes that drift a hard build failure instead of a silent
+ * discrepancy nobody notices until an audit finds it.
+ */
+function checkContractFilesMatchReadme() {
+  const errors = [];
+  const contractsDir = join(REPO_ROOT, 'Design/ContractForAI/Core/v1-fix-bugs');
+  const readmeRows = parseReadmeRows();
+  if (readmeRows.size === 0) return errors;
+
+  for (const batchDir of readdirSync(contractsDir)) {
+    if (!/^B[1-5]$/.test(batchDir)) continue;
+    const batchPath = join(contractsDir, batchDir);
+    for (const file of readdirSync(batchPath)) {
+      if (!file.endsWith('.md')) continue;
+      const fullPath = join(batchPath, file);
+      const content = readFileSync(fullPath, 'utf8');
+
+      const titleMatch = content.match(/^# (B\d[a-z]) — /m);
+      if (!titleMatch) {
+        errors.push(`${file}: no "# B\\da — Title" header found; cannot determine contract code.`);
+        continue;
+      }
+      const code = titleMatch[1];
+
+      // The first paragraph after the heading — the parenthetical detail
+      // after Implementation can itself wrap across a line break, so this
+      // captures everything up to the next blank line, not just one line.
+      const statusSectionMatch = content.match(/## 7\. Status\s*\n\s*\n([\s\S]+?)(?:\n\s*\n|$)/);
+      if (!statusSectionMatch) {
+        errors.push(`${code} (${file}): no "## 7. Status" section content found.`);
+        continue;
+      }
+      const statusParagraph = statusSectionMatch[1].replace(/\s+/g, ' ').trim();
+      const axisMatch = statusParagraph.match(
+        /^Spec:\s*(\S+)\s*\|\s*Implementation:\s*(\S+)(?:\s*\([^)]*\))?\s*\|\s*Proof:\s*(\S+)/
+      );
+      if (!axisMatch) {
+        errors.push(`${code} (${file}): Status section is not in "Spec: X | Implementation: Y | Proof: Z" format.`);
+        continue;
+      }
+      const [, spec, impl, proof] = axisMatch;
+
+      const readmeRow = readmeRows.get(code);
+      if (!readmeRow) {
+        errors.push(`${code} (${file}): no matching row in README.md's contract table.`);
+        continue;
+      }
+      if (spec !== readmeRow.spec) {
+        errors.push(`${code}: contract file Spec "${spec}" != README.md Spec "${readmeRow.spec}".`);
+      }
+      if (impl !== readmeRow.impl) {
+        errors.push(`${code}: contract file Implementation "${impl}" != README.md Implementation "${readmeRow.impl}".`);
+      }
+      if (proof !== readmeRow.proof) {
+        errors.push(`${code}: contract file Proof "${proof}" != README.md Proof "${readmeRow.proof}".`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+function parseReadmeRows() {
+  const content = readFileSync(readmePath, 'utf8');
+  const rows = new Map();
+  for (const line of content.split('\n')) {
+    const m = line.match(/^\| B[1-5] \| (B\d[a-z]) — /);
+    if (!m) continue;
+    const cells = splitRow(line);
+    if (cells.length < 7) continue;
+    const [, , , , spec, impl, proof] = cells;
+    rows.set(m[1], { spec, impl, proof });
+  }
+  return rows;
+}
+
+const errors = [...checkMatrix(), ...checkReadmeDependencyOrder(), ...checkContractFilesMatchReadme()];
 if (errors.length > 0) {
   console.error('check-matrix.mjs failed:\n' + errors.map((e) => `  - ${e}`).join('\n'));
   process.exit(1);

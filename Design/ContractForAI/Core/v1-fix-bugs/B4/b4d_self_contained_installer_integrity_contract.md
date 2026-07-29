@@ -63,4 +63,14 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md — trước đó README ghi Implementation dạng mơ hồ `NOT_STARTED/PARTIAL`, đã sửa về
+`PARTIAL`. Rà lại evidence phát hiện checklist §3 đã có bằng chứng installed-seam thật, trước đó
+không được liên kết vào matrix: U07 (ENGINE_ROOT tuyệt đối, không pin/integrity) nay FIXED —
+`moved-source.test.ts` xoá REPO_ROOT rồi relocate cả cây cài, `tampered-runtime.test.ts` chứng
+minh bit-flip runtime bundle fail closed. `installer-repair.test.ts`/`installer-interrupted.test.ts`
+chứng minh rerun không duplicate hook và crash giữa install tự phục hồi. X13 (rerun không thay hook
+stale vì match includes quá rộng) vẫn OPEN — chưa test nào dựng đúng kịch bản stale/wrong-version
+hook command string.

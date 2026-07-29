@@ -57,4 +57,10 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md. X04 (git/find coi read-only theo basename dù có lệnh phá huỷ) trong
+finding-coverage-matrix.md nay đã FIXED (`gitReadOnly.ts`, `findReadOnly.ts`) và có test thật ở
+`test/integration/installed-runtime/hook-adversarial.test.ts`. R08 (classifier split raw bằng
+whitespace, `git -C` không kiểm containment) vẫn OPEN.

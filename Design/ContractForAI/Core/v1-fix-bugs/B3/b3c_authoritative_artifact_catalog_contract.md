@@ -64,4 +64,9 @@ Interface đích:
 
 ## 7. Status
 
-IMPLEMENTED_WAITING_FOR_REVIEW
+Spec: WAITING_FOR_APPROVAL | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
+(`IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục — Implementation khớp README.md (`IMPLEMENTED`),
+đây là contract Implementation duy nhất trong toàn plan đạt mức này. Proof vẫn `UNIT_ONLY` vì chưa
+có test spawn qua CLI/installed target thật cho riêng catalog path-matching.

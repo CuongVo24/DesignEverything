@@ -59,7 +59,7 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B4 | B4a — Claude hook policy integration | Adapter | B1–B3 | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4b — Exact wrapper invocation | Adapter | B2b, B4a | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4c — CLI exit/output/health protocol | Adapter | B2e, B3d, B3e | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
-| B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | WAITING_FOR_APPROVAL | PARTIAL | MISSING |
+| B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4e — Codex parity and shared runtime | Adapter | B4c, B4d | WAITING_FOR_APPROVAL | PARTIAL | SEAM_PARTIAL |
 | B4 | B4f — Skill handoff and wording truth | Adapter | B1c, B3e, B4c | WAITING_FOR_APPROVAL | PARTIAL | SNAPSHOT_ONLY |
 | B5 | B5a — Adversarial installed-runtime integration | QA | B4a–B4f | WAITING_FOR_APPROVAL | PARTIAL | INVALID_FOR_CLAIM |

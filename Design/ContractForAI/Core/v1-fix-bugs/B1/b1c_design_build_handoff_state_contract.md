@@ -60,4 +60,10 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md, trước đó ghi chỉ một giá trị `WAITING_FOR_APPROVAL` không phân biệt spec/impl/proof.
+Checklist §3 còn nhiều mục chưa VERIFIED — U04 (docs-emitted fail-open nhưng ready-to-build lại
+deny) và R04 (blanket-allow write dưới `Design/`/`docs/` ở pha plan-validating) trong
+finding-coverage-matrix.md vẫn OPEN.

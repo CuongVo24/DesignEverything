@@ -65,4 +65,11 @@ Interface đích:
 
 ## 7. Status
 
-PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW — lifecycle gating (opt-in preconditions, plan-invalidation, health error, next-step) done and tested; tier-2 transactional rewrite of emitTier2.ts và B1b transaction wrapper còn lại (rủi ro đổi hành vi cleanup cần người duyệt quyết định trước khi làm).
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
+(`PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục khớp README.md. Lifecycle gating
+(opt-in preconditions, plan-invalidation, health error, next-step) done và tested; tier-2
+transactional rewrite của `emitTier2.ts` và B1b transaction wrapper còn lại (rủi ro đổi hành vi
+cleanup cần người duyệt quyết định trước khi làm). X17 (deepen chưa khóa phase tier-1, chưa dùng
+capability một-lượt) vẫn OPEN.

@@ -60,4 +60,10 @@ Ghi chú phạm vi: `answer_contract.pattern` được khai báo declarative tro
 
 ## 7. Status
 
-IMPLEMENTED_WAITING_FOR_REVIEW
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
+(`IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục — Implementation hạ từ ngụ ý "đã xong" xuống
+`PARTIAL` để khớp README.md và với thực tế U06 (build-plan/rationale/glossary/mermaid dẫn xuất
+thiếu quality/provenance gate) và X23 (derived quality phó thác executor yếu, không có user-visible
+acknowledgement) trong finding-coverage-matrix.md vẫn OPEN.

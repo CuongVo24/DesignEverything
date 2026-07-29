@@ -60,4 +60,10 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md, trước đó ghi chỉ một giá trị `WAITING_FOR_APPROVAL`. X06 (blocked conflates
+validation và execution failure) trong finding-coverage-matrix.md nay đã FIXED và có test thật ở
+`src/core/advanceExecutionState.test.ts` — checklist §3 phần còn lại (recoverable_by/reason_code
+render) vẫn cần rà theo installed seam trước khi Proof lên `SEAM_PARTIAL`.

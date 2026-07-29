@@ -58,4 +58,9 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md. X07 (glob matcher sai dấu chấm/metachar/double-star) trong
+finding-coverage-matrix.md nay đã FIXED (`pathPolicy.ts` `escapeRegExpExceptStar`) và UNC/device
+path deny đã thêm (14d380a). R06 (sibling-prefix qua `startsWith`) vẫn OPEN.

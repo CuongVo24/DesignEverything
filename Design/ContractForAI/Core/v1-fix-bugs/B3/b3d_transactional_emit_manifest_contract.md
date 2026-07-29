@@ -66,4 +66,13 @@ Interface đích:
 
 ## 7. Status
 
-PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW — core transaction engine (stage/validate/activate/recover) done and tested; execution-state/interview-phase wiring và CLI output đọc từ manifest còn lại cho B4 (không có CLI entrypoint nào gọi emit hiện nay).
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
+(`PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục khớp README.md. Note cũ "không có CLI
+entrypoint nào gọi emit hiện nay" đã LỖI THỜI — `cliOperations.ts` `handleEmit` gọi
+`recoverEmit`/`activateEmit` thật (xác nhận lại 2026-07-30, xem finding-coverage-matrix.md X16).
+Core transaction engine (stage/validate/activate/recover) done và tested; X22 (re-emit cleanup xóa
+nhầm user-owned docs) đã FIXED. Proof vẫn `UNIT_ONLY` vì crash-injection test (FE-01..06) gọi thẳng
+engine qua `crash-worker.mjs`, chưa crash một tiến trình `cli.mjs emit` thật — chấp nhận theo phạm
+vi P1 2.3 của plan-v1-fix.md, không phải thiếu sót chưa biết.

@@ -60,4 +60,10 @@ Interface đích:
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+
+Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
+khớp README.md. X10 (gate so basename nên docs/archive giả artifact) và X11 (gates_passed
+append-only, không revoke) trong finding-coverage-matrix.md nay đã FIXED — `evaluateGate.ts`
+candidateKeys không basename-anywhere, và `evaluatePreAction.ts` derive `gates_passed` fresh mỗi
+lần (db90029). R09 (gate snapshot chưa xác minh manifest/digest active) vẫn OPEN.
