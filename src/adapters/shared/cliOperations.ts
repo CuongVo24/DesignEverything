@@ -41,6 +41,7 @@ import {
 } from '../../core/index.js';
 import { renderNextStep } from './renderNextStep.js';
 import { CliResultEnvelope, redactInternalError } from './cliResult.js';
+import { handleDeepen } from './deepenCliOperations.js';
 import { RUNTIME_VERSION } from '../../version.js';
 
 function getArg(argv: string[], flag: string): string | undefined {
@@ -100,13 +101,15 @@ export async function runCliOperation(workspaceRoot: string, argv: string[]): Pr
       return handleVerify(workspaceRoot, argv);
     case 'review':
       return handleReview(workspaceRoot, argv);
+    case 'deepen':
+      return handleDeepen(workspaceRoot, argv);
     default:
       return {
         ok: false,
         operation: subcommand,
         reason_code: 'UNKNOWN_SUBCOMMAND',
         severity: 'error',
-        message: `Subcommand "${subcommand}" không được hỗ trợ. Sử dụng: status, init, commit, validate, emit, repair, next, start, verify, review.`,
+        message: `Subcommand "${subcommand}" không được hỗ trợ. Sử dụng: status, init, commit, validate, emit, repair, next, start, verify, review, deepen.`,
         next_command: 'node adapter/claude-code/cli.mjs status',
         runtime_version: RUNTIME_VERSION,
       };

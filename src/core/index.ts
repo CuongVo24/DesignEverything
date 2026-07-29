@@ -180,6 +180,17 @@ export type {
   ValidationCheckId,
   SemanticValidationResult,
 } from './semanticValidation.js';
+export {
+  listDeepenStatus,
+  optInDeepenModule,
+  issueDeepenCapability,
+  commitDeepen,
+} from './deepenApplicationServices.js';
+export type {
+  DeepenModuleStatus,
+  DeepenNextSuccess,
+  DeepenCommitArgs,
+  DeepenServiceError,
+} from './deepenApplicationServices.js';
 export { installManifestSchema } from './schemas/installManifest.js';
 export type { InstallManifest, InstallManifestAsset } from './schemas/installManifest.js';
-
