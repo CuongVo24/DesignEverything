@@ -67,6 +67,14 @@ try {
       cpSync(templatesSrc, join(workspace, 'Design/Content/doc-templates'), { recursive: true });
     }
 
+    // catalog-aware emit/write-gate (P6 10.3) reads artifact-catalog.yaml
+    // from the workspace, not ENGINE_ROOT — ship it into the replay
+    // workspace the same way interview-script/doc-templates already are.
+    cpSync(
+      join(ENGINE_ROOT, 'Design/Content/artifact-catalog.yaml'),
+      join(workspace, 'Design/Content/artifact-catalog.yaml')
+    );
+
     // 1. Doctor / Profile confirm
     const profileDir = join(workspace, '.design-everything');
     mkdirSync(profileDir, { recursive: true });
