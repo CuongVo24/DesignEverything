@@ -149,12 +149,22 @@ describe('B21b — eval tầng 2 trên golden corpus DE', () => {
   });
 
   it('ghi báo cáo evidence', () => {
+    // Only the date line encodes "when measured" — everything else is a pure
+    // function of golden-map/fixture/renderer bytes. Re-running the suite
+    // with no real change (the common case) must not dirty git every time;
+    // reuse the prior report's date whenever the rest of the body is
+    // byte-identical, and only stamp today's date when something actually
+    // moved. Force a fresh stamp regardless via DE_REGEN_EVIDENCE=1.
     const evidenceDir = join(projectRoot, 'Design/RoadMap/evidence');
     mkdirSync(evidenceDir, { recursive: true });
-    const lines = [
+    const evidencePath = join(evidenceDir, 'v6-tier2-eval.md');
+    const dateLinePrefix = `> Ngày đo: `;
+    let measuredDate = new Date().toISOString().slice(0, 10);
+
+    const buildLines = (date: string) => [
       '# Eval tầng 2 — Golden corpus (DesignEverything tự thiết kế)',
       '',
-      `> Ngày đo: ${new Date().toISOString().slice(0, 10)} · ref_sha: \`${goldenMap.ref_sha}\` · fixture: test/fixtures/de-self-answers.json`,
+      `${dateLinePrefix}${date} · ref_sha: \`${goldenMap.ref_sha}\` · fixture: test/fixtures/de-self-answers.json`,
       '',
       '## 5 số liệu (ngưỡng khoá ở test)',
       '',
@@ -182,7 +192,31 @@ describe('B21b — eval tầng 2 trên golden corpus DE', () => {
       '_(Điền khi review: chọn ≥5 khối ngẫu nhiên, đối chiếu rubric B19a — grounding, chống bịa, đúng cardinality.)_',
       '',
     ];
-    writeFileSync(join(evidenceDir, 'v6-tier2-eval.md'), lines.join('\n'), 'utf8');
+
+    const stripDateLine = (text: string): string => {
+      const dateLineStart = text.indexOf(dateLinePrefix);
+      if (dateLineStart === -1) return text;
+      const dateLineEnd = text.indexOf('\n', dateLineStart);
+      return text.slice(0, dateLineStart) + text.slice(dateLineEnd === -1 ? text.length : dateLineEnd);
+    };
+
+    let previousContent: string | null = null;
+    try {
+      previousContent = readFileSync(evidencePath, 'utf8');
+    } catch {
+      // No prior report — first run, use today's date.
+    }
+
+    const forceRegen = process.env.DE_REGEN_EVIDENCE === '1';
+    if (!forceRegen && previousContent !== null) {
+      const candidateBody = stripDateLine(buildLines(measuredDate).join('\n'));
+      if (candidateBody === stripDateLine(previousContent)) {
+        const priorDateMatch = previousContent.match(/> Ngày đo: (\d{4}-\d{2}-\d{2})/);
+        if (priorDateMatch) measuredDate = priorDateMatch[1];
+      }
+    }
+
+    writeFileSync(evidencePath, buildLines(measuredDate).join('\n'), 'utf8');
     expect(true).toBe(true);
   });
 });
