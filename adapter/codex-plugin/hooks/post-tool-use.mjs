@@ -1,33 +1,8 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
-import { dirname, join, resolve } from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { join } from 'path';
+import { pathToFileURL } from 'url';
 import { execSync } from 'child_process';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function resolveCorePath() {
-  const roots = [
-    process.env.CLAUDE_PLUGIN_ROOT,
-    process.env.PLUGIN_ROOT,
-    resolve(__dirname, '..'),
-  ].filter(Boolean);
-
-  const candidates = [];
-  for (const root of roots) {
-    candidates.push(join(root, 'core', 'index.js'));
-    candidates.push(join(root, 'dist', 'src', 'core', 'index.js'));
-    candidates.push(join(root, 'dist', 'core', 'index.js'));
-  }
-  candidates.push(resolve(__dirname, '../../../dist/src/core/index.js'));
-  candidates.push(resolve(__dirname, '../../../dist/core/index.js'));
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
+import { resolveCorePath } from './_shared.mjs';
 
 async function main() {
   try {
@@ -68,7 +43,7 @@ async function main() {
       console.error('[Audit Error] DesignEverything core runtime was not found next to the plugin; cannot verify allowed_paths for this audit pass.');
       return;
     }
-    const { matchesPathPattern } = await import(pathToFileURL(corePath).href);
+    const { filterUnexpectedFiles } = await import(pathToFileURL(corePath).href);
 
     let modifiedFiles = [];
     try {
@@ -81,13 +56,7 @@ async function main() {
       // ignore
     }
 
-    const unexpectedFiles = modifiedFiles.filter((file) => {
-      if (file.startsWith('.design-everything/') || file === 'progress.json' || file.startsWith('docs/') || file.startsWith('Design/')) {
-        return false;
-      }
-      const normFile = file.replace(/\\/g, '/');
-      return !allowedPaths.some((allowedGlob) => matchesPathPattern(normFile, allowedGlob));
-    });
+    const unexpectedFiles = filterUnexpectedFiles(modifiedFiles, allowedPaths);
 
     if (unexpectedFiles.length > 0) {
       state.phase = 'blocked';

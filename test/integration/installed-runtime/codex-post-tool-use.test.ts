@@ -1,21 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execFileSync } from 'child_process';
 
 const REPO_ROOT = join(__dirname, '../../..');
 const CODEX_INSTALLER = join(REPO_ROOT, 'adapter/codex-plugin/install.mjs');
-const POST_TOOL_HOOK = join(REPO_ROOT, 'adapter/codex-plugin/hooks/post-tool-use.mjs');
 
 describe('Codex post-tool-use.mjs — shared canonical path matcher (no homegrown matchGlob)', () => {
   let tmpDir: string;
+  let pluginDir: string;
+  let postToolHook: string;
 
   beforeEach(() => {
-    // Ensure the codex plugin has a built dist/ so the hook can resolve
-    // matchesPathPattern from the compiled core, mirroring how the real
-    // installed runtime works (see codex-parity.test.ts).
-    execFileSync('node', [CODEX_INSTALLER], { encoding: 'utf8' });
+    // P9 — install a self-contained plugin bundle to a disposable target
+    // dir (not the source tree) so the hook resolves matchesPathPattern
+    // from the sibling runtime.mjs bundle, mirroring a real install.
+    pluginDir = join(tmpdir(), `de-codex-post-tool-plugin-${Date.now()}`);
+    execFileSync('node', [CODEX_INSTALLER, pluginDir], { encoding: 'utf8' });
+    const runtimeDir = join(pluginDir, '.design-everything/runtime');
+    const version = readdirSync(runtimeDir).sort().pop()!;
+    postToolHook = join(runtimeDir, version, 'hooks/post-tool-use.mjs');
 
     tmpDir = join(tmpdir(), `de-codex-post-tool-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
@@ -54,6 +59,9 @@ describe('Codex post-tool-use.mjs — shared canonical path matcher (no homegrow
     if (existsSync(tmpDir)) {
       rmSync(tmpDir, { recursive: true, force: true });
     }
+    if (existsSync(pluginDir)) {
+      rmSync(pluginDir, { recursive: true, force: true });
+    }
   });
 
   it('blocks state when a modified file merely looks like the allowed_paths glob via a regex metacharacter (e.g. "." treated literally, not as any-char)', () => {
@@ -63,7 +71,7 @@ describe('Codex post-tool-use.mjs — shared canonical path matcher (no homegrow
     writeFileSync(join(tmpDir, 'src/aXb/file.ts'), 'export {};');
 
     const payload = JSON.stringify({ cwd: tmpDir, tool_name: 'Write', tool_use_id: 'abc' });
-    execFileSync('node', [POST_TOOL_HOOK], { input: payload, encoding: 'utf8' });
+    execFileSync('node', [postToolHook], { input: payload, encoding: 'utf8' });
 
     const state = JSON.parse(
       readFileSync(join(tmpDir, '.design-everything/execution-state.json'), 'utf8')
@@ -75,7 +83,7 @@ describe('Codex post-tool-use.mjs — shared canonical path matcher (no homegrow
     writeFileSync(join(tmpDir, 'src/a.b/file.ts'), 'export {};');
 
     const payload = JSON.stringify({ cwd: tmpDir, tool_name: 'Write', tool_use_id: 'abc' });
-    execFileSync('node', [POST_TOOL_HOOK], { input: payload, encoding: 'utf8' });
+    execFileSync('node', [postToolHook], { input: payload, encoding: 'utf8' });
 
     const state = JSON.parse(
       readFileSync(join(tmpDir, '.design-everything/execution-state.json'), 'utf8')

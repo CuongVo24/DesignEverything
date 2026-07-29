@@ -1,68 +1,258 @@
-import { existsSync, mkdirSync, rmSync, cpSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+#!/usr/bin/env node
+// Installer — stages the DesignEverything Codex plugin, TỰ CHỨA hoàn toàn
+// (P9 parity với adapter/claude-code/install.mjs), vào một thư mục đích rõ
+// ràng — thường là ~/.codex/plugins/design-everything-plugin, nhưng có thể
+// là bất kỳ đường dẫn nào (test dùng thư mục tạm dùng-một-lần).
+//
+//   node adapter/codex-plugin/install.mjs <đường-dẫn-đích>
+//
+// Trước P9: installer cũ cpSync dist/+node_modules NGAY VÀO chính thư mục
+// nguồn adapter/codex-plugin/ trong repo — nghĩa là "plugin" chưa bao giờ
+// thực sự tự chứa, nó vẫn sống trong và phụ thuộc vào checkout dev này. Bản
+// này không còn ghi gì vào source tree: mọi thứ được stage rồi activate vào
+// <target-dir>.
+//
+// Codex đọc plugin qua đường dẫn CỐ ĐỊNH tương đối với CLAUDE_PLUGIN_ROOT
+// (biến môi trường Codex tự set = chính <target-dir> khi plugin được nạp):
+// .codex-plugin/plugin.json trỏ tới ./hooks/hooks.json, và hooks.json chứa
+// các "command" cố định. Hai file đó (+ .codex-plugin/plugin.json) được giữ
+// tại gốc <target-dir> để Codex tìm thấy; runtime bundle + cli.mjs + chính
+// các hook .mjs được stage dưới layout versioned giống hệt Claude
+// (.design-everything/runtime/<version>/...) để install-manifest có cùng
+// schema (adapter:'codex') và cùng cơ chế hash-verify (DEBT3.2, Phase 5) —
+// hooks.json được RENDER để trỏ vào đường dẫn versioned đó.
+import { pathToFileURL, fileURLToPath } from 'url';
+import { dirname, join, resolve } from 'path';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+  copyFileSync,
+  rmSync,
+} from 'fs';
+import { createHash, randomBytes } from 'crypto';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PLUGIN_DIR = __dirname; // adapter/codex-plugin
-const REPO_ROOT = join(PLUGIN_DIR, '..', '..');
+const ADAPTER_DIR = dirname(fileURLToPath(import.meta.url));
+const ENGINE_ROOT = resolve(ADAPTER_DIR, '..', '..');
 
-// Runtime dependencies imported by the compiled core (both are dependency-free).
-const RUNTIME_DEPS = ['zod', 'yaml'];
+const target = process.argv[2];
+if (!target) {
+  console.error('Cách dùng: node adapter/codex-plugin/install.mjs <đường-dẫn-đích>');
+  console.error('  (thường là ~/.codex/plugins/design-everything-plugin)');
+  process.exit(1);
+}
+const targetRoot = resolve(target);
+if (targetRoot === ENGINE_ROOT || targetRoot === ADAPTER_DIR) {
+  console.error('Không cài đè lên chính repo DesignEverything — chọn thư mục đích khác.');
+  process.exit(1);
+}
+mkdirSync(targetRoot, { recursive: true });
 
-function bundleCoreRuntime() {
-  const distSrc = join(REPO_ROOT, 'dist');
-  if (!existsSync(join(distSrc, 'src', 'core', 'index.js')) && !existsSync(join(distSrc, 'core', 'index.js'))) {
-    console.error('ERROR: compiled core not found at dist/core/index.js.');
-    console.error('Run "npm run build" at the repo root first, then re-run this installer.');
-    process.exit(1);
-  }
+const bundlePath = join(ENGINE_ROOT, 'dist/bundle/runtime.mjs');
+if (!existsSync(bundlePath)) {
+  console.error('Chưa có dist/bundle/runtime.mjs. Chạy "npm run build:bundle" trong repo DesignEverything trước.');
+  process.exit(1);
+}
 
-  // Copy the compiled runtime next to the hooks so the installed plugin is
-  // self-contained: pre-tool-use.mjs resolves <pluginRoot>/dist/src/core/index.js.
-  const distDest = join(PLUGIN_DIR, 'dist');
-  rmSync(distDest, { recursive: true, force: true });
-  cpSync(distSrc, distDest, { recursive: true });
-  console.log('- Bundled compiled core -> dist/');
+function sha256(buf) {
+  return createHash('sha256').update(buf).digest('hex');
+}
+function sha256File(p) {
+  return sha256(readFileSync(p));
+}
+function toPosix(p) {
+  return p.replace(/\\/g, '/');
+}
 
-  // Copy the (zero-dependency) runtime deps so bare imports (zod, yaml) resolve
-  // from the bundled dist without needing the repo's node_modules.
-  const nmDest = join(PLUGIN_DIR, 'node_modules');
-  for (const dep of RUNTIME_DEPS) {
-    const depSrc = join(REPO_ROOT, 'node_modules', dep);
-    if (!existsSync(depSrc)) {
-      console.error(`ERROR: runtime dependency "${dep}" not found in node_modules. Run "npm install" first.`);
-      process.exit(1);
+const core = await import(pathToFileURL(bundlePath).href);
+const RUNTIME_VERSION = core.RUNTIME_VERSION;
+if (typeof RUNTIME_VERSION !== 'string' || !RUNTIME_VERSION) {
+  console.error('Bundle không export RUNTIME_VERSION hợp lệ — build hỏng, chạy lại "npm run build:bundle".');
+  process.exit(1);
+}
+const buildHash = sha256File(bundlePath);
+const runtimeRelDir = `.design-everything/runtime/${RUNTIME_VERSION}`;
+
+// ---------------------------------------------------------------------------
+// 1. Stage
+// ---------------------------------------------------------------------------
+const generationId = `install-${Date.now()}-${randomBytes(4).toString('hex')}`;
+const stagingRoot = join(targetRoot, '.design-everything/staging', generationId);
+mkdirSync(stagingRoot, { recursive: true });
+
+const assets = [];
+
+function stageWrite(relPath, content, kind) {
+  const dest = join(stagingRoot, relPath);
+  mkdirSync(dirname(dest), { recursive: true });
+  writeFileSync(dest, content);
+  assets.push({ path: toPosix(relPath), sha256: sha256(readFileSync(dest)), kind });
+}
+
+function stageCopyFile(srcPath, relPath, kind) {
+  stageWrite(relPath, readFileSync(srcPath), kind);
+}
+
+function stageCopyDir(srcDir, relPrefix, kind) {
+  for (const name of readdirSync(srcDir)) {
+    const srcPath = join(srcDir, name);
+    const relPath = join(relPrefix, name);
+    if (statSync(srcPath).isDirectory()) {
+      stageCopyDir(srcPath, relPath, kind);
+    } else {
+      stageCopyFile(srcPath, relPath, kind);
     }
-    const depDest = join(nmDest, dep);
-    mkdirSync(dirname(depDest), { recursive: true });
-    rmSync(depDest, { recursive: true, force: true });
-    cpSync(depSrc, depDest, { recursive: true });
-    console.log(`- Bundled runtime dependency -> node_modules/${dep}`);
   }
 }
 
-function main() {
-  console.log('=== DesignEverything Codex Plugin Installer ===\n');
-  console.log('Preparing a self-contained plugin bundle (manifest + hooks + core runtime)...\n');
+// 1a. Runtime bundle + universal cli.mjs launcher under the versioned dir —
+// same layout and same files (byte-identical) as the Claude installer.
+stageCopyFile(bundlePath, join(runtimeRelDir, 'runtime.mjs'), 'runtime');
+stageCopyFile(join(ENGINE_ROOT, 'adapter/claude-code/cli.mjs'), join(runtimeRelDir, 'cli.mjs'), 'launcher');
 
-  bundleCoreRuntime();
-
-  const cliSrc = join(REPO_ROOT, 'adapter', 'claude-code', 'cli.mjs');
-  const cliDest = join(PLUGIN_DIR, 'cli.mjs');
-  cpSync(cliSrc, cliDest);
-  console.log('- Bundled universal cli.mjs -> cli.mjs');
-
-  console.log('\nPlugin bundle is ready. Event hooks: PreToolUse, PostToolUse, PermissionRequest.\n');
-  console.log('To register the plugin locally, copy the WHOLE plugin directory (it now includes');
-  console.log('dist/ and node_modules/ so the enforcement core loads offline) into your Codex');
-  console.log('user config folder:\n');
-  console.log('  mkdir -p ~/.codex/plugins/design-everything-plugin');
-  console.log(`  cp -r "${PLUGIN_DIR}/." ~/.codex/plugins/design-everything-plugin/\n`);
-
-  console.log('IMPORTANT: Codex requires hooks to be explicitly trusted before execution.');
-  console.log('Inspect and trust them yourself via the chat UI command `/hooks`.\n');
-  console.log('This installer never writes to ~/.codex for you, never auto-trusts hooks, and');
-  console.log('never uses bypass flags like `--dangerously-bypass-hook-trust`.');
+// 1b. Hook wrappers — byte-identical; _shared.mjs's resolveCorePath()
+// detects the sibling runtime.mjs one directory up.
+for (const hookFile of ['_shared.mjs', 'pre-tool-use.mjs', 'post-tool-use.mjs', 'permission-request.mjs']) {
+  stageCopyFile(join(ADAPTER_DIR, 'hooks', hookFile), join(runtimeRelDir, 'hooks', hookFile), 'hook');
 }
 
-main();
+// 1c. Root-level cli.mjs — SKILL.md documents `<pluginRoot>/cli.mjs` literally.
+// This can't be a second byte-identical copy of the universal launcher: that
+// launcher locates its runtime bundle by looking for a FLAT sibling
+// runtime.mjs next to itself, and here the real bundle lives one level down
+// at the versioned dir. So this is a tiny redirector instead — it resolves
+// the current version's real cli.mjs and imports it, keeping the
+// `<pluginRoot>/cli.mjs` contract true without a second copy of the bundle
+// or a change to the shared launcher's sibling-detection contract (which
+// the Claude installer also depends on unchanged).
+stageWrite(
+  'cli.mjs',
+  `#!/usr/bin/env node
+// Thin redirector — the real launcher lives at the current version's
+// .design-everything/runtime/<version>/cli.mjs (see install.mjs). Kept at
+// the plugin root because SKILL.md documents \`<pluginRoot>/cli.mjs\`.
+import { readdirSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const rootDir = dirname(fileURLToPath(import.meta.url));
+const runtimeDir = join(rootDir, '.design-everything', 'runtime');
+const versions = existsSync(runtimeDir) ? readdirSync(runtimeDir).sort() : [];
+const latest = versions[versions.length - 1];
+if (!latest) {
+  console.error('[DesignEverything CLI] LỖI: Không tìm thấy .design-everything/runtime/<version>/ — chạy lại install.mjs.');
+  process.exit(5);
+}
+await import(pathToFileURL(join(runtimeDir, latest, 'cli.mjs')).href);
+`,
+  'launcher'
+);
+
+// 1d. Codex-required fixed-path files. plugin.json's "hooks" pointer and the
+// hooks.json matcher/timeout/statusMessage fields are copied verbatim;
+// only the "command" strings are rendered to the versioned hook path,
+// since ${CLAUDE_PLUGIN_ROOT} is substituted by Codex itself at hook-run
+// time and always equals targetRoot.
+stageCopyFile(join(ADAPTER_DIR, '.codex-plugin/plugin.json'), '.codex-plugin/plugin.json', 'policy');
+
+const hooksJsonSrc = JSON.parse(readFileSync(join(ADAPTER_DIR, 'hooks/hooks.json'), 'utf8'));
+for (const eventHooks of Object.values(hooksJsonSrc.hooks)) {
+  for (const entry of eventHooks) {
+    for (const h of entry.hooks ?? []) {
+      if (typeof h.command === 'string') {
+        h.command = h.command.replace(
+          /\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\//,
+          `\${CLAUDE_PLUGIN_ROOT}/${runtimeRelDir}/hooks/`
+        );
+      }
+    }
+  }
+}
+stageWrite('hooks/hooks.json', JSON.stringify(hooksJsonSrc, null, 2), 'hook');
+
+// 1e. Skills.
+stageCopyDir(join(ADAPTER_DIR, 'skills'), 'skills', 'skill');
+
+// 1f. Interview-script + catalog + templates — shipped for the same reason
+// the Claude installer ships them (manifest catalog_version/catalog_digest
+// parity, and forward-compat with any future codex-side scaffolding command
+// that seeds a project workspace from the plugin's own copies).
+stageCopyDir(
+  join(ENGINE_ROOT, 'Design/Content/interview-script'),
+  'Design/Content/interview-script',
+  'policy'
+);
+stageCopyFile(
+  join(ENGINE_ROOT, 'Design/Content/artifact-catalog.yaml'),
+  'Design/Content/artifact-catalog.yaml',
+  'catalog'
+);
+stageCopyDir(join(ENGINE_ROOT, 'Design/Content/doc-templates'), 'Design/Content/doc-templates', 'template');
+
+// ---------------------------------------------------------------------------
+// 2. Compile the catalog from the STAGED tree to bind catalog_version/digest
+//    in the manifest to real bytes.
+// ---------------------------------------------------------------------------
+const stagedCatalog = core.loadRuntimeCatalogFor(stagingRoot);
+
+// ---------------------------------------------------------------------------
+// 3. Promote — backup-then-copy each asset into place.
+// ---------------------------------------------------------------------------
+const backupDir = join(targetRoot, '.design-everything/backups', generationId);
+for (const asset of assets) {
+  const stagedPath = join(stagingRoot, asset.path);
+  const livePath = join(targetRoot, asset.path);
+  if (existsSync(livePath)) {
+    const backupPath = join(backupDir, asset.path);
+    mkdirSync(dirname(backupPath), { recursive: true });
+    copyFileSync(livePath, backupPath);
+  }
+  mkdirSync(dirname(livePath), { recursive: true });
+  copyFileSync(stagedPath, livePath);
+}
+
+rmSync(stagingRoot, { recursive: true, force: true });
+
+// ---------------------------------------------------------------------------
+// 4. install-manifest.json — written LAST.
+// ---------------------------------------------------------------------------
+const manifest = {
+  version: '1.0.0',
+  adapter: 'codex',
+  runtime_version: RUNTIME_VERSION,
+  catalog_version: stagedCatalog.version,
+  catalog_digest: stagedCatalog.digest,
+  build_hash: buildHash,
+  engine_range: `^${RUNTIME_VERSION}`,
+  target_root: toPosix(targetRoot),
+  hook_ids: ['codex:pre-tool-use', 'codex:post-tool-use', 'codex:permission-request'],
+  assets,
+  installed_at: new Date().toISOString(),
+};
+mkdirSync(join(targetRoot, '.design-everything'), { recursive: true });
+writeFileSync(
+  join(targetRoot, '.design-everything/install-manifest.json'),
+  JSON.stringify(manifest, null, 2),
+  'utf8'
+);
+
+console.log(`✅ Đã cài DesignEverything Codex plugin (tự chứa) vào: ${targetRoot}
+
+Cài đặt gồm:
+  .codex-plugin/plugin.json
+  hooks/hooks.json                          (trỏ vào ${runtimeRelDir}/hooks/)
+  ${runtimeRelDir}/runtime.mjs      (esbuild bundle, tự chứa — không phụ thuộc node_modules)
+  ${runtimeRelDir}/cli.mjs
+  ${runtimeRelDir}/hooks/           (pre-tool-use, post-tool-use, permission-request)
+  cli.mjs                                   (bản tiện dụng ở gốc, dùng trong SKILL.md)
+  skills/design-everything-build/SKILL.md
+  Design/Content/interview-script/, artifact-catalog.yaml, doc-templates/
+
+Bước tiếp theo (KHÔNG tự động — installer này không ghi vào ~/.codex):
+  1. Trỏ Codex tới thư mục plugin này (vd: cp -r "${targetRoot}/." ~/.codex/plugins/design-everything-plugin/
+     nếu đích ở trên chưa phải chính thư mục đó).
+  2. Trong Codex, chạy lệnh /hooks để TỰ MÌNH xem xét và cấp quyền tin cậy cho từng hook —
+     installer này không bao giờ tự động trust hook hay dùng cờ bypass.`);

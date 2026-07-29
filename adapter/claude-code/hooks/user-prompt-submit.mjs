@@ -4,7 +4,7 @@
 import { pathToFileURL } from 'url';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { ENGINE_ROOT, readStdinJson, workspaceRootFrom, emitJson, resolveModule } from './_shared.mjs';
+import { readStdinJson, workspaceRootFrom, emitJson, resolveModule, resolveCliLauncherPath } from './_shared.mjs';
 
 const input = await readStdinJson();
 const workspaceRoot = workspaceRootFrom(input);
@@ -34,7 +34,7 @@ try {
   }
 
   if (result.injectedContext) {
-    const cliPath = join(ENGINE_ROOT, 'adapter/claude-code/cli.mjs').replace(/\\/g, '/');
+    const cliPath = resolveCliLauncherPath().replace(/\\/g, '/');
     const commitLine = result.capabilityToken
       ? `  node "${cliPath}" commit --capability-token ${result.capabilityToken} --answer "<câu trả lời đã chuẩn hoá>"\n`
       : '';

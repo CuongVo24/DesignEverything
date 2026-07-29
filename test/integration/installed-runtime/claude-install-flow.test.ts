@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execSync, execFileSync } from 'child_process';
@@ -63,8 +63,12 @@ describe('B5a — Claude Installed Runtime Integration Flow', () => {
     };
     writeFileSync(join(tempTarget, 'progress.json'), JSON.stringify(progress, null, 2), 'utf8');
 
-    // Run PreToolUse hook directly on a Write tool call targeting src/index.ts
-    const hookPath = join(REPO_ROOT, 'adapter/claude-code/hooks/pre-tool-use.mjs');
+    // Run the TARGET-LOCAL installed PreToolUse hook (not the source-tree
+    // one) on a Write tool call targeting src/index.ts — proves the
+    // installed layout resolves the sibling runtime bundle on its own.
+    const runtimeDir = join(tempTarget, '.design-everything/runtime');
+    const version = readdirSync(runtimeDir).sort().pop()!;
+    const hookPath = join(runtimeDir, version, 'hooks/pre-tool-use.mjs');
     const inputPayload = JSON.stringify({
       cwd: tempTarget,
       tool_name: 'Write',

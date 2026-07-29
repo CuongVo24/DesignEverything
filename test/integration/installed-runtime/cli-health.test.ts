@@ -77,12 +77,14 @@ describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
     expect(res.reason_code).toBe('TURN_CAPABILITY_MISSING');
   });
 
-  it('should fail closed with UNKNOWN_SUBCOMMAND for the documented deepen --capability-token shape (H0: deepen is not wired into the dispatcher yet)', async () => {
-    // Pins current reality: SKILL.md documents `deepen --commit --capability-token
-    // <TOKEN> ...` (H0, plan-v1-bonus-tasks.md) as the authorization shape, but
-    // cliOperations.ts has no `case 'deepen'` — it falls through to the default
-    // unknown-subcommand branch. This must stay a stable, typed failure and never
-    // silently "succeed" until P6/P7 actually wire the handler.
+  it('deepen --commit on a module that was never opted-in is rejected DEEPEN_NOT_OPTED_IN (X01 closed: deepen is now wired, see test/integration/deepen-cli.test.ts for the full flow)', async () => {
+    // H0/X01 used to pin this exact documented shape (`deepen --commit
+    // --capability-token <TOKEN> ...`) as UNKNOWN_SUBCOMMAND because
+    // cliOperations.ts had no `case 'deepen'` at all. Phase 3.5 wired it —
+    // commitDeepenAnswer's own validation order (opted-in check before
+    // token verification) now surfaces DEEPEN_NOT_OPTED_IN for a fresh
+    // workspace that never ran --opt-in, a real typed rejection rather than
+    // a generic dispatcher fallthrough.
     const res = await runCliOperation(tmpDir, [
       'deepen',
       '--module',
@@ -97,10 +99,13 @@ describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
     ]);
 
     expect(res.ok).toBe(false);
-    expect(res.reason_code).toBe('UNKNOWN_SUBCOMMAND');
+    expect(res.reason_code).toBe('DEEPEN_NOT_OPTED_IN');
   });
 
-  it('should reject the stale deepen --turn shape identically to UNKNOWN_SUBCOMMAND (--turn grants no authority via this surface either)', async () => {
+  it('the stale deepen --turn shape is rejected TURN_CAPABILITY_MISSING before touching module state (--turn grants no authority via this surface either)', async () => {
+    // No --capability-token at all -> handleDeepen's CLI-layer check fires
+    // before commitDeepenAnswer's own opt-in check ever runs, mirroring
+    // handleCommit's identical "fail before doing anything else" discipline.
     const res = await runCliOperation(tmpDir, [
       'deepen',
       '--module',
@@ -115,7 +120,7 @@ describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
     ]);
 
     expect(res.ok).toBe(false);
-    expect(res.reason_code).toBe('UNKNOWN_SUBCOMMAND');
+    expect(res.reason_code).toBe('TURN_CAPABILITY_MISSING');
   });
 
   it('should reject commit with INVALID_SLOTS_FILE when slots file path points outside workspace, given a valid capability token', async () => {

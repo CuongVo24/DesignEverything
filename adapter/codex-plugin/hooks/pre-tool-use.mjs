@@ -1,8 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
-import { resolve, dirname, join } from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { join } from 'path';
+import { pathToFileURL } from 'url';
+import { resolveCorePath } from './_shared.mjs';
 
 function deny(reason) {
   console.log(
@@ -25,30 +24,6 @@ function allow() {
       },
     })
   );
-}
-
-function resolveCorePath() {
-  const roots = [
-    process.env.CLAUDE_PLUGIN_ROOT,
-    process.env.PLUGIN_ROOT,
-    resolve(__dirname, '..'),
-  ].filter(Boolean);
-
-  const candidates = [];
-  for (const root of roots) {
-    candidates.push(join(root, 'core', 'index.js'));
-    candidates.push(join(root, 'dist', 'src', 'core', 'index.js'));
-    candidates.push(join(root, 'dist', 'core', 'index.js'));
-  }
-  candidates.push(resolve(__dirname, '../../../dist/src/core/index.js'));
-  candidates.push(resolve(__dirname, '../../../dist/core/index.js'));
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
 }
 
 function extractApplyPatchPaths(patchText) {

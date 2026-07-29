@@ -3,23 +3,40 @@
   "version": "6.0.0",
   "description": "Portable foundational documentation design method for AI coding agents",
   "license": "MIT",
-  "main": "dist/src/core/index.js",
-  "exports": "./dist/src/core/index.js",
+  "main": "dist/core/index.js",
+  "exports": "./dist/core/index.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build:bundle": "tsc && node scripts/build-runtime-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node scripts/check-version-sync.mjs && node scripts/check-matrix.mjs && vitest run",
     "dogfood:regen": "npm run build && node scripts/regen-dogfood.mjs"
   },
-  "files": ["dist/src", "dist/adapter", "adapter", "Design/Content", "docs/quickstart.md", "RUNBOOK-web.md", "RUNBOOK-mobile.md", "README.md", "FirstIdea.md", "LICENSE", "!**/*.test.*"],
+  "files": [
+    "dist/core",
+    "dist/adapters",
+    "dist/version.js",
+    "dist/runtimeBundleEntry.js",
+    "dist/bundle",
+    "adapter",
+    "Design/Content",
+    "docs/quickstart.md",
+    "RUNBOOK-web.md",
+    "RUNBOOK-mobile.md",
+    "README.md",
+    "FirstIdea.md",
+    "LICENSE",
+    "!**/*.test.*"
+  ],
   "dependencies": {
     "yaml": "2.4.5",
     "zod": "3.23.8"
   },
   "devDependencies": {
     "@types/node": "20.14.9",
+    "esbuild": "^0.24.2",
     "eslint": "9.5.0",
     "eslint-config-prettier": "9.1.0",
     "prettier": "3.3.2",

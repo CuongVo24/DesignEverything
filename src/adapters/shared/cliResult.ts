@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RUNTIME_VERSION } from '../../version.js';
 
 export const cliResultEnvelopeSchema = z.object({
   ok: z.boolean(),
@@ -8,7 +9,7 @@ export const cliResultEnvelopeSchema = z.object({
   message: z.string(),
   data: z.record(z.string(), z.unknown()).optional(),
   next_command: z.string().optional(),
-  runtime_version: z.string().default('6.0.0'),
+  runtime_version: z.string().default(RUNTIME_VERSION),
 });
 export type CliResultEnvelope = z.infer<typeof cliResultEnvelopeSchema>;
 
@@ -56,7 +57,8 @@ export function exitCodeFor(result: CliResultEnvelope): number {
     code.includes('BROKEN') ||
     code.includes('MISSING') ||
     code.includes('HEALTH') ||
-    code.includes('UNINIT')
+    code.includes('UNINIT') ||
+    code.includes('TAMPERED')
   ) {
     return 3;
   }
