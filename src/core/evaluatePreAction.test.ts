@@ -560,5 +560,103 @@ describe('evaluatePreAction core engine', () => {
         rmSync(brokenWorkspace, { recursive: true, force: true });
       }
     });
+
+    describe('P4.2/DEBT2 — plan-validating writes go through catalog-aware authorizeMutation, not a prefix blanket-allow', () => {
+      function planValidatingRequest(overrides: Partial<PreActionRequest>): PreActionRequest {
+        return {
+          runtime: 'claude',
+          tool_name: 'Write',
+          action_kind: 'write',
+          target_paths: [],
+          command_argv: [],
+          workspace: catalogWorkspace,
+          session_id: 'test-session',
+          state: baseExecState({ phase: 'plan-validating' }),
+          ...overrides,
+        };
+      }
+
+      test('a managed catalog doc (docs/00-vision.md) is denied, not blanket-allowed', () => {
+        const decision = evaluatePreAction(planValidatingRequest({ target_paths: ['docs/00-vision.md'] }));
+        expect(decision.decision).toBe('deny');
+        expect(decision.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+      });
+
+      test('engine-state (.design-everything/execution-state.json) is denied', () => {
+        const decision = evaluatePreAction(
+          planValidatingRequest({ target_paths: ['.design-everything/execution-state.json'] })
+        );
+        expect(decision.decision).toBe('deny');
+        expect(decision.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+      });
+
+      test('engine-policy (Design/Content/interview-script/gate-policy.yaml) is denied', () => {
+        const decision = evaluatePreAction(
+          planValidatingRequest({ target_paths: ['Design/Content/interview-script/gate-policy.yaml'] })
+        );
+        expect(decision.decision).toBe('deny');
+        expect(decision.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+      });
+
+      test('a well-formed scratch path is still allowed', () => {
+        const decision = evaluatePreAction(
+          planValidatingRequest({ target_paths: ['.design-everything/scratch/sess1/q1/note.md'] })
+        );
+        expect(decision.decision).toBe('allow');
+        expect(decision.reason_code).toBe('plan-validating-write-allowed');
+      });
+
+      test('a malformed scratch path (missing session/question segments) is denied', () => {
+        const decision = evaluatePreAction(
+          planValidatingRequest({ target_paths: ['.design-everything/scratch/loose.md'] })
+        );
+        expect(decision.decision).toBe('deny');
+        expect(decision.reason_code).toBe('INVALID_SCRATCH_PATH');
+      });
+
+      test('positive control — a user-owned path under Design/ (not catalog, not engine-*) is still allowed', () => {
+        const decision = evaluatePreAction(planValidatingRequest({ target_paths: ['Design/notes/idea.md'] }));
+        expect(decision.decision).toBe('allow');
+        expect(decision.reason_code).toBe('plan-validating-write-allowed');
+      });
+
+      test('regression pin — a path outside the Design/docs/.design-everything scope is still denied PLAN_VALIDATION_REQUIRED', () => {
+        const decision = evaluatePreAction(planValidatingRequest({ target_paths: ['src/index.ts'] }));
+        expect(decision.decision).toBe('deny');
+        expect(decision.reason_code).toBe('PLAN_VALIDATION_REQUIRED');
+      });
+
+      test('a missing/unloadable catalog degrades to empty entries (docs/ write still allowed as user-owned), matching the interview-phase branch', () => {
+        // Same best-effort contract as the "P6 10.3" describe's "missing
+        // artifact-catalog.yaml degrades..." test above, for the
+        // plan-validating branch: a workspace with no catalog at all (e.g.
+        // a minimal fixture, or a target predating P9 shipping the catalog
+        // asset) must not have every docs/ write hard-denied — it just
+        // cannot benefit from managed-output protection until the catalog
+        // is available.
+        const brokenWorkspace = mkdtempSync(join(tmpdir(), 'pre-action-plan-validating-broken-catalog-'));
+        try {
+          const designDir = join(brokenWorkspace, 'Design/Content');
+          mkdirSync(designDir, { recursive: true });
+          cpSync(join(projectRoot, 'Design/Content'), designDir, { recursive: true });
+          rmSync(join(designDir, 'artifact-catalog.yaml'), { force: true });
+
+          const decision = evaluatePreAction({
+            runtime: 'claude',
+            tool_name: 'Write',
+            action_kind: 'write',
+            target_paths: ['docs/some-doc.md'],
+            command_argv: [],
+            workspace: brokenWorkspace,
+            session_id: 'test-session',
+            state: baseExecState({ phase: 'plan-validating' }),
+          });
+          expect(decision.decision).toBe('allow');
+          expect(decision.reason_code).toBe('plan-validating-write-allowed');
+        } finally {
+          rmSync(brokenWorkspace, { recursive: true, force: true });
+        }
+      });
+    });
   });
 });

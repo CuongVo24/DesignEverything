@@ -514,18 +514,41 @@ function evaluatePreActionInner(
       const isAllDocs = resolvedPaths.every(
         (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/')
       );
-      if (isAllDocs) {
+      if (!isAllDocs) {
         return {
-          decision: 'allow',
-          reason_code: 'plan-validating-write-allowed',
-          user_message: 'Được phép sửa đổi kế hoạch và tài liệu thiết kế.',
+          decision: 'deny',
+          reason_code: 'PLAN_VALIDATION_REQUIRED',
+          user_message: 'Không có task hoạt động (active_task) nào đang chạy. Vui lòng chạy lệnh "validate" để bắt đầu quy trình.',
           enforcement: 'hard',
         };
       }
+
+      // P4.2/DEBT2 — within the plan-validating design/docs scope, route
+      // through the same catalog-aware authorizeMutation the executing and
+      // interview phases already use, instead of a bare 3-prefix blanket
+      // allow (which let an agent-host actor hand-write any catalog-managed
+      // doc, engine-state file, or engine-policy file during this phase).
+      // A catalog that fails to load degrades to empty entries (same
+      // best-effort contract as collectCatalogEntries' other call site,
+      // §P6 10.3) — every path just falls through to user-owned instead of
+      // managed-output, matching the interview-phase branch's existing,
+      // tested behavior for the same situation.
+      const catalogEntries = collectCatalogEntries(request.workspace);
+      for (const targetPath of resolvedPaths) {
+        const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries);
+        if (auth.decision === 'deny') {
+          return {
+            decision: 'deny',
+            reason_code: auth.reason_code,
+            user_message: auth.user_message,
+            enforcement: 'hard',
+          };
+        }
+      }
       return {
-        decision: 'deny',
-        reason_code: 'PLAN_VALIDATION_REQUIRED',
-        user_message: 'Không có task hoạt động (active_task) nào đang chạy. Vui lòng chạy lệnh "validate" để bắt đầu quy trình.',
+        decision: 'allow',
+        reason_code: 'plan-validating-write-allowed',
+        user_message: 'Được phép sửa đổi kế hoạch và tài liệu thiết kế.',
         enforcement: 'hard',
       };
     }
