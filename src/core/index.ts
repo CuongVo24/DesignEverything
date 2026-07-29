@@ -173,8 +173,13 @@ export {
 export type { DeepenRuntimeSnapshot, CanStartDeepenDecision } from './deepenLifecycle.js';
 export { activateTier1Emit } from './emitTier1.js';
 export type { ActivateTier1EmitResult } from './emitTier1.js';
+export { manifestPath, journalPath } from './emitTransactionActivate.js';
+export { runSemanticValidation } from './semanticValidation.js';
+export type {
+  ValidationCheck,
+  ValidationCheckId,
+  SemanticValidationResult,
+} from './semanticValidation.js';
 export { installManifestSchema } from './schemas/installManifest.js';
 export type { InstallManifest, InstallManifestAsset } from './schemas/installManifest.js';
-
-
 

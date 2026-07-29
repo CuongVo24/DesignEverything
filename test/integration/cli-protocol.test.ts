@@ -141,6 +141,84 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
     expect(res.next_command).toBe('/build');
   });
 
+  test('P1 (DEBT1) — validate on a tampered doc fails closed to SEMANTIC_VALIDATION_FAILED and blocks the plan', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    const emitRes = await runCliOperation(tempDir, ['emit']);
+    expect(emitRes.ok).toBe(true);
+
+    writeFileSync(join(tempDir, 'docs/00-vision.md'), 'tampered, does not match emit manifest digest', 'utf8');
+
+    const res = await runCliOperation(tempDir, ['validate']);
+    expect(res.ok).toBe(false);
+    expect(res.reason_code).toBe('SEMANTIC_VALIDATION_FAILED');
+    expect(exitCodeFor(res)).toBe(2);
+
+    const execStatePath = join(tempDir, '.design-everything/execution-state.json');
+    const state = JSON.parse(readFileSync(execStatePath, 'utf8'));
+    expect(state.phase).toBe('blocked');
+    expect(state.block_reason.kind).toBe('validation');
+    expect(state.block_reason.reason_code).toBe('SEMANTIC_VALIDATION_FAILED');
+  });
+
+  test('P1 (DEBT1) — validate on an untampered freshly-emitted workspace passes with a real digest, not the literal "pass"', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    const emitRes = await runCliOperation(tempDir, ['emit']);
+    expect(emitRes.ok).toBe(true);
+
+    const res = await runCliOperation(tempDir, ['validate']);
+    expect(res.ok).toBe(true);
+    expect(res.reason_code).toBe('VALIDATION_PASSED');
+
+    const execStatePath = join(tempDir, '.design-everything/execution-state.json');
+    const state = JSON.parse(readFileSync(execStatePath, 'utf8'));
+    expect(state.phase).toBe('ready-to-execute');
+    expect(state.validation_result_digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(state.validation_result_digest).not.toBe('pass');
+  });
+
+  test('P1 (DEBT1) — validate never clears a verification-failed block; it stays blocked with the same reason', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    const emitRes = await runCliOperation(tempDir, ['emit']);
+    expect(emitRes.ok).toBe(true);
+
+    const execStatePath = join(tempDir, '.design-everything/execution-state.json');
+    const blockedState = {
+      ...JSON.parse(readFileSync(execStatePath, 'utf8')),
+      phase: 'blocked',
+      active_task: 'T1-scaffold',
+      block_reason: {
+        kind: 'verification-failed',
+        reason_code: 'TASK_COMMAND_FAILED_ABORT_POLICY',
+        origin_phase: 'executing',
+        task_id: 'T1-scaffold',
+        recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T1-scaffold',
+        detail: 'Task verification failed under abort policy.',
+        created_at: new Date().toISOString(),
+      },
+    };
+    writeFileSync(execStatePath, JSON.stringify(blockedState, null, 2), 'utf8');
+
+    const res = await runCliOperation(tempDir, ['validate']);
+    expect(res.ok).toBe(false);
+    expect(res.reason_code).toBe('TASK_COMMAND_FAILED_ABORT_POLICY');
+
+    const state = JSON.parse(readFileSync(execStatePath, 'utf8'));
+    expect(state.phase).toBe('blocked');
+    expect(state.block_reason.kind).toBe('verification-failed');
+    expect(state.active_task).toBe('T1-scaffold');
+  });
+
+  test('P1 gap-fix (§9.1) — start on a freshly-emitted, not-yet-validated workspace reports PLAN_VALIDATION_REQUIRED via evaluateBuildReadiness', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    const emitRes = await runCliOperation(tempDir, ['emit']);
+    expect(emitRes.ok).toBe(true);
+
+    const res = await runCliOperation(tempDir, ['start', '--task', 'T1-scaffold']);
+    expect(res.ok).toBe(false);
+    expect(res.reason_code).toBe('PLAN_VALIDATION_REQUIRED');
+    expect(res.next_command).toBe('/build');
+  });
+
   test('unknown subcommand returns UNKNOWN_SUBCOMMAND envelope with exit code 1', async () => {
     const res = await runCliOperation(tempDir, ['unknownSubcommand']);
     expect(res.ok).toBe(false);
