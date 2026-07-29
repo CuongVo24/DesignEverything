@@ -33,6 +33,7 @@ import {
   loadSlotsFile,
   activateTier1Emit,
   completeTier1Activation,
+  ensureTier1Handoff,
   evaluateBuildReadiness,
   runSemanticValidation,
   manifestPath,
@@ -113,6 +114,16 @@ function readBreakCount(filePath: string, label: string): number {
 }
 
 export async function runCliOperation(workspaceRoot: string, argv: string[]): Promise<CliResultEnvelope> {
+  // P3.1/P7 crash-window self-heal — activateTier1Emit (docs promoted,
+  // tier-1 manifest activated) and completeTier1Activation
+  // (execution-state.json created) are two separate calls in handleEmit
+  // below, not one transaction. A process killed between them leaves a
+  // workspace with tier-1 fully activated but no execution-state.json,
+  // which nothing else ever creates. Idempotent and a no-op unless exactly
+  // that inconsistent state is found, so running it on every subcommand is
+  // always safe.
+  ensureTier1Handoff(workspaceRoot);
+
   // Parse subcommand
   const subIndex = argv.findIndex((arg) => !arg.endsWith('.mjs') && !arg.endsWith('.js') && arg !== 'node');
   const subcommand = subIndex !== -1 ? argv[subIndex].toLowerCase() : 'status';

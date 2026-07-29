@@ -63,6 +63,7 @@ export type { ArtifactClass, CatalogPathEntry } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
 export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';
 export { tokenizeShellCommand, stripQuotedContent } from './tokenizeShellCommand.js';
+export { ensureTier1Handoff } from './ensureTier1Handoff.js';
 export { canonicalizeWorkspacePath, matchesPathPattern, isContainedRealPath } from './pathPolicy.js';
 export { loadDeepenScript } from './loadDeepenScript.js';
 export {
