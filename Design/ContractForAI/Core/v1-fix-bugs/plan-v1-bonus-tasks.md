@@ -59,17 +59,17 @@ contract proof.
 
 | Track | Trạng thái hiện tại | Kết luận |
 |---|---|---|
-| H0 — stale skill command | Closed 2026-07-25 | Doc/skill fixed; `deepen` CLI wiring vẫn nợ P6/P7 |
-| P2.2a — canonical authority | Partial (core+adapters done 2026-07-25) | interview/commit path chạy qua canonical; `evaluatePreAction` caller-injection và `deepen` chưa nối (P4/P6/P7/P8) |
+| H0 — stale skill command | Closed 2026-07-25 | Doc/skill fixed; **`deepen` CLI wiring đóng 2026-07-28** (bonus-plan Phase 3.5, X01) |
+| P2.2a — canonical authority | Partial (core+adapters done 2026-07-25) | interview/commit path chạy qua canonical; `evaluatePreAction` caller-injection vẫn nợ; `deepen` giờ có case CLI thật nhưng dùng durability riêng (deepen-state.json), không qua canonical transaction kernel (P4/P8) |
 | P2.2b — durability/lock | Partial (2026-07-25) | lock nonce/liveness + fsync + migration validation done; multi-file journal marker đánh giá không cần cho seam 1-file này |
-| P4 — policy | Partial (bugs cụ thể đã sửa 2026-07-26) | sibling-prefix escape, `**` zero-segment, `evaluatePreAction`/Codex post-hook safe-list & matchGlob riêng, git branch/-C scope đã sửa; capability architecture, `plan-validating` blanket-allow, raw shell parser vẫn nợ |
-| P5 — gate/health | Partial (bugs cụ thể đã sửa 2026-07-26) | gate fail-open + basename fallback + null-state allow + recovery substring-injection đã sửa; manifest/hash/hook-ID binding và catalog/tier1-2 health check vẫn nợ |
-| P3 — handoff/blocked | Partial (2026-07-26) | `completeTier1Activation` nối vào production emit; blocked-phase giờ theo `allowedRemediation` thay vì deny-all/blanket-allow; `evaluateBuildReadiness` có production caller thật (`next`). `ready-for-validation` rename, atomic single-transaction journal (interview phase + emit manifest + exec state cùng lúc), và `handleStart` cùng authority vẫn chưa làm |
+| P4 — policy | Partial (2026-07-28) | sibling-prefix escape, `**` zero-segment, `evaluatePreAction`/Codex post-hook safe-list & matchGlob riêng, git branch/-C scope đã sửa; **`plan-validating` blanket-allow đóng 2026-07-28** (giờ đi qua `authorizeMutation` catalog-aware, không còn allow ngay theo prefix); capability opaque/expiry architecture, raw shell parser vẫn nợ |
+| P5 — gate/health | Partial (2026-07-28) | gate fail-open + basename fallback + null-state allow + recovery substring-injection đã sửa. **DEBT3.1 đóng 2026-07-28**: `buildGateSnapshot`/`evaluateGate` giờ bind emit manifest thật (tampered-doc detection), evidence record thật (`requires_evidence`), và validation digest thật (`requires_validation`) — không còn boolean/list nổi. **DEBT3.2 đóng 2026-07-28**: `inspectRuntimeHealth` giờ parse `install-manifest.json` qua `installManifestSchema` (fail-closed `CORRUPT_INSTALL_MANIFEST`), hash-verify từng asset (`TAMPERED_RUNTIME_ASSET`), phát hiện `runtime_version` lệch (`INSTALL_MANIFEST_STALE`, warning), xác nhận hook_ids còn wired trong `.claude/settings.json` (`MISSING_HOOK_WIRING`), và phát hiện emit-manifest tier1/tier2 hỏng (`CORRUPT_EMIT_MANIFEST`) — trước đây chỉ `existsSync` boolean |
+| P3 — handoff/blocked | Partial (2026-07-28) | `completeTier1Activation` nối vào production emit; blocked-phase giờ theo `allowedRemediation` thay vì deny-all/blanket-allow; `evaluateBuildReadiness` có production caller thật ở cả `next` và `start`. **DEBT1 đóng 2026-07-28**: `handleValidate` không còn hardcode `validationPass: true` — chạy `runSemanticValidation` thật (manifest/artifact-digest/plan-schema/gate-docs), fail-closed → blocked `SEMANTIC_VALIDATION_FAILED`, digest thật thay vì literal `'pass'`. `ready-for-validation` rename và atomic single-transaction journal (interview phase + emit manifest + exec state cùng lúc) vẫn chưa làm |
 | P6 — answer/provenance/catalog | 10.1/10.2/10.3 done 2026-07-28 | `commitInterviewAnswer` load `answer_contract` thật, enforce `pattern`/`enum_values`/`required`/`min_items`/`required_fields`/`warning_rules`→`needs_user_ack`; `--slots-file` (mechanism thật theo SKILL.md, khác `loadQuestionSlots` — xem §10.1) commit atomic cùng transaction với answer, slot resubmit ghi `corrections`; derived-recipes có executor tối thiểu (`runDerivedRecipe`, chưa validate structured items thật vì chưa renderer nào tạo ra) và đã wire cảnh báo (warning-severity) vào `validateStagedEmit`; catalog `{placeholder}` matcher có bug thật đã sửa (chưa từng match gì), `artifactOwnership`/`evaluatePreAction` write-gate giờ dùng catalog thật (trừ interview-phase doc-write bypass — cố tình không đụng, xem P4.2) |
 | P7 — transactional emit | Tier-1 done 2026-07-26; **Tier-2 (P7.2) done 2026-07-28** | Production `emit` gọi `activateTier1Emit` qua kernel có sẵn. Tier-2: mỗi module giờ có channel/manifest/journal riêng (`tier2-${module}`), qua cùng kernel `prepareEmit`/`activateEmit`; `repair` recover đúng từng channel (trước đây recover 1 channel chết, luôn no-op); module plan-affecting (adr/test-strategy) giờ invalidate execution-state qua `invalidateSnapshotForTier2` (hàm có sẵn, trước không ai gọi); có test isolation (re-emit module A không đụng B, kể cả khi crash-recovery) và idempotent-repair. `activateTier1Emit`/`completeTier1Activation` vẫn 2 lời gọi riêng (không cùng transaction); fault-injection còn thiếu crash-worker hard-kill thật (chỉ có hand-crafted-journal, xem 11.3) |
 | P8 — adapter production wiring | Done 2026-07-28 | `authorizeCliOperation` (authority song song, 0 import từ Core) đã xóa hẳn. Subcommand/phase table port nguyên vẹn vào Core (`classifyCliSubcommand`), `evaluatePreAction` dùng nó cho MỌI CLI-shaped shell command (kể cả no-execState/interview — trước đây không có CLI awareness ở nhánh này, chỉ được che bởi wrapper bypass); `.mjs` wrapper giờ chỉ tokenize (giữ `resolveCliInvocation`) rồi fall through `onPreToolUse` — không còn tự quyết định. `action_kind` có `delete`/`rename` (typed-gap, chưa caller nào dùng, cố tình không wire rm/mv shell — xem P8.5 vì sẽ nới lỏng default hiện tại). `action_kind: 'delete' | 'rename'` chưa map từ MultiEdit/NotebookEdit/native delete tool (không có tool nào cần) |
-| P9 — installer/parity | Open | runtime chưa target-local/self-contained đúng B4d/B4e |
-| P10 — skill truth | Partial | Claude đã sửa phần lớn; Codex còn stale command và shared-block drift |
+| P9 — installer/parity | Done 2026-07-28 | Claude + Codex đều self-contained target-local (esbuild bundle, versioned layout, install-manifest, stage→atomic-activate); moved-source/repair/interrupted/tampered/packaging tests xanh — xem §13 |
+| P10 — skill truth | Done 2026-07-28 | **`emit --slots-file` giờ chạy thật**: phát hiện `handleEmit` không nhận `argv` và đọc `Design/.interview/answers.json` — file đã CHẾT cho tier-1 kể từ cutover P2.2a (chỉ migrator đọc, không production writer nào ghi nữa; file giờ chỉ còn được tier-2 deepen dùng riêng) — nghĩa là một interview thật qua canonical rồi `emit` sẽ sinh docs RỖNG. Sửa: `handleEmit` giờ lấy `answers` từ canonical `payload.answers`+`payload.slots`, merge `--slots-file` (persist transactional vào `payload.slots`), có test chứng minh bằng nội dung doc thật (không chỉ existsSync). `--calibrate` giờ implement thật (`calibrateChoice` mirror `branchChoice` ở CAL0, mặc định `fast`) thay vì flag ma SKILL.md dạy nhưng CLI bỏ qua. `--ack-warnings` và `init` được dạy vào SKILL.md (trước chỉ `--slots-file`/`--calibrate` có trong usage block). Claude's `design-everything/SKILL.md` giờ có block CLI cụ thể cho `deepen` (trước chỉ có văn xuôi, không có cú pháp `--module/--opt-in/--next/--commit/--subject/--emit` thật — Codex có, Claude không, đã đóng gap). Machine check mới `test/docs/skill-truth.test.ts`: `CLI_COMMAND_SURFACE` xuất từ dispatcher, đối chiếu 2 chiều với 3 SKILL.md (dòng `cli.mjs <sub> ...` nào cũng phải map đúng subcommand/flag thật; mọi flag thật phải được dạy ≥1 chỗ) + đối chiếu 2 chiều với chính `getArg`/`hasFlag` call site (bảng không tự trôi khỏi parser). Fixture `test/integration/installed-runtime/deepen-fixture.test.ts` mới: cài thật rồi spawn `cli.mjs` target-local cho toàn bộ opt-in→next→commit(+replay-deny) — lần đầu tiên deepen được chứng minh qua packaged bundle, không chỉ TS nguồn. Tiện thể sửa 2 lỗi fail-closed thật phát hiện khi chạy full suite lặp lại: `gateSnapshot.ts` không reset `exists=false` khi `readFileSync` throw sau khi `statSync` đã set `exists=true` (rò rỉ "missing" thành "tồn tại nhưng rỗng"); `writeEnvelopeAtomic`'s `renameSync` không retry trên EPERM/EBUSY thoáng qua (Windows AV/indexer) — cả hai đều rơi ở tải I/O song song cao, không phải logic sai nhưng là gap fail-closed/durability thật. |
 | P11 — B5 evidence | Partial | suite tồn tại nhưng proof còn phụ thuộc implementation chưa hoàn tất |
 | P12 — package/version/release | Open | chỉ được đóng sau P0–P11 |
 
@@ -201,9 +201,18 @@ interview phase, revision, answers/slots và capability state.
   append revision → advance state trong một transaction.
   (slots/provenance chưa nối — thuộc P6.)
 - [ ] Tạo service tương đương cho deepen commit, dùng cùng transaction
-  kernel. **Chưa làm**: `deepen` vẫn chưa có case nào trong
-  `cliOperations.ts` (xem H0/finding X01) — không có production consumer
-  nào để nối vào, thuộc P6/P7.
+  kernel (canonical interview store's `transactInterviewStore`/CAS
+  revision). **Vẫn chưa làm theo đúng nghĩa "cùng kernel"**: X01 đã đóng
+  (2026-07-28, bonus-plan Phase 3.5) — `deepen` giờ CÓ case thật trong
+  `cliOperations.ts` (`src/adapters/shared/deepenCliOperations.ts` +
+  `src/core/deepenApplicationServices.ts`) và một service commit riêng
+  (`commitDeepen`) — nhưng nó dùng cơ chế durability riêng của
+  `deepen-state.json` (atomic tmp+rename qua `saveDeepenState`, đã có từ
+  trước P7.2) chứ không đi qua canonical interview store's
+  `transactInterviewStore`/CAS revision. Đây là quyết định kiến trúc có
+  chủ đích (deepen state là file riêng, không phải một phần canonical
+  interview store), không phải thiếu sót — nhưng nếu ý plan gốc là "hợp
+  nhất một kernel duy nhất" thì mục này vẫn mở.
 - [x] Public mutation API bắt buộc `expectedRevision: number`; không
   chấp nhận `null`.
 - [x] Initializer dùng API riêng (`initializeInterviewStore`), không dùng
@@ -222,8 +231,12 @@ interview phase, revision, answers/slots và capability state.
   `progress.json` sau health; dùng initializer/migrator/canonical load.
 - [~] `src/adapters/shared/cliOperations.ts`:
   `status`, `init`, `commit`, `emit` đọc canonical service. `next` không
-  chạm progress (chỉ execution-state, không cần đổi). `deepen` chưa tồn
-  tại trong dispatcher (H0) — không có gì để cut over.
+  chạm progress (chỉ execution-state, không cần đổi). `deepen` giờ CÓ
+  trong dispatcher (X01 đóng 2026-07-28, bonus-plan Phase 3.5) nhưng đọc
+  canonical store chỉ để phục vụ `canStartDeepen`'s `DeepenRuntimeSnapshot`
+  (progress.phase/current_step) — nó không cut over sang canonical
+  interview store transaction kernel cho phần state riêng của nó
+  (deepen-state.json vẫn là file riêng, xem §5.2).
 - [~] `src/core/evaluatePreAction.ts` đọc canonical store thay vì
   `progress.json`; đã thêm `request.progress` optional field để caller
   bơm snapshot trực tiếp, nhưng **chưa adapter nào thực sự bơm nó** — vẫn
@@ -465,12 +478,33 @@ hardcode ở đây theo đúng nguyên tắc §0).
 - [ ] Scratch capability containment/extension/schema/size/depth/TTL: chưa
   làm (scratch path hiện chỉ check bằng regex path shape, không có
   capability object riêng).
-- [ ] `plan-validating` blanket-allow `Design/**`/`docs/**`/
-  `.design-everything/**`: **XÁC NHẬN VẪN CÒN** — `evaluatePreAction.ts`
-  write branch của `plan-validating` (và `interview`) vẫn coi mọi path bắt
-  đầu bằng 3 prefix này là allow, đúng như plan mô tả là vi phạm. Chưa sửa
-  trong đợt này (cần thiết kế lại authorization theo task/gate thật, rủi
-  ro lớn hơn phạm vi bugfix nhanh).
+- [x] `plan-validating` blanket-allow `Design/**`/`docs/**`/
+  `.design-everything/**` — ĐÃ SỬA (2026-07-28, bonus-plan Phase 2/DEBT2).
+  `evaluatePreAction.ts`'s `plan-validating` write branch không còn allow
+  ngay khi path khớp 1 trong 3 prefix; trong phạm vi 3 prefix đó, mỗi path
+  giờ đi qua `authorizeMutation('write', 'agent-host', path, undefined,
+  collectCatalogEntries(...))` — cùng hàm catalog-aware mà nhánh
+  `executing`/`interview` đã dùng. Kết quả: managed catalog doc
+  (`docs/00-vision.md`…), engine-state (`.design-everything/execution-
+  state.json`…) và engine-policy (`Design/Content/interview-script/
+  gate-policy.yaml`) giờ bị deny `PROTECTED_ARTIFACT_MUTATION_DENIED`
+  thay vì allow; scratch path đúng shape
+  (`.design-everything/scratch/{s}/{q}/**`) và path user-owned dưới
+  `Design/` vẫn allow. Ngoài phạm vi 3 prefix vẫn deny
+  `PLAN_VALIDATION_REQUIRED` như cũ (không đổi). Catalog không tải được
+  degrade về entries rỗng → mọi path rơi về `user-owned` → allow, cùng
+  hợp đồng best-effort với `collectCatalogEntries` ở nhánh `interview`
+  (đã có test riêng, không hard-fail — ban đầu thử fail-closed nhưng phát
+  hiện phá vỡ `buildWorkflow.test.ts` — một fixture hợp lệ không có
+  catalog vẫn cần docs write hoạt động — nên đổi lại về degrade, đúng
+  tinh thần "chưa cần/chưa làm" mà P4.2 đã ghi cho capability
+  architecture nói chung). **Không đụng** nhánh `interview` (P4.2 doc-write
+  bypass) — vẫn cố tình giữ nguyên như voucher đã ghi ở trên. Red/green
+  test: `src/core/evaluatePreAction.test.ts` describe "P4.2/DEBT2 —
+  plan-validating writes go through catalog-aware authorizeMutation" (8
+  test: managed-doc deny, engine-state deny, engine-policy deny, scratch
+  hợp lệ allow, scratch sai shape deny, user-owned positive control
+  allow, regression pin ngoài-scope deny, catalog-missing degrade-to-allow).
 - [ ] Differential/negative-control fixture cho forged capability/lookalike
   path trên toàn bộ consumer: chỉ có unit test cục bộ ở
   `artifactOwnership.test.ts`, chưa có fixture xuyên consumer.
@@ -587,13 +621,37 @@ hardcode ở đây theo đúng nguyên tắc §0).
 - [x] Hệ quả tự nhiên của việc sửa fail-open ở trên: sửa/xóa artifact sau
   gate pass ĐÃ đóng gate ở lần evaluate kế tiếp, vì snapshot luôn đọc lại
   bytes thật từ đĩa mỗi lần gọi (không có cache); không cần sửa thêm.
-- [ ] `buildGateSnapshot` nhận thêm active emit manifest, validation
-  record, evidence store làm input riêng: chưa làm — snapshot hiện tại
-  vẫn chỉ nhận `docPaths + validationPass + completedTasks`, không bind
-  manifest/evidence digest.
-- [ ] Validation pass bind current plan/docs/manifest digests; evidence
+- [x] `buildGateSnapshot` nhận thêm active emit manifest, validation
+  record, evidence store làm input riêng — ĐÃ SỬA (2026-07-28, bonus-plan
+  Phase 3/DEBT3.1). Thêm optional param thứ 5 `bindings?: {manifest?,
+  evidence?, validationDigest?}`; khi vắng, tự load tier1 emit manifest
+  (`manifestPath(...,'tier1')` + `emitManifestSchema`) và
+  `execution-state.json` (`evidence`/`validation_result_digest`) từ
+  workspace. `GateSnapshot` có thêm `manifest: {present, activated,
+  generationId, digestMismatches[]}` (mỗi artifact trong manifest active
+  được hash lại và so với digest đã ghi — path tồn tại nhưng lệch byte,
+  hoặc thiếu hẳn, đều vào `digestMismatches`) và `evidenceByTask`
+  (task_id → true chỉ khi có ít nhất 1 `EvidenceRecord.exit_code === 0`
+  thật). Cả hai fold vào `snapshotDigest`.
+- [x] Validation pass bind current plan/docs/manifest digests; evidence
   bind task ID/command digest/result digest/exit class/execution
-  revision: chưa làm.
+  revision — MỘT PHẦN ĐÃ SỬA (2026-07-28): `evaluateGate`'s
+  `requires_docs` giờ coi một doc tồn tại nhưng nằm trong
+  `manifest.digestMismatches` là "tampered", không phải "satisfied"
+  (missing entry dạng `tampered:<name>`) — không có manifest active thì
+  danh sách mismatch rỗng, hành vi cũ giữ nguyên 100%.
+  `requires_validation` chỉ mở khi `validationPass && /^[0-9a-f]{64}$/.
+  test(validationDigest)` — bind vào digest thật do `runSemanticValidation`
+  tính (DEBT1), không còn chấp nhận boolean nổi hay literal `'pass'`.
+  `requires_evidence` yêu cầu task vừa nằm trong `completedTasks` vừa có
+  `evidenceByTask[taskId]` thật. Red/green test: `src/core/gateSnapshot.test.ts`
+  (5 test mới: no-manifest, tampered-digest, matching-digest,
+  snapshotDigest đổi theo generation, evidenceByTask lọc theo exit_code)
+  và `src/core/evaluateGate.test.ts` (3 test mới: tampered marker,
+  requires_validation với digest giả/rỗng/thật, requires_evidence không
+  có/có evidence fail/có evidence pass). **Chưa làm**: command-digest/
+  exit-class/execution-revision binding riêng cho evidence (evidence hiện
+  chỉ dùng `exit_code === 0`, chưa đối chiếu digest lệnh hay revision).
 - [ ] `gates_passed` replace-all-derived-cache semantics (thay vì
   `evaluatePreAction.ts` hiện vẫn `push` từng gate id đã pass vào mảng
   tồn tại qua `transactInterviewStore`): chưa sửa, vẫn là merge/append,
@@ -754,11 +812,35 @@ hardcode ở đây theo đúng nguyên tắc §0).
   not a hardcoded deny-all" (4 test: write trong scope được allow, write
   ngoài scope vẫn deny, lệnh verify chính xác được allow, lệnh verify bị
   pad/lookalike vẫn deny, và block_reason null fail-closed).
-- [ ] `validate` chỉ recover validation/integrity/snapshot-stale khi có
-  proof tương ứng: chưa làm trong đợt này — `handleValidate` hiện vẫn
-  hardcode `validationPass: true` không điều kiện (bug thật, phát hiện
-  khi đọc code, chưa sửa — nằm ngoài phạm vi commit này, cần red test và
-  thiết kế riêng vì đụng vào toàn bộ `validate` command).
+- [x] `validate` chỉ recover validation/integrity/snapshot-stale khi có
+  proof tương ứng — ĐÃ SỬA (2026-07-28, bonus-plan Phase 1/DEBT1).
+  `handleValidate` không còn hardcode `validationPass: true`; gọi
+  `runSemanticValidation` (`src/core/semanticValidation.ts`, mới) chạy 5
+  check thật trên bytes/manifest: tier-1 emit manifest tồn tại + parse +
+  `activated_at`; mọi artifact trong manifest hash-match bytes trên đĩa
+  (sha256, phát hiện tamper); `execution-plan.json` parse đúng
+  `executionPlanSchemaV3`; docs bắt buộc của gate `requires_validation`
+  có mặt trên đĩa (docs-only slice của `evaluateGate`, tránh circularity
+  với chính kết quả này). Fail → `transitionToReadyToExecute(state,
+  false)` → `blocked` kind `validation`, `SEMANTIC_VALIDATION_FAILED`
+  (trước đây nhánh này unreachable từ CLI). Pass → `validation_digest`
+  là sha256 thật của kết quả check (`calculateValidationResultDigest`,
+  production caller đầu tiên của hàm này), không còn literal `'pass'`.
+  Sticky-block giữ nguyên: block kind `verification-failed`/
+  `verification-aborted`/`policy-corrupt` trả `ok:false` với reason_code
+  thật của block thay vì `VALIDATION_PASSED` giả. Không materialize
+  blocked state mới trên workspace chưa từng có execution-state/manifest.
+  Red/green test: `src/core/semanticValidation.test.ts` (mới, 5 test) +
+  4 test mới trong `test/integration/cli-protocol.test.ts` (tampered doc
+  → blocked; happy path → digest 64-hex thật; verification-failed giữ
+  nguyên; `start` trên plan-validating mới → `PLAN_VALIDATION_REQUIRED`).
+  **Chưa làm** (ngoài scope debt cụ thể này): traceability/must-have
+  check sâu của `validateExecutionPlan` (Must→trace-link, phantom-path,
+  scope-leak…) — hàm đó cần `answers`+`shape`+toàn bộ `emitted_docs`,
+  chưa có production caller nào trước đây (chỉ test fixtures), và wiring
+  nó vào `validate` là một project riêng lớn hơn debt "digest/manifest
+  binding" mà bonus-plan mô tả; `plan-schema` check ở đây chỉ làm cấu
+  trúc-schema (`executionPlanSchemaV3.safeParse`), không traceability.
 - [x] Verification failed/aborted giữ active task/evidence — đã đúng từ
   trước (`transitionToReadyToExecute`'s early-return cho các kind này).
 - [x] Next-step render trực tiếp từ `recoverable_by` — đã đúng từ trước
@@ -782,10 +864,13 @@ hardcode ở đây theo đúng nguyên tắc §0).
 
 ### Việc còn lại đáng chú ý
 
-- `handleStart` chưa gọi `evaluateBuildReadiness`, chỉ có `handleNext`.
-- `handleValidate` luôn `validationPass: true` — validate command hiện
-  không thực sự validate gì, chỉ ghi digest rồi pass. Đây là một finding
-  mới, nghiêm trọng hơn scope P3, cần plan riêng.
+- ~~`handleStart` chưa gọi `evaluateBuildReadiness`, chỉ có
+  `handleNext`.~~ ĐÃ SỬA (2026-07-28) — `handleStart` giờ gọi
+  `evaluateBuildReadiness` trước digest check, cùng pattern `handleNext`;
+  test: "start on a freshly-emitted, not-yet-validated workspace reports
+  PLAN_VALIDATION_REQUIRED" trong `cli-protocol.test.ts`.
+- ~~`handleValidate` luôn `validationPass: true`~~ ĐÃ SỬA (2026-07-28,
+  xem §9.2 P3.2 ở trên) — validate giờ chạy `runSemanticValidation` thật.
 - `ready-to-build` → `ready-for-validation` rename chưa làm.
 - Atomic single-transaction cho interview phase + emit manifest +
   execution-state activation chưa làm (hiện 2 lời gọi tuần tự).
@@ -1108,10 +1193,10 @@ nào (`rg` xác nhận 0 kết quả trong `test/`).
   (`handleInit`, `handleRepair`, `handleValidate`, `activateTier1Emit`)
   đã tự re-validate đúng theo state/canonical revision của nó (xem P7),
   nên pre-check này không phải authority cuối; nó chỉ tồn tại để cho
-  UX/early-deny tốt hơn. `deepen` giờ dùng phase thật (xem trên), nhưng
-  `deepen` vẫn không có handler trong `runCliOperation` (X01, chưa nối —
-  thuộc H0/P6/P7) nên allow ở tầng pre-check này chưa gây hại thật (tầng
-  dispatcher thật sẽ tự `UNKNOWN_SUBCOMMAND`).
+  UX/early-deny tốt hơn. `deepen` giờ dùng phase thật (xem trên); **X01
+  ĐÃ ĐÓNG (2026-07-28, bonus-plan Phase 3.5)** — `runCliOperation` giờ có
+  `case 'deepen'` thật (`src/adapters/shared/deepenCliOperations.ts`),
+  không còn rơi vào `UNKNOWN_SUBCOMMAND`. Chi tiết ở dòng ~204 và bảng §2.
 - [ ] Mỗi operation chỉ gọi Core service, không fork policy/state logic:
   **chưa đóng** — `authorizeCliOperation`/`resolveCliInvocation` vẫn là
   một bản sao độc lập của phần logic phân loại shell operator/launcher
@@ -1177,55 +1262,77 @@ nào (`rg` xác nhận 0 kết quả trong `test/`).
 
 ### 13.1. Claude installer (B4d)
 
-- [ ] Build versioned target-local bundle dưới
+- [x] Build versioned target-local bundle dưới
   `.design-everything/runtime/<version>/`.
-- [ ] Asset set lấy từ authoritative catalog, gồm:
-  launcher/runtime, deepen scripts, policy, shapes/templates, catalog,
-  recipes và schemas/version.
-- [ ] Install manifest chứa runtime/schema/catalog version, build hash,
+- [x] Asset set lấy từ authoritative catalog, gồm:
+  launcher/runtime, deepen scripts, policy, shapes/templates, catalog
+  (recipes/schemas ship qua compiled bundle, không phải file rời).
+- [x] Install manifest chứa runtime/schema/catalog version, build hash,
   từng file hash, stable hook IDs, target root và engine range.
-- [ ] Hooks/skills chỉ trỏ target-local relative layout; bỏ dependency
+- [x] Hooks/skills chỉ trỏ target-local relative layout; bỏ dependency
   vào source checkout/`ENGINE_ROOT`.
-- [ ] `ensureHook` match exact stable hook ID + event.
-- [ ] Repair stale path/hash/version nhưng giữ custom hooks byte-for-byte.
-- [ ] Backup settings trước mutation.
-- [ ] Stage toàn bộ install rồi atomic activate; manifest chỉ xuất hiện
+- [x] `ensureHook` match exact stable hook ID + event (regex theo
+  `.design-everything/runtime/.../hooks/<file>`, không dup).
+- [x] Repair stale path/hash/version nhưng giữ custom hooks byte-for-byte
+  (installer-repair.test.ts).
+- [x] Backup settings trước mutation.
+- [x] Stage toàn bộ install rồi atomic activate; manifest chỉ xuất hiện
   sau khi bundle/settings pass health.
-- [ ] Post-install spawn target-local CLI health.
-- [ ] Completion text lấy từ `renderNextStep`; không claim gate mở.
+- [x] Post-install spawn target-local CLI health.
+- [x] Completion text lấy từ health/`renderNextStep`; không claim gate mở.
 
 ### 13.2. Codex parity (B4e)
 
-- [ ] Codex installer luôn nhận target/package output rõ; test/install
-  không ghi vào source tree.
-- [ ] Codex hooks/skills dùng shared Core policy.
-- [ ] Xóa homegrown post-tool matcher.
-- [ ] Claude và Codex dùng cùng runtime bundle, manifest schema,
-  catalog/deepen assets và hashes.
+- [x] Codex installer luôn nhận target/package output rõ; test/install
+  không ghi vào source tree (installer cũ cpSync dist/+node_modules vào
+  chính `adapter/codex-plugin/` — đã xóa hoàn toàn).
+- [x] Codex hooks/skills dùng shared Core policy (`_shared.mjs` mới,
+  cùng cơ chế sibling-bundle detection với Claude).
+- [x] Xóa homegrown post-tool matcher (`filterUnexpectedFiles` chuyển
+  vào `src/adapters/codex/filterUnexpectedFiles.ts`, export qua bundle).
+- [x] Claude và Codex dùng cùng runtime bundle, manifest schema,
+  catalog/deepen assets và hashes (`adapter: 'claude-code' | 'codex'`
+  cùng `installManifestSchema`).
 - [ ] Capability matrix ghi rõ hard hook của Claude và soft-enforcement
-  giới hạn của Codex.
-- [ ] Replay cùng fixture phải giống decision, reason code, revision và
-  state digest; presentation khác phải được khai báo.
+  giới hạn của Codex — chưa làm, ngoài scope slice này.
+- [x] Replay cùng fixture phải giống decision, reason code — xem
+  `codex-parity.test.ts` ("Claude and Codex installs of the same version
+  replay an identical PreToolUse decision"); revision/state-digest replay
+  chưa cover.
 
 ### 13.3. Packaging layout
 
-- [ ] Chọn đúng một layout package hiện hành; không silent đổi contract.
-- [ ] Đồng bộ `tsconfig`, `main`, `exports`, `files`, hook resolver và
-  installer theo layout đó.
-- [ ] `npm pack --dry-run`/tarball inspection assert entrypoint và toàn
-  bộ catalog-declared runtime assets tồn tại.
-- [ ] Package không chứa source-only absolute/path assumptions.
+- [x] Chọn đúng một layout package hiện hành; không silent đổi contract.
+- [x] Đồng bộ `tsconfig`, `main`, `exports`, `files`, hook resolver và
+  installer theo layout đó (`dist/bundle`, `dist/runtimeBundleEntry.js`
+  đã có trong `package.json` files; không còn entry `dist/adapter` stale).
+- [x] `npm pack --dry-run`/tarball inspection assert entrypoint và toàn
+  bộ catalog-declared runtime assets tồn tại (`test/integration/packaging.test.ts`).
+- [x] Package không chứa source-only absolute/path assumptions
+  (`moved-source.test.ts` byte-scans cả hai installed tree).
 
 ### Installed-runtime tests
 
-- [ ] Target path có space/Unicode.
-- [ ] Rename/hide/remove source checkout sau install.
-- [ ] Target-local `status`, hook, commit, deepen và emit vẫn chạy.
-- [ ] Rerun installer repair đúng stale hook/assets, không duplicate.
-- [ ] Interrupted install giữ old healthy generation.
-- [ ] Tampered asset hash làm health fail closed.
-- [ ] Claude/Codex parity replay từ installed bundle, không source
-  imports.
+- [x] Target path có space (`claude-install-flow.test.ts`); Unicode path
+  chưa test riêng.
+- [x] Rename/hide/remove source checkout sau install (`moved-source.test.ts`
+  copy sang thư mục thứ hai rồi xóa bản gốc, chạy CLI+hook từ bản copy).
+- [x] Target-local `commit`/`deepen`/`emit` trên installed target thật —
+  `status`/hook đã test từ trước; `emit`+`deepen` (opt-in/next/commit +
+  token-replay-deny) đóng 2026-07-28 qua
+  `test/integration/installed-runtime/deepen-fixture.test.ts` (P10 §14).
+- [x] Rerun installer repair đúng stale hook/assets, không duplicate
+  (`installer-repair.test.ts`: no-dup hooks, preserve user hook, tamper
+  round-trip restore + backup).
+- [x] Interrupted install giữ old healthy generation
+  (`installer-interrupted.test.ts`: fault-seam `DE_INSTALL_CRASH_AFTER`
+  ở 4 checkpoint, không manifest nửa vời, rerun sạch hoàn tất).
+- [x] Tampered asset hash làm health fail closed
+  (`tampered-runtime.test.ts`: end-to-end install thật → bit-flip
+  `runtime.mjs` → `status` exit 3 `TAMPERED_RUNTIME_ASSET`; `repair`
+  degrade `REPAIR_PARTIAL` thay vì crash).
+- [x] Claude/Codex parity replay từ installed bundle, không source
+  imports (`codex-parity.test.ts`).
 
 ### Exit criteria
 
@@ -1244,19 +1351,42 @@ nào (`rg` xác nhận 0 kết quả trong `test/`).
 
 ## 14. P10 — skill truth closeout
 
-- [ ] Hoàn tất H0 và kiểm tra lại mọi `--turn`/`TURN_ID`.
-- [ ] Claude/Codex có đầy đủ executable commands cho:
+- [x] Hoàn tất H0 và kiểm tra lại mọi `--turn`/`TURN_ID` — đã đóng từ trước
+  (2026-07-25/2026-07-28); không còn `--turn` nào được dạy hay chấp nhận,
+  xác nhận lại qua `test/docs/skill-truth.test.ts`.
+- [x] Claude/Codex có đầy đủ executable commands cho:
   opt-in, next, commit, deepen commit, emit, validate và build handoff.
+  **2026-07-28**: phát hiện+đóng 2 gap thật trong lúc đóng mục này —
+  (1) `emit --slots-file` được dạy nhưng `handleEmit` không nhận `argv`,
+  và tệ hơn: `answers` cho emit đọc từ `Design/.interview/answers.json`
+  — file đã CHẾT cho tier-1 kể từ P2.2a canonical cutover (không production
+  writer nào ghi nữa), nghĩa là một interview thật rồi `emit` sẽ sinh docs
+  RỖNG; (2) Claude's `design-everything/SKILL.md` dạy deepen chỉ bằng văn
+  xuôi, không có block CLI cụ thể như Codex. Cả hai đã sửa, có test chứng
+  minh bằng nội dung doc thật + machine check `CLI_COMMAND_SURFACE`.
 - [ ] User-visible derived content giữ SourceRef và
-  `⚠ unknown — cần hỏi người`.
+  `⚠ unknown — cần hỏi người`. (chưa đụng trong lần đóng này)
 - [ ] Scope guard nói rõ trước handoff không tự ghi ngoài managed
-  flow/scratch contract.
-- [ ] Mọi state mutation qua CLI; không hướng dẫn sửa tay state/answers.
-- [ ] Emit success chỉ nói docs đã activate, plan chưa validate.
-- [ ] Non-zero/health error dừng flow và hiển thị exact `next_command`.
-- [ ] Generate/share command, health và handoff blocks để hai skills
-  không drift.
-- [ ] Skill fixture chạy trên installed target thật.
+  flow/scratch contract. (chưa đụng trong lần đóng này)
+- [x] Mọi state mutation qua CLI; không hướng dẫn sửa tay state/answers —
+  đã đúng từ trước, không cần sửa.
+- [x] Emit success chỉ nói docs đã activate, plan chưa validate — đã đúng
+  từ trước (mục "Handoff Truth"), không cần sửa.
+- [x] Non-zero/health error dừng flow và hiển thị exact `next_command` —
+  đã đúng từ trước, không cần sửa.
+- [~] Generate/share command, health và handoff blocks để hai skills
+  không drift — **quyết định có chủ đích**: không có quy ước
+  `<!-- shared:<id> -->` nào tồn tại sẵn trong 3 SKILL.md để đối chiếu máy;
+  dựng quy ước đó từ đầu là việc tách biệt, ngoài phạm vi lần đóng này.
+  Drift giữa các file được bắt một phần khác: machine check mới đối chiếu
+  MỌI dòng `cli.mjs <sub> ...` ở cả 3 file với cùng một `CLI_COMMAND_SURFACE`
+  (nguồn thật duy nhất), nên lệch cú pháp/flag giữa Claude và Codex tự bị
+  bắt dù không có shared-block marker.
+- [x] Skill fixture chạy trên installed target thật —
+  `test/integration/installed-runtime/deepen-fixture.test.ts` (mới): cài
+  thật qua `install.mjs` rồi spawn `cli.mjs` target-local cho toàn bộ
+  opt-in→next→commit(+replay-deny), lần đầu tiên deepen được chứng minh
+  qua packaged bundle chứ không chỉ TS nguồn.
 
 ### Exit criteria
 
