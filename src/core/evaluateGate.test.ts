@@ -6,6 +6,37 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
+import type { EmitManifest, EvidenceRecord, Gate } from './schemas/index.js';
+
+function baseManifest(overrides: Partial<EmitManifest> = {}): EmitManifest {
+  return {
+    version: '1.0.0',
+    generation_id: 'gen-1',
+    shape: 'cli',
+    catalog_version: '1.0.0',
+    catalog_digest: 'a'.repeat(64),
+    input_digest: 'b'.repeat(64),
+    artifacts: [],
+    created_at: new Date().toISOString(),
+    activated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function evidenceRecord(overrides: Partial<EvidenceRecord> = {}): EvidenceRecord {
+  return {
+    task_id: 'T1',
+    command_id: 'cmd-1',
+    argv: ['npm', 'test'],
+    exit_code: 0,
+    stdout_sha256: 'c'.repeat(64),
+    stderr_sha256: 'd'.repeat(64),
+    artifact_digests: {},
+    captured_at: new Date().toISOString(),
+    source: 'runner',
+    ...overrides,
+  };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -177,6 +208,92 @@ describe('evaluateGate engine', () => {
       const result = evaluateGate(scopeLockedGate, snapshot);
       expect(result.open).toBe(false);
       expect(result.missing).toEqual(['00-vision.md', '01-personas.md', '02-scope.md']);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('DEBT3.1 — requires_docs/requires_validation/requires_evidence bound to real manifest/evidence', () => {
+  test('a required doc present on disk but tampered relative to the active manifest keeps the gate closed with a tampered: marker', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'de-evaluate-gate-tamper-'));
+    try {
+      mkdirSync(join(workspace, 'docs'), { recursive: true });
+      writeFileSync(join(workspace, 'docs/00-vision.md'), '# tampered after activation');
+      writeFileSync(join(workspace, '01-personas.md'), '# real');
+      writeFileSync(join(workspace, '02-scope.md'), '# real');
+
+      const manifest = baseManifest({
+        artifacts: [
+          { id: 'vision', path: 'docs/00-vision.md', digest: 'f'.repeat(64), ownership: 'managed', kind: 'doc' },
+        ],
+      });
+      const snapshot = buildGateSnapshot(
+        workspace,
+        ['docs/00-vision.md', '01-personas.md', '02-scope.md'],
+        false,
+        [],
+        { manifest }
+      );
+      const result = evaluateGate(scopeLockedGate, snapshot);
+      expect(result.open).toBe(false);
+      expect(result.missing).toContain('tampered:00-vision.md');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test('requires_validation only opens with a real validationPass AND a digest-shaped validation_digest', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'de-evaluate-gate-validation-'));
+    const validationGate: Gate = {
+      id: 'plan-validated-test',
+      requires_docs: [],
+      blocks: ['Write'],
+      message: 'needs validation',
+      requires_validation: true,
+    };
+    try {
+      // validationPass true but no real digest (e.g. a caller passing the
+      // old literal 'pass' string, or leaving it empty) must not open it.
+      const noDigest = buildGateSnapshot(workspace, [], true, [], { validationDigest: '' });
+      expect(evaluateGate(validationGate, noDigest).open).toBe(false);
+
+      const fakeDigest = buildGateSnapshot(workspace, [], true, [], { validationDigest: 'pass' });
+      expect(evaluateGate(validationGate, fakeDigest).open).toBe(false);
+
+      const realDigest = buildGateSnapshot(workspace, [], true, [], { validationDigest: 'e'.repeat(64) });
+      expect(evaluateGate(validationGate, realDigest).open).toBe(true);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test('requires_evidence only opens when the task is both in completedTasks AND has a real passing evidence record', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'de-evaluate-gate-evidence-'));
+    const evidenceGate: Gate = {
+      id: 'evidence-test',
+      requires_docs: [],
+      blocks: ['Write'],
+      message: 'needs evidence',
+      requires_evidence: ['T1'],
+    };
+    try {
+      // Named in completedTasks but no evidence record at all — closed.
+      const noEvidence = buildGateSnapshot(workspace, [], false, ['T1'], { evidence: [] });
+      expect(evaluateGate(evidenceGate, noEvidence).open).toBe(false);
+      expect(evaluateGate(evidenceGate, noEvidence).missing).toContain('evidence:T1');
+
+      // Named in completedTasks with only a failing evidence record — closed.
+      const failingEvidence = buildGateSnapshot(workspace, [], false, ['T1'], {
+        evidence: [evidenceRecord({ task_id: 'T1', exit_code: 1 })],
+      });
+      expect(evaluateGate(evidenceGate, failingEvidence).open).toBe(false);
+
+      // Named in completedTasks with a real passing evidence record — open.
+      const passingEvidence = buildGateSnapshot(workspace, [], false, ['T1'], {
+        evidence: [evidenceRecord({ task_id: 'T1', exit_code: 0 })],
+      });
+      expect(evaluateGate(evidenceGate, passingEvidence).open).toBe(true);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }

@@ -29,23 +29,41 @@ export function evaluateGate(
   for (const reqDoc of gate.requires_docs) {
     const normReq = reqDoc.replace(/\\/g, '/');
     const candidateKeys = normReq.includes('/') ? [normReq] : [normReq, `docs/${normReq}`];
-    const foundArtifact = candidateKeys.map((k) => snapshot.artifacts[k]).find((a) => a !== undefined);
+    const foundKey = candidateKeys.find((k) => snapshot.artifacts[k] !== undefined);
+    const foundArtifact = foundKey ? snapshot.artifacts[foundKey] : undefined;
 
     if (!foundArtifact || !foundArtifact.exists || !foundArtifact.nonEmpty) {
       missing.push(reqDoc);
+      continue;
+    }
+
+    // DEBT3.1 — a doc that exists on disk but no longer matches the bytes
+    // the active tier-1 manifest activated is tampered, not satisfied. No
+    // active manifest (or the manifest not covering this path) means an
+    // empty digestMismatches list by construction, so a workspace with no
+    // manifest yet keeps behaving exactly as before this binding existed.
+    if (foundKey && snapshot.manifest.digestMismatches.includes(foundKey)) {
+      missing.push(`tampered:${reqDoc}`);
     }
   }
 
   let open = missing.length === 0;
 
-  if (gate.requires_validation && !snapshot.validationPass) {
+  // DEBT3.1 — requires_validation is now bound to a real, digest-shaped
+  // validation result (set by runSemanticValidation via handleValidate),
+  // not a floating boolean any caller could pass as true.
+  const hasRealValidationDigest = /^[0-9a-f]{64}$/.test(snapshot.validationDigest);
+  if (gate.requires_validation && !(snapshot.validationPass && hasRealValidationDigest)) {
     open = false;
     missing.push('validation-pass');
   }
 
   if (gate.requires_evidence && snapshot.completedTasks) {
+    // DEBT3.1 — a task_id must both appear in completedTasks AND have a
+    // real passing EvidenceRecord, not just be named in a caller-supplied
+    // list.
     const missingEvidence = gate.requires_evidence.filter(
-      (taskId) => !snapshot.completedTasks.includes(taskId)
+      (taskId) => !snapshot.completedTasks.includes(taskId) || !snapshot.evidenceByTask[taskId]
     );
     if (missingEvidence.length > 0) {
       open = false;
