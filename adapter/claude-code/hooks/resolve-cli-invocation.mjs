@@ -50,16 +50,51 @@ function tokenizeCommand(rawCommand) {
   return tokens;
 }
 
+// Drive-letter-insensitive, separator-normalized comparison — mirrors
+// src/core/pathPolicy.ts's normalizeDrive, duplicated here (not imported)
+// for the same synchronous-before-Core-loads reason tokenizeCommand above
+// stays local.
+function normalizeForComparison(p) {
+  const norm = normalize(p).replace(/\\/g, '/');
+  if (norm.length >= 2 && norm[1] === ':') {
+    return norm[0].toLowerCase() + norm.slice(1);
+  }
+  return norm;
+}
+
 /**
  * Parses and verifies whether a Bash tool invocation is an exact CLI invocation
- * targeting adapter/claude-code/cli.mjs without shell operator tricks.
+ * targeting this install's own cli.mjs launcher, without shell operator tricks.
  */
-export function resolveCliInvocation(event, _installManifest, _commandClassification) {
-  void _installManifest;
+export function resolveCliInvocation(event, expectedLauncherPath, _commandClassification) {
   void _commandClassification;
   const rawCommand = (typeof event?.tool_input?.command === 'string' ? event.tool_input.command : '').trim();
   if (!rawCommand) {
     return { outcome: 'not-cli' };
+  }
+
+  // The dev-mode source-relative path always stays recognized (running
+  // straight from this checkout, and this file's own synchronous unit
+  // test, never supply an installed launcher path). A real target-local
+  // install's SKILL.md teaches an absolute path instead
+  // (.design-everything/runtime/<version>/cli.mjs) — expectedLauncherPath,
+  // computed by the caller from this hook's own on-disk location
+  // (_shared.mjs's resolveCliLauncherPath), is what makes that path
+  // recognized too. Before this fix, only the dev-mode literal was ever
+  // checked, so an installed target's own hook denied the exact command
+  // its own installed SKILL.md teaches the agent to run.
+  const normalizedExpected = expectedLauncherPath ? normalizeForComparison(expectedLauncherPath) : null;
+  const devModeExactPaths = new Set([
+    'adapter/claude-code/cli.mjs',
+    './adapter/claude-code/cli.mjs',
+    'adapter/claude-code/cli.js',
+    './adapter/claude-code/cli.js',
+  ]);
+
+  function mentionsCliLauncher(text) {
+    if (/adapter[\\/]claude-code[\\/]cli\.mjs/.test(text)) return true;
+    if (normalizedExpected && normalizeForComparison(text).includes(normalizedExpected)) return true;
+    return false;
   }
 
   // Reject shell operators, redirects, chains, and inline evaluations
@@ -69,7 +104,7 @@ export function resolveCliInvocation(event, _installManifest, _commandClassifica
   const hasInlineInterpreter = /node\s+-e|python\s+-c/i.test(rawCommand);
 
   if (hasSeparator || hasRedirect || hasSubstitution || hasInlineInterpreter) {
-    if (/adapter[\\/]claude-code[\\/]cli\.mjs/.test(rawCommand)) {
+    if (mentionsCliLauncher(rawCommand)) {
       return {
         outcome: 'rejection',
         reason_code: 'CHAINED_CLI_COMMAND_DENIED',
@@ -96,7 +131,7 @@ export function resolveCliInvocation(event, _installManifest, _commandClassifica
   }
 
   if (cliTokenIndex === -1) {
-    if (/adapter[\\/]claude-code[\\/]cli\.mjs/.test(rawCommand)) {
+    if (mentionsCliLauncher(rawCommand)) {
       return {
         outcome: 'rejection',
         reason_code: 'MALFORMED_CLI_INVOCATION',
@@ -107,19 +142,16 @@ export function resolveCliInvocation(event, _installManifest, _commandClassifica
   }
 
   const targetToken = tokens[cliTokenIndex];
-  const normalizedPath = normalize(targetToken).replace(/\\/g, '/');
+  const normalizedPath = normalizeForComparison(targetToken);
 
   const isExactCliPath =
-    normalizedPath === 'adapter/claude-code/cli.mjs' ||
-    normalizedPath === './adapter/claude-code/cli.mjs' ||
-    normalizedPath === 'adapter/claude-code/cli.js' ||
-    normalizedPath === './adapter/claude-code/cli.js';
+    devModeExactPaths.has(normalizedPath) || (normalizedExpected !== null && normalizedPath === normalizedExpected);
 
   if (!isExactCliPath) {
     return {
       outcome: 'rejection',
       reason_code: 'INVALID_CLI_LAUNCHER',
-      message: `Đường dẫn launcher CLI không hợp lệ: "${targetToken}". Phải là exact canonical launcher "adapter/claude-code/cli.mjs".`,
+      message: `Đường dẫn launcher CLI không hợp lệ: "${targetToken}". Phải là exact canonical launcher "${expectedLauncherPath ?? 'adapter/claude-code/cli.mjs'}".`,
     };
   }
 
@@ -131,7 +163,7 @@ export function resolveCliInvocation(event, _installManifest, _commandClassifica
     outcome: 'exact-operation',
     subcommand,
     args,
-    launcherPath: 'adapter/claude-code/cli.mjs',
+    launcherPath: targetToken,
     isNodeLaunch,
   };
 }

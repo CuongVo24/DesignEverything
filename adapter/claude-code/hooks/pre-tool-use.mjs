@@ -4,7 +4,7 @@
 import { pathToFileURL } from 'url';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { readStdinJson, workspaceRootFrom, emitJson, resolveModule } from './_shared.mjs';
+import { readStdinJson, workspaceRootFrom, emitJson, resolveModule, resolveCliLauncherPath } from './_shared.mjs';
 import { resolveCliInvocation } from './resolve-cli-invocation.mjs';
 
 const input = await readStdinJson();
@@ -42,7 +42,13 @@ if (!coreTool) process.exit(0);
 // one.
 let preTokenizedArgv;
 if (coreTool === 'Bash') {
-  const cliResolution = resolveCliInvocation(input, null, null);
+  // P8.4/bugfix — resolveCliLauncherPath() computes THIS install's real
+  // launcher path (target-local absolute cli.mjs when installed, dev-mode
+  // source-relative path otherwise). Without passing it through, an
+  // installed target's own hook denied the exact absolute-path command its
+  // own installed SKILL.md teaches the agent to run — resolveCliInvocation
+  // only ever recognized the dev-mode literal.
+  const cliResolution = resolveCliInvocation(input, resolveCliLauncherPath(), null);
   if (cliResolution.outcome === 'rejection') {
     emitJson({
       hookSpecificOutput: {
