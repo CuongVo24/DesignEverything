@@ -41,6 +41,16 @@ describe('resolveCliInvocation — quote-aware tokenization (P8 item 9)', () => 
     );
     expect(res.args).toEqual(['--answer-text', 'đáp án tiếng Việt']);
   });
+
+  test('P4.3 — an escaped double-quote inside a quoted argument does not close quoting early', () => {
+    const res = resolveCliInvocation(
+      bashEvent('node adapter/claude-code/cli.mjs commit --answer-text "say \\"hi\\" now"'),
+      null,
+      null
+    );
+    expect(res.outcome).toBe('exact-operation');
+    expect(res.args).toEqual(['--answer-text', 'say "hi" now']);
+  });
 });
 
 // P8.4 — authorizeCliOperation (a second, parallel subcommand/phase

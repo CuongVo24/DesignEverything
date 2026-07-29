@@ -1,5 +1,6 @@
 import type { Gate, GatePolicy, ExecutionState } from './schemas/index.js';
 import { GateSnapshot, buildGateSnapshot } from './gateSnapshot.js';
+import { tokenizeShellCommand } from './tokenizeShellCommand.js';
 
 export function evaluateGate(
   gate: Gate,
@@ -127,7 +128,10 @@ export function checkExecutionGate(
   }
   const action_kind = tool === 'Bash' ? ('shell' as const) : ('write' as const);
   const target_paths = path ? [path] : [];
-  const command_argv = tool === 'Bash' && path ? path.split(/\s+/) : [];
+  // P4.3 — quote-aware tokenize instead of a naive split(/\s+/), which tore
+  // a quoted argument (or the command_raw text below) apart incorrectly.
+  const command_argv = tool === 'Bash' && path ? tokenizeShellCommand(path) : [];
+  const command_raw = tool === 'Bash' ? path : undefined;
   const workspace = process.cwd();
 
   let plan = undefined;
@@ -149,6 +153,7 @@ export function checkExecutionGate(
     action_kind,
     target_paths,
     command_argv,
+    command_raw,
     workspace,
     session_id: 'legacy-compat',
     state: state || undefined,

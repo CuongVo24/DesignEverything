@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execFileSync } from 'child_process';
+import { seedCanonicalProgress } from '../../helpers/canonicalProgress.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
 const PRE_TOOL_HOOK = join(REPO_ROOT, 'adapter/codex-plugin/hooks/pre-tool-use.mjs');
@@ -61,6 +62,53 @@ describe('Codex pre-tool-use.mjs — install-manifest must not be treated as "un
     });
     // A workspace with a real install marker but no state yet must fail closed
     // (deny) rather than silently allow every action like an uninvolved project.
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+  });
+});
+
+describe('Codex pre-tool-use.mjs — quote-aware shell tokenization (P4.3)', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = join(tmpdir(), `de-codex-pre-tool-quote-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+    mkdirSync(join(tmpDir, 'Design/Content/interview-script'), { recursive: true });
+    mkdirSync(join(tmpDir, 'docs'), { recursive: true });
+    for (const name of ['script.yaml', 'gate-policy.yaml']) {
+      writeFileSync(
+        join(tmpDir, 'Design/Content/interview-script', name),
+        readFileSync(join(REPO_ROOT, 'Design/Content/interview-script', name))
+      );
+    }
+    seedCanonicalProgress(tmpDir, { phase: 'interview', branch: null, current_step: 'S0' });
+  });
+
+  afterEach(() => {
+    if (existsSync(tmpDir)) {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not misclassify a quoted argument containing "&&" as literal content as a real chaining operator', () => {
+    // Before P4.3, this hook's naive command.trim().split(/\s+/) tore the
+    // quoted argument apart, so the "&&" inside this echoed text was
+    // indistinguishable from a real chaining operator once re-scanned —
+    // an otherwise safe read-only command was denied purely because of its
+    // quoted text content.
+    const result = runHook(tmpDir, {
+      cwd: tmpDir,
+      tool_name: 'Bash',
+      tool_input: { command: 'echo "fix: a && b"' },
+    });
+    expect(result.hookSpecificOutput.permissionDecision).toBe('allow');
+  });
+
+  it('still denies a real, unquoted chaining operator', () => {
+    const result = runHook(tmpDir, {
+      cwd: tmpDir,
+      tool_name: 'Bash',
+      tool_input: { command: 'echo hello && rm -rf /' },
+    });
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 });

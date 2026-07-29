@@ -2,14 +2,29 @@ import { normalize } from 'path';
 
 // Quote-aware split: a double- or single-quoted run (e.g. an --answer-text value
 // containing spaces, or a launcher path containing a space) stays one token instead
-// of being torn apart by a naive whitespace split. Not a full shell grammar parser —
-// still no support for escaped quotes or $VAR expansion; that remains open (see
-// plan-v1-bonus-tasks.md P4.3 raw-command-parser gap).
+// of being torn apart by a naive whitespace split, and a backslash-escaped quote
+// character doesn't prematurely close/open quoting. Not a full shell grammar parser
+// — still no $VAR expansion, command substitution, or brace expansion; that remains
+// open (see plan-v1-bonus-tasks.md P4.3 raw-command-parser gap).
+//
+// This stays a local, synchronous copy rather than importing the shared
+// src/core/tokenizeShellCommand.ts (which every other production call site now
+// uses): this function runs before the async Core-bundle import below and is
+// exercised directly by resolve-cli-invocation.test.mjs's synchronous API, so it
+// cannot become an awaited dynamic import without changing that call contract. The
+// escape-handling fix below keeps it behaviorally identical to the shared version.
 function tokenizeCommand(rawCommand) {
   const tokens = [];
   let current = '';
   let quote = null;
-  for (const ch of rawCommand) {
+  for (let i = 0; i < rawCommand.length; i++) {
+    const ch = rawCommand[i];
+    const next = rawCommand[i + 1];
+    if (ch === '\\' && (next === '"' || next === "'" || next === '\\')) {
+      current += next;
+      i++;
+      continue;
+    }
     if (quote) {
       if (ch === quote) {
         quote = null;

@@ -1,5 +1,6 @@
 import { isGitReadOnly } from './commandPolicies/gitReadOnly.js';
 import { isFindReadOnly } from './commandPolicies/findReadOnly.js';
+import { tokenizeShellCommand, stripQuotedContent } from './tokenizeShellCommand.js';
 
 export type CommandClassificationOutcome = 'proven_read_only' | 'mutation' | 'unknown';
 
@@ -37,9 +38,10 @@ const SAFE_READ_ONLY_EXECUTABLES = [
 export function classifyCommand(input: ClassifyCommandInput): CommandClassification {
   let argv = input.argv;
 
-  // Fallback to simple split if only raw is provided
+  // Fallback: quote-aware tokenize if only raw is provided (P4.3 — a naive
+  // split(/\s+/) here would tear a quoted argument apart and misclassify it).
   if ((!argv || argv.length === 0) && input.raw) {
-    argv = input.raw.trim().split(/\s+/);
+    argv = tokenizeShellCommand(input.raw.trim());
   }
 
   if (!argv || argv.length === 0) {
@@ -51,13 +53,19 @@ export function classifyCommand(input: ClassifyCommandInput): CommandClassificat
   }
 
   const rawStr = input.raw || argv.join(' ');
+  // P4.3 lossy-round-trip fix: scan a quote-redacted copy for operator
+  // characters/keywords instead of rawStr directly. A character like `&` or
+  // `>` occurring only inside a quoted argument (e.g. a commit message
+  // `git commit -m "fix: a && b"`) is literal content, not a real shell
+  // operator, and must not be misclassified as one.
+  const scanStr = stripQuotedContent(rawStr);
 
   // 1. Check for shell redirection operators (>, >>, Out-File, Set-Content)
   if (
-    rawStr.includes('>') ||
-    rawStr.includes('>>') ||
-    rawStr.toLowerCase().includes('out-file') ||
-    rawStr.toLowerCase().includes('set-content')
+    scanStr.includes('>') ||
+    scanStr.includes('>>') ||
+    scanStr.toLowerCase().includes('out-file') ||
+    scanStr.toLowerCase().includes('set-content')
   ) {
     return {
       outcome: 'mutation',
@@ -69,14 +77,14 @@ export function classifyCommand(input: ClassifyCommandInput): CommandClassificat
   // 2. Check for shell chaining/piping or nested shell invocations
   // Note: single semicolon at the very end of argv (like find -exec ... ;) is not compound chaining
   const hasChainingOperator =
-    rawStr.includes('&&') ||
-    rawStr.includes('||') ||
-    (rawStr.includes(';') && !rawStr.endsWith(';')) ||
-    rawStr.includes('|') ||
-    rawStr.toLowerCase().includes('powershell -c') ||
-    rawStr.toLowerCase().includes('powershell -command') ||
-    rawStr.toLowerCase().includes('cmd /c') ||
-    rawStr.toLowerCase().includes('bash -c');
+    scanStr.includes('&&') ||
+    scanStr.includes('||') ||
+    (scanStr.includes(';') && !scanStr.trimEnd().endsWith(';')) ||
+    scanStr.includes('|') ||
+    scanStr.toLowerCase().includes('powershell -c') ||
+    scanStr.toLowerCase().includes('powershell -command') ||
+    scanStr.toLowerCase().includes('cmd /c') ||
+    scanStr.toLowerCase().includes('bash -c');
 
   if (hasChainingOperator) {
     return {

@@ -88,11 +88,14 @@ async function main() {
     let action_kind = 'external';
     let target_paths = [];
     let command_argv = [];
+    let command_raw;
 
     if (tool_name === 'Bash') {
       action_kind = 'shell';
-      const cmd = toolInput.command || '';
-      command_argv = cmd.trim().length ? cmd.trim().split(/\s+/) : [];
+      command_raw = (toolInput.command || '').trim();
+      // Tokenized below, once Core is loaded (P4.3 — this hook previously
+      // had no quote-aware tokenization path at all, unlike the Claude
+      // adapter's resolveCliInvocation/tokenizeShellCommand fallback).
     } else if (tool_name === 'apply_patch') {
       action_kind = 'write';
       const patchText = toolInput.command || toolInput.input || toolInput.patch || '';
@@ -112,7 +115,11 @@ async function main() {
       return;
     }
 
-    const { evaluatePreAction } = await import(pathToFileURL(corePath).href);
+    const { evaluatePreAction, tokenizeShellCommand } = await import(pathToFileURL(corePath).href);
+
+    if (tool_name === 'Bash') {
+      command_argv = command_raw ? tokenizeShellCommand(command_raw) : [];
+    }
 
     const request = {
       runtime: 'codex',
@@ -120,6 +127,7 @@ async function main() {
       action_kind,
       target_paths,
       command_argv,
+      command_raw,
       workspace,
       session_id: payload.session_id || 'unknown',
     };

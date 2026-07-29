@@ -2,6 +2,7 @@ import {
   evaluatePreAction,
   PreActionRequest,
   AdapterCapability,
+  tokenizeShellCommand,
 } from '../../core/index.js';
 
 export function onPreToolUse(ctx: {
@@ -10,10 +11,13 @@ export function onPreToolUse(ctx: {
   toolInput: unknown;
   sessionId?: string;
   /** Pre-tokenized argv (e.g. resolveCliInvocation.mjs's quote-aware
-   * tokenizer), used verbatim when present instead of the naive
-   * commandStr.split(/\s+/) below — P8.3, so a quoted argument containing a
-   * space (e.g. --answer-text "hello world") reaches Core correctly split
-   * instead of torn apart. Falls back to the naive split when absent. */
+   * tokenizer), used verbatim when present instead of tokenizeShellCommand
+   * below — P8.3, so a quoted argument containing a space (e.g.
+   * --answer-text "hello world") reaches Core correctly split instead of
+   * torn apart. Falls back to Core's own quote-aware tokenizeShellCommand
+   * (P4.3) when absent — every non-CLI-shaped Bash command takes this path,
+   * since resolveCliInvocation only hands back pre-tokenized argv for a
+   * recognized exact CLI invocation. */
   commandArgv?: string[];
 }): { decision: 'allow' | 'deny'; message?: string } {
   let actionKind: 'write' | 'read' | 'shell' = 'write';
@@ -53,7 +57,7 @@ export function onPreToolUse(ctx: {
       return { decision: 'deny', message: 'Không chỉ định lệnh thực thi.' };
     }
     commandStr = commandStr.trim();
-    commandArgv = ctx.commandArgv && ctx.commandArgv.length > 0 ? ctx.commandArgv : commandStr.split(/\s+/);
+    commandArgv = ctx.commandArgv && ctx.commandArgv.length > 0 ? ctx.commandArgv : tokenizeShellCommand(commandStr);
   }
 
   const capability: AdapterCapability = {
@@ -72,6 +76,7 @@ export function onPreToolUse(ctx: {
     tool_name: toolName,
     target_paths: targetPaths,
     command_argv: commandArgv,
+    command_raw: ctx.tool === 'Bash' ? commandStr : undefined,
   };
 
   const result = evaluatePreAction(request, capability);

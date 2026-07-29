@@ -192,9 +192,10 @@ describe('onPreToolUse hook', () => {
         workspaceRoot: testWorkspaceRoot,
         tool: 'Bash',
         toolInput: { command: 'node cli.mjs commit --answer-text "hello world"' },
-        // The naive commandStr.split(/\s+/) would tear "hello world" into
-        // two tokens (plus stray quote characters); a caller supplying its
-        // own quote-aware tokens must have them reach Core intact.
+        // A naive commandStr.split(/\s+/) would tear "hello world" into two
+        // tokens (plus stray quote characters); a caller supplying its own
+        // pre-tokenized argv must have it reach Core verbatim, untouched by
+        // the tokenizeShellCommand fallback below.
         commandArgv: ['node', 'cli.mjs', 'commit', '--answer-text', 'hello world'],
       });
       expect(spy).toHaveBeenCalledWith(
@@ -208,7 +209,7 @@ describe('onPreToolUse hook', () => {
     }
   });
 
-  test('P8.3 — without a pre-tokenized commandArgv, the naive whitespace split is used unchanged', () => {
+  test('P8.3/P4.3 — without a pre-tokenized commandArgv, the quote-aware tokenizeShellCommand fallback is used', () => {
     seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
 
     const spy = vi.spyOn(core, 'evaluatePreAction');
@@ -285,6 +286,34 @@ describe('onPreToolUse hook', () => {
       toolInput: { command: 'node -e "console.log(1)"' },
     });
     expect(resultNodeEval.decision).toBe('deny');
+  });
+
+  test('P4.3 — a quoted argument containing shell-operator-lookalike text is not misclassified as a real operator', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+    mkdirSync(docsDir, { recursive: true });
+
+    // Before the P4.3 fix, a naive split(/\s+/) tore the quoted argument
+    // apart, and re-joining argv with a single space made the "&&" inside
+    // this commit message indistinguishable from a real chaining operator —
+    // an otherwise-safe read-only command would be denied as
+    // "compound/chained shell command" purely because of its quoted text
+    // content.
+    const result = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'echo "fix: a && b"' },
+    });
+    expect(result.decision).toBe('allow');
+
+    // A real, unquoted chaining operator must still be denied (negative
+    // control — this suite's existing "shell operators" test above already
+    // pins this, repeated here to keep the positive/negative pair local).
+    const chained = onPreToolUse({
+      workspaceRoot: testWorkspaceRoot,
+      tool: 'Bash',
+      toolInput: { command: 'echo hello && rm -rf /' },
+    });
+    expect(chained.decision).toBe('deny');
   });
 
   test('should deny when execution-state.json is missing or corrupted outside interview phase', () => {

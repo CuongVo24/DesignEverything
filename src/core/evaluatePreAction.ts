@@ -10,6 +10,7 @@ import { loadDeepenState } from './deepenState.js';
 import { authorizeMutation, type CatalogPathEntry } from './artifactOwnership.js';
 import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
 import { classifyCommand } from './classifyCommand.js';
+import { stripQuotedContent } from './tokenizeShellCommand.js';
 import { classifyCliSubcommand } from './classifyCliSubcommand.js';
 import { canonicalizeWorkspacePath, matchesPathPattern } from './pathPolicy.js';
 import { inspectRuntimeHealth } from './runtimeHealth.js';
@@ -139,13 +140,24 @@ function evaluatePreActionInner(
   let commandStr = '';
   let baseCmd = '';
   if (request.command_argv && request.command_argv.length > 0) {
-    commandStr = request.command_argv.join(' ').trim();
+    // P4.3 — prefer the original raw command text for the operator scan
+    // when the caller supplied it: re-joining tokenized argv with a single
+    // space is lossy, since a quoted argv token that legitimately contains
+    // "&&"/";"/"|" as literal content (e.g. a commit message) becomes
+    // indistinguishable from a real chaining operator once rejoined. Falls
+    // back to the joined argv for callers that don't populate command_raw.
+    commandStr = (request.command_raw ?? request.command_argv.join(' ')).trim();
     baseCmd = request.command_argv[0] || '';
 
-    const hasSeparator = /[&;|]/.test(commandStr);
-    const hasRedirect = /[<>]/.test(commandStr);
-    const hasSubstitution = /\$\(|`/.test(commandStr);
-    const hasInlineInterpreter = /node\s+-e|python\s+-c/i.test(commandStr);
+    // P4.3 lossy-round-trip fix: scan a quote-redacted copy, not commandStr
+    // itself — a quoted argv token that legitimately contains "&&"/";"/"|"
+    // as literal text (e.g. a commit message) must not be misclassified as
+    // a real chaining/redirect operator once (re)joined into one string.
+    const scanStr = stripQuotedContent(commandStr);
+    const hasSeparator = /[&;|]/.test(scanStr);
+    const hasRedirect = /[<>]/.test(scanStr);
+    const hasSubstitution = /\$\(|`/.test(scanStr);
+    const hasInlineInterpreter = /node\s+-e|python\s+-c/i.test(scanStr);
 
     if (hasSeparator || hasRedirect || hasSubstitution || hasInlineInterpreter) {
       return {
@@ -310,7 +322,7 @@ function evaluatePreActionInner(
       const reqExt = request as unknown as { shell_kind?: string; command?: string };
       const classification = classifyCommand({
         shell: reqExt.shell_kind,
-        raw: reqExt.command,
+        raw: request.command_raw ?? reqExt.command,
         argv: request.command_argv,
         cwd: request.workspace,
       });

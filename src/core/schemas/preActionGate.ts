@@ -13,6 +13,16 @@ export const preActionRequestSchema = z.object({
   action_kind: z.enum(['read', 'write', 'shell', 'mcp', 'external', 'delete', 'rename']),
   target_paths: z.array(z.string()),
   command_argv: z.array(z.string()),
+  /** Original untokenized command text (P4.3 lossy-round-trip fix). When
+   * present, evaluatePreAction scans THIS for shell operator characters
+   * instead of re-joining command_argv with a single space — re-joining
+   * loses the distinction between a real operator token and the same
+   * characters occurring literally inside a quoted argv token (e.g. a
+   * commit message "fix: a && b" tokenizes to one argv entry containing
+   * "&&", and joining argv back with spaces makes that indistinguishable
+   * from an actual `&&` chaining operator). Optional for backward
+   * compatibility with callers/tests that only construct command_argv. */
+  command_raw: z.string().optional(),
   workspace: z.string(),
   session_id: z.string(),
   plan_digest: z.string().optional(),
