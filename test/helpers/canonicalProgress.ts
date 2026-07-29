@@ -38,6 +38,15 @@ export function seedCanonicalProgress(workspaceRoot: string, overrides: Partial<
   return seeded.payload.progress;
 }
 
+/** Seeds payload.answers directly (test setup only) — mirrors what commitInterviewAnswer writes for a real step answer, without needing a real capability-token commit flow. */
+export function seedCanonicalAnswers(workspaceRoot: string, answers: Record<string, string>): void {
+  const envelope = loadInterviewStore(workspaceRoot);
+  transactInterviewStore(workspaceRoot, envelope.state_revision, (env) => ({
+    ...env,
+    payload: { ...env.payload, answers: { ...env.payload.answers, ...answers } },
+  }));
+}
+
 /** Arbitrary direct mutation of canonical progress (test setup / adversarial simulation only). */
 export function mutateCanonicalProgress(
   workspaceRoot: string,
