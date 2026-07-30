@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
+import { RUNTIME_VERSION } from '../../../src/version.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
 const CLAUDE_INSTALLER = join(REPO_ROOT, 'adapter/claude-code/install.mjs');
@@ -47,7 +48,7 @@ describe('installer-interrupted — a crash mid-install never leaves a "half ins
       });
       const result = JSON.parse(statusRun.stdout);
       expect(typeof result.ok).toBe('boolean');
-      expect(result.runtime_version).toBe('6.0.0');
+      expect(result.runtime_version).toBe(RUNTIME_VERSION);
     });
   }
 

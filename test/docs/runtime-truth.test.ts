@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
+import { RUNTIME_VERSION } from '../../src/version.js';
 
 const REPO_ROOT = join(__dirname, '../..');
 const DOCS_PATHS = [
@@ -85,10 +86,19 @@ describe('B5d — Documentation & Runtime Truth Sync Test Suite', () => {
     expect(content).toMatch(/validate|build/i);
   });
 
-  it('RT-04 — should verify package.json version matches release documentation version', () => {
+  it('RT-04 — package.json version matches the single source of truth (src/version.ts RUNTIME_VERSION), and the release note tracks it', () => {
     const pkgPath = join(REPO_ROOT, 'package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 
-    expect(pkg.version).toBe('6.0.0');
+    // A literal here (e.g. '6.0.0') would defeat the point of this test: it
+    // would keep passing even if RUNTIME_VERSION and package.json drifted
+    // apart from each other, which is the exact version-drift finding (R15)
+    // this test exists to catch.
+    expect(pkg.version).toBe(RUNTIME_VERSION);
+
+    const releaseNote = readFileSync(join(REPO_ROOT, 'Design/RoadMap/v7-release-note.md'), 'utf8');
+    const stated = releaseNote.match(/`package\.json`\s+still\s+([\d.]+)/);
+    expect(stated).toBeTruthy();
+    expect(stated![1]).toBe(pkg.version);
   });
 });

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, rmSync, cpSync, readdirSync, readFileSync, statS
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execFileSync, spawnSync } from 'child_process';
+import { RUNTIME_VERSION } from '../../../src/version.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
 const CLAUDE_INSTALLER = join(REPO_ROOT, 'adapter/claude-code/install.mjs');
@@ -59,7 +60,7 @@ describe('moved-source — an installed target is byte-scannable free of the dev
 
     const statusRun = spawnSync('node', [cliPath, 'status', '--json'], { cwd: movedTarget, encoding: 'utf8' });
     const result = JSON.parse(statusRun.stdout);
-    expect(result.runtime_version).toBe('6.0.0');
+    expect(result.runtime_version).toBe(RUNTIME_VERSION);
     expect(typeof result.ok).toBe('boolean');
 
     // Force a deterministic "deny" (interview phase, Write outside scope) so
@@ -111,7 +112,7 @@ describe('moved-source — an installed target is byte-scannable free of the dev
         encoding: 'utf8',
       });
       const result = JSON.parse(raw);
-      expect(result.runtime_version).toBe('6.0.0');
+      expect(result.runtime_version).toBe(RUNTIME_VERSION);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }

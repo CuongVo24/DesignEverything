@@ -5,6 +5,7 @@ import { tmpdir } from 'os';
 import { execSync, execFileSync } from 'child_process';
 import { CliResultEnvelope } from '../../src/adapters/shared/cliResult.js';
 import { issueTurnCapability } from '../../src/core/turnCapability.js';
+import { RUNTIME_VERSION } from '../../src/version.js';
 
 const REPO_ROOT = join(__dirname, '../..');
 const CLAUDE_CLI = join(REPO_ROOT, 'adapter/claude-code/cli.mjs');
@@ -70,8 +71,8 @@ describe('Claude & Codex CLI Adapter Parity', () => {
     expect(codexRes.operation).toBe('status');
     expect(claudeRes.reason_code).toBe('STATUS_HEALTHY');
     expect(codexRes.reason_code).toBe('STATUS_HEALTHY');
-    expect(claudeRes.runtime_version).toBe('6.0.0');
-    expect(codexRes.runtime_version).toBe('6.0.0');
+    expect(claudeRes.runtime_version).toBe(RUNTIME_VERSION);
+    expect(codexRes.runtime_version).toBe(RUNTIME_VERSION);
   });
 
   it('should return identical error envelope on missing subcommand from both launchers', () => {

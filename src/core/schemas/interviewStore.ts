@@ -49,4 +49,10 @@ export type InterviewStoreCorrections = z.infer<typeof interviewStoreCorrections
 export type InterviewStorePayload = z.infer<typeof interviewStorePayloadSchema>;
 export type InterviewStoreEnvelope = z.infer<typeof interviewStoreEnvelopeSchema>;
 
+// This is the canonical interview store's own schema_version namespace — it
+// tracks interview-state.json's payload shape, not the package/runtime
+// release version (src/version.ts RUNTIME_VERSION, currently 6.0.0). The two
+// have coincidentally diverged already and must stay allowed to: a future
+// package bump to 7.0.0 is not a reason to touch this, and a future store
+// schema migration is not a reason to touch RUNTIME_VERSION.
 export const INTERVIEW_STORE_VERSION = '7.0.0';

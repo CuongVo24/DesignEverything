@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execFileSync } from 'child_process';
+import { RUNTIME_VERSION } from '../../../src/version.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
 const CODEX_INSTALLER = join(REPO_ROOT, 'adapter/codex-plugin/install.mjs');
@@ -50,7 +51,7 @@ describe('B5a — Codex Plugin Installed Parity & Self-Contained Bundle Suite', 
 
     const manifest = JSON.parse(readFileSync(join(tmpDir, '.design-everything/install-manifest.json'), 'utf8'));
     expect(manifest.adapter).toBe('codex');
-    expect(manifest.runtime_version).toBe('6.0.0');
+    expect(manifest.runtime_version).toBe(RUNTIME_VERSION);
   });
 
   it('should execute status via the root cli.mjs redirector and produce the shared envelope', () => {
@@ -68,7 +69,7 @@ describe('B5a — Codex Plugin Installed Parity & Self-Contained Bundle Suite', 
       expect(res.ok).toBe(true);
       expect(res.operation).toBe('status');
       expect(res.reason_code).toBe('UNINVOLVED');
-      expect(res.runtime_version).toBe('6.0.0');
+      expect(res.runtime_version).toBe(RUNTIME_VERSION);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }
