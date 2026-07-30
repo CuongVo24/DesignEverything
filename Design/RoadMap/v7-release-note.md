@@ -10,6 +10,19 @@
 
 Bản GA trước đây (2026-07-25) claim "hoàn tất toàn bộ B1–B5" dựa trên `npm test` xanh. Đối chiếu lại cho thấy suite xanh không chứng minh 24 contract đạt: phần lớn primitive B1–B3 có unit test nhưng **không phải authority trên production path** (state, gate, emit, wrapper, installer vẫn dùng logic cũ song song). Chi tiết ở [plan-v1-fix.md](../ContractForAI/Core/v1-fix-bugs/plan-v1-fix.md) §1–§3.
 
+**Cập nhật 2026-07-30:** Phase 0–3 của kế hoạch đóng debt (repo sạch, 4 nhóm code debt, evidence
+rebuild cho B5a/B5b/B5c/B5d, harden `check-matrix.mjs`/`check-version-sync.mjs`, typecheck toàn bộ
+test, giết version literal, sửa docs claim 7.0.0 đã release, packaging test chứng minh file thật)
+đã xong — xem `Design/ContractForAI/Core/v1-fix-bugs/plan-v1-fix.md` cho chi tiết từng commit. Vẫn
+còn ba điều kiện thật trước khi hết BLOCKED, theo đúng thứ tự:
+
+1. **Rà lại phần đuôi của finding-coverage-matrix.md** — khoảng 37 dòng còn ghi `OPEN` cần đối chiếu
+   lại với code thật (12 dòng đã làm ở Phase 2.2/2026-07-30; phần còn lại chưa làm).
+2. **Duyệt spec theo batch** — người dùng duyệt B1→B5 trong README.md của v1-fix-bugs (Phase 4);
+   cột Spec chỉ được sửa sau khi có duyệt tường minh, chưa bắt đầu.
+3. **Một lần dogfood thật trên dự án ngoài repo** — xem `docs/dogfood-checklist.md`. Đây là bằng
+   chứng cuối cùng, không thay thế cho hai điều kiện trên.
+
 Release này **KHÔNG được phát hành** cho tới khi Definition of Done cuối cùng trong plan-v1-fix.md §10 đạt đủ 11 điều kiện. Không dùng tài liệu này làm bằng chứng release; xem `finding-coverage-matrix.md` cho trạng thái thật theo từng finding.
 
 ---
