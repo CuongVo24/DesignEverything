@@ -109,9 +109,12 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
 
     const res = evaluatePreAction({
       workspace: tempDir,
+      session_id: 'test-session',
+      runtime: 'claude',
       action_kind: 'write',
       tool_name: 'write_to_file',
       target_paths: ['src/app.ts'],
+      command_argv: [],
     });
 
     expect(res.decision).toBe('deny');

@@ -7,6 +7,7 @@ import { commitStep } from '../../src/core/advanceState.js';
 import { issueTurnCapability } from '../../src/core/turnCapability.js';
 import { validateAnswer } from '../../src/core/validateAnswer.js';
 import { renderNextStep } from '../../src/adapters/shared/renderNextStep.js';
+import { initExecutionState } from '../../src/core/advanceExecutionState.js';
 import type { Progress, ProjectProfile, Script } from '../../src/core/schemas/index.js';
 
 const REPO_ROOT = join(__dirname, '../..');
@@ -197,14 +198,16 @@ describe('B5c — Newbie Journey Across 4 Shapes (Web, Mobile, CLI, Hybrid)', ()
       });
     }
 
-    // Render post-emit next step suggestion
+    // Render post-emit next step suggestion — docs-emitted hands off to a
+    // real ExecutionState at plan-validating (renderNextStep's signature is
+    // (plan, state, profile, deepenPending), not (progress, script, locale)).
     progress.phase = 'docs-emitted';
     const profile: ProjectProfile = {
-      workspace_kind: 'greenfield-empty',
+      workspace_kind: 'empty',
       target: 'vite-web',
       runtime: 'node',
       package_manager: 'npm',
-      framework: 'react',
+      framework: 'vite',
       language: 'typescript',
       source_root: 'src',
       manifest_paths: ['package.json'],
@@ -212,7 +215,8 @@ describe('B5c — Newbie Journey Across 4 Shapes (Web, Mobile, CLI, Hybrid)', ()
       confirmation: { confirmed: true, confirmed_by: 'user' },
       evidence: [],
     };
-    const nextStepInfo = renderNextStep(progress, script, 'vi', profile);
+    const execState = initExecutionState();
+    const nextStepInfo = renderNextStep(null, execState, profile);
 
     // Guidance must instruct validate or build
     expect(nextStepInfo).toBeDefined();

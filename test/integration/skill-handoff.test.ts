@@ -24,12 +24,17 @@ describe('B4f — Skill Handoff, Deepen and Message Truth Contract', () => {
     const mockProfile: ProjectProfile = {
       workspace_kind: 'empty',
       target: 'node-cli',
+      runtime: 'node',
       package_manager: 'npm',
+      framework: 'none',
       language: 'typescript',
+      source_root: 'src',
+      manifest_paths: ['package.json'],
       capabilities: ['node-npm-project'],
+      evidence: [],
       confirmation: {
         confirmed: true,
-        source: 'interview',
+        confirmed_by: 'interview',
         confirmed_at: new Date().toISOString(),
       },
     };
@@ -47,12 +52,17 @@ describe('B4f — Skill Handoff, Deepen and Message Truth Contract', () => {
     const mockProfile: ProjectProfile = {
       workspace_kind: 'empty',
       target: 'node-cli',
+      runtime: 'node',
       package_manager: 'npm',
+      framework: 'none',
       language: 'typescript',
+      source_root: 'src',
+      manifest_paths: ['package.json'],
       capabilities: ['node-npm-project'],
+      evidence: [],
       confirmation: {
         confirmed: true,
-        source: 'interview',
+        confirmed_by: 'interview',
         confirmed_at: new Date().toISOString(),
       },
     };
@@ -111,12 +121,17 @@ describe('B4f — Skill Handoff, Deepen and Message Truth Contract', () => {
     const mockProfile: ProjectProfile = {
       workspace_kind: 'empty',
       target: 'node-cli',
+      runtime: 'node',
       package_manager: 'npm',
+      framework: 'none',
       language: 'typescript',
+      source_root: 'src',
+      manifest_paths: ['package.json'],
       capabilities: ['node-npm-project'],
+      evidence: [],
       confirmation: {
         confirmed: true,
-        source: 'interview',
+        confirmed_by: 'interview',
         confirmed_at: new Date().toISOString(),
       },
     };

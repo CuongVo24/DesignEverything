@@ -9,11 +9,14 @@ import {
   acquireLock,
   releaseLock,
   computePayloadChecksum,
-  type InterviewStoreEnvelope,
   CANONICAL_STORE_REL_PATH,
   LOCK_REL_PATH,
 } from '../../src/core/interviewStore.js';
-import { INTERVIEW_STORE_VERSION, interviewStoreEnvelopeSchema } from '../../src/core/schemas/interviewStore.js';
+import {
+  INTERVIEW_STORE_VERSION,
+  interviewStoreEnvelopeSchema,
+  type InterviewStoreEnvelope,
+} from '../../src/core/schemas/interviewStore.js';
 import { injectFsFault, restoreFsFaults } from '../helpers/faulty-filesystem.js';
 
 const REPO_ROOT = join(__dirname, '../..');

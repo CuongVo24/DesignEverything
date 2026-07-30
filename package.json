@@ -10,8 +10,9 @@
     "build": "tsc",
     "build:bundle": "tsc && node scripts/build-runtime-bundle.mjs",
     "typecheck": "tsc --noEmit",
+    "typecheck:all": "tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint .",
-    "test": "node scripts/check-version-sync.mjs && node scripts/check-matrix.mjs && vitest run",
+    "test": "node scripts/check-version-sync.mjs && node scripts/check-matrix.mjs && npm run typecheck:all && vitest run",
     "dogfood:regen": "npm run build && node scripts/regen-dogfood.mjs"
   },
   "files": [

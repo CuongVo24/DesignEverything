@@ -22,6 +22,7 @@ describe('B1a — Single-use interview turn capability', () => {
         target_doc: '00-vision.md',
         translate_back: 'Vision',
         depends_on: [],
+        gate: null,
       },
       {
         id: 'S1',
@@ -32,6 +33,7 @@ describe('B1a — Single-use interview turn capability', () => {
         target_doc: '00-vision.md',
         translate_back: 'Problem',
         depends_on: ['S0'],
+        gate: null,
       },
     ],
   };

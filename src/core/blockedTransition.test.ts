@@ -140,10 +140,17 @@ describe('B1d — Typed blocked reason and transition contract', () => {
     });
 
     const mockProfile: ProjectProfile = {
-      version: '6.0.0',
-      workspace_kind: 'newbie-greenfield',
-      target: 'web-react-vite',
+      workspace_kind: 'empty',
+      target: 'vite-web',
+      runtime: 'node',
+      package_manager: 'npm',
+      framework: 'vite',
+      language: 'typescript',
+      source_root: 'src',
+      manifest_paths: ['package.json'],
+      capabilities: [],
       confirmation: { confirmed: true, confirmed_at: new Date().toISOString() },
+      evidence: [],
     };
 
     const mockPlan = {

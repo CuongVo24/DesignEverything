@@ -95,12 +95,12 @@ describe('B3c — authoritative runtime and artifact catalog contract', () => {
     const base = loadArtifactCatalog(CATALOG_PATH);
     const script = loadScript(SCRIPT_PATH);
     const shapes = loadShapes(SHAPES_PATH);
-    const mutated: ArtifactCatalog = {
+    const mutated = {
       ...base,
       artifacts: base.artifacts.map((a, i) =>
         i === 0 ? { ...a, shapes: ['desktop-does-not-exist'] } : a
       ),
-    };
+    } as ArtifactCatalog;
     expect(() => compileRuntimeCatalog({ catalog: mutated, script, shapes })).toThrow(
       /unknown shape/
     );
@@ -110,12 +110,12 @@ describe('B3c — authoritative runtime and artifact catalog contract', () => {
     const base = loadArtifactCatalog(CATALOG_PATH);
     const script = loadScript(SCRIPT_PATH);
     const shapes = loadShapes(SHAPES_PATH);
-    const mutated: ArtifactCatalog = {
+    const mutated = {
       ...base,
       artifacts: base.artifacts.map((a, i) =>
         i === 0 ? { ...a, source: { ...a.source, question_ids: ['Z99-not-real'] } } : a
       ),
-    };
+    } as ArtifactCatalog;
     expect(() => compileRuntimeCatalog({ catalog: mutated, script, shapes })).toThrow(
       /unknown question id/
     );
@@ -123,10 +123,10 @@ describe('B3c — authoritative runtime and artifact catalog contract', () => {
 
   test('rejects path outside managed roots at load time', () => {
     const base = loadArtifactCatalog(CATALOG_PATH);
-    const outsideRoot: ArtifactCatalog = {
+    const outsideRoot = {
       ...base,
       artifacts: base.artifacts.map((a, i) => (i === 0 ? { ...a, path: '../escape.md' } : a)),
-    };
+    } as ArtifactCatalog;
     const path = writeTempCatalog(outsideRoot);
     try {
       expect(() => loadArtifactCatalog(path)).toThrow(/outside managed roots/);
@@ -137,12 +137,12 @@ describe('B3c — authoritative runtime and artifact catalog contract', () => {
 
   test('rejects case-collision between artifact paths at load time', () => {
     const base = loadArtifactCatalog(CATALOG_PATH);
-    const collided: ArtifactCatalog = {
+    const collided = {
       ...base,
       artifacts: base.artifacts.map((a, i) =>
         i === 1 ? { ...a, path: base.artifacts[0].path!.toUpperCase() } : a
       ),
-    };
+    } as ArtifactCatalog;
     const path = writeTempCatalog(collided);
     try {
       expect(() => loadArtifactCatalog(path)).toThrow(/Case-collision/);
