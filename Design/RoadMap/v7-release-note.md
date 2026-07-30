@@ -2,7 +2,7 @@
 
 **Status**: **UNRELEASED — BLOCKED**  
 **Target Version**: 7.0.0 (not yet cut; `package.json` still 6.0.0)  
-**Last reviewed**: 2026-07-25
+**Last reviewed**: 2026-07-30
 
 ---
 
@@ -67,7 +67,7 @@ Test xanh là điều kiện cần, không phải bằng chứng đủ cho một
 
 ## 5. Known Limitations & Operational Directives
 
-- **Chưa có installed-runtime seam evidence hợp lệ.** Phần lớn test B5a hiện gọi thẳng `src/adapters/shared/cliOperations.js` hoặc chạy hook từ `REPO_ROOT`, không phải target đã cài — xem plan-v1-fix.md R-finding và §1.3.
+- **Installed-runtime seam evidence (cập nhật 2026-07-30):** B5a's `hook-adversarial.test.ts` và `codex-pre-tool-use.test.ts` nay cài thật qua `install.mjs` trong `beforeAll` rồi spawn hook/CLI target-local, không còn gọi thẳng TS source hay chạy hook từ `REPO_ROOT` — xem X18 (CLOSED) trong `finding-coverage-matrix.md`. B5b (fault-injection) và B5c (journey) vẫn phần lớn gọi thẳng Core, chưa qua CLI thật — đó là scope hiện tại, không phải lỗi chưa biết.
 - **Chưa có reviewer/golden artifact cho B5c.** Report B5c hiện không có bằng chứng review độc lập, chỉ có validator output.
 - **Version chưa thống nhất.** `package.json` = 6.0.0 trong khi một số tài liệu đã ghi 7.0.0/GA trước khi sửa — đây là chính finding bị flag (R15). Không tin bất kỳ con số version nào trong docs cho tới khi P12 hoàn tất.
 - **Host Environment Smoke Run**: Khi phát hành tới người dùng cuối (sau khi hết BLOCKED), khuyến nghị thực hiện ít nhất 1 phiên phỏng vấn thực tế trên môi trường Claude Code CLI thật.

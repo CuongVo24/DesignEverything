@@ -68,25 +68,41 @@ Toàn bộ lõi trạng thái thực thi V3, kiểm duyệt ngữ nghĩa và lu�
 - Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.
 - AGENTS.md: Đã code bộ sinh rules `generateAgentsMd` và viết unit test xác thực. Tuy nhiên, việc chạy kiểm thử thực tế (smoke run) trên các harness mềm (Codex/Cursor/Cline) tạm hoãn (⏳ defer) sang Month 3 (xem thêm [v1-release-note.md](../RoadMap/Month2/v1-release-note.md) limitation #1 & #2 và [m2_polish_agents_md_artifact_drift_guard_contract.md](../ContractForAI/Core/break_task/Month2/m2_polish_agents_md_artifact_drift_guard_contract.md)).
 
-## Trạng thái v6.0.0 (B16a Contract schema & Conventions bind — 2026-07-14)
+## Trạng thái v6.0.0 (package hiện tại — 2 đợt B16a + B4e)
 Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đã được cài đặt và nghiệm thu hoàn chỉnh:
+
+**B16a Contract schema & Conventions bind — 2026-07-14:**
 - **Contract Schema:** `contractSchema` (Zod) tại `src/core/schemas/contract.ts` đóng gói 7 mục của `CONTRACT_STRUCTURE_RULE`.
 - **Conventions Emitter:** Sinh tài liệu tech-stack, allowed paths, coding standards, test tiers dựa trên ProjectProfile vào `docs/conventions/`.
 - **Validation Engine:** `validateContract` xác thực chặt chẽ hình-hài, cấu trúc lệnh, chống done giả (chặn file-exists-only), và cấm trộn stack công nghệ.
 - **Task card compiler:** `compileContractToTaskCard` ánh xạ trực tiếp Contract thành cấu trúc TaskCard của V3.
 - Toàn bộ unit test cho B16a đã được bổ sung và chạy thành công. ✅ Đã code + test.
 
-## Trạng thái v6.0.0 (B4e Claude/Codex Shared Runtime Parity — 2026-07-25)
+**B4e Claude/Codex Shared Runtime Parity — 2026-07-25:**
 Đã hợp nhất và loại bỏ duplicate logic CLI giữa Claude Code adapter và Codex plugin:
 - **Shared Runtime Runner:** 100% logic CLI operations (`status`, `init`, `commit`, `validate`, `emit`, `repair`, `next`, `start`, `verify`, `review`) được xử lý bởi `src/adapters/shared/cliOperations.ts`.
 - **Thin Launchers:** Cả `adapter/claude-code/cli.mjs` và `adapter/codex-plugin/cli.mjs` đều trở thành launcher mỏng (< 100 dòng), ủy quyền toàn bộ việc thực thi cho shared runner.
 - **Parity Verification:** Đã viết integration test `test/integration/adapter-parity.test.ts` và E2E benchmark `test/replay/crossRuntimeReplay.test.ts` đảm bảo 100% tương thích về JSON envelope, reason code, version evidence và state transitions. ✅ Đã code + test.
 
-## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync — 2026-07-25)
-Hoàn thành 100% kiểm tra sự thật runtime, kiểm thử chịu lỗi giao dịch, và đánh giá hành trình người dùng mới:
-- **Adversarial Installed Runtime (B5a):** Chặn đứng các hành vi can thiệp thô bạo vào state machine, bypass hook hoặc sửa lén manifest. ✅ Đã code + test (`test/integration/installed-runtime/hook-adversarial.test.ts`).
-- **Transaction Fault Injection (B5b):** Giao dịch `commit` và `emit` an toàn tuyệt đối trước process crash (`process.exit(137)`), đĩa đầy (`ENOSPC`), từ chối quyền (`EACCES`), và tự động dọn dẹp orphan lock khi tiến trình giữ lock bị treo/chết. ✅ Đã code + test (`test/fault-injection/`).
-- **Newbie Journey & Weak Executor Evaluation (B5c):** Đánh giá hành trình người dùng mới thông suốt trên 4 shapes (`web`, `mobile`, `cli`, `hybrid`) và 2 calibration modes (`deep`, `fast`), bảo đảm 0 false pass cho câu trả lời rỗng/placeholder. ✅ Đã code + test (`test/journey/`).
-- **Release Truth Sync (B5d):** Đồng bộ tài liệu release, xóa bỏ 100% link `file:///e:/...`, và duy trì linter tự động `test/docs/runtime-truth.test.ts`. ✅ Đã code + test.
+## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync) — PLANNED, chưa cắt
+
+**Sửa 2026-07-30:** mục này trước đó ghi các mốc dưới đây như đã hoàn thành và phát hành ngày
+2026-07-25 kèm dấu ✅ — sai sự thật, đúng finding R15 mà chính B5d phải bắt lại. Package hiện tại
+vẫn `6.0.0`; xem [v7-release-note.md](../RoadMap/v7-release-note.md) (UNRELEASED — BLOCKED) cho
+trạng thái thật từng mục. Trạng thái tiến độ thật (2026-07-30, đối chiếu với
+`Design/ContractForAI/Core/v1-fix-bugs/finding-coverage-matrix.md`):
+- **Adversarial Installed Runtime (B5a):** test đã chuyển sang chạy trên target cài thật qua
+  `install.mjs` (`test/integration/installed-runtime/hook-adversarial.test.ts`), không còn gọi thẳng
+  TS source hay chạy hook từ REPO_ROOT.
+- **Transaction Fault Injection (B5b):** engine transaction (`prepareEmit`/`activateEmit`/`recoverEmit`)
+  có test crash thật (`test/fault-injection/`), nhưng test crash mid-emit vẫn gọi thẳng Core, chưa
+  crash một tiến trình `cli.mjs emit` thật — chấp nhận theo phạm vi hiện tại, không phải VERIFIED.
+- **Newbie Journey & Weak Executor Evaluation (B5c):** journey suite (`test/journey/`) chạy qua Core
+  loop thuần, chưa qua CLI thật; báo cáo B5c không có reviewer/golden artifact độc lập (R14).
+- **Release Truth Sync (B5d):** đã dọn 100% link `file:///e:/...`; `check-matrix.mjs` nay chặn
+  vocabulary/dependency-range sai và cross-check contract-file ↔ README, nhưng docs vẫn cần một lượt
+  đối chiếu cuối trước khi coi B5d là VERIFIED.
+
+Không phần nào ở trên là "đã phát hành" — chỉ là tiến độ thật của một milestone vẫn PLANNED.
 
 
