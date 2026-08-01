@@ -65,3 +65,18 @@ thể gộp thành một báo cáo, mỗi vấn đề một mục `###`):
 
 Không cần kết luận nguyên nhân hay đề xuất fix — mục tiêu của lần dogfood là thu thập bằng chứng
 thật, không phải sửa lỗi tại chỗ.
+
+## 6. Lần chạy `E:\YT` ngày 2026-08-01 — chỉ đạt install smoke
+
+Audit lại target sau lần chạy cho thấy:
+
+- Installer Claude đã hoàn tất: `install-manifest.json` ghi runtime `6.0.0`, đủ ba hook, hai skill,
+  catalog/templates và `deepen-script.yaml`; hook trong `.claude/settings.json` đều trỏ target-local.
+- Target-local `cli.mjs status --json` trả `ok: false`, reason
+  `MISSING_INTERVIEW_STORE`, next command `init`.
+- Không có `interview-state.json`, `progress.json`, emit manifest, execution state/plan hoặc cây
+  `docs/`; ngoài asset installer, không quan sát thấy source của một dự án thật có sẵn.
+
+Kết luận: **INSTALL_ONLY / DOGFOOD_INCOMPLETE**. Lần này chứng minh bước cài đặt, không chứng minh
+§3 (phỏng vấn → emit → `/build` → execute một task), và không được dùng để mở điều kiện dogfood của
+7.0.0. Cần chạy lại trên một dự án thật có source rồi ghi observation theo mẫu §5.
