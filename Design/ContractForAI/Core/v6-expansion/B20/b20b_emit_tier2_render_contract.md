@@ -1,6 +1,6 @@
 # Contract — B20b Renderer + emit tầng 2 (`docs/design/`)
 
-> Tầng: Lõi. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B20b, đề xuất D50, template B19a, state B20a. Phụ thuộc: B20a. Được phép tách `-a/-b` theo D42 khi thực thi (renderer ≠ emit wiring).
+> Tầng: Lõi. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B20b, đề xuất D51, template B19a, state B20a. Phụ thuộc: B20a. Được phép tách `-a/-b` theo D42 khi thực thi (renderer ≠ emit wiring).
 >
 > **Sửa 2026-07-19 theo review mở lane:** (1) hàm slug dùng chung giờ TỒN TẠI THẬT — `src/core/slugify.ts` do B20a trích từ `synthesizeExecutionPlan` (bản trước yêu cầu import một hàm chưa được export); (2) `emitTier2` khoá thứ tự **transaction**: render thuần → consistency check → chỉ khi sạch lỗi mới ghi file + cập nhật state (bản trước ghi file/`emitted_at` trước consistency, có thể để lại state "đã emit" cùng output lỗi); (3) ký đầy đủ kiểu trả về, ConsistencyIssue có severity typed, mỗi artifact có identity trong manifest state.
 

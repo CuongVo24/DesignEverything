@@ -1,6 +1,6 @@
 # Contract — B20a Deepen state machine + hoàn tất theo module
 
-> Tầng: Lõi. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B20a, đề xuất D49, deepen-script B19b. Phụ thuộc: B19b.
+> Tầng: Lõi. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B20a, đề xuất D50, deepen-script B19b. Phụ thuộc: B19b.
 >
 > **Sửa 2026-07-19 theo review mở lane:** (1) state chuyển sang mô hình **question-instance** `{module, subject_id, question_id}` để biểu diễn "mỗi Must / mỗi quyết định một bộ câu" — `answered: string[]` cấp module không đủ, một bộ DS2 sẽ bị tái dùng cho mọi feature; (2) commit deepen là **đường advance riêng** (`commitDeepenAnswer`) vì `commitStep` tầng 1 từ chối khi `current_step === null` — vẫn giữ nguyên kỷ luật một-bước-mỗi-lượt + chống duplicate turn (D11/D14); (3) KHÔNG đụng gate-policy/evaluateGate — enforcement là fail-closed trong core, không phải gate PreToolUse; (4) ký đầy đủ chữ ký API + persistence atomic để executor yếu không phải đoán.
 

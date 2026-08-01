@@ -1,6 +1,6 @@
 # Contract — B21b Eval tầng 2 trên golden corpus
 
-> Tầng: QA. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B21b, đề xuất D51, [02-golden-corpus-protocol](../prep-brownfield/02-golden-corpus-protocol.md). Phụ thuộc: B21a.
+> Tầng: QA. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B21b, đề xuất D52, [02-golden-corpus-protocol](../prep-brownfield/02-golden-corpus-protocol.md). Phụ thuộc: B21a.
 >
 > **Sửa 2026-07-19 theo review mở lane:** (1) khôi phục metric **hallucinated-rationale = 0** đúng protocol 02 (bản trước thay bằng consistency — protocol ghi "không thương lượng"); (2) thêm **substance floor** chống output gần-rỗng pass (unknown được tính trung thực cho grounding, nhưng một file toàn heading + unknown vẫn phải FAIL); (3) ngưỡng chốt TRƯỚC khi đo và `ref-sha` freeze trước lần đo đầu — không còn "chốt số khi DONE".
 

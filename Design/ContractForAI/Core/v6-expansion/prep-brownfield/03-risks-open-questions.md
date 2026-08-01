@@ -17,7 +17,7 @@
 | 1 | **Bịa "vì sao"**: agent suy lý do kiến trúc từ code rồi viết như sự thật — phá uy tín sản phẩm đúng chỗ nó tự hào nhất | Rất cao | Cite-validation pha 2 hướng C; hallucinated-rationale = 0 không thương lượng; câu "vì sao" luôn thuộc pha người |
 | 2 | **Doc tay có sẵn bị coi là sự thật** trong khi chính nó đã drift so với code | Cao | Doc tay chỉ dùng làm reference ĐO, không làm input sinh; mọi khẳng định phải cite code hiện tại |
 | 3 | **Phình parser theo stack** (mỗi framework một kiểu) → chết vì bảo trì | Cao | Inventory chỉ quét lớp vỏ chuẩn (manifest/entrypoint/script); stack đợt đầu khoá Node/TS + Python |
-| 4 | **Người bỏ cuộc giữa pha confirm** vì quá nhiều câu | TB | Nhịp theo module (kế thừa D49); ưu tiên Must trước; số câu/phiên lấy từ pilot |
+| 4 | **Người bỏ cuộc giữa pha confirm** vì quá nhiều câu | TB | Nhịp theo module (kế thừa D50); ưu tiên Must trước; số câu/phiên lấy từ pilot |
 | 5 | **Anchor `status=live` sai rev** ngay từ đầu → drift flagging về sau vô nghĩa | TB | Anchor brownfield bắt buộc lấy rev từ git blame thật (D8), có test |
 | 6 | **Repo ngoài không truy cập được / đổi cấu trúc** giữa chừng | Thấp | Freeze `ref-sha` theo protocol 02 |
 

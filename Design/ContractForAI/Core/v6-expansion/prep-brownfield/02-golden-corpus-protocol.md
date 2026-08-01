@@ -1,4 +1,4 @@
-# Brownfield Prep 02 — Giao thức Golden Corpus (D51 đề xuất)
+# Brownfield Prep 02 — Giao thức Golden Corpus (D52 đề xuất)
 
 > Trạng thái: tài liệu chuẩn bị. Định nghĩa cách dùng ba dự án đã có docset tay (DesignEverything, ReportSupport, Univillage) làm ground truth — cho cả eval tầng 2 greenfield (B21b dùng phần DE) lẫn lane brownfield tương lai.
 

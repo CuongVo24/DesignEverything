@@ -26,7 +26,7 @@ Người dùng gọi được `deepen` từ cả hai harness thành vòng khép 
 
 **Out of scope**
 
-- Không thêm hook mới, không đổi PreToolUse; không hard-gate deepen (tầng 2 là tuỳ chọn theo D48).
+- Không thêm hook mới, không đổi PreToolUse; không hard-gate deepen (tầng 2 là tuỳ chọn theo D49).
 - Không tự ý gộp 2 bản cli.mjs trong batch này.
 
 ## 3. Checklist

@@ -1,7 +1,8 @@
-# Contracts — V6 Detailed Design (target 7.0.0)
+# Contracts — V6 Detailed Design (target 8.0.0)
 
-> Nguồn: [V6-DetailedDesignPlan](V6-DetailedDesignPlan.md) (TaskBrief của lane, theo ngoại lệ expansion [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0), đề xuất D48–D51, và bộ chuẩn bị brownfield [prep-brownfield/](prep-brownfield/00-problem-statement.md).
-> **Lane CHƯA mở.** Điều kiện mở ghi trong plan: ReleaseReadinessPlan đóng nợ (RB-05 e2e, RB-06b, RB-08) + pilot B18a xong + D48–D51 được duyệt vào DecisionLog.
+> Nguồn: [V6-DetailedDesignPlan](V6-DetailedDesignPlan.md) (TaskBrief của lane, theo ngoại lệ expansion [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0), đề xuất D49–D52, và bộ chuẩn bị brownfield [prep-brownfield/](prep-brownfield/00-problem-statement.md).
+> **Lane CHƯA mở.** Điều kiện mở ghi trong plan: ReleaseReadinessPlan đóng nợ (RB-05 e2e, RB-06b, RB-08) + pilot B18a xong + D49–D52 được duyệt vào DecisionLog.
+> **8.0.0 là MAJOR bump riêng của lane này** (đổi cây output `docs/design/`, breaking với adapter/validator cũ) — không chung version với `v1-fix-bugs` (giữ 7.0.0, xem [v7-release-note.md](../../../RoadMap/v7-release-note.md)). Đánh số lại 2026-08-01 vì D48 và 7.0.0 đã bị `v1-fix-bugs` chiếm trước.
 
 ## Bản đồ thực thi
 
@@ -18,9 +19,9 @@ Thứ tự bắt buộc: `B19a → B19b → B20a → B20b → B21a → B21b` —
 
 ## Kỷ luật lane
 
-- **Opt-in tuyệt đối (D48):** người không gọi deepen không thấy gì thay đổi; golden test tầng 1 không đổi output.
+- **Opt-in tuyệt đối (D49):** người không gọi deepen không thấy gì thay đổi; golden test tầng 1 không đổi output.
 - **Kênh riêng, không đụng tầng 1 (review 2026-07-19):** câu DS* ở `deepen-script.yaml` + commit qua `commitDeepenAnswer` riêng; KHÔNG sửa `script.yaml`/`gate-policy.yaml`, KHÔNG gate PreToolUse — enforcement là fail-closed trong core + CLI. Đơn vị answered là question-instance `{module, question_id, subject_id}` (mỗi Must / mỗi quyết định một bộ câu).
-- **Module độc lập, fail-closed cục bộ (D49):** 4 module đóng cho 7.0.0 (`glossary`, `feature-spec`, `adr`, `test-strategy`); module mở dở dang chỉ chặn emit của chính nó.
-- **Grounding bắt buộc (D50):** renderer đọc answers + docs tầng 1 đã emit; câu deepen chỉ bù phần thiếu; câu không truy được nguồn → gắn cờ, không bịa.
-- **Golden corpus là thước (D51):** eval so bản sinh với cây `Design/` viết tay của DesignEverything; đây cũng là cổng vào brownfield.
+- **Module độc lập, fail-closed cục bộ (D50):** 4 module đóng cho 8.0.0 (`glossary`, `feature-spec`, `adr`, `test-strategy`); module mở dở dang chỉ chặn emit của chính nó.
+- **Grounding bắt buộc (D51):** renderer đọc answers + docs tầng 1 đã emit; câu deepen chỉ bù phần thiếu; câu không truy được nguồn → gắn cờ, không bịa.
+- **Golden corpus là thước (D52):** eval so bản sinh với cây `Design/` viết tay của DesignEverything; đây cũng là cổng vào brownfield.
 - **Brownfield (phần b) KHÔNG có contract trong lane này** — chỉ có bộ chuẩn bị tại [prep-brownfield/](prep-brownfield/00-problem-statement.md); mở lane riêng khi đủ điều kiện ghi ở [03-risks-open-questions](prep-brownfield/03-risks-open-questions.md).

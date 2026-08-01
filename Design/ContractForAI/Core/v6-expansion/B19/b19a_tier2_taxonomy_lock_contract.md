@@ -1,6 +1,6 @@
 # Contract — B19a Khoá taxonomy tầng 2 + template
 
-> Tầng: Nội dung. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B19a, đề xuất D48/D49, [taxonomy-decision](../../../../RoadMap/Month3/taxonomy-decision.md) §3–§4. Phụ thuộc: gate mở lane (xem plan).
+> Tầng: Nội dung. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B19a, đề xuất D49/D50, [taxonomy-decision](../../../../RoadMap/Month3/taxonomy-decision.md) §3–§4. Phụ thuộc: gate mở lane (xem plan).
 
 ## 1. Micro-task target
 
@@ -48,7 +48,7 @@ Khoá cây `docs/design/` (4 module: `glossary`, `feature-spec`, `adr`, `test-st
 | Risk | Mức | Mitigation |
 |---|---:|---|
 | Template thành khung rỗng generic | Cao | Mỗi khối template ghi rõ nguồn dữ liệu bắt buộc (answers id/doc tầng 1); rubric chấm được. |
-| Cây tầng 2 phình quá 4 module | TB | D49 khoá danh sách; module mới = quyết định mới trong DecisionLog, không lách qua contract. |
+| Cây tầng 2 phình quá 4 module | TB | D50 khoá danh sách; module mới = quyết định mới trong DecisionLog, không lách qua contract. |
 | Golden tay lệch giọng với golden tầng 1 | Thấp | Viết golden tầng 2 cho đúng dự án web đã có golden tầng 1, đối chiếu chéo khi viết. |
 
 ## 6. Verification plan

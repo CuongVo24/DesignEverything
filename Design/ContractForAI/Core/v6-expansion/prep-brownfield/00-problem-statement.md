@@ -30,7 +30,7 @@ Brownfield:  INGEST code ─► draft answers ─► người xác nhận ─►
 
 Hệ quả: chất lượng phần (a) là trần chất lượng phần (b). Đó là lý do lane brownfield bị khoá sau khi (a) ship và eval B21b đạt.
 
-## Ba dự án đích đầu tiên (golden corpus — D51 đề xuất)
+## Ba dự án đích đầu tiên (golden corpus — D52 đề xuất)
 
 | Dự án | Vai trò | Cái đã có sẵn |
 |---|---|---|

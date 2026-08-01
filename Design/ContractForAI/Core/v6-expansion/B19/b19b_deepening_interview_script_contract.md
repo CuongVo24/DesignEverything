@@ -1,6 +1,6 @@
 # Contract — B19b Kịch bản phỏng vấn đào sâu (deepen)
 
-> Tầng: Nội dung. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B19b, đề xuất D49/D50, taxonomy-tier2 (B19a). Phụ thuộc: B19a.
+> Tầng: Nội dung. Nguồn: [V6-DetailedDesignPlan](../V6-DetailedDesignPlan.md) B19b, đề xuất D50/D51, taxonomy-tier2 (B19a). Phụ thuộc: B19a.
 >
 > **Sửa 2026-07-19 theo review mở lane.** Bản trước chèn DS* vào `script.yaml` và thêm gate vào `gate-policy.yaml` — không chạy được trên runtime hiện hành: `commitStep` ([advanceState.ts:77](../../../../../src/core/advanceState.ts)) chọn câu kế tiếp chỉ theo `branch` + `depends_on`, không có predicate opt-in, nên DS hoặc hiện với mọi người hoặc không bao giờ được chọn; CLI còn từ chối `commit` khi tầng 1 đã xong (`current_step === null`); còn gate trong `gate-policy.yaml` được `evaluatePreAction` duyệt TẤT CẢ và schema bắt buộc hard-block Write/Edit/Bash — trái bất biến "module dở chỉ chặn emit của chính nó". Vì vậy: **deepen có file kịch bản riêng + đường commit riêng (B20a); không đụng một byte nào của script.yaml/gate-policy.yaml.**
 
@@ -31,7 +31,7 @@ Viết kịch bản phỏng vấn deepen thành file nội dung MỚI `deepen-sc
       translate_back: true
   ```
 
-- Bộ câu (danh sách đóng cho 7.0.0; mỗi lượt deepen một module hỏi ≤4 câu):
+- Bộ câu (danh sách đóng cho 8.0.0; mỗi lượt deepen một module hỏi ≤4 câu):
   - `DS0-<module>` (4 câu meta, `per_subject: none`, `target_doc: null`): câu opt-in + điều kiện kích hoạt — hỏi quy mô team / CI / cách dùng agent, map đúng taxonomy-decision §3 (`adr` ↔ 2+ dev, `test-strategy` ↔ CI/CD).
   - `DS1a/DS1b` glossary (2 câu, `per_subject: none`, `target_doc: design/glossary.md`): thuật ngữ hay dùng sai/lẫn; từ nào PHẢI hiểu đúng thì sản phẩm mới đúng.
   - `DS2a/DS2b/DS2c` feature-spec (3 câu, `per_subject: must`, `target_doc: design/features/{subject-slug}.md`): ca biên, trạng thái lỗi phải xử tử tế, tiêu chí "xong thật" — hỏi RIÊNG cho từng Must.

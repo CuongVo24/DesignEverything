@@ -1,7 +1,8 @@
-# V6 Detailed Design — Từ bộ nền 12 file tới bộ thiết kế chi tiết (target 7.0.0)
+# V6 Detailed Design — Từ bộ nền 12 file tới bộ thiết kế chi tiết (target 8.0.0)
 
 > **Ngày lập:** 2026-07-19. **Nguồn thượng nguồn:** [FirstIdea.md](../../../../FirstIdea.md) §3/§12, [taxonomy-decision.md](../../../RoadMap/Month3/taxonomy-decision.md) (căn cứ D17), D41–D47 trong [DecisionLog](../../../DecisionLog.md), [ReleaseReadinessPlan](../../../RoadMap/ReleaseReadinessPlan.md).
-> **Vai trò file này:** TaskBrief nguồn cho lane `Core/v6-expansion` theo ngoại lệ expansion của [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0. Contract trong lane chỉ được thực thi sau khi các quyết định D48–D51 dưới đây được chủ repo duyệt và ghi vào DecisionLog.
+> **Vai trò file này:** TaskBrief nguồn cho lane `Core/v6-expansion` theo ngoại lệ expansion của [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0. Contract trong lane chỉ được thực thi sau khi các quyết định D49–D52 dưới đây được chủ repo duyệt và ghi vào DecisionLog.
+> **Cập nhật 2026-08-01:** đánh số lại D48–D51 → D49–D52 và target 7.0.0 → 8.0.0. D48 và 7.0.0 đã bị lane `v1-fix-bugs` chiếm trước (DecisionLog D48, [v7-release-note.md](../../../RoadMap/v7-release-note.md)); V6 đổi cây output `docs/design/` nên là MAJOR bump riêng, không chung version với v1-fix-bugs.
 
 ## Tại sao cần file này
 
@@ -33,14 +34,14 @@ Review chỉ ra bản contract đầu không chạy được trên runtime hiệ
 5. **Slug một nguồn.** `src/core/slugify.ts` trích từ `synthesizeExecutionPlan` (byte-identical), khoá luật collision/slug rỗng; renderer tầng 2 import chung (B20a/B20b).
 6. **Grammar SourceRef đóng** (B19a) + **eval 5 số liệu, ngưỡng và `ref-sha` freeze trước khi đo** — khôi phục hallucinated-rationale = 0, thêm unknown-rate ≤30% và substance floor chống output rỗng (B21b).
 
-## Quyết định cần khoá (đề xuất D48–D51 — CHƯA ghi DecisionLog, chờ duyệt)
+## Quyết định cần khoá (đề xuất D49–D52 — CHƯA ghi DecisionLog, chờ duyệt)
 
 | ID đề xuất | Quyết định | Lý do |
 |---|---|---|
-| D48 | Tầng 2 "Detailed Design" là **opt-in progressive deepening** dưới `docs/design/`; taxonomy mặc định không đổi. Mỗi nhóm tài liệu bind vào điều kiện kích hoạt taxonomy-decision §3 hoặc opt-in tường minh. **MAJOR bump 7.0.0** theo Impact Assessment §4 của chính taxonomy-decision. | Giữ lời hứa đơn giản cho người mới (D17) mà vẫn mở đường cho người cần sâu; đổi cây đầu ra là breaking với adapter/validator cũ. |
-| D49 | Deepen chia **module độc lập, idempotent**: `glossary`, `feature-spec`, `adr`, `test-strategy` (danh sách đóng cho 7.0.0). Emit một module chỉ khi module đó answered đủ; không module nào chặn tầng 1 hay build skeleton. | Người dùng đào sâu đúng chỗ đau, không bị ép nuốt cả cây; fail-closed cục bộ thay vì chặn toàn cục. |
-| D50 | Câu hỏi deepen **không trùng lặp answers tầng 1**: renderer bắt buộc đọc từ docs tầng 1 đã emit + answers cũ, câu mới chỉ bù phần thiếu (edge case, phương án đã loại, tiêu chí chấp nhận, nỗi sợ hỏng). | "Phỏng vấn, không sinh template trống" — nhưng cũng không tra tấn người dùng bằng câu đã hỏi. |
-| D51 | Bộ `Design/` viết tay của DesignEverything (và ReportSupport, Univillage khi tiếp cận được) là **golden corpus**: thước đo chất lượng tầng 2 và điều kiện tiên quyết mở lane brownfield (phần b). | Có ground truth thật do chính phương pháp tạo ra — lợi thế đánh giá mà tool sinh doc generic không có. |
+| D49 | Tầng 2 "Detailed Design" là **opt-in progressive deepening** dưới `docs/design/`; taxonomy mặc định không đổi. Mỗi nhóm tài liệu bind vào điều kiện kích hoạt taxonomy-decision §3 hoặc opt-in tường minh. **MAJOR bump 8.0.0** theo Impact Assessment §4 của chính taxonomy-decision. | Giữ lời hứa đơn giản cho người mới (D17) mà vẫn mở đường cho người cần sâu; đổi cây đầu ra là breaking với adapter/validator cũ. |
+| D50 | Deepen chia **module độc lập, idempotent**: `glossary`, `feature-spec`, `adr`, `test-strategy` (danh sách đóng cho 8.0.0). Emit một module chỉ khi module đó answered đủ; không module nào chặn tầng 1 hay build skeleton. | Người dùng đào sâu đúng chỗ đau, không bị ép nuốt cả cây; fail-closed cục bộ thay vì chặn toàn cục. |
+| D51 | Câu hỏi deepen **không trùng lặp answers tầng 1**: renderer bắt buộc đọc từ docs tầng 1 đã emit + answers cũ, câu mới chỉ bù phần thiếu (edge case, phương án đã loại, tiêu chí chấp nhận, nỗi sợ hỏng). | "Phỏng vấn, không sinh template trống" — nhưng cũng không tra tấn người dùng bằng câu đã hỏi. |
+| D52 | Bộ `Design/` viết tay của DesignEverything (và ReportSupport, Univillage khi tiếp cận được) là **golden corpus**: thước đo chất lượng tầng 2 và điều kiện tiên quyết mở lane brownfield (phần b). | Có ground truth thật do chính phương pháp tạo ra — lợi thế đánh giá mà tool sinh doc generic không có. |
 
 ## Phạm vi
 
@@ -69,13 +70,13 @@ Thứ tự bắt buộc `B19a → B19b → B20a → B20b → B21a → B21b`: n�
 
 Mỗi contract một tầng, hand-authored ≤ ~200 dòng thay đổi/file theo CONTRACT_STRUCTURE_RULE §4. B20b nhiều renderer — được phép tách `-a/-b` theo D42 khi thực thi, mỗi mảnh vẫn đủ 7 mục.
 
-## Definition of Done cho mốc 7.0.0
+## Definition of Done cho mốc 8.0.0
 
 - [ ] E2e greenfield: phỏng vấn tầng 1 → emit → opt-in 2 module deepen → `docs/design/` sinh đúng, consistency pass xanh, gate module dở dang hoạt động.
 - [ ] Người không opt-in: bộ golden test tầng 1 hiện có không đổi một byte output nào.
 - [ ] Eval B21b đạt ngưỡng cấu trúc trên golden corpus DesignEverything; báo cáo lưu `Design/RoadMap/evidence/`.
 - [ ] `npm run build && npm run lint && npm test` xanh; version-sync xanh; ConformanceMatrix + README + quickstart cập nhật; ghi chú migration cho MAJOR bump.
-- [ ] D48–D51 ghi vào DecisionLog với trạng thái Active.
+- [ ] D49–D52 ghi vào DecisionLog với trạng thái Active.
 
 ## Rủi ro lane
 
@@ -83,14 +84,14 @@ Mỗi contract một tầng, hand-authored ≤ ~200 dòng thay đổi/file theo 
 |---|---:|---|
 | Tầng 2 phá lời hứa "đơn giản cho người mới" | Cao | Opt-in cứng; card next-step không bao giờ tự đề xuất deepen khi user chưa hỏi; đo bằng pilot. |
 | Renderer sinh văn mẫu rỗng (template-filling trá hình) | Cao | D50 ép grounding từ answers/docs thật; rubric B19a có mục "câu nào không truy được nguồn → gắn cờ"; eval B21b đếm. |
-| Phình bảo trì template × shape | TB | Danh sách module đóng (D49); shape variant chỉ khi golden corpus chứng minh cần. |
+| Phình bảo trì template × shape | TB | Danh sách module đóng (D50); shape variant chỉ khi golden corpus chứng minh cần. |
 | Trùng lặp/mâu thuẫn với tầng 1 | TB | Consistency pass mở rộng bắt mâu thuẫn scope/data-model; anchor nối tầng 2 về tầng 1. |
 | Lane mở quá sớm, đè lên release readiness | Cao | Gate mở lane ghi rõ ở trên; mọi contract giữ WAITING_FOR_APPROVAL tới khi gate qua. |
 
 ## Cập nhật tài liệu đi kèm (khi lane chạy)
 
-- DecisionLog: ghi D48–D51 khi duyệt.
+- DecisionLog: ghi D49–D52 khi duyệt.
 - `Design/Content/taxonomy.md`: thêm pointer sang `taxonomy-tier2.md` (không sửa cây mặc định).
 - `Design/Adapters/ConformanceMatrix.md`: thêm cột năng lực `deepen` cho từng harness.
 - `README.md` + `docs/quickstart.md`: mục "Đào sâu thiết kế (tuỳ chọn)".
-- `Design/RoadMap/MasterRoadMap.md`: mốc 7.0.0.
+- `Design/RoadMap/MasterRoadMap.md`: mốc 8.0.0.
