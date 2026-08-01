@@ -50,13 +50,25 @@ describe('P8.1 — classifyCliSubcommand', () => {
     if (res.decision === 'deny') expect(res.reason_code).toBe('INVALID_CLI_OPERATION');
   });
 
-  test.each(['status', 'help', '--help', '-h', 'init', 'repair', 'validate', 'build', 'emit', 'amend'])(
+  test.each(['status', 'help', '--help', '-h', 'init', 'repair', 'validate', 'build', 'emit'])(
     'subcommand "%s" is allowed regardless of phase',
     (sub) => {
       expect(classifyCliSubcommand(sub, 'interview').decision).toBe('allow');
       expect(classifyCliSubcommand(sub, 'ready-to-execute').decision).toBe('allow');
     }
   );
+
+  // `amend` was allowed here while cliOperations.ts had no `amend` case, so the
+  // pre-check green-lit a command the dispatcher then rejected with
+  // UNKNOWN_SUBCOMMAND. It must classify like any other subcommand the real CLI
+  // does not implement until B14b is approved and wired.
+  test('AMD-03 — amend is denied while the dispatcher has no amend case (B14b unwired)', () => {
+    for (const phase of ['interview', 'ready-to-execute', 'repairing', 'blocked', null]) {
+      const res = classifyCliSubcommand('amend', phase);
+      expect(res.decision, `phase=${phase}`).toBe('deny');
+      if (res.decision === 'deny') expect(res.reason_code).toBe('UNRECOGNIZED_CLI_SUBCOMMAND');
+    }
+  });
 
   test('subcommand matching is case-insensitive', () => {
     expect(classifyCliSubcommand('STATUS', null).decision).toBe('allow');

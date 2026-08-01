@@ -1,8 +1,12 @@
 import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/schemas/index.js';
 
 // The only proven-executable CLI entrypoint today. Cards must reference real
-// subcommands (status, emit, validate, next, start, verify, repair, amend), not
-// an aspirational `npx design-everything` binary that is not published.
+// subcommands — the ones with a case in cliOperations.ts's dispatcher (status,
+// init, commit, validate, build, repair, emit, next, start, verify, review,
+// deepen) — not an aspirational `npx design-everything` binary that is not
+// published, and not `amend`, which has no dispatcher case (see §0 below).
+// The invariant is enforced by renderNextStep.test.ts against
+// CLI_COMMAND_SURFACE, so this list cannot silently drift again.
 const CLI = 'node adapter/claude-code/cli.mjs';
 
 export interface NextStepCard {
@@ -24,19 +28,33 @@ export function renderNextStep(
   // B21a: module deepen đã opt-in nhưng chưa emit. Card mềm, KHÔNG hiện khi không opt-in.
   deepenPending: string[] = []
 ): NextStepCard {
-  // 0. Check for pending proposed amendments
+  // 0. Check for pending proposed amendments.
+  //
+  // B14b (controlled_amendment_recovery) is WAITING_FOR_APPROVAL and its engine
+  // (src/core/planAmendment.ts) has no production caller: nothing proposes an
+  // amendment, and cliOperations.ts's dispatcher has no `amend` case. This card
+  // therefore must NOT emit a nextCommand — it used to print
+  // `amend approve <id>`, which the dispatcher answered with
+  // UNKNOWN_SUBCOMMAND, i.e. it taught the user a command that cannot run.
+  // Until B14b is approved and wired, the honest card is "a proposal is sitting
+  // in state and only a human can resolve it". Gap tracked as R21 in
+  // Design/ContractForAI/Core/v1-fix-bugs/finding-coverage-matrix.md.
   if (state && state.amendment_history) {
     const proposed = state.amendment_history.find((am) => am.status === 'proposed');
     if (proposed) {
       return {
         state: 'needs-validation',
-        now: `Phê duyệt đề xuất tu chỉnh kế hoạch: ${proposed.id}.`,
-        whyNow: `Đề xuất tu chỉnh đang chờ phê duyệt. Lý do: ${proposed.reason_code}. Impact: ${proposed.impact}`,
+        now: `Quyết định thủ công về đề xuất tu chỉnh kế hoạch ${proposed.id} — CHƯA có lệnh CLI để approve/reject.`,
+        whyNow: `Đề xuất tu chỉnh đang ở status "proposed". Lý do: ${proposed.reason_code}. Impact: ${proposed.impact}`,
         allowedScope: [],
-        proof: `Đề xuất ${proposed.id} được đổi sang status approved.`,
-        ifItFails: 'Người dùng có thể approve hoặc reject đề xuất tu chỉnh này.',
+        proof: `Đề xuất ${proposed.id} rời khỏi status "proposed" (approved hoặc rejected) trong .design-everything/execution-state.json.`,
+        ifItFails:
+          'Đường dẫn tu chỉnh có kiểm soát (B14b) chưa được nối vào CLI: không có lệnh "amend". ' +
+          'Người dùng phải tự quyết định và tự sửa execution-state.json, hoặc bỏ đề xuất rồi chạy validate lại.',
         enforcement: 'hard',
-        nextCommand: `node adapter/claude-code/cli.mjs amend approve ${proposed.id}`,
+        warning:
+          'WARNING: Có đề xuất tu chỉnh đang chờ nhưng runtime chưa có lệnh amend. ' +
+          'Không có agent nào được tự áp dụng đề xuất này thay cho phê duyệt của người dùng.',
       };
     }
   }

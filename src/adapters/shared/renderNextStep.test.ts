@@ -1,5 +1,6 @@
 import { expect, test, describe } from 'vitest';
-import { renderNextStep, renderNextStepMarkdown } from './renderNextStep.js';
+import { renderNextStep, renderNextStepMarkdown, NextStepCard } from './renderNextStep.js';
+import { CLI_COMMAND_SURFACE, CLI_GLOBAL_FLAGS } from './cliOperations.js';
 import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/schemas/index.js';
 
 describe('renderNextStep Adapter Renderer', () => {
@@ -62,6 +63,22 @@ describe('renderNextStep Adapter Renderer', () => {
     open_break_tasks: [],
     reviewed_milestones: [],
     updated_at: new Date().toISOString(),
+  };
+
+  const amendmentPendingState: ExecutionState = {
+    ...mockState,
+    amendment_history: [
+      {
+        id: 'amend-deadpath',
+        reason_code: 'scope-change',
+        requested_by: 'agent',
+        proposed_changes: { tasks: { 'T0-discovery': { intent: 'Verify a different toolchain.' } } },
+        impact: 'Task T0-discovery modified.',
+        requires_user_confirmation: true,
+        status: 'proposed',
+        created_at: new Date().toISOString(),
+      },
+    ],
   };
 
   test('should return needs-profile state when profile is not confirmed', () => {
@@ -217,6 +234,90 @@ describe('renderNextStep Adapter Renderer', () => {
       target: 'node-cli',
     };
     expect(renderNextStep(mockPlan, mockState, greenfield).state).not.toBe('needs-profile');
+  });
+
+  // A next-step card is an instruction the user (or a weak executor) is meant to
+  // run verbatim. A card that names a subcommand the dispatcher does not have
+  // answers UNKNOWN_SUBCOMMAND — the exact failure the dead `amend approve <id>`
+  // string produced. CLI_COMMAND_SURFACE is the dispatcher's own machine-checked
+  // inventory, so checking every emitted command against it turns "the card must
+  // not claim a non-executable command" (see the `doctor` case above) from a
+  // per-test comment into an invariant over all branches at once.
+  describe('AMD-01 — every emitted nextCommand is executable by the real dispatcher', () => {
+    function assertExecutable(card: NextStepCard, label: string) {
+      if (!card.nextCommand) return;
+      // Cards may append parenthesised prose after the command (e.g. the verify
+      // card's "(cần người dùng đồng ý → thêm --confirm)" hint); the command
+      // itself is everything before it.
+      const commandText = card.nextCommand.split(' (')[0];
+      const tokens = commandText.trim().split(/\s+/);
+      const entryIdx = tokens.findIndex((t) => t.endsWith('cli.mjs'));
+      expect(entryIdx, `${label}: nextCommand must invoke the real CLI entrypoint`).toBeGreaterThan(-1);
+
+      const subcommand = tokens[entryIdx + 1];
+      expect(
+        Object.keys(CLI_COMMAND_SURFACE),
+        `${label}: subcommand "${subcommand}" has no case in cliOperations.ts's dispatcher`
+      ).toContain(subcommand);
+
+      for (const flag of tokens.slice(entryIdx + 2).filter((t) => t.startsWith('--'))) {
+        expect(
+          [...CLI_COMMAND_SURFACE[subcommand], ...CLI_GLOBAL_FLAGS],
+          `${label}: flag "${flag}" is not parsed by "${subcommand}"`
+        ).toContain(flag);
+      }
+    }
+
+    const cases: [string, () => NextStepCard][] = [
+      ['needs-profile', () => renderNextStep(null, null, { ...mockProfile, confirmation: { confirmed: false } })],
+      ['unsupported', () => renderNextStep(null, null, { ...mockProfile, workspace_kind: 'existing-unsupported', target: 'unsupported' })],
+      ['needs-validation', () => renderNextStep(null, { ...mockState, phase: 'plan-validating' }, mockProfile)],
+      ['ready', () => renderNextStep(mockPlan, mockState, mockProfile)],
+      ['executing', () => renderNextStep(mockPlan, { ...mockState, phase: 'executing', active_task: 'T0-discovery' }, mockProfile)],
+      ['verifying', () => renderNextStep(mockPlan, { ...mockState, phase: 'verifying', active_task: 'T0-discovery' }, mockProfile)],
+      ['repairing', () => renderNextStep(mockPlan, { ...mockState, phase: 'repairing', active_task: 'T0-discovery' }, mockProfile)],
+      ['reviewing (open break-tasks)', () => renderNextStep(mockPlan, { ...mockState, phase: 'reviewing', active_milestone: 'M4-x', open_break_tasks: ['C-x-fix'] }, mockProfile)],
+      ['reviewing (clean)', () => renderNextStep(mockPlan, { ...mockState, phase: 'reviewing', active_milestone: 'M4-x', open_break_tasks: [] }, mockProfile)],
+      ['complete', () => renderNextStep(mockPlan, { ...mockState, phase: 'ready-to-ship' }, mockProfile)],
+      ['deepen pending', () => renderNextStep(mockPlan, mockState, mockProfile, ['data-model'])],
+      ['blocked', () => renderNextStep(mockPlan, {
+        ...mockState,
+        phase: 'blocked',
+        block_reason: {
+          kind: 'verification-failed',
+          reason_code: 'VERIFICATION_FAILED',
+          origin_phase: 'verifying',
+          task_id: 'T0-discovery',
+          recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T0-discovery --command node-version',
+          detail: 'command failed',
+          created_at: new Date().toISOString(),
+        },
+      }, mockProfile)],
+      ['amendment proposed', () => renderNextStep(mockPlan, amendmentPendingState, mockProfile)],
+    ];
+
+    test.each(cases)('%s', (label, build) => {
+      assertExecutable(build(), label);
+    });
+  });
+
+  // Regression for the dead `amend` path: planAmendment.ts implements
+  // propose/approve and classifyCliSubcommand once allowed `amend`, but B14b is
+  // WAITING_FOR_APPROVAL and cliOperations.ts has no `amend` case. The card must
+  // surface the pending proposal without inventing a command to resolve it.
+  test('AMD-02 — a pending amendment surfaces as a hard block with no CLI command to run', () => {
+    const card = renderNextStep(mockPlan, amendmentPendingState, mockProfile);
+    expect(card.state).toBe('needs-validation');
+    expect(card.enforcement).toBe('hard');
+    expect(card.now).toContain('amend-deadpath');
+    // The whole point: no `amend approve <id>` (or any other) command is claimed.
+    expect(card.nextCommand).toBeUndefined();
+    expect(renderNextStepMarkdown(card)).not.toContain('💻 Command:');
+    expect(renderNextStepMarkdown(card)).not.toContain('amend approve');
+    // The user must still be told the proposal exists and why it is stuck.
+    expect(card.whyNow).toContain('scope-change');
+    expect(card.ifItFails).toContain('amend');
+    expect(card.warning).toContain('WARNING');
   });
 
   test('should render markdown next-step card in deep and fast modes', () => {

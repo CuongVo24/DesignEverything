@@ -80,6 +80,31 @@ Phải có test/evidence riêng trước khi coi phần primary contract tương
 | R18 | Interview lock có thể xóa lock của process còn sống chỉ vì mtime > 30s; release lock không có owner token. | B1b | B5b | OPEN | none | — |
 | R19 | Store nói flush nhưng chỉ `writeFileSync` + rename; không fsync file/dir, không recovery marker, không dọn temp orphan. | B1b, B5b | B5b | OPEN | none | — |
 | R20 | `canonicalizeWorkspacePath` trả workspace-relative path nhưng CLI kiểm slots bằng `existsSync(canonicalPath)` theo process cwd, không theo workspace root. | B2c, B3a, B4c | B5a | OPEN | none | — |
+| R21 | (2026-08-01) Đường dẫn tu chỉnh kế hoạch có kiểm soát (B14b/D39) **không có surface chạy được**: `planAmendment.ts` (propose/approve/reject) chỉ được gọi từ chính test của nó, `cliOperations.ts` không có case `amend`, nên `renderNextStep.ts` từng dạy `amend approve <id>` — một lệnh trả `UNKNOWN_SUBCOMMAND`. Đúng pattern "có unit test nhưng không phải authority trên production path" mà v7-release-note nêu. | B14b | B15a | OPEN — **surface sai đã gỡ, chức năng vẫn chưa nối** (xem "Phạm vi đã đóng" bên dưới) | AMD-01, AMD-02, AMD-03 | src/adapters/shared/renderNextStep.test.ts, src/core/classifyCliSubcommand.test.ts |
+
+### R21 — phạm vi đã đóng và phần còn mở (2026-08-01)
+
+**Đã đóng (chỉ là chống-hiểu-lầm, không phải tính năng):**
+
+- `renderNextStep.ts` §0 không còn phát `nextCommand`; card nói thẳng chưa có lệnh `amend` và chỉ người
+  dùng mới quyết định được đề xuất. Test AMD-02.
+- `classifyCliSubcommand.ts` bỏ nhánh `allow` cho `amend`; nay deny `UNRECOGNIZED_CLI_SUBCOMMAND`, khớp
+  dispatcher thật thay vì bảo model rằng lệnh đó chạy được. Test AMD-03.
+- AMD-01 (`renderNextStep.test.ts`) kiểm **mọi** nhánh card: subcommand/flag của `nextCommand` phải nằm
+  trong `CLI_COMMAND_SURFACE`. Đây là cái chặn tái diễn — không chỉ cho `amend`.
+
+**Còn mở — cố ý không làm trong lần này:**
+
+- B14b vẫn `WAITING_FOR_APPROVAL` (cả batch v4-expansion). Nối `amend` vào dispatcher là ship public
+  surface của một contract chưa duyệt, trái kỷ luật ContractForAI.
+- Nghiêm trọng hơn: `approvePlanAmendment` hiện **trái chính checklist của B14b**. Contract yêu cầu
+  "Approval **preserves prior evidence**" và xếp "Evidence history lost after revision" là risk Cao,
+  nhưng `planAmendment.ts:159-160` set `state.evidence = []` và `state.completed_tasks = []`. Nối
+  nguyên trạng sẽ đưa một đường dẫn phá evidence vào production — tệ hơn lệnh chết.
+- Contract còn đòi `amend show` và diff chính xác theo task/command/path/risk; `proposePlanAmendment`
+  mới sinh chuỗi impact thô ("Task X modified."), và chưa có cách nào nhập `proposed_changes` qua CLI.
+- Điều kiện đóng R21: B14b được duyệt → sửa evidence-preservation → nối `amend propose|show|approve`
+  → integration test qua CLI thật (không phải import Core), theo đúng "Điều kiện đóng matrix" bên dưới.
 
 ## Hiệu chỉnh review, không mở bug riêng
 

@@ -54,10 +54,14 @@ export function classifyCliSubcommand(
     return { decision: 'allow' };
   }
 
-  // 6. Amend is allowed for plan amendments
-  if (sub === 'amend') {
-    return { decision: 'allow' };
-  }
+  // 6. `amend` used to be allowed here "for plan amendments", but there is no
+  // `amend` case in cliOperations.ts's dispatcher — B14b
+  // (controlled_amendment_recovery) is WAITING_FOR_APPROVAL and its engine,
+  // src/core/planAmendment.ts, has no production caller. Allowing it told the
+  // model a command was fine to run that the CLI then answered with
+  // UNKNOWN_SUBCOMMAND, which is exactly what the closing comment below forbids.
+  // It now falls through to that deny. Re-add this branch when B14b is approved
+  // and the dispatcher case lands, not before.
 
   // 7. Deepen is allowed when interview is complete
   if (sub === 'deepen') {
