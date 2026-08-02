@@ -43,7 +43,7 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | Batch | Contract | Layer | Depends on | Spec | Implementation | Proof |
 |---|---|---|---|---|---|---|
 | B1 | B1a — Interview turn capability | Core | — | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
-| B1 | B1b — Atomic interview persistence | Core | B1a | APPROVED | PARTIAL | UNIT_ONLY |
+| B1 | B1b — Atomic interview persistence | Core | B1a | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B1 | B1c — Design/build handoff state | Core | B1b | APPROVED | PARTIAL | UNIT_ONLY |
 | B1 | B1d — Block reason transition | Core | B1c | APPROVED | PARTIAL | UNIT_ONLY |
 | B2 | B2a — Protected artifact policy | Core | B1b | APPROVED | PARTIAL | UNIT_ONLY |

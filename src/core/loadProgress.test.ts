@@ -57,9 +57,14 @@ describe('loadProgress & saveProgress', () => {
       );
       expect(() => loadProgress(join(corruptCanonicalDir, 'progress.json'))).toThrow(/CANONICAL_CORRUPT/);
 
+      // answers.json with real data but no progress.json to attach it to is
+      // not "no legacy" — migrateInterviewStore now fails closed instead of
+      // silently discarding the answers (R02/P2.2a).
       mkdirSync(join(orphanAnswersDir, 'Design/.interview'), { recursive: true });
       writeFileSync(join(orphanAnswersDir, 'Design/.interview/answers.json'), JSON.stringify({ S0: 'Vision' }));
-      expect(() => loadProgress(join(orphanAnswersDir, 'progress.json'))).toThrow(/STORE_MISSING/);
+      expect(() => loadProgress(join(orphanAnswersDir, 'progress.json'))).toThrow(
+        /MIGRATION_BLOCKED_ANSWERS_WITHOUT_PROGRESS/
+      );
 
       mkdirSync(join(corruptAnswersDir, 'Design/.interview'), { recursive: true });
       writeFileSync(join(corruptAnswersDir, 'Design/.interview/answers.json'), '{ not valid json');

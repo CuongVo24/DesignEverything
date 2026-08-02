@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import { createHash, randomBytes } from 'crypto';
 import {
   interviewStoreEnvelopeSchema,
@@ -102,6 +102,41 @@ function isLockStale(lockPath: string): boolean {
   if (liveness === false) return true; // owner process is definitively dead
   if (liveness === true) return false; // owner alive -> TTL alone never reclaims it
   return ttlExpired(lockPath); // liveness truly indeterminate -> bounded fallback only
+}
+
+/**
+ * Removes leftover `<canonical-basename>.tmp.*` files from a crashed writer
+ * (R19/P2.2b). Safe by construction, no separate journal file needed: the
+ * temp-suffix pattern already distinguishes an in-flight write from the
+ * canonical file (which is only ever created by `renameSyncWithRetry`), and
+ * the caller always holds the workspace lock when this runs — a live writer
+ * would still be holding that same lock, so any matching file found here can
+ * only be orphaned by a process that died between temp-write and rename.
+ * Idempotent: an empty/missing directory or a file removed by a racing
+ * cleanup is silently a no-op, never an error.
+ */
+/** @internal exported for migrateInterviewStore.ts and tests — not part of the public store API. */
+export function cleanupOrphanTempFiles(workspaceRoot: string): void {
+  const canonicalPath = join(workspaceRoot, CANONICAL_STORE_REL_PATH);
+  const dir = dirname(canonicalPath);
+  const prefix = `${basename(canonicalPath)}.tmp.`;
+
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return; // Directory doesn't exist yet — nothing to clean.
+  }
+
+  for (const entry of entries) {
+    if (!entry.startsWith(prefix)) continue;
+    try {
+      fs.unlinkSync(join(dir, entry));
+    } catch {
+      // Best-effort: already removed by a racing cleanup, or transiently
+      // locked (Windows AV/indexer) — next commit's cleanup retries.
+    }
+  }
 }
 
 function sleepSync(ms: number): void {
@@ -242,6 +277,7 @@ export function transactInterviewStore(
   }
   const lockNonce = acquireLock(workspaceRoot);
   try {
+    cleanupOrphanTempFiles(workspaceRoot);
     const current = loadInterviewStore(workspaceRoot);
 
     if (current.state_revision !== expectedRevision) {
@@ -375,6 +411,7 @@ export function initializeInterviewStore(workspaceRoot: string): InterviewStoreE
 
   const lockNonce = acquireLock(workspaceRoot);
   try {
+    cleanupOrphanTempFiles(workspaceRoot);
     if (fs.existsSync(canonicalPath)) {
       throw new Error(
         'STORE_ALREADY_EXISTS: Canonical interview store already exists; use transactInterviewStore to mutate it.'

@@ -508,7 +508,21 @@ function handleRepair(workspaceRoot: string): CliResultEnvelope {
     for (const module of deepenModuleIdSchema.options) {
       recoverEmit(workspaceRoot, `tier2-${module}`);
     }
-    migrateInterviewStore(workspaceRoot);
+    // Opportunistic: migrate legacy interview state to canonical if any
+    // exists. This must not abort the tier1/tier2 recovery above on failure
+    // — a legacy conflict migrateInterviewStore refuses to resolve on its
+    // own (R02/B1b fail-closed guards) is a distinct, separately-surfaced
+    // issue, not a reason to report the whole repair as failed when the
+    // journal recovery it was actually asked to do already succeeded.
+    // migrateInterviewStore never partially writes on failure (it throws
+    // before any write), so skipping it here loses no data and fabricates
+    // no state — a later `status`/`init` will still hit the same guard.
+    try {
+      migrateInterviewStore(workspaceRoot);
+    } catch {
+      // Surfaced via inspectRuntimeHealth below when the workspace actually
+      // has progress.json/interview-state.json for it to inspect.
+    }
     const health = inspectRuntimeHealth(workspaceRoot);
 
     return {

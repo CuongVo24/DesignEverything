@@ -64,10 +64,22 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
 
 Cập nhật 2026-08-01: `loadProgress` chỉ được dựng state mới khi workspace thật sự chưa có marker quản
 lý nào. Có canonical store hoặc legacy answers thì lỗi parse/schema/checksum được propagate fail-closed,
 không được reset thành state mới; regression ở `src/core/loadProgress.test.ts`. Canonical commit hiện đi
-qua CAS có revision, nhưng B1b vẫn `PARTIAL`: chưa có journal/recovery marker để phân biệt commit/temp
-orphan, chưa cleanup orphan theo marker, và migration chưa có xử lý conflict đầy đủ cho hai nguồn legacy.
+qua CAS có revision.
+
+Cập nhật 2026-08-02: `cleanupOrphanTempFiles` xóa `interview-state.json.tmp.*` mồ côi mỗi lần
+`transactInterviewStore`/`initializeInterviewStore`/`migrateInterviewStore` giữ lock — an toàn vì giữ
+được lock nghĩa là không writer sống nào đang ghi dở, nên file tmp còn sót chỉ có thể tới từ process đã
+chết; không cần file journal riêng vì hậu tố `.tmp.*` cùng checksum trong envelope đã đủ phân biệt
+committed/temp/corrupt. `migrateInterviewStore` giờ fail-closed thêm hai ca: answers.json có dữ liệu
+nhưng progress.json không tồn tại (`MIGRATION_BLOCKED_ANSWERS_WITHOUT_PROGRESS` — trước đây bị âm thầm
+coi là "no-legacy" và mất dữ liệu), và progress.json/answers.json không có bước nào trùng nhau
+(`MIGRATION_BLOCKED_LEGACY_CONFLICT`). Đã xác nhận: `commitInterviewAnswer` gộp capability consumption +
+answer + slots + step advance vào đúng một `transactInterviewStore` mutation (một revision bump);
+`saveProgress` không còn caller production nào (chỉ dùng cho fixture/migration). Toàn bộ 10 mục
+implementation checklist ở §3 đã đóng — chuyển `IMPLEMENTED`. Proof giữ `UNIT_ONLY` vì chưa có seam
+evidence installed-runtime/fault-injection qua CLI production thật (việc của B5b, Gate A2).

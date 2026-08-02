@@ -8,6 +8,7 @@ import {
   acquireLock,
   releaseLock,
   writeEnvelopeAtomic,
+  cleanupOrphanTempFiles,
 } from './interviewStore.js';
 import {
   INTERVIEW_STORE_VERSION,
@@ -92,11 +93,42 @@ export function migrateInterviewStore(workspaceRoot: string): MigrateInterviewSt
   }
 
   if (!legacyProgress) {
+    // A bare answers.json with no progress.json is not "no legacy" — it is
+    // real answer data with nothing to attach it to. Silently ignoring it
+    // (as a prior version of this function did) would let a caller run
+    // initializeInterviewStore() next and discard that data forever, which
+    // is exactly the "reset/fail-open" pattern this migrator exists to
+    // prevent (R02/P2.2a).
+    if (Object.keys(legacyAnswers).length > 0) {
+      throw new Error(
+        'MIGRATION_BLOCKED_ANSWERS_WITHOUT_PROGRESS: Design/.interview/answers.json has data but progress.json is missing; ' +
+          'refusing to silently discard the answers. Restore progress.json or remove answers.json to acknowledge the loss explicitly.'
+      );
+    }
     return 'no-legacy';
+  }
+
+  // Conflicting-pair guard (P2.2a §5): a fully disjoint set between the
+  // steps progress.json already marks answered and the keys answers.json
+  // actually has strongly suggests the two files came from different runs
+  // (e.g. a stale answers.json copied back in) rather than one consistent
+  // legacy session. Migrating either "answered but no text" or "text but
+  // never marked answered" data silently would fabricate a plausible-looking
+  // but wrong canonical store, so this fails closed instead of guessing.
+  if (legacyProgress.answered.length > 0 && Object.keys(legacyAnswers).length > 0) {
+    const answeredSet = new Set(legacyProgress.answered);
+    const hasOverlap = Object.keys(legacyAnswers).some((key) => answeredSet.has(key));
+    if (!hasOverlap) {
+      throw new Error(
+        'MIGRATION_BLOCKED_LEGACY_CONFLICT: progress.json answered steps and answers.json keys share no overlap; ' +
+          'these look like they came from different interview sessions. Resolve the conflict manually before migrating.'
+      );
+    }
   }
 
   const lockNonce = acquireLock(workspaceRoot);
   try {
+    cleanupOrphanTempFiles(workspaceRoot);
     // Re-check under the lock: another writer may have migrated or
     // initialized the store between our pre-lock check and acquiring it.
     if (existsSync(canonicalPath)) {

@@ -14,7 +14,7 @@
 |---|---|---|---|
 | **Phase 0** | Đóng working tree (53 file uncommitted, gồm code RB-05 thật) | ✅ DONE 2026-08-02 | `8ef786f` (RB-05 seam + e2e), `5830215` (audit matrix), `dfb1b98` (roadmap docs); build/lint/typecheck/test xanh: 125 file, 847 test |
 | **Gate A1** | Nâng 22 contract `v1-fix-bugs` PARTIAL → IMPLEMENTED (P2→P10 của `plan-v1-fix.md` §6) | ⏳ TODO | Cột Implementation `v1-fix-bugs/README.md` — hiện 2/24 |
-| ↳ A1-P2 | B1a/B1b — capability lifecycle + canonical store | TODO | R19, R18 đóng |
+| ↳ A1-P2 | B1a/B1b — capability lifecycle + canonical store | ✅ Implementation đóng 2026-08-02 (Proof vẫn UNIT_ONLY, chờ A2) | R19 FIXED, R18 FIXED; B1a/B1b `README.md` = IMPLEMENTED |
 | ↳ A1-P3 | B1c/B1d — handoff authority + typed blocked remediation | TODO | R05 đóng |
 | ↳ A1-P4 | B2a/B2b/B2c — path/ownership/command policy | TODO | R07, X02, R06 đóng |
 | ↳ A1-P5 | B2d/B2e — gate snapshot + runtime health | TODO | X15, R03 đóng |

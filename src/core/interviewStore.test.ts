@@ -7,6 +7,7 @@ import {
   transactInterviewStore,
   computePayloadChecksum,
   initializeInterviewStore,
+  cleanupOrphanTempFiles,
   CANONICAL_STORE_REL_PATH,
 } from './interviewStore.js';
 import { migrateInterviewStore } from './migrateInterviewStore.js';
@@ -133,5 +134,103 @@ describe('B1b — Atomic interview persistence', () => {
     writeFileSync(canonicalPath, JSON.stringify(raw, null, 2));
 
     expect(() => loadInterviewStore(tempDir)).toThrow(/CHECKSUM_MISMATCH/);
+  });
+
+  // R19/P2.2b — orphan temp-file cleanup
+  test('cleanupOrphanTempFiles removes leftover <canonical>.tmp.* files from a crashed writer', () => {
+    initializeInterviewStore(tempDir);
+    const canonicalPath = join(tempDir, CANONICAL_STORE_REL_PATH);
+    const orphanPath = `${canonicalPath}.tmp.1700000000000.1234`;
+    writeFileSync(orphanPath, '{ incomplete write left behind by a crashed process');
+    expect(existsSync(orphanPath)).toBe(true);
+
+    cleanupOrphanTempFiles(tempDir);
+
+    expect(existsSync(orphanPath)).toBe(false);
+    // Canonical store itself must be untouched.
+    expect(loadInterviewStore(tempDir).state_revision).toBe(0);
+  });
+
+  test('cleanupOrphanTempFiles is idempotent on a missing/empty directory', () => {
+    expect(() => cleanupOrphanTempFiles(tempDir)).not.toThrow();
+  });
+
+  test('transactInterviewStore self-heals by removing an orphaned temp file from a prior crash', () => {
+    initializeInterviewStore(tempDir);
+    const canonicalPath = join(tempDir, CANONICAL_STORE_REL_PATH);
+    const orphanPath = `${canonicalPath}.tmp.1700000000000.5678`;
+    writeFileSync(orphanPath, 'stale partial write');
+
+    transactInterviewStore(tempDir, 0, (env) => env);
+
+    expect(existsSync(orphanPath)).toBe(false);
+  });
+
+  // P2.2a §5 — migration conflict guards
+  test('migrateInterviewStore fails closed when answers.json has data but progress.json is missing', () => {
+    mkdirSync(join(tempDir, 'Design/.interview'), { recursive: true });
+    writeFileSync(join(tempDir, 'Design/.interview/answers.json'), JSON.stringify({ S0: 'Vision Text' }));
+
+    expect(() => migrateInterviewStore(tempDir)).toThrow(/MIGRATION_BLOCKED_ANSWERS_WITHOUT_PROGRESS/);
+    expect(existsSync(join(tempDir, CANONICAL_STORE_REL_PATH))).toBe(false);
+  });
+
+  test('migrateInterviewStore treats an empty answers.json object as no-legacy, not a conflict', () => {
+    mkdirSync(join(tempDir, 'Design/.interview'), { recursive: true });
+    writeFileSync(join(tempDir, 'Design/.interview/answers.json'), JSON.stringify({}));
+
+    const res = migrateInterviewStore(tempDir);
+    expect(res).toBe('no-legacy');
+  });
+
+  test('migrateInterviewStore fails closed when progress.json and answers.json share no overlapping steps', () => {
+    const legacyProgress = {
+      version: '0.1.0',
+      phase: 'interview',
+      branch: 'web',
+      current_step: 'S3',
+      answered: ['S0', 'S1', 'S2'],
+      emitted_docs: [],
+      gates_passed: [],
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 3,
+      updated_at: new Date().toISOString(),
+      calibrate_mode: 'deep',
+    };
+    writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(legacyProgress));
+
+    // Disjoint keys — looks like an answers.json from an unrelated session.
+    mkdirSync(join(tempDir, 'Design/.interview'), { recursive: true });
+    writeFileSync(join(tempDir, 'Design/.interview/answers.json'), JSON.stringify({ M1: 'Mobile platform text' }));
+
+    expect(() => migrateInterviewStore(tempDir)).toThrow(/MIGRATION_BLOCKED_LEGACY_CONFLICT/);
+    expect(existsSync(join(tempDir, CANONICAL_STORE_REL_PATH))).toBe(false);
+  });
+
+  test('migrateInterviewStore proceeds when progress.json and answers.json partially overlap', () => {
+    const legacyProgress = {
+      version: '0.1.0',
+      phase: 'interview',
+      branch: 'web',
+      current_step: 'S3',
+      answered: ['S0', 'S1', 'S2'],
+      emitted_docs: [],
+      gates_passed: [],
+      last_user_turn_id: null,
+      answered_len_at_last_turn: 3,
+      updated_at: new Date().toISOString(),
+      calibrate_mode: 'deep',
+    };
+    writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(legacyProgress));
+
+    // Partial overlap (S0 matches) plus one extra key — not a conflict.
+    mkdirSync(join(tempDir, 'Design/.interview'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'Design/.interview/answers.json'),
+      JSON.stringify({ S0: 'Vision Text', EXTRA: 'stray key' })
+    );
+
+    const res = migrateInterviewStore(tempDir);
+    expect(res).toBe('migrated');
   });
 });
