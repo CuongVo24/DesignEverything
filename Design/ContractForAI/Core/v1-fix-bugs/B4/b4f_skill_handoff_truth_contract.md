@@ -58,7 +58,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SNAPSHOT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: SNAPSHOT_ONLY
 
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). SKILL.md handoff wording
 ("chưa validate, gate chưa mở") là cải thiện thật và nên giữ, nhưng cùng lúc bị xóa mất: cú pháp

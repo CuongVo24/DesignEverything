@@ -64,12 +64,10 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
-Cập nhật 2026-07-25 (bugfix, không phải implementation của contract): `src/core/loadProgress.ts`
-`saveProgress` alias-mutation bug đã sửa (mutator truyền `p` trực tiếp cho
-`transactInterviewStore`, khiến stamp revision nội bộ ghi đè ngược `p.state_revision` trong bộ nhớ —
-chi tiết ở B1a §3). Đây là một bug cụ thể, không phải việc hoàn thành checklist B1b: `progress.json`
-production vẫn là dual-authority với canonical store, `expectedRevision` vẫn truyền `null` (bỏ qua
-CAS), chưa có journal/recovery marker, chưa fsync, chưa migration fail-closed. Toàn bộ §3 còn
-`[ ]`; P2.2 trong plan-v1-fix.md vẫn là công việc lớn còn lại.
+Cập nhật 2026-08-01: `loadProgress` chỉ được dựng state mới khi workspace thật sự chưa có marker quản
+lý nào. Có canonical store hoặc legacy answers thì lỗi parse/schema/checksum được propagate fail-closed,
+không được reset thành state mới; regression ở `src/core/loadProgress.test.ts`. Canonical commit hiện đi
+qua CAS có revision, nhưng B1b vẫn `PARTIAL`: chưa có journal/recovery marker để phân biệt commit/temp
+orphan, chưa cleanup orphan theo marker, và migration chưa có xử lý conflict đầy đủ cho hai nguồn legacy.

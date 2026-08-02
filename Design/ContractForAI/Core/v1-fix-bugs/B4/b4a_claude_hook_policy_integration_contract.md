@@ -61,7 +61,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. X18 (test chưa chạy installer/wrapper/adversarial thật) nay đã CLOSED —

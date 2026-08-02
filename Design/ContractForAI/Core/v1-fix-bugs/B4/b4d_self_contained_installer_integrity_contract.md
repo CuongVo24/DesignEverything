@@ -63,7 +63,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md — trước đó README ghi Implementation dạng mơ hồ `NOT_STARTED/PARTIAL`, đã sửa về
@@ -71,6 +71,7 @@ khớp README.md — trước đó README ghi Implementation dạng mơ hồ `NO
 không được liên kết vào matrix: U07 (ENGINE_ROOT tuyệt đối, không pin/integrity) nay FIXED —
 `moved-source.test.ts` xoá REPO_ROOT rồi relocate cả cây cài, `tampered-runtime.test.ts` chứng
 minh bit-flip runtime bundle fail closed. `installer-repair.test.ts`/`installer-interrupted.test.ts`
-chứng minh rerun không duplicate hook và crash giữa install tự phục hồi. X13 (rerun không thay hook
-stale vì match includes quá rộng) vẫn OPEN — chưa test nào dựng đúng kịch bản stale/wrong-version
-hook command string.
+chứng minh rerun không duplicate hook và crash giữa install tự phục hồi. X13 nay có fixture installed
+target seed cả ba hook DesignEverything với runtime version cũ, rerun thay đúng mỗi command về version
+hiện hành và giữ nguyên byte command của user hook. Contract vẫn `PARTIAL` vì các mục source-build,
+migration hook legacy và failure/recovery còn lại chưa đủ.

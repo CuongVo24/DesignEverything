@@ -30,7 +30,7 @@ Thay TURN_ID do agent tự khai bằng capability do runtime phát hành, bind �
 - [x] Capability cũ tự invalid khi câu hỏi, branch, session hoặc revision đổi (không đổi, đã có sẵn trong `verifyTurnCapability`).
 - [x] Deepen commit dùng cùng primitive với operation_kind=deepen và module/question binding (`commitDeepenAnswer` nay bắt buộc capabilityToken giống commitStep).
 - [x] Loại check "bắt ở lượt người dùng kế tiếp"; violation phải bị từ chối ngay tại commit (nhánh legacy đã xoá; deepen's `userTurnId === last_user_turn_id` no-op-else-allow bug cũng đã xoá).
-- [ ] Migrator không biến last_user_turn_id cũ thành token hợp lệ; buộc issue capability mới — **CHƯA LÀM**: `migrateInterviewStore`/`loadProgress` chưa được audit riêng cho việc này trong lần sửa này; xem R02 trong finding-coverage-matrix.md, còn lại cho P2.2.
+- [x] Migrator không biến `last_user_turn_id` cũ thành token hợp lệ; buộc issue capability mới. Regression trong `interviewApplicationServices.test.ts` migrate state legacy, xác nhận `pending_turn_capability === null`, từ chối commit bằng legacy id, rồi chỉ chấp nhận token mới do `issuePromptCapability()` phát.
 
 **Bổ sung ngoài checklist gốc, phát hiện khi nối dây (2026-07-25):** `src/core/loadProgress.ts`
 `saveProgress` có bug alias nghiêm trọng — mutator truyền cho `transactInterviewStore` gán thẳng
@@ -73,8 +73,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL (9/10 checklist items done, migrator audit
-còn lại) | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: IMPLEMENTED (10/10 checklist items done) | Proof: SEAM_PARTIAL
 
 Cập nhật 2026-07-25: legacy `userTurnId`-based bypass (X01/R01) đã xoá khỏi
 `commitStep`/`commitDeepenAnswer`; plaintext token nay thật sự được UserPromptSubmit trả về và

@@ -60,7 +60,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. X10 (gate so basename nên docs/archive giả artifact) và X11 (gates_passed

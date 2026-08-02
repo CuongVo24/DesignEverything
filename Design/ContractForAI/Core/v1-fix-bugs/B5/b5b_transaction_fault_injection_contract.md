@@ -55,11 +55,11 @@ Expected commands:
 - Restart/recovery lần hai no-op và health green hoặc explicit unrecoverable với backup còn nguyên.
 - No mixed progress/answers/slots; no mixed docs/plan/execution-state.
 - Manifest/journal/temp orphan được cleanup an toàn sau success.
-- Test report map X08, X16, X22 và installer partial case.
+- Test report map tối thiểu X08, X16, X22, R11, R18 và R19; mỗi dòng phân biệt Core proof, application-service proof và production CLI/install seam proof.
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: INVALID_FOR_PRODUCTION_SEAM
+Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_PRODUCTION_SEAM
 
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). Fault-injection harness
 (`faulty-filesystem.ts`, `crash-worker.mjs`, FE-01..06, FI-01..05) là hạ tầng thật và nên giữ, nhưng

@@ -61,7 +61,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-25 (bugfix, không phải implementation đầy đủ của contract): đã xoá check substring
 `norm.includes('shapes/')`/`norm.includes('schemas/')` khỏi `classifyArtifact` — check này false-deny

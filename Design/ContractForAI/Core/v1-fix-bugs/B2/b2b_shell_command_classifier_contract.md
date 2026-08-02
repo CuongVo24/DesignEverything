@@ -57,10 +57,9 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
-Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
-khớp README.md. X04 (git/find coi read-only theo basename dù có lệnh phá huỷ) trong
-finding-coverage-matrix.md nay đã FIXED (`gitReadOnly.ts`, `findReadOnly.ts`) và có test thật ở
-`test/integration/installed-runtime/hook-adversarial.test.ts`. R08 (classifier split raw bằng
-whitespace, `git -C` không kiểm containment) vẫn OPEN.
+Cập nhật 2026-08-01: X04/R08 đã có policy argv cho git/find và test đúng seam. Với raw shell text
+không có argv cấu trúc, classifier nay trả `RAW_SHELL_UNPARSED_DENIED` thay vì suy đoán từ tokenizer;
+đây là hardening fail-closed, không phải claim đã có parser Bash/PowerShell/cmd đầy đủ. Contract vẫn
+`PARTIAL` cho tới khi có parser/host envelope đúng shell và fuzz/segment proof theo §6.

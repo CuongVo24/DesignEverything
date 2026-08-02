@@ -60,7 +60,7 @@ Expected commands:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
+Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
 
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `v1-fix-bugs-evaluation-report.md`
 claim rubric A–H và reviewer outcome nhưng không có reviewer artifact, score sheet, danh tính

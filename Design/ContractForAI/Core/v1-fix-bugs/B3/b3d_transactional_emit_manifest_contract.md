@@ -48,7 +48,7 @@ Interface đích:
 - prepareEmit(root, inputs, catalog) → staged generation
 - validateStagedEmit(generation) → pass | issues
 - activateEmit(root, generation, expectedRevision) → active manifest/state
-- recoverEmit(root) → no-op | rolled-forward | rolled-back | explicit-error
+- recoverEmit(root) → no-op | rolled-back | explicit-error (rollback-only; không hứa roll-forward)
 
 ## 5. Risks & mitigations
 
@@ -66,7 +66,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
 (`PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục khớp README.md. Note cũ "không có CLI

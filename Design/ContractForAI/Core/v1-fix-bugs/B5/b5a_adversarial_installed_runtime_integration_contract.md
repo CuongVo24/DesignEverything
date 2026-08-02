@@ -57,12 +57,12 @@ Expected commands:
 
 - Tất cả adversarial cases phải assert decision, reason_code, exit code, state revision và filesystem không đổi.
 - Ít nhất một positive control cho mỗi allowed recovery/read-only/active-task action.
-- Coverage report liệt kê U01–U04, X01–X24; finding security không có test id làm suite fail.
+- Coverage report liệt kê U01–U08, X01–X24 và R01–R20; finding thuộc release 7.0.0 không có test id làm suite fail. R21 thuộc B14b/v4-expansion và chỉ được theo dõi như dependency ngoài lane, không dùng để che thiếu coverage của B1–B5.
 - Existing unit/e2e suite vẫn xanh sau installed-runtime suite.
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
+Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
 
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). Checklist ở §3 bị tick nhưng
 không đạt: hầu hết test spawn hook/CLI từ `REPO_ROOT` thay vì target đã cài (trái mitigation ở §5),

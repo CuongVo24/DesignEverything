@@ -27,9 +27,9 @@ Khóa deepen đúng thời điểm, cùng one-turn capability/quality/transactio
 - [x] Nếu tier-2 làm đổi architecture/test/plan inputs (module `adr`/`test-strategy`), mark validation snapshot stale (`block_reason.kind='snapshot-stale'`, `recoverable_by='/build validate'`) qua [`invalidateSnapshotForTier2`](../../../../src/core/deepenLifecycle.ts); `glossary`/`feature-spec` không bao giờ invalidate.
 - [x] Missing/corrupt deepen asset (`deepen-script.yaml`) ở project đã opt-in ≥1 module là `inspectRuntimeHealth` **error** (`MISSING_DEEPEN_SCRIPT`/`CORRUPT_DEEPEN_SCRIPT`), không phải warning mềm.
 - [x] next-step chỉ hiển thị deepen pending khi `deepenPending.length > 0` và không nằm trong busy phases — **đã đúng từ trước B3e** ([renderNextStep.ts](../../../../src/adapters/shared/renderNextStep.ts) mục 0b), xác nhận lại không cần sửa.
-- [~] Tier-2 emit dùng catalog B3c và transaction B3d, không write docs/design trực tiếp — **chưa làm**: `emitTier2.ts` vẫn ghi trực tiếp qua `writeAtomic` (atomic per-file rename), KHÔNG qua `prepareEmit`/`activateEmit`. B3d's transaction engine đã hỗ trợ kênh riêng cho tier-2 (`channel: 'tier2'` → `emit-manifest-tier2.json` tách biệt tier-1, đã có sẵn trong `emitTransactionActivate.ts`/`recoverEmitTransaction.ts`) nhưng chưa được nối vào `emitTier2.ts`. Lý do hoãn: `emitTier2.ts` đã có cơ chế atomic-write + orphan-cleanup **riêng cho từng module** (không phải toàn-tier-2), được test qua (`emitTier2.test.ts`, 5 test xanh) — rewrite sang transaction chung sẽ đổi ngữ nghĩa cleanup (hiện tại re-emit module A không đụng file của module B; một manifest tier-2 chung sẽ cần coi cả 4 module là managed set, thay đổi hành vi cần bàn kỹ trước khi làm, không nên làm vội trong cùng phiên).
-- [~] Mỗi deepen commit cần transaction B1b — `commitDeepenAnswer` là pure state mutation có capability check, nhưng **chưa đóng gói qua một transaction wrapper tường minh kiểu B1b** (nếu B1b nghĩa là một module transaction riêng biệt khác capability). Cần làm rõ B1b là gì trước khi có thể tick — ghi chú tồn đọng.
-- [~] Re-run module là amendment/version mới — **hành vi hiện tại là overwrite-in-place** (module doc là "trạng thái hiện tại", giống cách tier-1 docs bị ghi đè khi re-emit), không tạo bản ghi amendment riêng. Nhất quán với cách tier-1 hoạt động nhưng khác chữ "amendment/version mới" trong contract gốc — cần quyết định của người duyệt xem đây có phải đúng ý định hay cần thêm version history.
+- [~] Tier-2 emit dùng catalog B3c và transaction B3d, không write docs/design trực tiếp — **chưa làm**: `emitTier2.ts` vẫn ghi trực tiếp qua `writeAtomic` (atomic per-file rename), KHÔNG qua `prepareEmit`/`activateEmit`. Semantics đã duyệt: managed set/manifest phải partition theo `module_id` (hoặc một manifest composite có partition tương đương); re-emit module A tuyệt đối không cleanup/overwrite artifact của module B. Mỗi module activation vẫn phải old-or-new ở cấp toàn bộ output của module.
+- [~] Mỗi deepen commit cần transaction B1b — `commitDeepenAnswer` hiện mới là pure state mutation có capability check. Semantics đã duyệt: capability consumption, answer append, module/question advance và provenance update phải nằm trong **cùng canonical B1b transaction/revision**; không tạo một authority store thứ hai.
+- [~] Re-run module là amendment/version mới — **hành vi hiện tại overwrite-in-place chưa đạt spec**. Semantics đã duyệt: mỗi rerun tạo generation/version mới có `supersedes`, giữ history/provenance và một current pointer tới generation active; raw confirmed answer cũ không bị overwrite.
 
 ## 4. Interfaces / Files expected to change
 
@@ -65,7 +65,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
 (`PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục khớp README.md. Lifecycle gating

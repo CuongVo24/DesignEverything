@@ -56,7 +56,7 @@
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
+Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
 
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `file:///e:/...` cleanup và
 Glossary S0–S8 fix là thật và nên giữ. Nhưng `RT-04` chỉ assert `pkg.version === '6.0.0'` literal —

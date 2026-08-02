@@ -60,10 +60,11 @@ Ghi chú phạm vi: `answer_contract.pattern` được khai báo declarative tro
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
 (`IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục — Implementation hạ từ ngụ ý "đã xong" xuống
-`PARTIAL` để khớp README.md và với thực tế U06 (build-plan/rationale/glossary/mermaid dẫn xuất
-thiếu quality/provenance gate) và X23 (derived quality phó thác executor yếu, không có user-visible
-acknowledgement) trong finding-coverage-matrix.md vẫn OPEN.
+`PARTIAL` để khớp README.md. Cập nhật 2026-08-01: production `emitTier1` đã tải
+`derived-recipes.yaml` và truyền recipes vào `validateStagedEmit`; recipe asset thiếu/corrupt fail
+closed trước activation. U06/X23 vẫn `PARTIAL` vì provenance chỉ warning và chưa có acknowledgement
+capability/user-visible artifact cho output dẫn xuất.

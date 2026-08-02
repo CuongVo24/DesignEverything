@@ -59,7 +59,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
 
 **Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `cliOperations.ts` duy nhất
 đã hợp nhất logic — giữ lại — nhưng Codex hook vẫn có `matchGlob`/allowed-paths tự suy riêng (R17),

@@ -64,7 +64,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: WAITING_FOR_APPROVAL | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
 (`IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục — Implementation khớp README.md (`IMPLEMENTED`),
