@@ -6,6 +6,21 @@ import { recordEvidence } from './advanceExecutionState.js';
 import { ExecutionState, EvidenceRecord } from './schemas/index.js';
 import { ExecutionPlanV3 } from './schemas/executionPlan.js';
 
+// Windows note: package-manager shims (npm.cmd, pnpm.cmd, yarn.cmd) are
+// batch files, not real executables — spawn() with shell:false calls
+// CreateProcess directly, which cannot launch a .cmd without a shell to
+// interpret it, so `spawn('npm', ...)` ENOENTs on Windows regardless of
+// workspace content. Direct binaries (node.exe, python.exe, pytest.exe,
+// ...) don't have this problem and must stay off the shell path: cmd.exe
+// re-tokenizes argv, which mangles `node -e "<code with quotes/;/()>"`.
+// argv[0] here is always static recipe/contract data (stackRecipes.ts,
+// synthesizeFeatureContracts.ts), never raw user input, so shell:true for
+// the shim case carries no injection risk.
+const WINDOWS_SHELL_SHIMS = new Set(['npm', 'pnpm', 'yarn']);
+function needsWindowsShimShell(command: string): boolean {
+  return process.platform === 'win32' && WINDOWS_SHELL_SHIMS.has(command);
+}
+
 function isPathSafe(workspace: string, relativeOrAbsolutePath: string): boolean {
   const resolvedWorkspace = resolve(workspace);
   const resolvedPath = resolve(resolvedWorkspace, relativeOrAbsolutePath);
@@ -90,7 +105,7 @@ export function runTaskVerification(input: {
     const child = spawn(argv[0], argv.slice(1), {
       cwd: runCwd,
       env: { ...process.env },
-      shell: false,
+      shell: needsWindowsShimShell(argv[0]),
     });
 
     let stdoutData = '';

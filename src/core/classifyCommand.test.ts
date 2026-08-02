@@ -40,4 +40,16 @@ describe('B2b — Safe shell command classifier contract', () => {
     expect(classifyCommand({ argv: ['ls', '-la'] }).outcome).toBe('proven_read_only');
     expect(classifyCommand({ argv: ['pwd'] }).outcome).toBe('proven_read_only');
   });
+
+  test('does not prove raw shell text read-only without structured argv', () => {
+    for (const raw of [
+      'git status',
+      'powershell -NoProfile -Command "Get-ChildItem"',
+      'cmd /c "dir"',
+      'rg "a value with spaces" src',
+    ]) {
+      expect(classifyCommand({ raw })).toMatchObject({ outcome: 'unknown' });
+    }
+    expect(classifyCommand({ raw: 'git status' }).reason_code).toBe('RAW_SHELL_UNPARSED_DENIED');
+  });
 });

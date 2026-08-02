@@ -1,6 +1,6 @@
 import { isGitReadOnly } from './commandPolicies/gitReadOnly.js';
 import { isFindReadOnly } from './commandPolicies/findReadOnly.js';
-import { tokenizeShellCommand, stripQuotedContent } from './tokenizeShellCommand.js';
+import { stripQuotedContent } from './tokenizeShellCommand.js';
 
 export type CommandClassificationOutcome = 'proven_read_only' | 'mutation' | 'unknown';
 
@@ -36,15 +36,11 @@ const SAFE_READ_ONLY_EXECUTABLES = [
 ];
 
 export function classifyCommand(input: ClassifyCommandInput): CommandClassification {
-  let argv = input.argv;
+  const argv = input.argv ?? [];
+  const hasStructuredArgv = argv.length > 0;
+  const rawStr = input.raw ?? argv.join(' ');
 
-  // Fallback: quote-aware tokenize if only raw is provided (P4.3 — a naive
-  // split(/\s+/) here would tear a quoted argument apart and misclassify it).
-  if ((!argv || argv.length === 0) && input.raw) {
-    argv = tokenizeShellCommand(input.raw.trim());
-  }
-
-  if (!argv || argv.length === 0) {
+  if (!hasStructuredArgv && rawStr.trim().length === 0) {
     return {
       outcome: 'unknown',
       reason_code: 'EMPTY_COMMAND',
@@ -52,7 +48,6 @@ export function classifyCommand(input: ClassifyCommandInput): CommandClassificat
     };
   }
 
-  const rawStr = input.raw || argv.join(' ');
   // P4.3 lossy-round-trip fix: scan a quote-redacted copy for operator
   // characters/keywords instead of rawStr directly. A character like `&` or
   // `>` occurring only inside a quoted argument (e.g. a commit message
@@ -91,6 +86,18 @@ export function classifyCommand(input: ClassifyCommandInput): CommandClassificat
       outcome: 'unknown',
       reason_code: 'COMPOUND_OR_NESTED_SHELL_DENIED',
       message: 'Compound, chained, piped, or nested shell commands are unproven and fail-closed.',
+    };
+  }
+
+  // A raw shell string is not a structured command boundary. The shared
+  // tokenizer is useful for diagnostics, but it is not a complete parser for
+  // Bash, PowerShell, or cmd.exe and therefore cannot prove a command is
+  // read-only. Hosts must provide argv before policy may allow it.
+  if (!hasStructuredArgv) {
+    return {
+      outcome: 'unknown',
+      reason_code: 'RAW_SHELL_UNPARSED_DENIED',
+      message: 'Raw shell text without structured argv cannot be proven read-only.',
     };
   }
 

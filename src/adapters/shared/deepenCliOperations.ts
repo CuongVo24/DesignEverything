@@ -11,7 +11,9 @@ import {
   commitDeepen,
 } from '../../core/index.js';
 import { CliResultEnvelope } from './cliResult.js';
-import { RUNTIME_VERSION } from '../../version.js';
+import { RUNTIME_VERSION, TARGET_LOCAL_CLI_COMMAND } from '../../version.js';
+
+const CLI = TARGET_LOCAL_CLI_COMMAND;
 
 function getArg(argv: string[], flag: string): string | undefined {
   const idx = argv.indexOf(flag);
@@ -88,7 +90,7 @@ export function handleDeepen(workspaceRoot: string, argv: string[]): CliResultEn
       reason_code: 'DEEPEN_OPTED_IN',
       severity: 'info',
       message: `Module ${moduleId} đã opt-in.`,
-      next_command: `node adapter/claude-code/cli.mjs deepen --module ${moduleId} --next`,
+      next_command: `${CLI} deepen --module ${moduleId} --next`,
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -120,7 +122,7 @@ export function handleDeepen(workspaceRoot: string, argv: string[]): CliResultEn
         capability_token: result.capability_token,
       },
       next_command:
-        `node adapter/claude-code/cli.mjs deepen --module ${moduleId} --commit ` +
+        `${CLI} deepen --module ${moduleId} --commit ` +
         `--capability-token <TOKEN> --question ${result.instance.question_id}${subjectFlag} --answer "..."`,
       runtime_version: RUNTIME_VERSION,
     };
@@ -176,7 +178,7 @@ export function handleDeepen(workspaceRoot: string, argv: string[]): CliResultEn
       reason_code: 'DEEPEN_COMMIT_SUCCESS',
       severity: 'info',
       message: `Đã commit câu ${questionId}${subjectId ? `@${subjectId}` : ''} của module ${moduleId}.`,
-      next_command: `node adapter/claude-code/cli.mjs deepen --module ${moduleId} --next`,
+      next_command: `${CLI} deepen --module ${moduleId} --next`,
       runtime_version: RUNTIME_VERSION,
     };
   }

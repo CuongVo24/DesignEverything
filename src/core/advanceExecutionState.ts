@@ -8,6 +8,9 @@ import {
   BlockRecord,
   BlockKind,
 } from './schemas/index.js';
+import { TARGET_LOCAL_CLI_COMMAND } from '../version.js';
+
+const CLI = TARGET_LOCAL_CLI_COMMAND;
 
 export function initExecutionState(): ExecutionState {
   return {
@@ -238,7 +241,8 @@ export function transitionToReview(
 export function applyReviewOutcome(
   state: ExecutionState,
   milestoneId: string,
-  breakTaskIds: string[]
+  breakTaskIds: string[],
+  plan?: any
 ): ExecutionState {
   if (state.phase !== 'reviewing') {
     throw new Error(`applyReviewOutcome chỉ chạy ở phase reviewing, không phải ${state.phase}.`);
@@ -247,14 +251,18 @@ export function applyReviewOutcome(
     throw new Error(`Review đang mở cho ${state.active_milestone}, không phải ${milestoneId}.`);
   }
   if (breakTaskIds.length === 0) {
-    return closeFeatureReview({ ...state, open_break_tasks: [] }, milestoneId);
+    // plan must reach closeFeatureReview so it can tell "this feature is
+    // reviewed" apart from "every task in the plan is now done" — without
+    // it, closeFeatureReview's allDone check is always false and a project
+    // can never reach ready-to-ship through review, no matter how clean.
+    return closeFeatureReview({ ...state, open_break_tasks: [] }, milestoneId, plan);
   }
   const blockRecord: BlockRecord = {
     kind: 'review-incomplete',
     reason_code: 'FEATURE_HAS_OPEN_BREAK_TASKS',
     origin_phase: 'reviewing',
     task_id: null,
-    recoverable_by: `node adapter/claude-code/cli.mjs review --milestone ${milestoneId}`,
+    recoverable_by: `${CLI} review --milestone ${milestoneId}`,
     detail: `Feature ${milestoneId} có ${breakTaskIds.length} break-task chưa xử lý; chưa được coi là done.`,
     created_at: new Date().toISOString(),
   };
@@ -447,7 +455,7 @@ export function recordEvidence(
     }
 
     const failurePolicy = activeTaskCard?.failure_policy || 'abort';
-    const verifyCommand = `node adapter/claude-code/cli.mjs verify --task ${state.active_task ?? ''}`;
+    const verifyCommand = `${CLI} verify --task ${state.active_task ?? ''}`;
     if (failurePolicy === 'abort') {
       const blockRecord: BlockRecord = {
         kind: 'verification-failed',
@@ -554,7 +562,7 @@ export function evaluateBuildReadiness(
     return {
       ready: true,
       reason_code: 'READY_TO_EXECUTE',
-      next_command: execState.active_task ? `node adapter/claude-code/cli.mjs verify --task ${execState.active_task}` : 'node adapter/claude-code/cli.mjs build',
+      next_command: execState.active_task ? `${CLI} verify --task ${execState.active_task}` : `${CLI} build`,
       message: 'Execution state is ready for build tasks.',
     };
   }
@@ -638,7 +646,7 @@ export function allowedRemediation(state: ExecutionState): {
     return {
       allowed_actions: ['read', 'write-task-scope', 'verify'],
       allowed_paths: ['src/**', 'test/**'],
-      next_command: block.recoverable_by || `node adapter/claude-code/cli.mjs verify --task ${block.task_id ?? ''}`,
+      next_command: block.recoverable_by || `${CLI} verify --task ${block.task_id ?? ''}`,
     };
   }
 

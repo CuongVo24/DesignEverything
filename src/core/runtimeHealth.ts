@@ -13,7 +13,7 @@ import {
 import { loadDeepenState } from './deepenState.js';
 import { loadDeepenScript } from './loadDeepenScript.js';
 import { emitManifestSchema } from './schemas/emitManifest.js';
-import { RUNTIME_VERSION } from '../version.js';
+import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../version.js';
 
 function sha256File(p: string): string {
   return createHash('sha256').update(readFileSync(p)).digest('hex');
@@ -144,7 +144,7 @@ function checkEmitManifestIntegrity(workspaceRoot: string): HealthIssue[] {
           reason_code: 'CORRUPT_EMIT_MANIFEST',
           artifact: relPath,
           detail: `${channel} emit manifest does not match the expected schema: ${JSON.stringify(parsed.error.format())}`,
-          safe_next_command: 'node adapter/claude-code/cli.mjs validate',
+          safe_next_command: targetLocalCliCommand('validate'),
           can_auto_repair: false,
         });
       }
@@ -154,7 +154,7 @@ function checkEmitManifestIntegrity(workspaceRoot: string): HealthIssue[] {
         reason_code: 'CORRUPT_EMIT_MANIFEST',
         artifact: relPath,
         detail: `Failed to parse ${channel} emit manifest: ${(err as Error).message}`,
-        safe_next_command: 'node adapter/claude-code/cli.mjs validate',
+        safe_next_command: targetLocalCliCommand('validate'),
         can_auto_repair: false,
       });
     }
@@ -186,13 +186,13 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
   }
 
   // 2. Installed or partially initialized -> check progress & interview store
-  if (hasInstallManifest && !hasProgress && !hasCanonicalStore) {
+  if (hasInstallManifest && !hasCanonicalStore) {
     issues.push({
       severity: 'error',
       reason_code: 'MISSING_INTERVIEW_STORE',
       artifact: 'interview-state.json',
-      detail: 'Install manifest exists but mandatory interview store/progress is missing.',
-      safe_next_command: 'node adapter/claude-code/cli.mjs init',
+      detail: 'Install manifest exists but mandatory canonical interview store is missing.',
+      safe_next_command: TARGET_LOCAL_INIT_COMMAND,
       can_auto_repair: true,
     });
   }
@@ -206,7 +206,7 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
         reason_code: 'CORRUPT_PROGRESS_STATE',
         artifact: 'progress.json',
         detail: `Failed to load progress.json: ${(err as Error).message}`,
-        safe_next_command: 'node adapter/claude-code/cli.mjs repair --state progress',
+        safe_next_command: targetLocalCliCommand('repair --state progress'),
         can_auto_repair: false,
       });
     }
@@ -221,7 +221,7 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
         reason_code: 'CORRUPT_INTERVIEW_STORE',
         artifact: 'interview-state.json',
         detail: `Failed to load interview store: ${(err as Error).message}`,
-        safe_next_command: 'node adapter/claude-code/cli.mjs repair --state interview',
+        safe_next_command: targetLocalCliCommand('repair --state interview'),
         can_auto_repair: false,
       });
     }
@@ -236,7 +236,7 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
         reason_code: 'CORRUPT_EXECUTION_STATE',
         artifact: 'execution-state.json',
         detail: `Failed to load execution state: ${(err as Error).message}`,
-        safe_next_command: 'node adapter/claude-code/cli.mjs validate',
+        safe_next_command: targetLocalCliCommand('validate'),
         can_auto_repair: true,
       });
     }
@@ -262,7 +262,7 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
           reason_code: 'MISSING_DEEPEN_SCRIPT',
           artifact: 'deepen-script.yaml',
           detail: 'Project has opted into a deepen module but deepen-script.yaml could not be found.',
-          safe_next_command: 'node adapter/claude-code/cli.mjs repair --state deepen',
+          safe_next_command: targetLocalCliCommand('repair --state deepen'),
           can_auto_repair: false,
         });
       } else {
@@ -274,7 +274,7 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
             reason_code: 'CORRUPT_DEEPEN_SCRIPT',
             artifact: 'deepen-script.yaml',
             detail: `Failed to load deepen-script.yaml: ${(err as Error).message}`,
-            safe_next_command: 'node adapter/claude-code/cli.mjs repair --state deepen',
+            safe_next_command: targetLocalCliCommand('repair --state deepen'),
             can_auto_repair: false,
           });
         }

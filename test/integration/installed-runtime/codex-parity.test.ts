@@ -36,6 +36,12 @@ describe('B5a — Codex Plugin Installed Parity & Self-Contained Bundle Suite', 
     expect(existsSync(join(tmpDir, '.codex-plugin/plugin.json'))).toBe(true);
     expect(existsSync(join(tmpDir, 'hooks/hooks.json'))).toBe(true);
     expect(existsSync(join(tmpDir, 'cli.mjs'))).toBe(true);
+    const interviewSkillPath = join(tmpDir, 'skills/design-everything/SKILL.md');
+    expect(existsSync(interviewSkillPath)).toBe(true);
+    const interviewSkill = readFileSync(interviewSkillPath, 'utf8');
+    expect(interviewSkill).toContain('name: design-everything');
+    expect(interviewSkill).toContain('${PLUGIN_ROOT}/cli.mjs');
+    expect(interviewSkill).not.toContain('__ENGINE_ROOT__');
     expect(existsSync(join(tmpDir, '.design-everything/install-manifest.json'))).toBe(true);
 
     const runtimeDir = latestRuntimeDir(tmpDir);

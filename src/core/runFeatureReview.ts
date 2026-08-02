@@ -3,6 +3,14 @@ import { resolve } from 'path';
 import { ProjectConventions, VerificationCommand } from './schemas/index.js';
 import type { ReviewSignal } from './reviewFeatureOutput.js';
 
+// See runTaskVerification.ts's WINDOWS_SHELL_SHIMS for why this is narrow:
+// npm/pnpm/yarn are .cmd shims that need shell:true to resolve on Windows,
+// but pytest is a real .exe entry point and must NOT go through the shell.
+const WINDOWS_SHELL_SHIMS = new Set(['npm', 'pnpm', 'yarn']);
+function needsWindowsShimShell(command: string): boolean {
+  return process.platform === 'win32' && WINDOWS_SHELL_SHIMS.has(command);
+}
+
 export interface FeatureReviewCommands {
   lint: string[] | null;
   test: string[];
@@ -30,7 +38,7 @@ interface CommandOutcome {
 
 function runCommand(argv: string[], cwd: string): Promise<CommandOutcome> {
   return new Promise((res) => {
-    const child = spawn(argv[0], argv.slice(1), { cwd, env: { ...process.env }, shell: false });
+    const child = spawn(argv[0], argv.slice(1), { cwd, env: { ...process.env }, shell: needsWindowsShimShell(argv[0]) });
 
     let stdout = '';
     let stderr = '';

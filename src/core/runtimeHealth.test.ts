@@ -7,7 +7,8 @@ import {
   authorizeRecovery,
   evaluatePreAction,
 } from './index.js';
-import { RUNTIME_VERSION } from '../version.js';
+import { initializeInterviewStore } from './interviewStore.js';
+import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND } from '../version.js';
 import { createHash } from 'crypto';
 
 function validProgress(overrides: Record<string, unknown> = {}) {
@@ -73,12 +74,13 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     expect(report.issues).toEqual([]);
   });
 
-  test('returns broken when install manifest exists but mandatory progress is missing', () => {
+  test('returns broken when install manifest exists but only legacy progress is present', () => {
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
       JSON.stringify(validManifest(), null, 2)
     );
+    writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(validProgress(), null, 2));
 
     const report = inspectRuntimeHealth(tempDir);
     expect(report.status).toBe('broken');
@@ -88,6 +90,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
 
   test('returns broken when progress.json is corrupt JSON', () => {
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
+    initializeInterviewStore(tempDir);
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
       JSON.stringify(validManifest(), null, 2)
@@ -96,11 +99,12 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
 
     const report = inspectRuntimeHealth(tempDir);
     expect(report.status).toBe('broken');
-    expect(report.issues[0].reason_code).toBe('CORRUPT_PROGRESS_STATE');
+    expect(report.issues.some((issue) => issue.reason_code === 'CORRUPT_PROGRESS_STATE')).toBe(true);
   });
 
   test('evaluatePreAction denies code write when runtime health is broken', () => {
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
+    initializeInterviewStore(tempDir);
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
       JSON.stringify(validManifest(), null, 2)
@@ -129,7 +133,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     );
 
     const report = inspectRuntimeHealth(tempDir);
-    const auth = authorizeRecovery(report, 'node adapter/claude-code/cli.mjs init');
+    const auth = authorizeRecovery(report, TARGET_LOCAL_INIT_COMMAND);
     expect(auth.authorized).toBe(true);
   });
 
@@ -153,7 +157,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
   test('authorizeRecovery rejects an attemptedAction that pads a safe command with extra content', () => {
     // Regression: `attemptedAction.includes(cmd)` allows the caller to wrap
     // an arbitrary prefix/suffix around a valid safe_next_command and still
-    // get authorized, e.g. "rm -rf / && node adapter/claude-code/cli.mjs init".
+    // get authorized when a destructive prefix is added to the safe command.
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
       join(tempDir, '.design-everything/install-manifest.json'),
@@ -161,7 +165,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     );
 
     const report = inspectRuntimeHealth(tempDir);
-    const auth = authorizeRecovery(report, 'rm -rf / && node adapter/claude-code/cli.mjs init');
+    const auth = authorizeRecovery(report, `rm -rf / && ${TARGET_LOCAL_INIT_COMMAND}`);
     expect(auth.authorized).toBe(false);
     expect(auth.reason_code).toBe('UNAUTHORIZED_RECOVERY_ACTION');
   });
@@ -223,6 +227,7 @@ describe('DEBT3.2 — install-manifest.json is parsed and hash-verified, not jus
   beforeEach(() => {
     tempDir = join(tmpdir(), `de-test-debt3.2-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
+    initializeInterviewStore(tempDir);
     writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(validProgress(), null, 2));
     return () => {
       if (existsSync(tempDir)) {

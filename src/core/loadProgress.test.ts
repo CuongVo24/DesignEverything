@@ -2,7 +2,8 @@ import { expect, test, describe, afterAll } from 'vitest';
 import { loadProgress, saveProgress } from './loadProgress.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +43,34 @@ describe('loadProgress & saveProgress', () => {
     expect(defaultProgress.current_step).toBe('CAL0');
     expect(defaultProgress.answered.length).toBe(0);
     expect(defaultProgress.answered_len_at_last_turn).toBe(0);
+  });
+
+  test('fails closed instead of fabricating fresh state when managed markers exist', () => {
+    const corruptCanonicalDir = mkdtempSync(join(tmpdir(), 'de-load-progress-canonical-'));
+    const orphanAnswersDir = mkdtempSync(join(tmpdir(), 'de-load-progress-answers-'));
+    const corruptAnswersDir = mkdtempSync(join(tmpdir(), 'de-load-progress-corrupt-answers-'));
+    try {
+      mkdirSync(join(corruptCanonicalDir, '.design-everything'), { recursive: true });
+      writeFileSync(
+        join(corruptCanonicalDir, '.design-everything/interview-state.json'),
+        '{ not valid json'
+      );
+      expect(() => loadProgress(join(corruptCanonicalDir, 'progress.json'))).toThrow(/CANONICAL_CORRUPT/);
+
+      mkdirSync(join(orphanAnswersDir, 'Design/.interview'), { recursive: true });
+      writeFileSync(join(orphanAnswersDir, 'Design/.interview/answers.json'), JSON.stringify({ S0: 'Vision' }));
+      expect(() => loadProgress(join(orphanAnswersDir, 'progress.json'))).toThrow(/STORE_MISSING/);
+
+      mkdirSync(join(corruptAnswersDir, 'Design/.interview'), { recursive: true });
+      writeFileSync(join(corruptAnswersDir, 'Design/.interview/answers.json'), '{ not valid json');
+      expect(() => loadProgress(join(corruptAnswersDir, 'progress.json'))).toThrow(
+        /MIGRATION_BLOCKED_LEGACY_CORRUPT/
+      );
+    } finally {
+      rmSync(corruptCanonicalDir, { recursive: true, force: true });
+      rmSync(orphanAnswersDir, { recursive: true, force: true });
+      rmSync(corruptAnswersDir, { recursive: true, force: true });
+    }
   });
 
   test('should throw Zod error when loading invalid progress templates', () => {

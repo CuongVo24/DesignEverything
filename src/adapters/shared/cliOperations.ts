@@ -44,7 +44,7 @@ import {
 import { renderNextStep } from './renderNextStep.js';
 import { CliResultEnvelope, redactInternalError } from './cliResult.js';
 import { handleDeepen } from './deepenCliOperations.js';
-import { RUNTIME_VERSION } from '../../version.js';
+import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../../version.js';
 
 /**
  * P10 (bonus-plan Phase 6, item 3) — the machine-checkable inventory of
@@ -159,7 +159,7 @@ export async function runCliOperation(workspaceRoot: string, argv: string[]): Pr
         reason_code: 'UNKNOWN_SUBCOMMAND',
         severity: 'error',
         message: `Subcommand "${subcommand}" không được hỗ trợ. Sử dụng: status, init, commit, validate, emit, repair, next, start, verify, review, deepen.`,
-        next_command: 'node adapter/claude-code/cli.mjs status',
+        next_command: targetLocalCliCommand('status'),
         runtime_version: RUNTIME_VERSION,
       };
   }
@@ -175,7 +175,7 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
       reason_code: primaryIssue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
       severity: 'error',
       message: `Runtime state bị hỏng: ${primaryIssue?.detail || 'State corrupted'}`,
-      next_command: primaryIssue?.safe_next_command || 'node adapter/claude-code/cli.mjs repair',
+      next_command: primaryIssue?.safe_next_command || targetLocalCliCommand('repair'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -188,7 +188,7 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'UNINVOLVED',
       severity: 'info',
       message: 'Dự án chưa được khởi tạo với DesignEverything.',
-      next_command: 'node adapter/claude-code/cli.mjs init',
+      next_command: TARGET_LOCAL_INIT_COMMAND,
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -203,7 +203,7 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'CORRUPT_PROGRESS_STATE',
       severity: 'error',
       message: `Khong the nap canonical interview store: ${canonicalOutcome.message}`,
-      next_command: 'node adapter/claude-code/cli.mjs repair --state progress',
+      next_command: targetLocalCliCommand('repair --state progress'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -231,7 +231,7 @@ function handleStatus(workspaceRoot: string): CliResultEnvelope {
       execState,
       nextStepCard: card,
     },
-    next_command: card.nextCommand || 'node adapter/claude-code/cli.mjs status',
+    next_command: card.nextCommand || targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -248,7 +248,7 @@ function handleInit(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'INIT_SUCCESS',
       severity: 'info',
       message: 'Đã khởi tạo thành công trạng thái DesignEverything.',
-      next_command: 'node adapter/claude-code/cli.mjs status',
+      next_command: targetLocalCliCommand('status'),
       runtime_version: RUNTIME_VERSION,
     };
   } catch (err: unknown) {
@@ -334,7 +334,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
         reason_code: 'PROGRESS_MISSING',
         severity: 'error',
         message: `Không tìm thấy canonical interview store để commit: ${result.message}`,
-        next_command: 'node adapter/claude-code/cli.mjs init',
+        next_command: TARGET_LOCAL_INIT_COMMAND,
         runtime_version: RUNTIME_VERSION,
       };
     }
@@ -345,7 +345,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
         reason_code: 'CORRUPT_PROGRESS_STATE',
         severity: 'error',
         message: `Khong the nap canonical interview store: ${result.message}`,
-        next_command: 'node adapter/claude-code/cli.mjs repair',
+        next_command: targetLocalCliCommand('repair'),
         runtime_version: RUNTIME_VERSION,
       };
     }
@@ -369,7 +369,7 @@ function handleCommit(workspaceRoot: string, argv: string[]): CliResultEnvelope 
     severity: 'info',
     message: `Đã commit bước phỏng vấn thành công. Bước tiếp theo: ${result.progress.current_step || 'hoàn tất'}.`,
     data: { progress: result.progress },
-    next_command: 'node adapter/claude-code/cli.mjs status',
+    next_command: targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -445,7 +445,7 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
       severity: 'info',
       message: 'Kế hoạch thi công đã được validate thành công.',
       data: { execState: updatedState },
-      next_command: 'node adapter/claude-code/cli.mjs status',
+      next_command: targetLocalCliCommand('status'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -481,7 +481,7 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
       severity: 'error',
       message: `Kế hoạch không vượt qua kiểm tra ngữ nghĩa: ${failedChecks.map((c) => c.id).join(', ')}.`,
       data: { execState: updatedState, checks: result.checks },
-      next_command: 'node adapter/claude-code/cli.mjs validate',
+      next_command: targetLocalCliCommand('validate'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -493,7 +493,7 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
     severity: 'info',
     message: 'Kế hoạch thi công đã được validate thành công.',
     data: { execState: updatedState },
-    next_command: 'node adapter/claude-code/cli.mjs status',
+    next_command: targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -519,7 +519,7 @@ function handleRepair(workspaceRoot: string): CliResultEnvelope {
       message: health.status === 'broken'
         ? 'Đã thực hiện khôi phục nhưng vẫn còn cảnh báo sức khỏe.'
         : 'Khôi phục và sửa chữa trạng thái thành công.',
-      next_command: 'node adapter/claude-code/cli.mjs status',
+      next_command: targetLocalCliCommand('status'),
       runtime_version: RUNTIME_VERSION,
     };
   } catch (err: unknown) {
@@ -543,7 +543,7 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       reason_code: 'PROGRESS_MISSING',
       severity: 'error',
       message: 'Không tìm thấy canonical interview store để emit.',
-      next_command: 'node adapter/claude-code/cli.mjs init',
+      next_command: TARGET_LOCAL_INIT_COMMAND,
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -668,7 +668,7 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       manifest_generation_id: result.manifest_generation_id,
       warnings: result.warnings,
     },
-    next_command: 'node adapter/claude-code/cli.mjs status',
+    next_command: targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -684,7 +684,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'EXECUTION_STATE_MISSING',
       severity: 'error',
       message: 'Chưa có execution-state.json. Vui lòng phỏng vấn hoàn tất và chạy "validate".',
-      next_command: 'node adapter/claude-code/cli.mjs validate',
+      next_command: targetLocalCliCommand('validate'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -695,7 +695,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'EXECUTION_PLAN_MISSING',
       severity: 'error',
       message: 'Không thấy execution-plan.json.',
-      next_command: 'node adapter/claude-code/cli.mjs emit',
+      next_command: targetLocalCliCommand('emit'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -711,7 +711,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
       message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
-      next_command: 'node adapter/claude-code/cli.mjs validate',
+      next_command: targetLocalCliCommand('validate'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -746,7 +746,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
       message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
-      next_command: 'node adapter/claude-code/cli.mjs validate',
+      next_command: targetLocalCliCommand('validate'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -783,7 +783,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
     severity: 'info',
     message: runnable.length > 0 ? `Tìm thấy ${runnable.length} task có thể thực hiện.` : 'Không có task nào sẵn sàng để chạy.',
     data: { runnable },
-    next_command: runnable.length > 0 ? `node adapter/claude-code/cli.mjs start --task ${runnable[0].id}` : 'node adapter/claude-code/cli.mjs status',
+    next_command: runnable.length > 0 ? targetLocalCliCommand(`start --task ${runnable[0].id}`) : targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -835,7 +835,7 @@ function handleStart(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
       message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
-      next_command: 'node adapter/claude-code/cli.mjs validate',
+      next_command: targetLocalCliCommand('validate'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -869,7 +869,7 @@ function handleStart(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       reason_code: 'STALE_SNAPSHOT',
       severity: 'error',
       message: `Xác thực Snapshot thất bại: ${redactInternalError((err as Error).message)}`,
-      next_command: 'node adapter/claude-code/cli.mjs validate',
+      next_command: targetLocalCliCommand('validate'),
       runtime_version: RUNTIME_VERSION,
     };
   }
@@ -916,7 +916,7 @@ function handleStart(workspaceRoot: string, argv: string[]): CliResultEnvelope {
           evidence_required: task?.evidence_required,
         },
       },
-      next_command: 'node adapter/claude-code/cli.mjs status',
+      next_command: targetLocalCliCommand('status'),
       runtime_version: RUNTIME_VERSION,
     };
   } catch (err: unknown) {
@@ -1044,7 +1044,7 @@ async function handleVerify(workspaceRoot: string, argv: string[]): Promise<CliR
         reason_code: 'PLAN_PROMOTION_FAILED',
         origin_phase: nextState.phase,
         task_id: nextState.active_task,
-        recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T3-verify',
+        recoverable_by: targetLocalCliCommand('verify --task T3-verify'),
         detail: `Plan promotion failed: ${(e as Error).message}`,
         created_at: new Date().toISOString(),
       };
@@ -1072,7 +1072,7 @@ async function handleVerify(workspaceRoot: string, argv: string[]): Promise<CliR
       promoted_milestones: promotedMilestones,
       progress_log: progressLog,
     },
-    next_command: 'node adapter/claude-code/cli.mjs status',
+    next_command: targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -1156,7 +1156,8 @@ async function handleReview(workspaceRoot: string, argv: string[]): Promise<CliR
     outcomeState = applyReviewOutcome(
       reviewState,
       milestoneId,
-      breakTasks.map((t) => t.id)
+      breakTasks.map((t) => t.id),
+      reviewPlan
     );
   } catch (e: unknown) {
     return {
@@ -1214,7 +1215,7 @@ async function handleReview(workspaceRoot: string, argv: string[]): Promise<CliR
       block_reason: outcomeState.block_reason,
       break_task_doc: `docs/break-tasks/${docFile}`,
     },
-    next_command: 'node adapter/claude-code/cli.mjs status',
+    next_command: targetLocalCliCommand('status'),
     runtime_version: RUNTIME_VERSION,
   };
 }

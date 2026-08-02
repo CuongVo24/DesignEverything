@@ -1,4 +1,5 @@
 import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/schemas/index.js';
+import { TARGET_LOCAL_CLI_COMMAND } from '../../version.js';
 
 // The only proven-executable CLI entrypoint today. Cards must reference real
 // subcommands — the ones with a case in cliOperations.ts's dispatcher (status,
@@ -7,7 +8,7 @@ import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/sche
 // published, and not `amend`, which has no dispatcher case (see §0 below).
 // The invariant is enforced by renderNextStep.test.ts against
 // CLI_COMMAND_SURFACE, so this list cannot silently drift again.
-const CLI = 'node adapter/claude-code/cli.mjs';
+const CLI = TARGET_LOCAL_CLI_COMMAND;
 
 export interface NextStepCard {
   state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported' | 'deepen';

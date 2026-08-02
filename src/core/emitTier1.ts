@@ -8,6 +8,7 @@ import { prepareEmit, type StagedGeneration } from './emitTransactionStage.js';
 import { validateStagedEmit, type StageValidationIssue } from './emitTransactionValidate.js';
 import { activateEmit, manifestPath } from './emitTransactionActivate.js';
 import { emitManifestSchema } from './schemas/emitManifest.js';
+import { loadDerivedRecipes } from './loadDerivedRecipes.js';
 
 export type ActivateTier1EmitResult =
   | {
@@ -55,6 +56,19 @@ export function activateTier1Emit(
     return { ok: false, reason_code: 'EMIT_CATALOG_LOAD_FAILED', message: (err as Error).message };
   }
 
+  let derivedRecipes;
+  try {
+    derivedRecipes = loadDerivedRecipes(
+      join(workspaceRoot, 'Design/Content/interview-script/derived-recipes.yaml')
+    ).recipes;
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      reason_code: 'EMIT_DERIVED_RECIPES_LOAD_FAILED',
+      message: (err as Error).message,
+    };
+  }
+
   const inputDigest = createHash('sha256')
     .update(JSON.stringify({ answers, branch }))
     .digest('hex');
@@ -66,7 +80,7 @@ export function activateTier1Emit(
     return { ok: false, reason_code: 'EMIT_STAGE_FAILED', message: (err as Error).message };
   }
 
-  const validation = validateStagedEmit(generation, catalog);
+  const validation = validateStagedEmit(generation, catalog, undefined, derivedRecipes);
   if (!validation.pass) {
     return {
       ok: false,

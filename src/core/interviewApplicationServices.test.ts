@@ -1,10 +1,11 @@
 import { test, expect, describe, beforeEach } from 'vitest';
-import { mkdirSync, rmSync, existsSync, cpSync } from 'fs';
+import { mkdirSync, rmSync, existsSync, cpSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { initializeInterviewStore, loadInterviewStore } from './interviewStore.js';
 import { issuePromptCapability, commitInterviewAnswer } from './interviewApplicationServices.js';
+import { migrateInterviewStore } from './migrateInterviewStore.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '../..');
@@ -134,5 +135,50 @@ describe('P6 10.1 — commitInterviewAnswer atomically commits slots with the an
     expect(after.payload.corrections?.slots.shared_key).toEqual([
       expect.objectContaining({ previous_value: 'Giá trị ban đầu.' }),
     ]);
+  });
+
+  test('B1a: a migrated legacy turn id is metadata, never a commit capability', () => {
+    writeFileSync(
+      join(tempDir, 'progress.json'),
+      JSON.stringify({
+        version: '0.1.0',
+        phase: 'interview',
+        branch: null,
+        current_step: 'CAL0',
+        answered: [],
+        emitted_docs: [],
+        gates_passed: [],
+        // This legacy authority field must not become a capability. The old
+        // progress format deliberately has no pending_turn_capability.
+        last_user_turn_id: 'legacy-turn-42',
+        answered_len_at_last_turn: 0,
+        updated_at: new Date().toISOString(),
+        calibrate_mode: null,
+      })
+    );
+
+    expect(migrateInterviewStore(tempDir)).toBe('migrated');
+    const migrated = loadInterviewStore(tempDir).payload.progress;
+    expect(migrated.last_user_turn_id).toBe('legacy-turn-42');
+    expect(migrated.pending_turn_capability).toBeNull();
+
+    const forgedLegacyCommit = commitInterviewAnswer(tempDir, {
+      capabilityToken: 'legacy-turn-42',
+      calibrateChoice: 'fast',
+    });
+    expect(forgedLegacyCommit).toMatchObject({
+      ok: false,
+      reason_code: 'TURN_CAPABILITY_MISSING',
+    });
+
+    const issued = issuePromptCapability(tempDir);
+    expect(issued.ok).toBe(true);
+    if (!issued.ok) return;
+
+    const acceptedCommit = commitInterviewAnswer(tempDir, {
+      capabilityToken: issued.token,
+      calibrateChoice: 'fast',
+    });
+    expect(acceptedCommit).toMatchObject({ ok: true, reason_code: 'COMMIT_SUCCESS' });
   });
 });

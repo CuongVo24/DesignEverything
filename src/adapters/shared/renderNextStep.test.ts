@@ -2,6 +2,7 @@ import { expect, test, describe } from 'vitest';
 import { renderNextStep, renderNextStepMarkdown, NextStepCard } from './renderNextStep.js';
 import { CLI_COMMAND_SURFACE, CLI_GLOBAL_FLAGS } from './cliOperations.js';
 import { ExecutionPlanV3, ExecutionState, ProjectProfile } from '../../core/schemas/index.js';
+import { TARGET_LOCAL_CLI_COMMAND } from '../../version.js';
 
 describe('renderNextStep Adapter Renderer', () => {
   const mockProfile: ProjectProfile = {
@@ -122,7 +123,7 @@ describe('renderNextStep Adapter Renderer', () => {
 
     const card1 = renderNextStep(null, validatingState, mockProfile);
     expect(card1.state).toBe('needs-validation');
-    expect(card1.nextCommand).toBe('node adapter/claude-code/cli.mjs validate');
+    expect(card1.nextCommand).toBe(`${TARGET_LOCAL_CLI_COMMAND} validate`);
 
     const card2 = renderNextStep(mockPlan, validatingState, mockProfile);
     expect(card2.state).toBe('needs-validation');
@@ -131,7 +132,7 @@ describe('renderNextStep Adapter Renderer', () => {
   test('should return ready state when phase is ready-to-execute', () => {
     const card = renderNextStep(mockPlan, mockState, mockProfile);
     expect(card.state).toBe('ready');
-    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs start --task T0-discovery');
+    expect(card.nextCommand).toBe(`${TARGET_LOCAL_CLI_COMMAND} start --task T0-discovery`);
   });
 
   test('ready-to-execute after promotion points at the first incomplete feature task', () => {
@@ -148,7 +149,7 @@ describe('renderNextStep Adapter Renderer', () => {
     };
     const card = renderNextStep(promotedPlan, promotedState, mockProfile);
     expect(card.state).toBe('ready');
-    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs start --task T4-search-recipe');
+    expect(card.nextCommand).toBe(`${TARGET_LOCAL_CLI_COMMAND} start --task T4-search-recipe`);
   });
 
   test('should return executing state and details when phase is executing', () => {
@@ -174,7 +175,7 @@ describe('renderNextStep Adapter Renderer', () => {
 
     const card = renderNextStep(mockPlan, verifyingState, mockProfile);
     expect(card.state).toBe('verifying');
-    expect(card.nextCommand).toBe('node adapter/claude-code/cli.mjs verify --task T0-discovery --command node-version');
+    expect(card.nextCommand).toBe(`${TARGET_LOCAL_CLI_COMMAND} verify --task T0-discovery --command node-version`);
     expect(card.enforcement).toBe('hard');
   });
 
@@ -251,7 +252,7 @@ describe('renderNextStep Adapter Renderer', () => {
       // itself is everything before it.
       const commandText = card.nextCommand.split(' (')[0];
       const tokens = commandText.trim().split(/\s+/);
-      const entryIdx = tokens.findIndex((t) => t.endsWith('cli.mjs'));
+      const entryIdx = tokens.findIndex((t) => t.replace(/^["']|["']$/g, '').endsWith('cli.mjs'));
       expect(entryIdx, `${label}: nextCommand must invoke the real CLI entrypoint`).toBeGreaterThan(-1);
 
       const subcommand = tokens[entryIdx + 1];

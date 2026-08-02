@@ -10,3 +10,15 @@
  * silently drift apart.
  */
 export const RUNTIME_VERSION = '6.0.0';
+
+/**
+ * Stable command surface inside every installed target. Both installers stage
+ * the same versioned launcher under this relative path, so recovery guidance
+ * must never point back into the DesignEverything development checkout.
+ */
+export const TARGET_LOCAL_CLI_COMMAND = `node ".design-everything/runtime/${RUNTIME_VERSION}/cli.mjs"`;
+export const TARGET_LOCAL_INIT_COMMAND = `${TARGET_LOCAL_CLI_COMMAND} init`;
+
+export function targetLocalCliCommand(args = ''): string {
+  return args ? `${TARGET_LOCAL_CLI_COMMAND} ${args}` : TARGET_LOCAL_CLI_COMMAND;
+}

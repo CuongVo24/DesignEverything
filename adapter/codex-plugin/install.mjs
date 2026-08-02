@@ -176,6 +176,21 @@ stageWrite('hooks/hooks.json', JSON.stringify(hooksJsonSrc, null, 2), 'hook');
 // 1e. Skills.
 stageCopyDir(join(ADAPTER_DIR, 'skills'), 'skills', 'skill');
 
+// The interview skill is authored once for Claude and rendered for Codex at
+// install time. Before this, the Codex package shipped only the build skill,
+// so a freshly installed real project had no /design-everything entrypoint and
+// could not complete the documented interview -> emit -> build journey.
+const codexInterviewSkill = readFileSync(
+  join(ENGINE_ROOT, 'adapter/claude-code/skill/SKILL.md'),
+  'utf8'
+)
+  .replaceAll(
+    '__ENGINE_ROOT__/adapter/claude-code/cli.mjs',
+    '${PLUGIN_ROOT}/cli.mjs'
+  )
+  .replaceAll('__ENGINE_ROOT__', '${PLUGIN_ROOT}');
+stageWrite('skills/design-everything/SKILL.md', codexInterviewSkill, 'skill');
+
 // 1f. Interview-script + catalog + templates — shipped for the same reason
 // the Claude installer ships them (manifest catalog_version/catalog_digest
 // parity, and forward-compat with any future codex-side scaffolding command
@@ -248,6 +263,7 @@ Cài đặt gồm:
   ${runtimeRelDir}/cli.mjs
   ${runtimeRelDir}/hooks/           (pre-tool-use, post-tool-use, permission-request)
   cli.mjs                                   (bản tiện dụng ở gốc, dùng trong SKILL.md)
+  skills/design-everything/SKILL.md
   skills/design-everything-build/SKILL.md
   Design/Content/interview-script/, artifact-catalog.yaml, doc-templates/
 

@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, rmSync, writeFileSync, cpSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync, cpSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { execFileSync, spawnSync } from 'child_process';
 import { runCliOperation } from '../../../src/adapters/shared/cliOperations.js';
 import { issueTurnCapability } from '../../../src/core/turnCapability.js';
 import { loadInterviewStore } from '../../../src/core/interviewStore.js';
 
 const REPO_ROOT = join(__dirname, '../../..');
+const CLAUDE_INSTALLER = join(REPO_ROOT, 'adapter/claude-code/install.mjs');
 
 describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
   let tmpDir: string;
@@ -226,5 +228,34 @@ describe('B5a — Installed Runtime CLI Health & Recovery Suite', () => {
     const res = await runCliOperation(tmpDir, ['unknown-op']);
     expect(res.ok).toBe(false);
     expect(res.reason_code).toBe('UNKNOWN_SUBCOMMAND');
+  });
+
+  it('B4c/X09: target-local validate failure exits non-zero and emits one JSON envelope', () => {
+    execFileSync('node', [CLAUDE_INSTALLER, tmpDir], { encoding: 'utf8' });
+    const manifest = JSON.parse(
+      readFileSync(join(tmpDir, '.design-everything/install-manifest.json'), 'utf8')
+    );
+    const targetCli = join(
+      tmpDir,
+      '.design-everything/runtime',
+      manifest.runtime_version,
+      'cli.mjs'
+    );
+
+    const run = spawnSync(process.execPath, [targetCli, 'validate', '--json'], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+
+    expect(run.error).toBeUndefined();
+    expect(run.status).toBe(2);
+    expect(run.stderr).toBe('');
+    const envelope = JSON.parse(run.stdout);
+    expect(envelope).toMatchObject({
+      ok: false,
+      operation: 'validate',
+      reason_code: 'SEMANTIC_VALIDATION_FAILED',
+      severity: 'error',
+    });
   });
 });

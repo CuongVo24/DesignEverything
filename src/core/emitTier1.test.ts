@@ -77,4 +77,15 @@ describe('P7.1 — activateTier1Emit is the sole application-service authority f
     expect(second.manifest_generation_id).not.toBe(first.manifest_generation_id);
     expect(existsSync(join(root, 'docs/00-vision.md'))).toBe(true);
   });
+
+  test('loads derived recipes before validation instead of silently skipping production provenance checks', () => {
+    rmSync(join(root, 'Design/Content/interview-script/derived-recipes.yaml'));
+
+    const result = activateTier1Emit(root, cliAnswers, 'cli');
+    expect(result).toMatchObject({
+      ok: false,
+      reason_code: 'EMIT_DERIVED_RECIPES_LOAD_FAILED',
+    });
+    expect(existsSync(manifestPath(root, 'tier1'))).toBe(false);
+  });
 });

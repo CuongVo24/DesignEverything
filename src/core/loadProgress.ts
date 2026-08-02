@@ -13,12 +13,12 @@ export function loadProgress(path: string): Progress {
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       if (existsSync(canonicalPath) || existsSync(join(workspaceRoot, 'Design/.interview/answers.json'))) {
-        try {
-          const envelope = loadInterviewStore(workspaceRoot);
-          return envelope.payload.progress;
-        } catch {
-          // Fallback if canonical read fails
-        }
+        // A canonical store or legacy answers marker proves this workspace is
+        // already involved. Never turn a corrupt/missing managed store into a
+        // fresh interview: callers must receive the typed store error and use
+        // the recovery path instead.
+        const envelope = loadInterviewStore(workspaceRoot);
+        return envelope.payload.progress;
       }
       return {
         version: '7.0.0',

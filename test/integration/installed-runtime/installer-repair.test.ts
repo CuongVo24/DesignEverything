@@ -82,4 +82,52 @@ describe('installer-repair — rerunning the installer over an existing install 
     });
     expect(foundTamperedBackup).toBe(true);
   });
+
+  it('replaces every stale versioned DesignEverything hook without changing a user hook', () => {
+    execFileSync('node', [CLAUDE_INSTALLER, tempTarget], { encoding: 'utf8' });
+
+    const settingsPath = join(tempTarget, '.claude/settings.json');
+    const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    const staleVersion = '0.0.0-stale';
+    const roleFiles = ['session-start.mjs', 'user-prompt-submit.mjs', 'pre-tool-use.mjs'];
+
+    for (const entries of Object.values(settings.hooks) as { hooks: { command: string }[] }[][]) {
+      for (const entry of entries) {
+        for (const hook of entry.hooks ?? []) {
+          if (roleFiles.some((file) => hook.command.includes(`/hooks/${file}`))) {
+            hook.command = hook.command.replace(/\.design-everything\/runtime\/[^"']+/, `.design-everything/runtime/${staleVersion}`);
+          }
+        }
+      }
+    }
+
+    const userHook = 'node "/some/other/users/custom-hook.mjs" --preserve-this-byte-sequence';
+    settings.hooks.PreToolUse.push({
+      matcher: 'Bash',
+      hooks: [{ type: 'command', command: userHook }],
+    });
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+
+    execFileSync('node', [CLAUDE_INSTALLER, tempTarget], { encoding: 'utf8' });
+
+    const manifest = JSON.parse(
+      readFileSync(join(tempTarget, '.design-everything/install-manifest.json'), 'utf8')
+    );
+    const after = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    const hookGroups = Object.values(after.hooks) as Array<
+      Array<{ hooks?: Array<{ command: string }> }>
+    >;
+    const commands = hookGroups
+      .flatMap((entries) => entries)
+      .flatMap((entry) => entry.hooks ?? [])
+      .map((hook) => hook.command);
+
+    for (const file of roleFiles) {
+      const matching = commands.filter((command: string) => command.includes(`/hooks/${file}`));
+      expect(matching).toHaveLength(1);
+      expect(matching[0]).toContain(`.design-everything/runtime/${manifest.runtime_version}/hooks/${file}`);
+      expect(matching[0]).not.toContain(staleVersion);
+    }
+    expect(commands).toContain(userHook);
+  });
 });
