@@ -16,7 +16,7 @@
 | **Gate A1** | Nâng 22 contract `v1-fix-bugs` PARTIAL → IMPLEMENTED (P2→P10 của `plan-v1-fix.md` §6) | ⏳ TODO | Cột Implementation `v1-fix-bugs/README.md` — hiện 2/24 |
 | ↳ A1-P2 | B1a/B1b — capability lifecycle + canonical store | ✅ Implementation đóng 2026-08-02 (Proof vẫn UNIT_ONLY, chờ A2) | R19 FIXED, R18 FIXED; B1a/B1b `README.md` = IMPLEMENTED |
 | ↳ A1-P3 | B1c/B1d — handoff authority + typed blocked remediation | TODO | R05 đóng |
-| ↳ A1-P4 | B2a/B2b/B2c — path/ownership/command policy | TODO | R07, X02, R06 đóng |
+| ↳ A1-P4 | B2a/B2b/B2c — path/ownership/command policy | ⏳ 2/3 đóng 2026-08-02 (R07 vẫn PARTIAL) | R06 FIXED (trước đó), R08 FIXED (trước đó, thuộc B2b), X02 FIXED (pre-create vs. overwrite phân biệt qua `getActiveManagedPaths`); R07 còn thiếu capability issuer production/operation binding/scratch size/TTL — xem `b2a_protected_artifact_policy_contract.md` cập nhật 2026-08-02 |
 | ↳ A1-P5 | B2d/B2e — gate snapshot + runtime health | TODO | X15, R03 đóng |
 | ↳ A1-P6 | B3a/B3b/B3c — answer/slots/provenance/catalog | TODO | U05, X12, U06, X23 đóng |
 | ↳ A1-P7 | B3d/B3e — transactional tier-1/tier-2 activation | TODO | — |

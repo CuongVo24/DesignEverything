@@ -6,7 +6,7 @@ import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
-import { mkdtempSync, mkdirSync, cpSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, cpSync, rmSync, writeFileSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '../..');
@@ -112,6 +112,50 @@ describe('evaluatePreAction core engine', () => {
     const decision = evaluatePreAction(request);
     expect(decision.decision).toBe('allow');
     expect(decision.reason_code).toBe('interview-doc-write-allowed');
+  });
+
+  describe('P4.2/R07 — interview-phase scratch writes are bound to the real session and current question', () => {
+    test('allows a scratch write for the request session_id and current_step (S0)', () => {
+      const decision = evaluatePreAction({
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['.design-everything/scratch/test-session/S0/draft.md'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+      });
+      expect(decision.decision).toBe('allow');
+      expect(decision.reason_code).toBe('interview-doc-write-allowed');
+    });
+
+    test('denies a scratch write for a different session_id than the request', () => {
+      const decision = evaluatePreAction({
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['.design-everything/scratch/someone-elses-session/S0/draft.md'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+      });
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('SCRATCH_SESSION_MISMATCH');
+    });
+
+    test('denies a scratch write for a question that is not the current current_step', () => {
+      const decision = evaluatePreAction({
+        runtime: 'claude',
+        tool_name: 'Write',
+        action_kind: 'write',
+        target_paths: ['.design-everything/scratch/test-session/S9/draft.md'],
+        command_argv: [],
+        workspace: testWorkspace,
+        session_id: 'test-session',
+      });
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason_code).toBe('SCRATCH_QUESTION_MISMATCH');
+    });
   });
 
   test('should return unsupported decision if tool is not in intercepts list', () => {
@@ -496,12 +540,12 @@ describe('evaluatePreAction core engine', () => {
       expect(first.digest).toMatch(/^[0-9a-f]{64}$/);
     });
 
-    test('interview-phase doc writes are still bypassed with the real catalog present (deliberately-deferred gap, untouched by this wiring)', () => {
+    test('interview-phase pre-create of a real catalog doc is allowed (it does not exist on disk yet and no emit has activated it)', () => {
       // Every real catalog artifact today lives under docs/ — exactly what
-      // the interview-phase bypass covers — so this pins that wiring the
-      // real catalog in did not silently start denying it. Closing that
-      // known gap (plan-v1-bonus-tasks.md P4.2) is explicitly out of scope
-      // here; it needs its own task/gate-based authorization redesign.
+      // the interview-phase bypass covers. This is the genuine "drafting a
+      // doc before the first emit" case (P4.2/X02's `preCreateAllowed`
+      // branch), which must stay allowed — see the next test for the case
+      // this bypass no longer covers: overwriting an already-claimed doc.
       const request: PreActionRequest = {
         runtime: 'claude',
         tool_name: 'Write',
@@ -514,6 +558,39 @@ describe('evaluatePreAction core engine', () => {
       const decision = evaluatePreAction(request);
       expect(decision.decision).toBe('allow');
       expect(decision.reason_code).toBe('interview-doc-write-allowed');
+    });
+
+    describe('P4.2/X02 — direct overwrite of an already-claimed managed doc is no longer bypassed', () => {
+      test('a managed doc that already exists on disk denies a direct interview-phase write', () => {
+        const claimedWorkspace = mkdtempSync(join(tmpdir(), 'pre-action-catalog-claimed-'));
+        try {
+          const designDir = join(claimedWorkspace, 'Design/Content');
+          mkdirSync(designDir, { recursive: true });
+          cpSync(join(projectRoot, 'Design/Content'), designDir, { recursive: true });
+          mkdirSync(join(claimedWorkspace, 'docs'), { recursive: true });
+          writeFileSync(join(claimedWorkspace, 'docs/00-vision.md'), '# already emitted\n');
+
+          const base = initializeInterviewStore(claimedWorkspace).payload.progress;
+          transactInterviewStore(claimedWorkspace, 0, (env) => ({
+            ...env,
+            payload: { ...env.payload, progress: { ...base, phase: 'interview', current_step: 'S0' } },
+          }));
+
+          const decision = evaluatePreAction({
+            runtime: 'claude',
+            tool_name: 'Write',
+            action_kind: 'write',
+            target_paths: ['docs/00-vision.md'],
+            command_argv: [],
+            workspace: claimedWorkspace,
+            session_id: 'test-session',
+          });
+          expect(decision.decision).toBe('deny');
+          expect(decision.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+        } finally {
+          rmSync(claimedWorkspace, { recursive: true, force: true });
+        }
+      });
     });
 
     test('a missing artifact-catalog.yaml degrades to empty catalog entries rather than crashing the write gate', () => {

@@ -30,7 +30,7 @@ export { commitStep, checkRate, stampTurn } from './advanceState.js';
 export { issueTurnCapability, verifyTurnCapability, hashToken } from './turnCapability.js';
 export type { TurnCapabilityRecord, IssueCapabilityInput, IssueCapabilityResult, VerifyTurnResult } from './turnCapability.js';
 export { evaluateGate, isBlocked, passedGates, checkExecutionGate } from './evaluateGate.js';
-export { buildGateSnapshot } from './gateSnapshot.js';
+export { buildGateSnapshot, getActiveManagedPaths } from './gateSnapshot.js';
 export type { GateSnapshot, GateArtifactInfo } from './gateSnapshot.js';
 export { evaluatePreAction } from './evaluatePreAction.js';
 export { validateAnswer } from './validateAnswer.js';
@@ -59,7 +59,7 @@ export {
   type CliResultEnvelope,
 } from '../adapters/shared/cliResult.js';
 export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
-export type { ArtifactClass, CatalogPathEntry } from './artifactOwnership.js';
+export type { ArtifactClass, CatalogPathEntry, ScratchWriteContext } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
 export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';
 export { tokenizeShellCommand, stripQuotedContent } from './tokenizeShellCommand.js';

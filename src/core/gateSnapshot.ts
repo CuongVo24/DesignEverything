@@ -58,6 +58,17 @@ function loadActiveManifest(workspaceRoot: string): EmitManifest | null {
   }
 }
 
+// P4.2/X02 — canonical, manifest-relative paths of every managed artifact
+// the active tier-1 emit manifest currently claims. Used by the write-gate
+// (evaluatePreAction) to tell a genuine pre-create (path absent from both
+// disk and the active manifest) apart from a direct-write attempt against
+// an artifact the emit transaction already owns.
+export function getActiveManagedPaths(workspaceRoot: string): Set<string> {
+  const manifest = loadActiveManifest(workspaceRoot);
+  if (!manifest) return new Set();
+  return new Set(manifest.artifacts.filter((a) => a.ownership === 'managed').map((a) => a.path));
+}
+
 function loadExecutionStateBits(workspaceRoot: string): { evidence: EvidenceRecord[]; validationDigest: string } {
   const p = join(workspaceRoot, '.design-everything/execution-state.json');
   if (!existsSync(p)) return { evidence: [], validationDigest: '' };

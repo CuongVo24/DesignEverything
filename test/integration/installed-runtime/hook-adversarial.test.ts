@@ -317,21 +317,40 @@ describe('B5a — Adversarial Hook Protection Suite (real finding IDs: X01, X02,
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
-  it('X02 — should still allow pre-creating a doc at a future managed-catalog path during interview (known open gap, not yet gated)', () => {
-    // Per finding-coverage-matrix.md X02: evaluatePreAction.ts:282-296
-    // deliberately forces catalogEntries=[] during the interview-phase
-    // doc-write bypass, so authorizeMutation never classifies a real
-    // catalog path (e.g. docs/00-vision.md, not yet emitted) as a managed
-    // output — an agent can pre-create it as if it were a plain user file.
-    // This assertion documents the CURRENT (still-open) behavior so a
-    // future fix is a deliberate, visible change to this test, not a
-    // silent regression discovered later.
+  it('X02 — should still allow pre-creating a doc at a future managed-catalog path during interview (genuine pre-create, gated by preCreateAllowed)', () => {
+    // Per finding-coverage-matrix.md X02: the interview-phase doc-write
+    // bypass now always classifies against the real catalog, but a
+    // managed-catalog path (e.g. docs/00-vision.md) that does not yet
+    // exist on disk and is not part of the active emit manifest is a
+    // genuine pre-create (drafting before the first emit) — see
+    // authorizeMutation's `preCreateAllowed` branch, artifactOwnership.ts.
+    // This assertion pins that the pre-create case stays allowed; the next
+    // test pins the case this used to leave open — a direct overwrite of
+    // an already-claimed managed doc — now denies.
     const res = runHook(preToolHook, {
       cwd: tmpDir,
       tool_name: 'Write',
       tool_input: { file_path: join(tmpDir, 'docs/00-vision.md') },
     });
     expect(res).toBeNull();
+  });
+
+  it('X02 — should deny a direct overwrite of a managed-catalog doc that already exists on disk (pre-create gap closed)', () => {
+    // Same target path as the previous test, but this time the file is
+    // already on disk — no longer a pre-create, an attempted silent
+    // overwrite of an artifact the emit transaction owns. Before the
+    // preCreateAllowed/activeManifest wiring, catalogEntries=[] during the
+    // interview-phase bypass meant this was indistinguishable from the
+    // pre-create case above and always allowed.
+    mkdirSync(join(tmpDir, 'docs'), { recursive: true });
+    writeFileSync(join(tmpDir, 'docs/00-vision.md'), '# already emitted\n', 'utf8');
+
+    const res = runHook(preToolHook, {
+      cwd: tmpDir,
+      tool_name: 'Write',
+      tool_input: { file_path: join(tmpDir, 'docs/00-vision.md') },
+    });
+    expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
   it('Phase gate — should deny code write to an unrelated path during interview phase', () => {

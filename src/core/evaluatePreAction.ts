@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { loadInterviewStore, transactInterviewStore } from './interviewStore.js';
 import { loadGatePolicy } from './loadGatePolicy.js';
 import { evaluateGate, isBlocked } from './evaluateGate.js';
-import { buildGateSnapshot } from './gateSnapshot.js';
+import { buildGateSnapshot, getActiveManagedPaths } from './gateSnapshot.js';
 import { loadExecutionState, allowedRemediation } from './advanceExecutionState.js';
 import { assertValidatedSnapshot, loadEmittedDocs } from './validatedSnapshot.js';
 import { loadDeepenState } from './deepenState.js';
@@ -283,19 +283,30 @@ function evaluatePreActionInner(
       const isDocWrite = resolvedPaths.every(
         (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/scratch/') || p === 'progress.json'
       );
-      // P6 10.3 — the real catalog's managed-output protection only applies
-      // OUTSIDE the interview-phase doc-write bypass below. That bypass is a
-      // known, deliberately-deferred design gap (plan-v1-bonus-tasks.md
-      // P4.2: "plan-validating blanket-allow Design/**/docs/**/
-      // .design-everything/**" is confirmed still present and explicitly
-      // NOT fixed in this batch — it needs a real task/gate-based
-      // authorization redesign, bigger than a catalog-wiring change).
-      // Passing the real catalog here regardless would silently start
-      // closing that gap as an unplanned side effect, since every current
-      // catalog artifact lives under docs/ — exactly what the bypass covers.
-      const catalogEntries = isDocWrite ? [] : collectCatalogEntries(request.workspace);
+      // P4.2/X02 — the real catalog is now always passed in, but a
+      // managed-output path only denies when it is already "claimed": it
+      // exists on disk, or it is part of the active tier-1 emit manifest.
+      // A managed-output path that is neither is a genuine interview-phase
+      // pre-create (drafting a doc before the first real emit), which stays
+      // allowed — see authorizeMutation's `preCreateAllowed` branch. This
+      // closes the previously-blanket bypass (every doc write allowed
+      // regardless of catalog membership) down to only the pre-create case
+      // the bypass was ever meant to cover.
+      const catalogEntries = collectCatalogEntries(request.workspace);
+      const activeManagedPaths = isDocWrite ? getActiveManagedPaths(request.workspace) : new Set<string>();
+      // P4.2/R07 — bind scratch writes to the caller's real session
+      // (request.session_id, the live host session) and the interview's
+      // actual current question (progress.current_step), not just any
+      // well-shaped {session}/{question} pair.
+      const scratchContext = isDocWrite ? { sessionId: request.session_id, questionId: progress?.current_step ?? null } : undefined;
       for (const targetPath of resolvedPaths) {
-        const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries);
+        const options = isDocWrite
+          ? {
+              preCreateAllowed: !activeManagedPaths.has(targetPath) && !existsSync(join(workspace, targetPath)),
+              scratchContext,
+            }
+          : undefined;
+        const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries, options);
         if (auth.decision === 'deny') {
           return {
             decision: 'deny',

@@ -69,3 +69,17 @@ mọi path người dùng chỉ TÌNH CỜ chứa "schemas/" hoặc "shapes/" (v
 thư mục `shapes/`/`schemas/` nào thật sự được cài vào target project. Phần còn lại của checklist B2a
 (exact catalog-driven managed-output, capability path binding chặt, scratch containment/size/TTL)
 **chưa làm** — xem R07 trong finding-coverage-matrix.md.
+
+Cập nhật 2026-08-02 (A1-P4): đóng phần "Scratch duy nhất nằm dưới
+.design-everything/scratch/{session}/{question}/" của checklist §3 — `authorizeMutation` giờ nhận
+`scratchContext` (session_id thật từ request + `progress.current_step` hiện tại) và deny khi path
+scratch khớp session/question khác, cộng depth cap (chỉ `{session}/{question}/{file}`, không nested)
+và extension allowlist. Đóng X02 (pre-create managed docs): `evaluatePreAction.ts` giờ luôn dùng
+catalog thật; một managed-output path chỉ được coi "pre-create" hợp lệ khi chưa tồn tại trên đĩa VÀ
+chưa nằm trong active tier-1 emit manifest (`getActiveManagedPaths`, gateSnapshot.ts) — đã claimed thì
+deny `PROTECTED_ARTIFACT_MUTATION_DENIED` như managed-output khác. Còn lại của checklist §3 **chưa
+làm**: internal capability chưa có issuer production thật (không có call site nào phát capability —
+Core tự ghi state trực tiếp, không qua PreToolUse gate), operation binding, scratch size limit ở
+write-gate (chỉ có ở read-time trong `loadQuestionSlots`), TTL cleanup, key allowlist đối chiếu
+script.yaml. Implementation vẫn PARTIAL cho tới khi các mục đó đóng — xem R07 trong
+finding-coverage-matrix.md.

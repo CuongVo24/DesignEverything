@@ -243,4 +243,98 @@ describe('B2a — Protected artifact ownership policy contract', () => {
       }
     });
   });
+
+  describe('P4.2/R07 — scratch session/question binding, extension and depth', () => {
+    test('denies a scratch write nested deeper than {session}/{question}/{fileName}', () => {
+      const res = authorizeMutation('write', 'agent-host', '.design-everything/scratch/sess1/S0/sub/draft.txt');
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('INVALID_SCRATCH_PATH');
+    });
+
+    test('denies a scratch write with a disallowed extension', () => {
+      const res = authorizeMutation('write', 'agent-host', '.design-everything/scratch/sess1/S0/draft.exe');
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('SCRATCH_EXTENSION_DENIED');
+    });
+
+    test('allows a scratch write matching the current session and question', () => {
+      const res = authorizeMutation(
+        'write',
+        'agent-host',
+        '.design-everything/scratch/sess1/S0/draft.txt',
+        undefined,
+        [],
+        { scratchContext: { sessionId: 'sess1', questionId: 'S0' } }
+      );
+      expect(res.decision).toBe('allow');
+      expect(res.reason_code).toBe('INTERVIEW_SCRATCH_ALLOWED');
+    });
+
+    test('denies a scratch write targeting a different session', () => {
+      const res = authorizeMutation(
+        'write',
+        'agent-host',
+        '.design-everything/scratch/other-session/S0/draft.txt',
+        undefined,
+        [],
+        { scratchContext: { sessionId: 'sess1', questionId: 'S0' } }
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('SCRATCH_SESSION_MISMATCH');
+    });
+
+    test('denies a scratch write targeting a past/future question, not the current one', () => {
+      const res = authorizeMutation(
+        'write',
+        'agent-host',
+        '.design-everything/scratch/sess1/S9/draft.txt',
+        undefined,
+        [],
+        { scratchContext: { sessionId: 'sess1', questionId: 'S0' } }
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('SCRATCH_QUESTION_MISMATCH');
+    });
+
+    test('denies any scratch write when no question is currently active', () => {
+      const res = authorizeMutation(
+        'write',
+        'agent-host',
+        '.design-everything/scratch/sess1/S0/draft.txt',
+        undefined,
+        [],
+        { scratchContext: { sessionId: 'sess1', questionId: null } }
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('SCRATCH_QUESTION_MISMATCH');
+    });
+  });
+
+  describe('P4.2/X02 — managed-output pre-create vs. direct overwrite', () => {
+    const catalog = ['docs/00-vision.md'];
+
+    test('allows pre-creating a managed doc that is not yet claimed', () => {
+      const res = authorizeMutation('write', 'agent-host', 'docs/00-vision.md', undefined, catalog, {
+        preCreateAllowed: true,
+      });
+      expect(res.decision).toBe('allow');
+      expect(res.reason_code).toBe('MANAGED_DOC_PRE_CREATE_ALLOWED');
+    });
+
+    test('denies a direct write to a managed doc once it is already claimed (exists on disk or in the active manifest)', () => {
+      const res = authorizeMutation('write', 'agent-host', 'docs/00-vision.md', undefined, catalog, {
+        preCreateAllowed: false,
+      });
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+    });
+
+    test('preCreateAllowed has no effect on delete — there is nothing to pre-create by deleting', () => {
+      const res = authorizeMutation('delete', 'agent-host', 'docs/00-vision.md', undefined, catalog, {
+        preCreateAllowed: true,
+      });
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+    });
+  });
 });

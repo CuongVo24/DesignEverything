@@ -83,12 +83,38 @@ export function classifyArtifact(path: string, catalogEntries: (string | Catalog
   return 'user-owned';
 }
 
+// P4.2/R07 — {session}/{question} segments a scratch write is bound to.
+// `questionId: null` means no question is currently active (e.g. interview
+// complete) — no scratch write can ever be "current" in that state.
+export interface ScratchWriteContext {
+  sessionId: string;
+  questionId: string | null;
+}
+
+// Interview scratch is free-form drafting space, not an arbitrary file
+// drop — only plain text/structured-data formats a question's answer
+// drafting could plausibly produce are accepted. Nothing in the schema or
+// script declares binary/image scratch content today, so this stays
+// conservative rather than inventing an undeclared policy.
+const SCRATCH_ALLOWED_EXTENSIONS = new Set(['.txt', '.md', '.json', '.csv', '.yaml', '.yml']);
+
 export function authorizeMutation(
   action: 'write' | 'delete' | 'rename',
   actor: 'agent-host' | 'core-transaction',
   targetPath: string,
   capability?: InternalMutationCapability,
-  catalogEntries: (string | CatalogPathEntry)[] = []
+  catalogEntries: (string | CatalogPathEntry)[] = [],
+  options?: {
+    // P4.2/X02 — a managed-output path that does not yet exist on disk and
+    // is not part of the currently active emit manifest is a legitimate
+    // interview-phase draft ("pre-create"), not a bypass of the emit
+    // transaction. Once a path exists or is active, direct writes must go
+    // back to denying — that is an attempt to overwrite an already-managed
+    // artifact outside the transaction. The caller (evaluatePreAction)
+    // computes this from filesystem/manifest state; this module stays pure.
+    preCreateAllowed?: boolean;
+    scratchContext?: ScratchWriteContext;
+  }
 ): { decision: 'allow' | 'deny'; reason_code: string; user_message: string } {
   // P8.5 — action is no longer discarded. Every branch below already
   // treated write/delete/rename identically before this change (the
@@ -111,21 +137,75 @@ export function authorizeMutation(
 
   if (artifactClass === 'interview-scratch') {
     const norm = normalizePath(targetPath);
-    // Scratch path must follow .design-everything/scratch/{session}/{question}/ pattern
-    const scratchRegex = /\.design-everything\/scratch\/[^/]+\/[^/]+\/.+/;
-    if (scratchRegex.test(norm)) {
-      return {
-        decision: 'allow',
-        reason_code: 'INTERVIEW_SCRATCH_ALLOWED',
-        user_message: `Interview scratch file ${action} is allowed.`,
-      };
-    } else {
+    // Scratch path must be a direct child of
+    // .design-everything/scratch/{session}/{question}/ — a nested
+    // subdirectory under {question}/ is denied (depth cap) rather than
+    // matched by a trailing `.+`, since the one legitimate writer
+    // (loadQuestionSlots) only ever produces a flat {session}/{question}/{fileName}.
+    const scratchMatch = norm.match(/^\.design-everything\/scratch\/([^/]+)\/([^/]+)\/([^/]+)$/);
+    if (!scratchMatch) {
       return {
         decision: 'deny',
         reason_code: 'INVALID_SCRATCH_PATH',
-        user_message: 'Scratch file must be stored under .design-everything/scratch/{session}/{question}/.',
+        user_message: 'Scratch file must be a direct child of .design-everything/scratch/{session}/{question}/.',
       };
     }
+
+    const [, pathSession, pathQuestion, fileName] = scratchMatch;
+    const extMatch = fileName.match(/\.[^.]+$/);
+    const ext = extMatch ? extMatch[0].toLowerCase() : '';
+    if (!SCRATCH_ALLOWED_EXTENSIONS.has(ext)) {
+      return {
+        decision: 'deny',
+        reason_code: 'SCRATCH_EXTENSION_DENIED',
+        user_message: `Scratch file extension "${ext || '(none)'}" is not allowed; use one of: ${[...SCRATCH_ALLOWED_EXTENSIONS].join(', ')}.`,
+      };
+    }
+
+    // P4.2/R07 — bind the write to the caller's real, current session and
+    // question. Without this, any agent-host write could target another
+    // session's scratch directory, or a past/future question's directory
+    // that isn't the one currently active — exactly what the B2a contract
+    // (§3, "Không dùng scratch để override ... past/future question")
+    // forbids. `scratchContext` is optional so callers with no session/
+    // question notion (e.g. plan-validating phase, or existing tests) keep
+    // today's shape-only check.
+    if (options?.scratchContext) {
+      const { sessionId, questionId } = options.scratchContext;
+      if (pathSession !== sessionId) {
+        return {
+          decision: 'deny',
+          reason_code: 'SCRATCH_SESSION_MISMATCH',
+          user_message: `Scratch write targets session "${pathSession}" but the current session is "${sessionId}".`,
+        };
+      }
+      if (questionId === null || pathQuestion !== questionId) {
+        return {
+          decision: 'deny',
+          reason_code: 'SCRATCH_QUESTION_MISMATCH',
+          user_message: `Scratch write targets question "${pathQuestion}" but the current active question is ${questionId === null ? 'none' : `"${questionId}"`}.`,
+        };
+      }
+    }
+
+    return {
+      decision: 'allow',
+      reason_code: 'INTERVIEW_SCRATCH_ALLOWED',
+      user_message: `Interview scratch file ${action} is allowed.`,
+    };
+  }
+
+  // P4.2/X02 — a managed-output path that doesn't exist yet and isn't part
+  // of the active emit manifest is a legitimate interview-phase draft, not
+  // an overwrite. This must not extend to engine-state/engine-policy (a
+  // pre-create scratch file cannot masquerade as e.g. progress.json) or to
+  // delete/rename (there is nothing to "pre-create" by deleting).
+  if (artifactClass === 'managed-output' && action === 'write' && options?.preCreateAllowed) {
+    return {
+      decision: 'allow',
+      reason_code: 'MANAGED_DOC_PRE_CREATE_ALLOWED',
+      user_message: `Pre-creating managed document ${targetPath} during interview drafting is allowed; run the emit command to make it authoritative.`,
+    };
   }
 
   // Protected classes: engine-state, engine-policy, managed-output
