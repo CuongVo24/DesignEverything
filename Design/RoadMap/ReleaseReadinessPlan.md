@@ -237,7 +237,7 @@ npm run build && npm test
 npx vitest run test/e2e/skeleton-to-feature.test.ts
 ```
 
-### Status: `IN_PROGRESS` (2026-07-19 — core `promoteExecutionPlan` + CLI wiring + feature gate + unit test promote 5 ca xong; fix 2 bug review: CLI bỏ qua promote khi `no_features: true`, card post-promote trỏ đúng task M4) — còn thiếu: e2e `skeleton-to-feature.test.ts`
+### Status: `DONE` (2026-08-01 — thêm e2e `skeleton-to-feature.test.ts` chạy đường production T0→T3, assert promote ra M4, chạy feature + review tới `ready-to-ship`; đồng thời sửa seam Windows chỉ mở shell cho shim `npm`/`pnpm`/`yarn` và truyền execution plan qua `applyReviewOutcome` để nhánh đóng review có thể xác định toàn plan đã xong. Build, lint, typecheck và toàn bộ 841 test xanh.)
 
 ---
 

@@ -17,15 +17,18 @@ test, giết version literal, sửa docs claim 7.0.0 đã release, packaging tes
 
 **Cập nhật 2026-08-01:** audit toàn bộ matrix đã hoàn tất theo bốn lô A–D. Mọi dòng đều có lại
 status/test/evidence theo code hiện tại; X11/X18/X24 đã hạ từ `CLOSED` về `FIXED` vì contract primary
-vẫn `PARTIAL`, đúng điều kiện đóng matrix. Còn hai điều kiện thật trước khi hết BLOCKED:
+vẫn `PARTIAL`, đúng điều kiện đóng matrix. Phase 4 spec approval đã đóng B1→B5 ngày 2026-08-01
+(24/24 contract `APPROVED`). Approval chỉ đóng trục Spec; **không** đóng implementation, proof hay
+Definition of Done. Ledger hiện ghi 0/24 contract `DONE` (`APPROVED + IMPLEMENTED + VERIFIED`), nên
+không có cơ sở nói chỉ còn một điều kiện trước khi hết `BLOCKED`. Các blocker còn lại gồm:
 
-1. **Duyệt spec theo batch** — chờ kết quả audit matrix (nay đã có) để người dùng duyệt B1→B5 trong
-   README.md của v1-fix-bugs (Phase 4). Cột Spec chỉ được sửa sau khi có duyệt tường minh; hiện vẫn
-   0 contract được duyệt.
-2. **Một lần dogfood thật trên dự án ngoài repo** — lần chạy `E:\YT` ngày 2026-08-01 chỉ đạt
+1. **Một lần dogfood thật trên dự án ngoài repo** — lần chạy `E:\YT` ngày 2026-08-01 chỉ đạt
    `INSTALL_ONLY`: target-local status trả `MISSING_INTERVIEW_STORE`, chưa có interview/emit/build
    state hay `docs/`, và target không có source dự án thật quan sát được. Xem
    `docs/dogfood-checklist.md` §6; phải chạy lại đầy đủ §3 trên dự án thật.
+2. **Implementation và seam proof còn thiếu cho DoD §10** — trạng thái nguồn sự thật là bảng contract
+   trong `Design/ContractForAI/Core/v1-fix-bugs/README.md` và `finding-coverage-matrix.md`. Test xanh
+   không tự nâng `PARTIAL`, `UNIT_ONLY`, `SEAM_PARTIAL` hay evidence invalid thành `DONE`.
 
 Release này **KHÔNG được phát hành** cho tới khi Definition of Done cuối cùng trong plan-v1-fix.md §10 đạt đủ 11 điều kiện. Không dùng tài liệu này làm bằng chứng release; xem `finding-coverage-matrix.md` cho trạng thái thật theo từng finding.
 

@@ -1,6 +1,6 @@
 # Interactive Question Cards — phỏng vấn bằng thẻ chọn thay vì gõ văn xuôi
 
-> **Lane CHƯA mở.** Target version **8.1.0** — MINOR trên nền V6 `8.0.0` ([v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md)), vì B22b tự khai tương thích ngược: thiếu `options` = câu free-text như cũ. Lane này chạy **sau** V6 (đã chốt 2026-08-01) và không được chen hàng trước ba điều kiện gỡ block 7.0.0 của `v1-fix-bugs` ở [v7-release-note.md](v7-release-note.md).
+> **Lane CHƯA mở.** Target version **8.1.0** — MINOR trên nền V6 `8.0.0` ([v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md)), vì B22b tự khai tương thích ngược: thiếu `options` = câu free-text như cũ. Lane này chạy **sau** V6 — cái được chốt 2026-08-01 chỉ là **thứ tự lane**, KHÔNG phải là V6 đã xong: nền `8.0.0` vẫn CHƯA tồn tại (cả 6 contract `B19a–B21b` còn `WAITING_FOR_APPROVAL`, D49–D52 chưa duyệt — xem [v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md)). Lane cũng không được chen hàng trước khi **toàn bộ điều kiện** gỡ block 7.0.0 của `v1-fix-bugs` ở [v7-release-note.md](v7-release-note.md) §0 đóng.
 >
 > Vai trò: TaskBrief nguồn cho `Design/ContractForAI/Core/v7-expansion/` theo ngoại lệ expansion lane ([CONTRACT_STRUCTURE_RULE](../ContractForAI/CONTRACT_STRUCTURE_RULE.md) §0). "v7" ở đây là **số thứ tự lane** (lane mở rộng thứ 7, sau v2..v6-expansion) — **không phải** version 7.0.0, vốn thuộc `v1-fix-bugs`. Contract chỉ được viết sau khi D53–D55 dưới đây được duyệt và ghi vào [DecisionLog.md](../DecisionLog.md).
 
@@ -72,7 +72,7 @@ Thứ tự bắt buộc:
 | `option_hints` khiến agent tự chế lựa chọn lệch với câu trả lời trước | TB | B22e kiểm gợi ý phải trích được từ answers đã commit; giữ nguyên `translate_back` + `warning_rules` làm lưới chặn. |
 | Thẻ tương tác chỉ Claude Code có → hai harness lệch trải nghiệm | TB | D53 giữ dữ liệu ở Lõi; ConformanceMatrix công bố đúng mức, không hứa đồng đều — theo [D37](../DecisionLog.md). |
 | Nhịp "giữ câu trả lời qua lượt" phụ thuộc model nhớ đúng | TB | Nếu R-spike cho thấy `UserPromptSubmit` **có** bắn khi trả lời thẻ, bỏ hẳn cơ chế giữ; commit ngay trong lượt. |
-| Lane chen hàng trước việc gỡ block 7.0.0 | Cao | Không mở lane cho tới khi ba điều kiện trong [v7-release-note.md](v7-release-note.md) §0 đóng. |
+| Lane chen hàng trước việc gỡ block 7.0.0 | Cao | Không mở lane cho tới khi toàn bộ điều kiện trong [v7-release-note.md](v7-release-note.md) §0 đóng. |
 
 ## 7. Out of scope
 

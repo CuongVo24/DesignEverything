@@ -9,7 +9,7 @@
 > nhắm **8.1.0**, MINOR trên nền `v6-expansion` (8.0.0), vì B22b tự khai tương thích ngược.
 >
 > **Lane CHƯA mở.** Hai điều kiện tiên quyết, không thương lượng:
-> 1. Ba điều kiện gỡ block 7.0.0 ở `v7-release-note.md` §0 đóng và 7.0.0 được cắt.
+> 1. Toàn bộ điều kiện gỡ block 7.0.0 ở `v7-release-note.md` §0 đóng và 7.0.0 được cắt.
 > 2. `v6-expansion` (8.0.0) cắt trước — chủ repo đã chốt 2026-08-01: Interactive chạy **sau** V6.
 
 ## Bản đồ thực thi

@@ -1,7 +1,7 @@
 # Dogfood Checklist — lần chạy thật đầu tiên trên dự án ngoài repo
 
-Tài liệu này dành cho **lần dogfood thật** được nêu ở `Design/RoadMap/v7-release-note.md` §0 — điều
-kiện cuối cùng còn thiếu trước khi 7.0.0 hết `BLOCKED`. Đây không phải test mô phỏng (`npm test`
+Tài liệu này dành cho **lần dogfood thật** được nêu ở `Design/RoadMap/v7-release-note.md` §0 — một
+điều kiện bắt buộc, nhưng không đủ một mình, trước khi 7.0.0 hết `BLOCKED`. Đây không phải test mô phỏng (`npm test`
 chạy trong repo, qua Vitest) — đây là chạy `install.mjs` thật vào một dự án thật, ngoài repo
 DesignEverything, rồi dùng Claude Code (hoặc Codex) thật để phỏng vấn/build.
 
@@ -80,3 +80,14 @@ Audit lại target sau lần chạy cho thấy:
 Kết luận: **INSTALL_ONLY / DOGFOOD_INCOMPLETE**. Lần này chứng minh bước cài đặt, không chứng minh
 §3 (phỏng vấn → emit → `/build` → execute một task), và không được dùng để mở điều kiện dogfood của
 7.0.0. Cần chạy lại trên một dự án thật có source rồi ghi observation theo mẫu §5.
+
+## 7. Lần thử `ReportSupporter` ngày 2026-08-01 — không đủ điều kiện dogfood
+
+Đã cài Claude adapter vào bản clone cô lập của dự án thật `ReportSupporter` tại
+`C:\tmp\de-dogfood-reportsupporter-claude-20260801`. Claude Code khởi động được SessionStart hook và
+nhận `/design-everything`, nhưng provider trả `401 Insufficient balance` trước câu hỏi interview đầu
+tiên. Do đó không có `init`, interview, emit, `/build`, hay task thực thi nào để credit cho §3.
+
+Kết luận: **DOGFOOD_BLOCKED_BY_PROVIDER_QUOTA / DOGFOOD_INCOMPLETE**. Sau khi Claude Code có quota
+hợp lệ, phải chạy lại trọn §3 trên dự án này (hoặc một dự án thật tương đương) và ghi observation theo
+mẫu §5; không dùng lần thử này để mở gate.
