@@ -28,8 +28,15 @@
 - [x] Runtime chỉ tin `.design-everything/emit-manifest.json` (active manifest) — staging dir không nằm trong live tree nên không thể lẫn vào gate.
 - [x] Re-emit chỉ xoá path có trong previous **managed** manifest và absent ở manifest mới (`staleManagedPaths`); path không managed (user-owned) không bao giờ bị đụng.
 - [x] Không overwrite unknown user-owned file: `activateEmit` kiểm tra mọi target path đã tồn tại trên đĩa mà KHÔNG có trong previous managed manifest → `status:'blocked', reason:'user-file-collision'`, liệt kê path, và **không mutate gì** (kiểm tra chạy trước khi ghi journal).
-- [ ] Successful activation set interview phase `ready-for-validation` và execution-state `plan-validating` theo B1c — **chưa làm**: `activateEmit` hiện chỉ trả `EmitManifest`, chưa nhận/ghi `Progress`/`ExecutionState`. Cần một lớp gọi (adapter/CLI) nối `activateEmit` với `advanceState`/`advanceExecutionState` — để lại cho B4 (CLI/adapter wiring) vì B3d "Out of scope" đã loại trừ "CLI text/exit".
-- [ ] CLI output lấy exact activated paths từ manifest — chưa có CLI entrypoint nào gọi `emitTree`/`activateEmit` trong repo hiện tại (xác nhận bằng grep); để lại cho B4.
+- [x] Successful activation set interview phase `ready-for-validation` (precondition đã kiểm ở
+  `emitTier1.ts`'s `prepare` handoff — `progress.phase !== 'ready-for-validation'` throw trước khi
+  activate) và execution-state `plan-validating` (`completeTier1Activation`'s `initExecutionState()`
+  set `phase: 'plan-validating'` mặc định, gọi từ `tier1Handoff.complete` trong cùng transaction).
+  Tested: `test/integration/cli-protocol.test.ts` "P3.1 — a successful tier-1 activation creates
+  execution-state.json at plan-validating".
+- [x] CLI output lấy exact activated paths từ manifest — `emitTier1.ts`'s `activateTier1Emit` trả
+  `emitted_files: activation.manifest.artifacts.map((a) => a.path)`, `cliOperations.ts`'s `handleEmit`
+  surface nguyên trạng vào `data.emitted_files`. Tested: `emitTier1.test.ts`.
 
 ## 4. Interfaces / Files expected to change
 
@@ -66,7 +73,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED (2026-08-03) | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): sửa từ vocabulary cũ đã bỏ
 (`PARTIALLY_IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục khớp README.md. Note cũ "không có CLI
@@ -76,3 +83,8 @@ Core transaction engine (stage/validate/activate/recover) done và tested; X22 (
 nhầm user-owned docs) đã FIXED. Proof vẫn `UNIT_ONLY` vì crash-injection test (FE-01..06) gọi thẳng
 engine qua `crash-worker.mjs`, chưa crash một tiến trình `cli.mjs emit` thật — chấp nhận theo phạm
 vi P1 2.3 của plan-v1-fix.md, không phải thiếu sót chưa biết.
+
+Cập nhật 2026-08-03 (A1-P7, đối chiếu lại 2 mục còn `[ ]` với code thật — không cần code mới, chỉ
+xác minh): cả hai mục "chưa làm" ở §3 hoá ra đã đóng từ trước, ghi chú stale. Implementation chuyển
+`IMPLEMENTED` — 100% checklist §3 đã tick, có test xác nhận cho từng mục. Proof giữ `UNIT_ONLY` vì lý
+do đã nêu ở trên (chưa qua crash một tiến trình CLI thật) không đổi.

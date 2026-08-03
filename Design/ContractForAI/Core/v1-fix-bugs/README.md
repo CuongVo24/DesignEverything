@@ -54,7 +54,7 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B3 | B3a — Answer and slot validation | Core | B1a, B2c | APPROVED | PARTIAL | UNIT_ONLY |
 | B3 | B3b — Derived content provenance | Content | B3a | APPROVED | PARTIAL | UNIT_ONLY |
 | B3 | B3c — Authoritative artifact catalog | Core | B2c | APPROVED | IMPLEMENTED | UNIT_ONLY |
-| B3 | B3d — Transactional emit | Core | B2d, B3b, B3c | APPROVED | PARTIAL | UNIT_ONLY |
+| B3 | B3d — Transactional emit | Core | B2d, B3b, B3c | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B3 | B3e — Deepen lifecycle | Core | B1a, B3a, B3d | APPROVED | PARTIAL | UNIT_ONLY |
 | B4 | B4a — Claude hook policy integration | Adapter | B1–B3 | APPROVED | PARTIAL | SEAM_PARTIAL |
 | B4 | B4b — Exact wrapper invocation | Adapter | B2b, B4a | APPROVED | PARTIAL | SEAM_PARTIAL |
