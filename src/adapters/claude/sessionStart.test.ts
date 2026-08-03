@@ -1,5 +1,6 @@
-import { expect, test, describe, afterEach, beforeEach } from 'vitest';
+import { expect, test, describe, afterEach, beforeEach, vi } from 'vitest';
 import { onSessionStart } from './sessionStart.js';
+import * as core from '../../core/index.js';
 import { loadInterviewStore, initializeInterviewStore, transactInterviewStore } from '../../core/index.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -82,5 +83,35 @@ describe('onSessionStart hook', () => {
     const after = loadInterviewStore(testWorkspaceRoot);
     expect(after.state_revision).toBe(before.state_revision);
     expect(after.payload.progress.current_step).toBe('S3');
+  });
+
+  test('P4.2/R03 — returns the real inspectRuntimeHealth result instead of discarding it', () => {
+    const result = onSessionStart({ workspaceRoot: testWorkspaceRoot });
+    expect(result.health).toBeDefined();
+    expect(result.health.status).toBe('uninvolved');
+  });
+
+  test('P4.2/R03 — a migration failure is reported via migrate_error, not swallowed', () => {
+    // Corrupt legacy progress.json makes migrateInterviewStore throw
+    // MIGRATION_BLOCKED_LEGACY_CORRUPT — a real, reachable error path, not a
+    // mock. Before this fix, an empty catch inside onSessionStart absorbed
+    // this and the caller never learned migration had failed.
+    writeFileSync(progressPath, '{ not valid json', 'utf8');
+
+    const result = onSessionStart({ workspaceRoot: testWorkspaceRoot });
+    expect(result.migrate_error).toBeDefined();
+    expect(result.migrate_error).toContain('MIGRATION_BLOCKED_LEGACY_CORRUPT');
+  });
+
+  test('P4.2/R03 — a recovery failure is reported via recover_error, not swallowed', () => {
+    const spy = vi.spyOn(core, 'recoverEmit').mockImplementation(() => {
+      throw new Error('simulated recovery failure');
+    });
+    try {
+      const result = onSessionStart({ workspaceRoot: testWorkspaceRoot });
+      expect(result.recover_error).toBe('simulated recovery failure');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

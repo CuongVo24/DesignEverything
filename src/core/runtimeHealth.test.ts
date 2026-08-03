@@ -405,4 +405,26 @@ describe('DEBT3.2 — install-manifest.json is parsed and hash-verified, not jus
     expect(report.issues.some((i) => i.reason_code === 'INSTALL_MANIFEST_STALE')).toBe(true);
     expect(report.status).toBe('warning');
   });
+
+  test('P4.2/R03 (X15) — a corrupt project-profile.json reports broken with CORRUPT_PROJECT_PROFILE, not silently ignored', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest(), null, 2)
+    );
+    writeFileSync(join(tempDir, '.design-everything/project-profile.json'), '{ not valid json', 'utf8');
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_PROJECT_PROFILE')).toBe(true);
+  });
+
+  test('a missing project-profile.json is not itself a health problem', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest(), null, 2)
+    );
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_PROJECT_PROFILE')).toBe(false);
+  });
 });

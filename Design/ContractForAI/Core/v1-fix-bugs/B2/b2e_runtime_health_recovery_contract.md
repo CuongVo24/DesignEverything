@@ -65,6 +65,25 @@ Cập nhật 2026-07-25 (bugfix, không phải implementation đầy đủ của
 xoá điều kiện `cmd.includes(attemptedAction)` — trước đây một `attemptedAction` ngắn tuỳ ý (vd chỉ
 chuỗi `"node"`) khớp substring vào bất kỳ `safe_next_command` dài nào và được authorize, một đường
 bypass rõ ràng của "Recovery chỉ allow exact repair action" ở §6. Giờ chỉ còn hướng
-`attemptedAction.includes(cmd)` (attempted phải chứa TRỌN VẸN command an toàn). Đây vẫn là so khớp
-theo chuỗi, chưa phải "exact repair action" đúng nghĩa contract yêu cầu — R10 (parse/verify install
-manifest schema/hash) và phần lớn checklist B2e khác vẫn `[ ]`.
+`attemptedAction.includes(cmd)` (attempted phải chứa TRỌN VẸN command an toàn).
+
+Cập nhật 2026-08-03 (A1-P5): xác nhận `authorizeRecovery` hiện tại đã dùng exact match hai chiều
+(`trimmedAttempt === cmd.trim()`), đã đúng "exact repair action" — ghi chú 2026-07-25 ở trên mô tả
+trạng thái cũ, không còn khớp code hiện hành. Đóng R03 và phần B2e của X15 trong cùng đợt:
+
+- **R03 (SessionStart nuốt lỗi)** — `onSessionStart` (`src/adapters/claude/sessionStart.ts`) không còn
+  empty-catch cho `recoverEmit`/`migrateInterviewStore`; trả về `SessionStartResult` có
+  `recover_error`/`migrate_error` thật cùng `health` (kết quả `inspectRuntimeHealth`, không còn bị bỏ).
+  `session-start.mjs` giờ surface cả ba vào `additionalContext` thay vì tính rồi vứt.
+- **X15 (project-profile.json ngoài health surface)** — thêm `classifyProjectProfileState` (phân biệt
+  `missing`/`ok`/`corrupt`, không collapse cả hai vào `null` như `loadProjectProfile` cũ vẫn giữ cho
+  hai caller hiện có của nó); `inspectRuntimeHealth` giờ phát `CORRUPT_PROJECT_PROFILE` khi file tồn
+  tại nhưng hỏng.
+
+**Còn mở, chưa làm trong đợt này** (phát hiện khi rà lại checklist §3 cho đầy đủ, không rewrite phần
+đã đúng): `inspectRuntimeHealth` chưa kiểm integrity của `execution-plan.json`, `gate-policy.yaml` hay
+artifact-catalog — checklist §3 dòng "Parse/schema/integrity/version error của state, plan, profile,
+policy và catalog" mới đóng phần state+profile, "plan/policy/catalog" vẫn để ngỏ. Symlink escape qua
+`gateSnapshot.ts`'s `statSync`/`readFileSync` (theo symlink mặc định, không `lstatSync`) chưa được rà —
+rủi ro thực tế có thể đã bị chặn từ trước bởi B2a (managed-output path không cho agent-host tạo symlink
+ở đó), nhưng chưa có test xác nhận. Không đánh dấu Implementation `IMPLEMENTED` vì các mục này.

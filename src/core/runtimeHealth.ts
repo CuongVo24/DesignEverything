@@ -12,6 +12,7 @@ import {
 } from './index.js';
 import { loadDeepenState } from './deepenState.js';
 import { loadDeepenScript } from './loadDeepenScript.js';
+import { classifyProjectProfileState } from './projectProfileState.js';
 import { emitManifestSchema } from './schemas/emitManifest.js';
 import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../version.js';
 
@@ -320,6 +321,24 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
   }
   issues.push(...checkEmitManifestIntegrity(workspaceRoot));
   issues.push(...checkTier1ExecutionHandoff(workspaceRoot, hasExecState));
+
+  // P4.2/R03 (X15) — project-profile.json existed entirely outside the
+  // health surface before this: loadProjectProfile's callers (emit.ts,
+  // promoteExecutionPlan.ts) silently collapsed a corrupt profile into
+  // "act as if it were never generated", so status/next never saw it.
+  // A missing profile is not a health problem (it just hasn't been
+  // inspected yet); an unparseable one is.
+  const profileState = classifyProjectProfileState(workspaceRoot);
+  if (profileState.status === 'corrupt') {
+    issues.push({
+      severity: 'error',
+      reason_code: 'CORRUPT_PROJECT_PROFILE',
+      artifact: 'project-profile.json',
+      detail: `Failed to load project-profile.json: ${profileState.message}`,
+      safe_next_command: targetLocalCliCommand('validate'),
+      can_auto_repair: false,
+    });
+  }
 
   const hasErrors = issues.some((i) => i.severity === 'error');
   const hasWarnings = issues.some((i) => i.severity === 'warning');

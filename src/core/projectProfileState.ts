@@ -32,6 +32,34 @@ export function loadProjectProfile(workspace: string): ProjectProfile | null {
   }
 }
 
+// P4.2/R03 (X15) — a pure, read-only classification used by inspectRuntimeHealth
+// to tell "no profile has been generated yet" apart from "a profile exists but
+// is corrupt/unparseable". loadProjectProfile above deliberately keeps
+// collapsing both into `null` for its own callers (emit.ts,
+// promoteExecutionPlan.ts): they only ever want "use it if valid, otherwise
+// proceed as if absent" and changing that return shape would be an
+// unrelated, wider API change. Health reporting needs the distinction that
+// those callers don't.
+export type ProjectProfileState =
+  | { status: 'missing' }
+  | { status: 'ok' }
+  | { status: 'corrupt'; message: string };
+
+export function classifyProjectProfileState(workspace: string): ProjectProfileState {
+  const profilePath = join(workspace, '.design-everything/project-profile.json');
+  if (!existsSync(profilePath)) {
+    return { status: 'missing' };
+  }
+  try {
+    const raw = readFileSync(profilePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    projectProfileSchema.parse(parsed);
+    return { status: 'ok' };
+  } catch (err: unknown) {
+    return { status: 'corrupt', message: (err as Error).message };
+  }
+}
+
 export function saveProjectProfile(workspace: string, profile: ProjectProfile): void {
   const profilePath = join(workspace, '.design-everything/project-profile.json');
   let oldDigest = '';
