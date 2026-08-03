@@ -245,6 +245,26 @@ export function commitInterviewAnswer(
   }
 
   if (args.slotsPayload) {
+    // P4.2/P6 (R07/U05) — a question that declares `slot_keys` in
+    // script.yaml only accepts writes to that exact set; a question with no
+    // `slot_keys` declared keeps the old behavior (any key accepted), so
+    // this is additive and does not regress questions this field hasn't
+    // been backfilled for. `stepId` is guaranteed non-null here (checked
+    // just above).
+    const currentQuestion = script.questions.find((q) => q.id === stepId);
+    const allowedSlotKeys = currentQuestion?.slot_keys;
+    if (allowedSlotKeys) {
+      for (const key of Object.keys(args.slotsPayload)) {
+        if (!allowedSlotKeys.includes(key)) {
+          return {
+            ok: false,
+            reason_code: 'SLOT_KEY_NOT_ALLOWLISTED',
+            message: `Slot key "${key}" không thuộc danh sách slot_keys của câu hỏi hiện tại (${stepId}): ${allowedSlotKeys.join(', ')}.`,
+          };
+        }
+      }
+    }
+
     // Slot values get the same basic quality bar as the main answer text
     // (empty/placeholder rejection) — they don't carry a per-key
     // answer_contract of their own, so contract-specific rules

@@ -1,7 +1,11 @@
-import { test, expect, describe } from 'vitest';
+import { test, expect, describe, afterEach } from 'vitest';
+import { mkdirSync, rmSync, existsSync, writeFileSync, utimesSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import {
   classifyArtifact,
   authorizeMutation,
+  cleanupExpiredScratch,
   InternalMutationCapability,
   preActionRequestSchema,
 } from './index.js';
@@ -335,6 +339,146 @@ describe('B2a — Protected artifact ownership policy contract', () => {
       });
       expect(res.decision).toBe('deny');
       expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+    });
+  });
+
+  describe('P4.2/R07 — operation binding (capability operation must cover both action and artifact class)', () => {
+    function cap(operation: InternalMutationCapability['operation'], targetPaths: string[]): InternalMutationCapability {
+      return {
+        capability_id: 'cap-op',
+        operation,
+        target_paths: targetPaths,
+        issued_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 60000).toISOString(),
+      };
+    }
+
+    test('denies an emit_doc capability from authorizing a write to an engine-state path, even when the path is in target_paths', () => {
+      const res = authorizeMutation('write', 'core-transaction', 'progress.json', cap('emit_doc', ['progress.json']));
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('CAPABILITY_OPERATION_CLASS_MISMATCH');
+    });
+
+    test('allows an emit_doc capability to write a managed-output path', () => {
+      const catalog = ['docs/01-vision.md'];
+      const res = authorizeMutation(
+        'write',
+        'core-transaction',
+        'docs/01-vision.md',
+        cap('emit_doc', ['docs/01-vision.md']),
+        catalog
+      );
+      expect(res.decision).toBe('allow');
+      expect(res.reason_code).toBe('INTERNAL_CAPABILITY_AUTHORIZED');
+    });
+
+    test('allows an emit_doc capability to delete a stale managed-output path (re-emit cleanup)', () => {
+      const catalog = ['docs/01-vision.md'];
+      const res = authorizeMutation(
+        'delete',
+        'core-transaction',
+        'docs/01-vision.md',
+        cap('emit_doc', ['docs/01-vision.md']),
+        catalog
+      );
+      expect(res.decision).toBe('allow');
+    });
+
+    test('denies a commit_step capability from renaming an engine-state path — commit_step only covers write', () => {
+      const res = authorizeMutation(
+        'rename',
+        'core-transaction',
+        'progress.json',
+        cap('commit_step', ['progress.json'])
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('CAPABILITY_OPERATION_ACTION_MISMATCH');
+    });
+
+    test('target-path mismatch is still reported before operation binding — existing CAPABILITY_TARGET_MISMATCH behavior is unchanged', () => {
+      const res = authorizeMutation(
+        'write',
+        'core-transaction',
+        'gate-policy.yaml',
+        cap('commit_step', ['progress.json'])
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('CAPABILITY_TARGET_MISMATCH');
+    });
+  });
+
+  describe('P4.2/R07 — scratch write-gate size cap', () => {
+    test('denies a scratch write whose content_size_bytes exceeds the 1MB cap', () => {
+      const res = authorizeMutation(
+        'write',
+        'agent-host',
+        '.design-everything/scratch/sess1/S0/draft.txt',
+        undefined,
+        [],
+        { contentSizeBytes: 1024 * 1024 + 1 }
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('SCRATCH_FILE_OVERSIZED');
+    });
+
+    test('allows a scratch write whose content_size_bytes is at or under the 1MB cap', () => {
+      const res = authorizeMutation(
+        'write',
+        'agent-host',
+        '.design-everything/scratch/sess1/S0/draft.txt',
+        undefined,
+        [],
+        { contentSizeBytes: 1024 * 1024 }
+      );
+      expect(res.decision).toBe('allow');
+    });
+
+    test('allows a scratch write when content_size_bytes is not supplied (caller predates the field)', () => {
+      const res = authorizeMutation('write', 'agent-host', '.design-everything/scratch/sess1/S0/draft.txt');
+      expect(res.decision).toBe('allow');
+    });
+  });
+
+  describe('P4.2/R07 — cleanupExpiredScratch (TTL sweep)', () => {
+    let tempDir: string;
+
+    afterEach(() => {
+      if (tempDir && existsSync(tempDir)) {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('removes a scratch file older than the TTL and prunes the now-empty question directory', () => {
+      tempDir = join(tmpdir(), `de-scratch-ttl-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
+      const questionDir = join(tempDir, '.design-everything/scratch/sess1/S0');
+      mkdirSync(questionDir, { recursive: true });
+      const filePath = join(questionDir, 'draft.txt');
+      writeFileSync(filePath, 'stale draft', 'utf8');
+      const old = new Date(Date.now() - 1000);
+      utimesSync(filePath, old, old);
+
+      cleanupExpiredScratch(tempDir, 1); // 1ms TTL — anything not brand new is expired
+
+      expect(existsSync(filePath)).toBe(false);
+      expect(existsSync(questionDir)).toBe(false);
+    });
+
+    test('keeps a scratch file younger than the TTL', () => {
+      tempDir = join(tmpdir(), `de-scratch-ttl-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
+      const questionDir = join(tempDir, '.design-everything/scratch/sess1/S0');
+      mkdirSync(questionDir, { recursive: true });
+      const filePath = join(questionDir, 'draft.txt');
+      writeFileSync(filePath, 'fresh draft', 'utf8');
+
+      cleanupExpiredScratch(tempDir, 24 * 60 * 60 * 1000);
+
+      expect(existsSync(filePath)).toBe(true);
+    });
+
+    test('is a silent no-op when no scratch directory exists yet', () => {
+      tempDir = join(tmpdir(), `de-scratch-ttl-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
+      mkdirSync(tempDir, { recursive: true });
+      expect(() => cleanupExpiredScratch(tempDir)).not.toThrow();
     });
   });
 });

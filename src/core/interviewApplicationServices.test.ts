@@ -106,10 +106,16 @@ describe('P6 10.1 — commitInterviewAnswer atomically commits slots with the an
     expect(capRes1.ok).toBe(true);
     if (!capRes1.ok) return;
 
+    // P4.2/R07 — `vision_elevator_pitch` is used here (not an arbitrary made
+    // up key) because the first commit's step is CAL0, which has no
+    // `slot_keys` declared (anything is still accepted there), and the
+    // second commit's step is S0, whose declared `slot_keys` genuinely
+    // includes `vision_elevator_pitch` — the resubmission this test proves
+    // must stay reachable under the new per-question key allowlist.
     const first = commitInterviewAnswer(tempDir, {
       capabilityToken: capRes1.token,
       answerText: 'Câu trả lời đầu tiên hợp lệ.',
-      slotsPayload: { shared_key: 'Giá trị ban đầu.' },
+      slotsPayload: { vision_elevator_pitch: 'Giá trị ban đầu.' },
     });
     expect(first.ok).toBe(true);
 
@@ -124,17 +130,60 @@ describe('P6 10.1 — commitInterviewAnswer atomically commits slots with the an
     const second = commitInterviewAnswer(tempDir, {
       capabilityToken: capRes2.token,
       answerText: 'Câu trả lời thứ hai hợp lệ.',
-      slotsPayload: { shared_key: 'Giá trị đã sửa lại.' },
+      slotsPayload: { vision_elevator_pitch: 'Giá trị đã sửa lại.' },
     });
     expect(second.ok).toBe(true);
 
     const after = loadInterviewStore(tempDir);
     // Latest value wins in the live slots map...
-    expect(after.payload.slots.shared_key.value).toBe('Giá trị đã sửa lại.');
+    expect(after.payload.slots.vision_elevator_pitch.value).toBe('Giá trị đã sửa lại.');
     // ...but the value it replaced is preserved, not destroyed.
-    expect(after.payload.corrections?.slots.shared_key).toEqual([
+    expect(after.payload.corrections?.slots.vision_elevator_pitch).toEqual([
       expect.objectContaining({ previous_value: 'Giá trị ban đầu.' }),
     ]);
+  });
+
+  test('P4.2/R07 — a slot key outside the current question\'s declared slot_keys is denied, whole commit blocked', () => {
+    initializeInterviewStore(tempDir);
+
+    // Advance past CAL0 (no slot_keys declared there — not the case under
+    // test) so the current step is S0, which declares slot_keys:
+    // [vision_elevator_pitch].
+    const capRes1 = issuePromptCapability(tempDir);
+    expect(capRes1.ok).toBe(true);
+    if (!capRes1.ok) return;
+    const first = commitInterviewAnswer(tempDir, {
+      capabilityToken: capRes1.token,
+      answerText: 'Câu trả lời đầu tiên hợp lệ.',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const capRes2 = issuePromptCapability(tempDir);
+    expect(capRes2.ok).toBe(true);
+    if (!capRes2.ok) return;
+    // issuePromptCapability is itself a CAS write (same as the first test in
+    // this suite notes) — the revision to compare against is capRes2's, not
+    // first.revision, since issuing the second capability already bumped it.
+    const before = capRes2.revision;
+
+    const result = commitInterviewAnswer(tempDir, {
+      capabilityToken: capRes2.token,
+      answerText: 'Một câu trả lời hợp lệ và đủ dài.',
+      slotsPayload: {
+        vision_elevator_pitch: 'Nội dung hợp lệ.', // allowed for S0
+        not_a_real_slot_key: 'Không thuộc S0.', // not in S0's slot_keys
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason_code).toBe('SLOT_KEY_NOT_ALLOWLISTED');
+
+    // Nothing committed — the whole commit is blocked, not just the bad key.
+    const after = loadInterviewStore(tempDir);
+    expect(after.state_revision).toBe(before);
+    expect(after.payload.slots.vision_elevator_pitch).toBeUndefined();
   });
 
   test('B1a: a migrated legacy turn id is metadata, never a commit capability', () => {

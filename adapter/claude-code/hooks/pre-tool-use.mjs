@@ -69,12 +69,19 @@ if (coreTool === 'Bash') {
 }
 
 // Chuẩn hoá tool_input về shape mà onPreToolUse hiểu (path / command).
+// P4.2/R07 — content/new_string/edits được giữ nguyên (không chỉ path) để
+// onPreToolUse tính được content_size_bytes cho write-gate size cap; trước
+// đây các field này bị bỏ hẳn nên size chỉ được kiểm ở read-time
+// (loadQuestionSlots), không phải tại điểm ghi.
 let normalizedInput;
 if (coreTool === 'Bash') {
   normalizedInput = { command: String(toolInput.command || '') };
 } else {
   normalizedInput = {
     path: String(toolInput.file_path || toolInput.path || toolInput.notebook_path || ''),
+    content: typeof toolInput.content === 'string' ? toolInput.content : undefined,
+    new_string: typeof toolInput.new_string === 'string' ? toolInput.new_string : undefined,
+    edits: Array.isArray(toolInput.edits) ? toolInput.edits : undefined,
   };
 }
 

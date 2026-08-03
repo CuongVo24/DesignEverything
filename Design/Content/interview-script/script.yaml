@@ -18,6 +18,7 @@ questions:
     gate: null
     translate_back: "Để mình tóm lại thành 1 câu ngắn kiểu elevator pitch: `<bản tóm lại>`. Mình hiểu vậy đúng chưa?"
     depends_on: []
+    slot_keys: [vision_elevator_pitch]
     answer_contract:
       required: true
       min_trimmed_chars: 12
@@ -34,6 +35,7 @@ questions:
     gate: null
     translate_back: "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`. Hiện tại họ giải quyết tạm bằng: `<cách xoay xở hiện nay>`. Đúng ý bạn chứ?"
     depends_on: [S0]
+    slot_keys: [problem_summary, current_workaround]
     answer_contract:
       required: true
       min_trimmed_chars: 8
@@ -47,6 +49,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại có các nhóm người dùng chính sau: `<persona 1>` muốn `<job-to-be-done 1>`; `<persona 2>` muốn `<job-to-be-done 2>`. Ổn chưa?"
     depends_on: [S0, S1]
+    slot_keys: [primary_persona_summary, primary_persona_job_to_be_done, secondary_persona_summary, secondary_persona_job_to_be_done]
     answer_contract:
       required: true
       min_trimmed_chars: 10
@@ -72,6 +75,7 @@ questions:
     gate: scope-locked
     translate_back: "Mình đã nhóm lại thành 4 tầng: Must / Should / Could / Won't. Bản MVP nhỏ nhất mình đề xuất là: `<danh sách Must>`. Phần này để sau là: `<danh sách còn lại>`. Bạn xác nhận giúp mình nhé."
     depends_on: [S0, S1, S2]
+    slot_keys: [must_have_scope, should_have_scope, could_have_scope, wont_for_mvp_scope]
     answer_contract:
       required: true
       min_trimmed_chars: 15
@@ -92,6 +96,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại các dữ liệu lõi là: `<danh sách entity>` cùng quan hệ chính giữa chúng. Mỗi loại dữ liệu này phục vụ trực tiếp cho các tính năng Must. Đúng chứ?"
     depends_on: [S0, S1, S2, S3]
+    slot_keys: [core_entities, entity_relationships, deferred_data_notes]
     answer_contract:
       required: true
       min_trimmed_chars: 8
@@ -105,6 +110,7 @@ questions:
     gate: null
     translate_back: "Mình viết lại luồng chuẩn như sau: `<các bước mở đến xong việc>`. Luồng này sẽ là ví dụ chính để kiểm tra MVP có thật sự dùng được hay không."
     depends_on: [S0, S1, S2, S3, S4]
+    slot_keys: [main_flow_summary, main_flow_steps, main_flow_risks_or_edge_cases]
     answer_contract:
       required: true
       min_trimmed_chars: 12
@@ -118,6 +124,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại ràng buộc hiện tại là: `<nguồn lực>`, `<deadline>`, `<ngân sách>`. Mình sẽ dùng phần này để giới hạn scope."
     depends_on: [S0, S1, S2, S3, S4, S5]
+    slot_keys: [team_and_ownership_constraints, timeline_constraints, budget_constraints, constraint_impact_on_scope]
     answer_contract:
       required: true
       min_trimmed_chars: 6
@@ -153,6 +160,7 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận hai yêu cầu phi chức năng: dữ liệu nhạy cảm gồm `<danh sách hoặc 'không có'>`, và quy mô dự kiến năm đầu khoảng `<số người dùng>`. Hai điều này quyết định mức bảo mật và mức tối ưu **đủ dùng** cho dự án — để không làm thừa (tốn thời gian) mà cũng không làm thiếu (vỡ khi có người dùng thật)."
     depends_on: [R1]
+    slot_keys: [data_sensitivity_and_security, expected_scale_and_performance]
     answer_contract:
       required: true
       min_trimmed_chars: 6
@@ -166,6 +174,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại nhu cầu hiển thị là: `<cần SEO / không cần SEO>`, nên hướng rendering phù hợp là `<SSR/SSG hoặc SPA>` vì `<lý do gắn với cách người dùng tìm và dùng sản phẩm>`."
     depends_on: [R1, S8]
+    slot_keys: [client_and_rendering_strategy]
   - id: W2
     ask: "Người dùng của bạn chủ yếu mở sản phẩm trên máy tính, điện thoại, hay lúc nào cũng lẫn cả hai?"
     default: "Cả hai, nên thiết kế responsive và ưu tiên mobile-first ngay từ đầu."
@@ -175,6 +184,7 @@ questions:
     gate: null
     translate_back: "Mình hiểu thiết bị sử dụng chính là `<máy tính / điện thoại / cả hai>`. Vì vậy giao diện nên được thiết kế theo hướng `<responsive mobile-first / desktop-first có lý do cụ thể>`."
     depends_on: [R1, S8, W1]
+    slot_keys: [client_and_rendering_strategy, architecture_overview]
   - id: W3
     ask: "Bạn muốn người khác có thể mở sản phẩm bằng link ở giai đoạn nào? Có cần tên miền riêng ngay không, hay chỉ cần một bản chạy được để chia sẻ thử trước?"
     default: "Triển khai sớm trên Vercel hoặc Netlify với subdomain miễn phí; chưa cần tên miền riêng ở MVP nếu chưa có nhu cầu thương hiệu hoặc vận hành chính thức."
@@ -184,6 +194,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại nhu cầu triển khai là: `<chia sẻ bản thử sớm / cần miền riêng ngay / chỉ nội bộ>`. Vì vậy phương án phù hợp trước mắt là `<Vercel hoặc Netlify free + subdomain / phương án khác có lý do>`."
     depends_on: [R1, S8, W1, W2]
+    slot_keys: [hosting_strategy, deployment_goal, domain_and_access_strategy]
   - id: W4
     ask: "Người dùng có cần vào bằng tài khoản không? Nếu có thì kiểu nào sẽ đỡ rào cản nhất: email, Google, hay một cách đăng nhập khác?"
     default: "Nếu cần tài khoản, ưu tiên Google OAuth kèm email/password để vừa dễ vào nhanh vừa có đường fallback."
@@ -193,6 +204,7 @@ questions:
     gate: null
     translate_back: "Mình hiểu bài toán truy cập là: `<cần / không cần tài khoản>`. Nếu cần, phương án đăng nhập phù hợp hiện tại là `<Google OAuth + email/password / phương án khác>` vì `<lý do gắn với độ tiện và đối tượng người dùng>`."
     depends_on: [R1, S8, W1, W2, W3]
+    slot_keys: [auth_and_access_strategy]
   - id: W5
     ask: "Có chỗ nào cần cập nhật ngay lúc đó không, kiểu chat, thông báo live, hay nhiều người cùng thấy thay đổi tức thì? Và bạn có cần một khu vực admin riêng để quản lý không?"
     default: "Mặc định chưa cần realtime ở MVP; chỉ thêm trang admin nếu từ S2 đã có vai trò admin hoặc người vận hành rõ ràng."
@@ -202,6 +214,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại mức tương tác thời gian thực là `<không cần / cần ở chỗ nào>`, và nhu cầu quản trị là `<có / chưa cần admin riêng>`. Vì vậy kiến trúc nên `<giữ đơn giản không realtime / bổ sung realtime có phạm vi rõ>`."
     depends_on: [R1, S8, W1, W2, W3, W4]
+    slot_keys: [realtime_push_or_sync_strategy, initial_ops_notes]
     answer_contract:
       required: true
       min_trimmed_chars: 4
@@ -218,6 +231,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại phạm vi nền tảng thử nghiệm đầu tiên là `<Android / iOS / cả hai>`. Với nguồn lực hiện tại, việc tập trung vào `<Android / iOS>` làm MVP sẽ giúp giảm thiểu rủi ro build/test."
     depends_on: [R1, S8]
+    slot_keys: [client_and_rendering_strategy, device_capabilities_and_permissions]
   - id: M2
     ask: "Nếu điện thoại mất mạng hoặc mạng chập chờn, người dùng còn phải làm được phần nào không? Hay chỉ cần có mạng là đủ?"
     default: "Online-first. Chỉ chọn offline-first khi người dùng thật sự có tình huống mất mạng thường xuyên và vẫn phải hoàn thành việc ngay lúc đó."
@@ -227,6 +241,7 @@ questions:
     gate: null
     translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn có đồng ý đánh đổi chi phí này để lấy trải nghiệm offline không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1]
+    slot_keys: [client_and_rendering_strategy, architecture_overview]
     answer_contract:
       required: true
       min_trimmed_chars: 4
@@ -243,6 +258,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại app cần các quyền sau: `<danh sách quyền cần thiết>`, mỗi quyền gắn với `<tính năng Must tương ứng>`. Những quyền chưa phục vụ trực tiếp cho MVP sẽ để sau để tránh tăng rào cản review và niềm tin người dùng."
     depends_on: [R1, S8, M1, M2]
+    slot_keys: [distribution_strategy, release_goal, monetization_strategy]
   - id: M4
     ask: "Bạn có cần app chủ động kéo người dùng quay lại bằng thông báo đẩy không? Nếu có thì muốn nhắc họ chuyện gì?"
     default: "Có thể dùng FCM nếu push thực sự phục vụ luồng giá trị, nhưng mặc định chưa bật nếu không có lý do rõ ràng từ hành vi người dùng."
@@ -252,6 +268,7 @@ questions:
     gate: null
     translate_back: "Mình hiểu nhu cầu push là: `<có / chưa cần>`, dùng để `<nhắc việc gì>`. Nếu triển khai, phương án thực dụng hiện tại là FCM cho thông báo đẩy; nếu chưa có tình huống buộc phải kéo người dùng quay lại, có thể để sau MVP."
     depends_on: [R1, S8, M1, M2, M3]
+    slot_keys: [auth_and_access_strategy]
   - id: M5
     ask: "Bạn đang nghĩ app này kiếm tiền kiểu gì, và ở giai đoạn đầu muốn lên store thật luôn hay chỉ cần bản thử để test với người dùng trước?"
     default: "Mặc định phát hành bản thử trước qua TestFlight hoặc kênh internal test. Nếu có bán trong app, dùng in-app purchase và chấp nhận phí nền tảng."
@@ -261,6 +278,7 @@ questions:
     gate: null
     translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer (Apple App Store: $99/năm, Google Play Store: $25 một lần), và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn có đồng ý chuẩn bị các thủ tục và chi phí này không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1, M2, M3, M4]
+    slot_keys: [realtime_push_or_sync_strategy, store_readiness_notes]
     answer_contract:
       required: true
       min_trimmed_chars: 4
@@ -277,6 +295,7 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận ngôn ngữ và môi trường chạy là: `<Node.js / Python / Go / Rust / Bash>`, sử dụng các thư viện chính: `<danh sách thư viện>`."
     depends_on: [R1, S8]
+    slot_keys: [architecture_overview]
   - id: C2
     ask: "Giao diện lệnh của app sẽ thế nào? Người dùng truyền flags/arguments (ví dụ --verbose -f file.txt), tương tác qua menu (interactive prompt), hay truyền dữ liệu qua stdin/stdout pipeline?"
     default: "Kết hợp truyền flags/arguments cho các lệnh tự động và menu tương tác (interactive prompts) khi cần nhập liệu trực quan."
@@ -286,6 +305,7 @@ questions:
     gate: null
     translate_back: "Mình tóm tắt phương thức giao tiếp CLI là: `<truyền tham số flags/args / menu tương tác / stdin/stdout pipeline>`. Thư viện xử lý giao diện CLI đề xuất là `<Commander.js / Inquirer.js / Clack / các thư viện tương ứng>`."
     depends_on: [R1, S8, C1]
+    slot_keys: [client_and_rendering_strategy]
   - id: C3
     ask: "Ứng dụng lưu cấu hình, khóa bảo mật (API keys), và dữ liệu ở đâu? (ví dụ file config JSON ở thư mục home, biến môi trường ENV, hay keychain của hệ điều hành)?"
     default: "Lưu file config JSON tại thư mục home người dùng (ví dụ ~/.config/myapp.json) và hỗ trợ ghi đè bằng biến môi trường (ENV)."
@@ -295,6 +315,7 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận giải pháp quản lý cấu hình và bảo mật là: `<lưu file config JSON cục bộ / biến môi trường / keychain>` tại đường dẫn `<đường dẫn>`."
     depends_on: [R1, S8, C1, C2]
+    slot_keys: [auth_and_access_strategy]
   - id: C4
     ask: "Ứng dụng CLI này trước mắt chạy trên hệ điều hành nào của riêng bạn? Bạn có muốn giới hạn ở một hệ điều hành duy nhất để đơn giản hóa MVP, hay bắt buộc phải chạy đa nền tảng (macOS, Linux, Windows) ngay từ đầu?"
     default: "Chạy trên hệ điều hành hiện tại của người phát triển (ví dụ Windows hoặc macOS) để tối giản hóa việc tương thích."
@@ -304,6 +325,7 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận hệ điều hành hỗ trợ đầu tiên là: `<hệ điều hành của bạn>`. Các hệ điều hành khác sẽ được xem xét sau MVP để tối ưu hóa việc phân phối."
     depends_on: [R1, S8, C1, C2, C3]
+    slot_keys: [device_capabilities_and_permissions]
   - id: C5
     ask: "Bạn định phân phối công cụ này tới người dùng bằng cách nào? (ví dụ xuất bản lên NPM/Pip/Cargo, tải file binary biên dịch sẵn từ GitHub Releases, hay dùng homebrew/scoop)?"
     default: "Chạy cục bộ bằng node hoặc npx (hoặc npm link) để kiểm thử nội bộ trước khi xuất bản lên NPM registry."
@@ -313,6 +335,7 @@ questions:
     gate: null
     translate_back: "Mình xác nhận cơ chế phân phối ban đầu: `<cục bộ qua node/npx / npm link / NPM registry>`."
     depends_on: [R1, S8, C1, C2, C3, C4]
+    slot_keys: [distribution_channel, versioning_strategy, installation_guide]
     answer_contract:
       required: true
       min_trimmed_chars: 4

@@ -89,6 +89,7 @@ async function main() {
     let target_paths = [];
     let command_argv = [];
     let command_raw;
+    let content_size_bytes;
 
     if (tool_name === 'Bash') {
       action_kind = 'shell';
@@ -103,10 +104,25 @@ async function main() {
       if (target_paths.length === 0 && (toolInput.path || toolInput.file_path)) {
         target_paths = [toolInput.path || toolInput.file_path];
       }
+      // P4.2/R07 — approximate written size from the patch body itself
+      // (parity with the Claude adapter's write-gate size cap).
+      if (typeof patchText === 'string') {
+        content_size_bytes = Buffer.byteLength(patchText, 'utf8');
+      }
     } else if (tool_name === 'Write' || tool_name === 'Edit') {
       action_kind = 'write';
       const path = toolInput.path || toolInput.file_path || '';
       if (path) target_paths = [path];
+      if (typeof toolInput.content === 'string') {
+        content_size_bytes = Buffer.byteLength(toolInput.content, 'utf8');
+      } else if (typeof toolInput.new_string === 'string') {
+        content_size_bytes = Buffer.byteLength(toolInput.new_string, 'utf8');
+      } else if (Array.isArray(toolInput.edits)) {
+        content_size_bytes = toolInput.edits.reduce((total, edit) => {
+          const newString = edit && typeof edit === 'object' ? edit.new_string : undefined;
+          return total + (typeof newString === 'string' ? Buffer.byteLength(newString, 'utf8') : 0);
+        }, 0);
+      }
     }
 
     const corePath = resolveCorePath();
@@ -130,6 +146,7 @@ async function main() {
       command_raw,
       workspace,
       session_id: payload.session_id || 'unknown',
+      content_size_bytes,
     };
 
     const decision = evaluatePreAction(request);

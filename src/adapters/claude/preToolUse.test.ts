@@ -257,6 +257,60 @@ describe('onPreToolUse hook', () => {
     }
   });
 
+  test('P4.2/R07 — Write content length is computed and threaded through as content_size_bytes', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+    mkdirSync(docsDir, { recursive: true });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Write',
+        toolInput: { path: 'docs/02-scope.md', content: 'hello' },
+      });
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ content_size_bytes: 5 }), expect.anything());
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('P4.2/R07 — Edit new_string length is threaded through as content_size_bytes', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+    mkdirSync(docsDir, { recursive: true });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Edit',
+        toolInput: { path: 'docs/02-scope.md', new_string: 'abcdefghij' },
+      });
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ content_size_bytes: 10 }), expect.anything());
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('P4.2/R07 — MultiEdit-shaped edits[].new_string entries are summed into content_size_bytes', () => {
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'interview', branch: null, current_step: 'S0' });
+    mkdirSync(docsDir, { recursive: true });
+
+    const spy = vi.spyOn(core, 'evaluatePreAction');
+    try {
+      onPreToolUse({
+        workspaceRoot: testWorkspaceRoot,
+        tool: 'Edit',
+        toolInput: {
+          path: 'docs/02-scope.md',
+          edits: [{ new_string: 'abc' }, { new_string: 'de' }],
+        },
+      });
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ content_size_bytes: 5 }), expect.anything());
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test('should deny path traversal and drives on Write/Edit tools', () => {
     // 1. Path traversal via relative parent dir
     const result1 = onPreToolUse({

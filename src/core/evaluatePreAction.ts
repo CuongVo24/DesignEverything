@@ -319,6 +319,9 @@ function evaluatePreActionInner(
           ? {
               preCreateAllowed: !activeManagedPaths.has(targetPath) && !existsSync(join(workspace, targetPath)),
               scratchContext,
+              // P4.2/R07 — write-gate size cap, threaded from the adapter
+              // hook when it supplied the content being written.
+              contentSizeBytes: request.content_size_bytes,
             }
           : undefined;
         const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries, options);

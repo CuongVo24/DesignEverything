@@ -25,6 +25,7 @@ export function onPreToolUse(ctx: {
   let targetPaths: string[] = [];
   let commandStr = '';
   let commandArgv: string[] = [];
+  let contentSizeBytes: number | undefined;
 
   if (ctx.tool === 'Write' || ctx.tool === 'Edit') {
     actionKind = 'write';
@@ -38,6 +39,23 @@ export function onPreToolUse(ctx: {
         (typeof obj.filepath === 'string' ? obj.filepath : '') ||
         (typeof obj.file === 'string' ? obj.file : '') ||
         '';
+      // P4.2/R07 — byte length of the content actually being written, so
+      // evaluatePreAction can enforce the scratch write-gate size cap
+      // instead of only checking it once the file is already on disk.
+      // Write's `content` is the whole new file; Edit/MultiEdit's
+      // `new_string`/`edits[].new_string` is the replacement text — an
+      // approximation of the resulting file size (it does not add back
+      // `old_string`'s length), sufficient for a coarse cap.
+      if (typeof obj.content === 'string') {
+        contentSizeBytes = Buffer.byteLength(obj.content, 'utf8');
+      } else if (typeof obj.new_string === 'string') {
+        contentSizeBytes = Buffer.byteLength(obj.new_string, 'utf8');
+      } else if (Array.isArray(obj.edits)) {
+        contentSizeBytes = obj.edits.reduce((total: number, edit: unknown) => {
+          const newString = edit && typeof edit === 'object' ? (edit as Record<string, unknown>).new_string : undefined;
+          return total + (typeof newString === 'string' ? Buffer.byteLength(newString, 'utf8') : 0);
+        }, 0);
+      }
     }
 
     if (!rawPath) {
@@ -77,6 +95,7 @@ export function onPreToolUse(ctx: {
     target_paths: targetPaths,
     command_argv: commandArgv,
     command_raw: ctx.tool === 'Bash' ? commandStr : undefined,
+    content_size_bytes: contentSizeBytes,
   };
 
   const result = evaluatePreAction(request, capability);

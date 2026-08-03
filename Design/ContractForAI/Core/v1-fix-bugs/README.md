@@ -46,7 +46,7 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B1 | B1b — Atomic interview persistence | Core | B1a | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B1 | B1c — Design/build handoff state | Core | B1b | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B1 | B1d — Block reason transition | Core | B1c | APPROVED | IMPLEMENTED | UNIT_ONLY |
-| B2 | B2a — Protected artifact policy | Core | B1b | APPROVED | PARTIAL | UNIT_ONLY |
+| B2 | B2a — Protected artifact policy | Core | B1b | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B2 | B2b — Shell command classifier | Core | — | APPROVED | PARTIAL | UNIT_ONLY |
 | B2 | B2c — Canonical path matcher | Core | — | APPROVED | PARTIAL | UNIT_ONLY |
 | B2 | B2d — Gate evidence recomputation | Core | B2c | APPROVED | PARTIAL | UNIT_ONLY |

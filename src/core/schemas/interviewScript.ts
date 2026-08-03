@@ -12,6 +12,15 @@ export const questionSchema = z.object({
   translate_back: z.string().min(1),
   depends_on: z.array(z.string()),
   answer_contract: answerContractSchema.optional(),
+  // P4.2/P6 (R07/U05) — the authoritative set of `--slots-file` keys this
+  // question may write. Optional/additive (a question with no declared
+  // `slot_keys` keeps today's behavior: any key in the payload is accepted,
+  // same as before this field existed) so this does not require a schema
+  // version bump. A key can legitimately appear under more than one
+  // question (e.g. `architecture_overview` under W1/W2, M2 and C1 — the
+  // same slot filled in from whichever branch the interview actually
+  // took), so this is a per-question allowlist, not a global one.
+  slot_keys: z.array(z.string()).optional(),
 }).refine(
   (q) => {
     if (q.kind === 'meta') {

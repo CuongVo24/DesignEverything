@@ -8,6 +8,7 @@ import {
   type InterviewStorePayload,
 } from './schemas/interviewStore.js';
 import { migrateInterviewStore } from './migrateInterviewStore.js';
+import { cleanupExpiredScratch } from './artifactOwnership.js';
 
 export const CANONICAL_STORE_REL_PATH = '.design-everything/interview-state.json';
 export const LOCK_REL_PATH = '.design-everything/interview-state.lock';
@@ -278,6 +279,10 @@ export function transactInterviewStore(
   const lockNonce = acquireLock(workspaceRoot);
   try {
     cleanupOrphanTempFiles(workspaceRoot);
+    // P4.2/R07 — TTL sweep for abandoned interview scratch. Runs on every
+    // commit, same best-effort/idempotent contract as the temp-file cleanup
+    // above; scratch has no transaction of its own to clear it otherwise.
+    cleanupExpiredScratch(workspaceRoot);
     const current = loadInterviewStore(workspaceRoot);
 
     if (current.state_revision !== expectedRevision) {

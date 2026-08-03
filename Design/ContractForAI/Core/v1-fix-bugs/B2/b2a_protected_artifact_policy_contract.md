@@ -61,7 +61,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED (2026-08-03) | Proof: UNIT_ONLY (chờ A2/B5a cho seam evidence installed-target thật)
 
 Cập nhật 2026-07-25 (bugfix, không phải implementation đầy đủ của contract): đã xoá check substring
 `norm.includes('shapes/')`/`norm.includes('schemas/')` khỏi `classifyArtifact` — check này false-deny
@@ -77,9 +77,35 @@ scratch khớp session/question khác, cộng depth cap (chỉ `{session}/{quest
 và extension allowlist. Đóng X02 (pre-create managed docs): `evaluatePreAction.ts` giờ luôn dùng
 catalog thật; một managed-output path chỉ được coi "pre-create" hợp lệ khi chưa tồn tại trên đĩa VÀ
 chưa nằm trong active tier-1 emit manifest (`getActiveManagedPaths`, gateSnapshot.ts) — đã claimed thì
-deny `PROTECTED_ARTIFACT_MUTATION_DENIED` như managed-output khác. Còn lại của checklist §3 **chưa
-làm**: internal capability chưa có issuer production thật (không có call site nào phát capability —
-Core tự ghi state trực tiếp, không qua PreToolUse gate), operation binding, scratch size limit ở
-write-gate (chỉ có ở read-time trong `loadQuestionSlots`), TTL cleanup, key allowlist đối chiếu
-script.yaml. Implementation vẫn PARTIAL cho tới khi các mục đó đóng — xem R07 trong
-finding-coverage-matrix.md.
+deny `PROTECTED_ARTIFACT_MUTATION_DENIED` như managed-output khác.
+
+Cập nhật 2026-08-03 (A1-P4đ, quyết định chủ repo): mục "Chỉ operation Core có internal capability
+scoped theo action + revision + exact paths mới mutate" trong checklist §3 được **thu hẹp phạm vi**,
+không xoá. Khảo sát xác nhận: không có call site production nào construct `InternalMutationCapability`
+— mọi lần dùng actor `core-transaction` chỉ nằm trong `artifactOwnership.test.ts`. Lý do là cấu trúc,
+không phải thiếu code: Core tự ghi state trực tiếp trong tiến trình CLI (`interviewStore.ts`,
+`emitTransactionActivate.ts`), không đi qua `PreToolUse` — hook đó chỉ chặn tool call của agent
+(Write/Edit/Bash), không bao giờ thấy được `fs.writeFileSync` của Core. Nhánh `core-transaction` vì
+vậy là **defense-in-depth cho một kiến trúc chưa từng cần tới nó**, không phải production seam đang
+thiếu người phát hành. Quyết định (2026-08-03): giữ nhánh này làm lưới an toàn được test đầy đủ, không
+dựng issuer giả chỉ để có call site — bỏ mục "issuer production" khỏi điều kiện đóng Implementation.
+
+Bốn mục còn lại của R07 đã đóng trong cùng đợt A1-P4đ:
+- **Operation binding** — `authorizeMutation` giờ cross-check `capability.operation` với cả
+  `artifactClass` (`OPERATION_ALLOWED_CLASSES`) và `action` (`OPERATION_ALLOWED_ACTIONS`) trước khi
+  allow, thay vì chỉ khớp `target_paths`. Test: `artifactOwnership.test.ts` §"operation binding".
+- **Scratch size limit tại write-gate** — `content_size_bytes` được thread từ `Write`'s `content`/
+  `Edit`'s `new_string`/MultiEdit's `edits[].new_string` qua cả hai adapter hook
+  (`pre-tool-use.mjs` của Claude và Codex) → `PreActionRequest` → `authorizeMutation`, deny
+  `SCRATCH_FILE_OVERSIZED` khi vượt 1MB tại đúng điểm ghi, không chỉ ở read-time như trước.
+- **TTL cleanup** — `cleanupExpiredScratch()` (artifactOwnership.ts) quét best-effort, xoá file scratch
+  quá 24h và dọn thư mục `{session}/{question}/` rỗng; gọi trong `transactInterviewStore` mỗi lần
+  commit, cùng chỗ với `cleanupOrphanTempFiles` đã có.
+- **Key allowlist đối chiếu script.yaml** — thêm field `slot_keys` (optional, additive) vào schema
+  Question và vào 23/26 câu trong `script.yaml` (nguồn: cross-check trực tiếp với `emit.ts`'s
+  `filledSlots[...] = answers[key] || answers[QID]`, không chỉ copy bảng SKILL.md). Enforcement thật ở
+  `interviewApplicationServices.ts`: một slot key ngoài `slot_keys` của câu hiện tại bị deny
+  `SLOT_KEY_NOT_ALLOWLISTED`, chặn toàn bộ commit. Việc này cũng đóng một phần của U05 (B3a).
+
+Implementation chuyển `IMPLEMENTED` — cả 4 mục còn lại của checklist §3 đã đóng, mục thứ 5 đã thu hẹp
+phạm vi hợp lệ ở trên. Xem R07 trong finding-coverage-matrix.md.

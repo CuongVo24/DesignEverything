@@ -58,7 +58,7 @@ export {
   cliResultEnvelopeSchema,
   type CliResultEnvelope,
 } from '../adapters/shared/cliResult.js';
-export { classifyArtifact, authorizeMutation } from './artifactOwnership.js';
+export { classifyArtifact, authorizeMutation, cleanupExpiredScratch } from './artifactOwnership.js';
 export type { ArtifactClass, CatalogPathEntry, ScratchWriteContext } from './artifactOwnership.js';
 export { classifyCommand } from './classifyCommand.js';
 export type { CommandClassification, CommandClassificationOutcome, ClassifyCommandInput } from './classifyCommand.js';

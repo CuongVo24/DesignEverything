@@ -34,6 +34,16 @@ export const preActionRequestSchema = z.object({
   progress: z.any().optional(),
   plan: z.any().optional(),
   policy: z.any().optional(),
+  /** P4.2/R07 — byte length of the content a Write/Edit tool call is about
+   * to write (adapter-supplied: Write's `content`, or the sum of Edit's
+   * `new_string`/MultiEdit's `edits[].new_string`). Optional and additive:
+   * absent for callers/tests that predate this field, and for action kinds
+   * where it has no meaning (read/shell/delete/rename). Used only to cap
+   * interview-scratch write size at the gate itself — until now the 1MB
+   * limit in loadQuestionSlots only applied at read time, so an
+   * oversized scratch file could be written and simply sit there
+   * unenforced. */
+  content_size_bytes: z.number().int().nonnegative().optional(),
 });
 export type PreActionRequest = z.infer<typeof preActionRequestSchema>;
 
