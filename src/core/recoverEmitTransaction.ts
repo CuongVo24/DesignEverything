@@ -1,9 +1,26 @@
 import { existsSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, rmSync } from 'fs';
 import { join, dirname, relative } from 'path';
 import { emitJournalSchema, emitManifestSchema } from './schemas/emitManifest.js';
+import { executionStateSchema } from './schemas/executionState.js';
 import { journalPath, manifestPath, type EmitChannel } from './emitTransactionActivate.js';
 
 export type RecoverEmitResult = 'no-op' | 'rolled-back' | 'explicit-error';
+
+function handoffMatchesJournal(
+  state: unknown,
+  handoff: NonNullable<ReturnType<typeof emitJournalSchema.parse>['handoff']>
+): boolean {
+  const parsed = executionStateSchema.safeParse(state);
+  if (!parsed.success || !parsed.data.handoff) return false;
+  const binding = parsed.data.handoff;
+  return (
+    binding.manifest_generation_id === handoff.manifest_generation_id &&
+    binding.manifest_digest === handoff.manifest_digest &&
+    binding.plan_digest === handoff.plan_digest &&
+    binding.docs_digest === handoff.docs_digest &&
+    binding.interview_state_revision === handoff.interview_state_revision
+  );
+}
 
 function listFilesRecursive(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -40,6 +57,29 @@ export function recoverEmit(root: string, channel: EmitChannel = 'tier1'): Recov
   if (journal.step === 'done') return 'no-op';
 
   try {
+    // The only state file recovery may delete is one whose persisted handoff
+    // provenance matches this incomplete journal exactly. This protects a
+    // newer/re-emitted execution state from an old journal rollback.
+    if (journal.handoff) {
+      const handoffStatePath = join(root, journal.handoff.execution_state_path);
+      if (existsSync(handoffStatePath)) {
+        let rawState: unknown;
+        try {
+          rawState = JSON.parse(readFileSync(handoffStatePath, 'utf8'));
+        } catch {
+          return 'explicit-error';
+        }
+        const matches = handoffMatchesJournal(rawState, journal.handoff);
+        if (matches) {
+          unlinkSync(handoffStatePath);
+        } else if (journal.handoff.state_status === 'created') {
+          // The journal says it created a state but the bytes are not the
+          // bound state it recorded. Refuse to delete or overwrite anything.
+          return 'explicit-error';
+        }
+      }
+    }
+
     const backupDir = join(root, journal.backup_dir);
     const backedUpFiles = listFilesRecursive(backupDir);
     const restoredRelPaths = new Set<string>();

@@ -2,7 +2,8 @@
 import { createHash } from 'crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import { ExecutionState, BlockRecord } from './schemas/index.js';
+import { ExecutionState } from './schemas/index.js';
+import { createBlockRecord } from './advanceExecutionState.js';
 
 export function stableStringify(obj: any): string {
   if (obj === null || typeof obj !== 'object') {
@@ -95,16 +96,13 @@ export function assertValidatedSnapshot(input: {
     input.state.validated_plan_digest !== currentPlanDigest ||
     input.state.validated_docs_digest !== currentDocsDigest
   ) {
-    const blockRecord: BlockRecord = {
+    const blockRecord = createBlockRecord(input.state, {
       kind: 'snapshot-stale',
       reason_code: 'VALIDATED_SNAPSHOT_STALE',
-      origin_phase: input.state.phase,
-      task_id: input.state.active_task,
       recoverable_by: '/build validate',
       detail:
         'Kế hoạch hoặc tài liệu thiết kế đã bị thay đổi kể từ lần xác thực cuối cùng. Vui lòng chạy lại lệnh "validate" để cập nhật snapshot.',
-      created_at: new Date().toISOString(),
-    };
+    });
     input.state.phase = 'blocked';
     input.state.block_reason = blockRecord;
     input.state.updated_at = new Date().toISOString();

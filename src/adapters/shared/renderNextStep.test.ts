@@ -292,6 +292,13 @@ describe('renderNextStep Adapter Renderer', () => {
           recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T0-discovery --command node-version',
           detail: 'command failed',
           created_at: new Date().toISOString(),
+          remediation: {
+            actions: ['read', 'write-task-scope', 'run-command'],
+            paths: ['src/discovery.ts'],
+            command: 'node adapter/claude-code/cli.mjs verify --task T0-discovery --command node-version',
+            task_id: 'T0-discovery',
+            plan_revision: 1,
+          },
         },
       }, mockProfile)],
       ['amendment proposed', () => renderNextStep(mockPlan, amendmentPendingState, mockProfile)],

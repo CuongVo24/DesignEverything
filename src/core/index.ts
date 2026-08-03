@@ -96,6 +96,7 @@ export {
   completeTier1Emit,
   completeTier1Activation,
   evaluateBuildReadiness,
+  createBlockRecord,
   blockExecution,
   recoverBlockedExecution,
   allowedRemediation,

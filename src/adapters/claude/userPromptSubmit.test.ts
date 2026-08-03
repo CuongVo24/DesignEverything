@@ -146,7 +146,7 @@ describe('onUserPromptSubmit hook', () => {
 
   test('should allow turn but not inject context when current_step is null (interview complete)', () => {
     seedCanonicalProgress({
-      phase: 'ready-to-build',
+      phase: 'ready-for-validation',
       branch: 'web',
       current_step: null,
       answered: ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'W1', 'W2', 'W3', 'W4', 'W5'],

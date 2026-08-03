@@ -70,10 +70,31 @@ describe('B5c — Weak-Executor Replay & Quality Evaluation Suite', () => {
 
     // Transition to blocked on validation failure
     state.phase = 'blocked';
-    state.block_reason = 'snapshot-stale: Kế hoạch hoặc tài liệu thiết kế đã bị sửa đổi. Vui lòng chạy lệnh "validate" để cập nhật snapshot.';
+    const recoverCommand = 'node adapter/claude-code/cli.mjs validate';
+    state.block_reason = {
+      kind: 'snapshot-stale',
+      reason_code: 'SNAPSHOT_STALE',
+      origin_phase: 'plan-validating',
+      task_id: null,
+      recoverable_by: recoverCommand,
+      detail: 'Kế hoạch hoặc tài liệu thiết kế đã bị sửa đổi. Vui lòng chạy validate để cập nhật snapshot.',
+      created_at: new Date().toISOString(),
+      remediation: {
+        actions: ['read', 'write-docs', 'run-command'],
+        paths: ['Design/ContractForAI/Core/v1-fix-bugs/B1/03-plan.md'],
+        command: recoverCommand,
+        task_id: null,
+        plan_revision: 1,
+      },
+    };
 
     expect(state.phase).toBe('blocked');
-    expect(state.block_reason).toContain('validate');
+    expect(state.block_reason?.recoverable_by).toBe(recoverCommand);
+    expect(state.block_reason?.remediation).toMatchObject({
+      paths: ['Design/ContractForAI/Core/v1-fix-bugs/B1/03-plan.md'],
+      command: recoverCommand,
+      plan_revision: state.plan_revision,
+    });
 
     // Recovery is available by clearing block_reason upon successful validation
     state = {

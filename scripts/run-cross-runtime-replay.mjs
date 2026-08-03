@@ -44,7 +44,10 @@ try {
     const progressPath = join(workspace, 'progress.json');
     const progress = {
       version: '4.0.0',
-      phase: 'ready-to-build',
+      // P3 đổi tên phase hậu-phỏng-vấn `ready-to-build` → `ready-for-validation`
+      // (progressSchema chỉ còn chấp nhận tên mới). Seed dùng tên cũ khiến hook
+      // đọc progress.json back-compat gặp schema-invalid → health broken → deny.
+      phase: 'ready-for-validation',
       branch: benchmark.target === 'vite-web' ? 'web' : 'cli',
       calibrate_mode: 'fast',
       current_step: null,

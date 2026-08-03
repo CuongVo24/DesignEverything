@@ -59,10 +59,19 @@ describe('B5a — Adversarial Hook Protection Suite (real finding IDs: X01, X02,
     tmpDir = join(tmpdir(), `de-adversarial-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
 
-    // Setup base interview script
+    // Setup base interview script + catalog — a real install.mjs target
+    // ships both under Design/Content/ (see install.mjs's stageCopyFile for
+    // artifact-catalog.yaml); a fixture missing the catalog silently
+    // degrades every catalog-aware ownership check to an empty catalog,
+    // which made the X02-overwrite case below indistinguishable from a
+    // genuine pre-create and always allow.
     const designDir = join(tmpDir, 'Design/Content/interview-script');
     mkdirSync(designDir, { recursive: true });
     cpSync(join(REPO_ROOT, 'Design/Content/interview-script'), designDir, { recursive: true });
+    cpSync(
+      join(REPO_ROOT, 'Design/Content/artifact-catalog.yaml'),
+      join(tmpDir, 'Design/Content/artifact-catalog.yaml')
+    );
 
     // Base progress.json in interview phase
     const progress = {
@@ -219,7 +228,7 @@ describe('B5a — Adversarial Hook Protection Suite (real finding IDs: X01, X02,
     // real canonical phase is what the decision is now based on.
     const progress = {
       version: '4.0.0',
-      phase: 'ready-to-build',
+      phase: 'ready-for-validation',
       branch: 'web',
       calibrate_mode: 'fast',
       current_step: null,
@@ -250,7 +259,7 @@ describe('B5a — Adversarial Hook Protection Suite (real finding IDs: X01, X02,
     // "P8.2" suite already pins for the pure function.
     const progress = {
       version: '4.0.0',
-      phase: 'ready-to-build',
+      phase: 'ready-for-validation',
       branch: 'web',
       calibrate_mode: 'fast',
       current_step: null,

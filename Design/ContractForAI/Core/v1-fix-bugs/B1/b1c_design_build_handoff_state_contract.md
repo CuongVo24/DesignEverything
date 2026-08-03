@@ -10,7 +10,7 @@ Khóa một bàn giao duy nhất và đúng sự thật: emit xong chỉ sẵn s
 
 - Quan hệ giữa interview phase và execution phase.
 - Khởi tạo execution-state sau emit.
-- Luật code gate cho docs-emitted/ready-to-build/plan-validating.
+- Luật code gate cho docs-emitted/ready-for-validation/plan-validating (và migration legacy ready-to-build).
 - Next-step canonical cho /design-everything → /build.
 
 ### Out of scope
@@ -20,15 +20,15 @@ Khóa một bàn giao duy nhất và đúng sự thật: emit xong chỉ sẵn s
 
 ## 3. Implementation checklist
 
-- [ ] Thay nghĩa mơ hồ ready-to-build bằng ready-for-validation, hoặc migration alias có semantics tương đương.
-- [ ] Successful tier-1 emit phải atomically tạo execution-state phase=plan-validating cùng plan/docs digests.
-- [ ] Nếu docs/plan tồn tại mà execution-state thiếu/corrupt, code action luôn deny với reason EXECUTION_STATE_REQUIRED/CORRUPT.
-- [ ] requires_validation không bao giờ được skip vì execState null.
-- [ ] docs-emitted là transient/recovery phase và chặt ít nhất bằng ready-for-validation; không có phase inversion.
-- [ ] Chỉ ready-to-execute, executing/repairing hợp lệ và path thuộc active task mới có thể allow code write.
-- [ ] Core next-step sau emit trả nextCommand=/build và hành động đầu tiên validate, không trả “bắt đầu code M0”.
-- [ ] Chốt invariant: gate artifact pass không đồng nghĩa plan validation pass.
-- [ ] Migration state ready-to-build cũ tạo/đòi plan-validating, không tự nâng ready-to-execute.
+- [x] Thay nghĩa mơ hồ ready-to-build bằng ready-for-validation, hoặc migration alias có semantics tương đương.
+- [x] Successful tier-1 emit phải atomically tạo execution-state phase=plan-validating cùng plan/docs digests.
+- [x] Nếu docs/plan tồn tại mà execution-state thiếu/corrupt, code action luôn deny với reason EXECUTION_STATE_REQUIRED/CORRUPT.
+- [x] requires_validation không bao giờ được skip vì execState null.
+- [x] docs-emitted là transient/recovery phase và chặt ít nhất bằng ready-for-validation; không có phase inversion.
+- [x] Chỉ ready-to-execute, executing/repairing hợp lệ và path thuộc active task mới có thể allow code write.
+- [x] Core next-step sau emit trả nextCommand=/build và hành động đầu tiên validate, không trả “bắt đầu code M0”.
+- [x] Chốt invariant: gate artifact pass không đồng nghĩa plan validation pass.
+- [x] Migration state ready-to-build cũ tạo/đòi plan-validating, không tự nâng ready-to-execute.
 
 ## 4. Interfaces / Files expected to change
 
@@ -60,10 +60,8 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
 
-Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
-khớp README.md, trước đó ghi chỉ một giá trị `WAITING_FOR_APPROVAL` không phân biệt spec/impl/proof.
-Checklist §3 còn nhiều mục chưa VERIFIED — U04 (docs-emitted fail-open nhưng ready-to-build lại
-deny) và R04 (blanket-allow write dưới `Design/`/`docs/` ở pha plan-validating) trong
-finding-coverage-matrix.md vẫn OPEN.
+Cập nhật 2026-08-02 (A1-P3 implementation): canonical phase là `ready-for-validation`; emit Tier-1
+ghi execution-state bound vào cùng recovery journal và missing/corrupt state fail closed. Proof vẫn
+`UNIT_ONLY`; installed-runtime evidence thuộc A2/B5, nên không suy diễn thành `VERIFIED`.

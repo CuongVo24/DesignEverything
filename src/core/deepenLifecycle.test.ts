@@ -11,7 +11,7 @@ import type { EmitManifest } from './schemas/emitManifest.js';
 function makeProgress(overrides: Partial<Progress> = {}): Progress {
   return {
     version: '7.0.0',
-    phase: 'ready-to-build',
+    phase: 'ready-for-validation',
     session_id: 'default-session',
     state_revision: 0,
     branch: 'web',

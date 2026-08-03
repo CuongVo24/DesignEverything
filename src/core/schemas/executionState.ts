@@ -38,6 +38,28 @@ export const blockKindSchema = z.enum([
 ]);
 export type BlockKind = z.infer<typeof blockKindSchema>;
 
+export const remediationActionSchema = z.enum([
+  'read',
+  'write-docs',
+  'write-task-scope',
+  'run-command',
+]);
+export type RemediationAction = z.infer<typeof remediationActionSchema>;
+
+/**
+ * The recovery capability is state data, not a policy switch inferred from a
+ * free-text error.  Binding all dimensions here lets the hook reject a
+ * command/path/task/revision mismatch instead of widening a blocked state.
+ */
+export const blockRemediationSchema = z.object({
+  actions: z.array(remediationActionSchema).min(1),
+  paths: z.array(z.string()),
+  command: z.string().min(1),
+  task_id: z.string().nullable(),
+  plan_revision: z.number().int().min(0),
+});
+export type BlockRemediation = z.infer<typeof blockRemediationSchema>;
+
 export const blockRecordSchema = z.object({
   kind: blockKindSchema,
   reason_code: z.string(),
@@ -46,8 +68,34 @@ export const blockRecordSchema = z.object({
   recoverable_by: z.string(),
   detail: z.string(),
   created_at: z.string().datetime(),
+  remediation: blockRemediationSchema,
+}).superRefine((record, ctx) => {
+  if (record.recoverable_by !== record.remediation.command) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['remediation', 'command'],
+      message: 'remediation.command must exactly match recoverable_by',
+    });
+  }
+  if (record.task_id !== record.remediation.task_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['remediation', 'task_id'],
+      message: 'remediation.task_id must exactly match task_id',
+    });
+  }
 });
 export type BlockRecord = z.infer<typeof blockRecordSchema>;
+
+export const tier1HandoffSchema = z.object({
+  manifest_generation_id: z.string().min(1),
+  manifest_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  plan_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  docs_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  interview_state_revision: z.number().int().min(0),
+  activated_at: z.string().datetime(),
+});
+export type Tier1Handoff = z.infer<typeof tier1HandoffSchema>;
 
 export const executionStateSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
@@ -56,10 +104,14 @@ export const executionStateSchema = z.object({
   active_milestone: z.string().nullable(),
   completed_tasks: z.array(z.string()),
   evidence: z.array(evidenceRecordSchema),
-  block_reason: z.union([z.string(), blockRecordSchema]).nullable(),
+  block_reason: blockRecordSchema.nullable(),
   validated_plan_digest: z.string(),
   validated_docs_digest: z.string(),
   validation_result_digest: z.string(),
+  // Optional only so loadExecutionState can migrate prior files without
+  // claiming their old activation had this P3 binding. Every new tier-1
+  // handoff writes it.
+  handoff: tier1HandoffSchema.optional(),
   plan_revision: z.number().int().default(1),
   amendment_history: z.array(planAmendmentSchema).default([]),
   // B17a — review/break-task loop. Optional với default để state cũ vẫn hợp lệ.

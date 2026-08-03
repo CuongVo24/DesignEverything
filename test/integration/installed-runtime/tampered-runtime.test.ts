@@ -21,16 +21,30 @@ describe('tampered-runtime — DEBT3.2 end-to-end: a real install with a hand-ta
     mkdirSync(tempTarget, { recursive: true });
     execFileSync('node', [CLAUDE_INSTALLER, tempTarget], { encoding: 'utf8' });
 
-    // Give the target a valid progress.json so the ONLY health problem after
+    // Create the canonical interview store so the ONLY health problem after
     // tampering is the tampered asset itself — otherwise a fresh install's
-    // pre-existing MISSING_INTERVIEW_STORE would also be issues[0] and mask
-    // the reason_code this test is actually about.
+    // pre-existing MISSING_INTERVIEW_STORE (install manifest present, no
+    // .design-everything/interview-state.json yet) would be issues[0] and
+    // mask the reason_code this test is actually about. Since the P2.2a
+    // canonical-store cutover, the legacy progress.json write below is not
+    // by itself enough — inspectRuntimeHealth checks interview-state.json,
+    // not progress.json, for this issue (runtimeHealth.ts's
+    // hasCanonicalStore check).
+    const runtimeDirForInit = join(tempTarget, '.design-everything/runtime');
+    const versionForInit = readdirSync(runtimeDirForInit).sort().pop()!;
+    execFileSync('node', [join(runtimeDirForInit, versionForInit, 'cli.mjs'), 'init'], {
+      cwd: tempTarget,
+      encoding: 'utf8',
+    });
+
+    // Legacy progress.json — kept for back-compat coverage alongside the
+    // canonical store; no longer sufficient on its own (see above).
     writeFileSync(
       join(tempTarget, 'progress.json'),
       JSON.stringify(
         {
           version: '4.0.0',
-          phase: 'ready-to-build',
+          phase: 'ready-for-validation',
           branch: 'web',
           calibrate_mode: 'fast',
           current_step: null,

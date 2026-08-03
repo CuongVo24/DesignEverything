@@ -48,6 +48,17 @@ describe('B1c — Design-to-build handoff state contract', () => {
     expect(readiness.next_command).toBe('/build');
   });
 
+  test('evaluateBuildReadiness fails closed when the post-emit execution state is missing', () => {
+    const readiness = evaluateBuildReadiness(
+      { phase: 'ready-for-validation', branch: 'web' },
+      null
+    );
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.reason_code).toBe('EXECUTION_STATE_REQUIRED');
+    expect(readiness.next_command).toBe('/build');
+  });
+
   test('evaluatePreAction denies code write actions during plan-validating phase', () => {
     const execState = initExecutionState();
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });

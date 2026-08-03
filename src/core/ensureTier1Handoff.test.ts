@@ -5,9 +5,10 @@ import { mkdtempSync, rmSync, existsSync, cpSync, readFileSync, writeFileSync } 
 import { tmpdir } from 'os';
 import { activateTier1Emit } from './emitTier1.js';
 import { manifestPath } from './emitTransactionActivate.js';
-import { completeTier1Activation } from './advanceExecutionState.js';
 import { ensureTier1Handoff } from './ensureTier1Handoff.js';
+import { loadInterviewStore } from './interviewStore.js';
 import type { InterviewAnswers } from './emit.js';
+import { seedCanonicalAnswers, seedCanonicalProgress } from '../../test/helpers/canonicalProgress.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '../..');
@@ -33,79 +34,101 @@ const execStateRelPath = '.design-everything/execution-state.json';
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'ensure-tier1-handoff-test-'));
   cpSync(join(projectRoot, 'Design/Content'), join(root, 'Design/Content'), { recursive: true });
+  seedCanonicalProgress(root, { phase: 'ready-for-validation', branch: 'cli', current_step: null });
+  seedCanonicalAnswers(root, cliAnswers);
 });
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe('P3.1/P7 — ensureTier1Handoff closes the crash window between docs activation and execution-state creation', () => {
-  test('a tier-1 emit interrupted before execution-state.json is created gets healed on the next call', () => {
-    const result = activateTier1Emit(root, cliAnswers, 'cli');
+describe('P3.1 — ensureTier1Handoff reports, but never manufactures, a tier-1 handoff', () => {
+  function emitWithAtomicHandoff() {
+    return activateTier1Emit(root, cliAnswers, 'cli', {
+      interview_state_revision: loadInterviewStore(root).state_revision,
+    });
+  }
+
+  test('an activated manifest without execution-state.json remains fail-closed instead of self-healing', () => {
+    const result = emitWithAtomicHandoff();
     expect(result.ok).toBe(true);
 
-    // Simulate the crash: tier-1 docs/manifest are fully activated (real
-    // production authority already ran to completion), but the process was
-    // killed before cliOperations.handleEmit reached its subsequent
-    // completeTier1Activation call — execution-state.json was never
-    // created.
+    const execStatePath = join(root, execStateRelPath);
+    expect(existsSync(execStatePath)).toBe(true);
+    rmSync(execStatePath);
+
+    const health = ensureTier1Handoff(root);
+
+    expect(health).toBe('state-required');
+    expect(existsSync(execStatePath)).toBe(false);
+  });
+
+  test('repeated inspection of a missing state is non-mutating', () => {
+    const result = emitWithAtomicHandoff();
+    expect(result.ok).toBe(true);
+    rmSync(join(root, execStateRelPath));
+
+    expect(ensureTier1Handoff(root)).toBe('state-required');
+    expect(ensureTier1Handoff(root)).toBe('state-required');
     expect(existsSync(join(root, execStateRelPath))).toBe(false);
-
-    ensureTier1Handoff(root);
-
-    expect(existsSync(join(root, execStateRelPath))).toBe(true);
-    const state = JSON.parse(readFileSync(join(root, execStateRelPath), 'utf8'));
-    expect(state.phase).toBe('plan-validating');
   });
 
-  test('calling it twice is idempotent — the second call does not touch an already-healed execution-state.json', () => {
-    const result = activateTier1Emit(root, cliAnswers, 'cli');
+  test('an existing execution state is reported ready and left untouched', () => {
+    const result = emitWithAtomicHandoff();
     expect(result.ok).toBe(true);
 
-    ensureTier1Handoff(root);
-    const firstWrite = readFileSync(join(root, execStateRelPath), 'utf8');
-
-    ensureTier1Handoff(root);
-    const secondRead = readFileSync(join(root, execStateRelPath), 'utf8');
-    expect(secondRead).toBe(firstWrite);
-  });
-
-  test('a normal, non-crashed handoff (execution-state.json already exists) is left untouched', () => {
-    const result = activateTier1Emit(root, cliAnswers, 'cli');
-    expect(result.ok).toBe(true);
-
-    // Simulate the normal path: handleEmit's completeTier1Activation already
-    // ran (no crash), and state has since advanced further than
-    // plan-validating (e.g. build already started) before this self-heal is
-    // ever invoked — it must never reset that.
-    completeTier1Activation(root);
     const execStatePath = join(root, execStateRelPath);
     const advanced = JSON.parse(readFileSync(execStatePath, 'utf8'));
     advanced.phase = 'executing';
     writeFileSync(execStatePath, JSON.stringify(advanced, null, 2), 'utf8');
 
-    ensureTier1Handoff(root);
+    expect(ensureTier1Handoff(root)).toBe('ready');
 
     const after = JSON.parse(readFileSync(execStatePath, 'utf8'));
     expect(after.phase).toBe('executing');
   });
 
   test('a workspace with no tier-1 manifest at all (pure interview phase) is a no-op', () => {
-    ensureTier1Handoff(root);
+    expect(ensureTier1Handoff(root)).toBe('not-applicable');
     expect(existsSync(join(root, execStateRelPath))).toBe(false);
   });
 
-  test('a tier-1 manifest that exists but was never activated (still mid-transaction) does not trigger a heal', () => {
-    const result = activateTier1Emit(root, cliAnswers, 'cli');
+  test('a tier-1 manifest that exists but was never activated is not applicable', () => {
+    const result = emitWithAtomicHandoff();
     expect(result.ok).toBe(true);
 
     const mPath = manifestPath(root, 'tier1');
     const manifest = JSON.parse(readFileSync(mPath, 'utf8'));
-    delete manifest.activated_at;
+    manifest.activated_at = null;
     writeFileSync(mPath, JSON.stringify(manifest, null, 2), 'utf8');
+    rmSync(join(root, execStateRelPath));
 
-    ensureTier1Handoff(root);
+    expect(ensureTier1Handoff(root)).toBe('not-applicable');
 
+    expect(existsSync(join(root, execStateRelPath))).toBe(false);
+  });
+
+  test('an incomplete handoff-pending journal requires recovery and never creates state', () => {
+    const result = emitWithAtomicHandoff();
+    expect(result.ok).toBe(true);
+    rmSync(join(root, execStateRelPath));
+
+    const manifest = JSON.parse(readFileSync(manifestPath(root, 'tier1'), 'utf8'));
+    const journalPath = join(root, '.design-everything/emit-journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
+    journal.step = 'handoff-pending';
+    journal.handoff = {
+      execution_state_path: execStateRelPath,
+      interview_state_revision: 1,
+      manifest_generation_id: manifest.generation_id,
+      manifest_digest: 'a'.repeat(64),
+      plan_digest: 'b'.repeat(64),
+      docs_digest: 'c'.repeat(64),
+      state_status: 'pending',
+    };
+    writeFileSync(journalPath, JSON.stringify(journal, null, 2), 'utf8');
+
+    expect(ensureTier1Handoff(root)).toBe('recovery-required');
     expect(existsSync(join(root, execStateRelPath))).toBe(false);
   });
 });

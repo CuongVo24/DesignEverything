@@ -260,7 +260,22 @@ function evaluatePreActionInner(
     }
   }
 
-  if (!execState && progress && progress.phase !== 'interview' && progress.phase !== 'docs-emitted' && progress.phase !== 'ready-for-validation') {
+  // `ready-for-validation` is the direct successor of the retired
+  // `ready-to-build` phase (migrateInterviewStore converts old stores
+  // one-way) and inherits its semantics: interview done, docs emitted,
+  // code gate NOT open until /build creates execution-state.json. It must
+  // stay OUT of this exclusion list — only `interview`/`docs-emitted`
+  // (genuinely mid-interview, where the gate-policy fallback below is the
+  // right authority) are safe to exempt. Before this fix, `ready-for-validation`
+  // sat in the exclusion list from when it meant something distinct from
+  // `ready-to-build`; once the phase rename made it inherit ready-to-build's
+  // role, leaving it excluded made this branch permanently unreachable (the
+  // schema only allows these three phases) and let a workspace with docs
+  // emitted but no execution-state.json (corruption, interrupted handoff,
+  // manually deleted file) fall through to the interview-time gate-policy
+  // check and get allowed to write code — silently reopening the gate this
+  // check exists to keep shut.
+  if (!execState && progress && progress.phase !== 'interview' && progress.phase !== 'docs-emitted') {
     return {
       decision: 'deny',
       reason_code: 'EXECUTION_STATE_REQUIRED',
@@ -513,7 +528,7 @@ function evaluatePreActionInner(
       }
     }
 
-    if (request.action_kind === 'shell' && remediation.allowed_actions.includes('verify')) {
+    if (request.action_kind === 'shell' && remediation.allowed_actions.includes('run-command')) {
       const trimmedCmd = commandStr.trim();
       const trimmedRecoverCmd = (remediation.next_command || '').trim();
       if (trimmedCmd && trimmedRecoverCmd && trimmedCmd === trimmedRecoverCmd) {
@@ -529,7 +544,7 @@ function evaluatePreActionInner(
     return {
       decision: 'deny',
       reason_code: 'state-blocked',
-      user_message: `Quy trình thực thi đang bị chặn (blocked). Lý do: ${execState.block_reason || 'Không rõ lý do.'}. Vui lòng chạy "validate" hoặc "repair" để khắc phục.`,
+      user_message: `Quy trình thực thi đang bị chặn (blocked). Lý do: ${execState.block_reason?.detail || 'Không rõ lý do.'}. Vui lòng chạy đúng lệnh khắc phục được chỉ định.`,
       enforcement: 'hard',
     };
   }

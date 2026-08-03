@@ -6,6 +6,12 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs';
 
+const validationDigests = {
+  plan_digest: 'a'.repeat(64),
+  docs_digest: 'b'.repeat(64),
+  validation_digest: 'c'.repeat(64),
+};
+
 // Mỗi test spawn ít nhất một process node thật (test đầu spawn 3 lệnh tuần tự).
 // 5s mặc định của vitest không đủ trên Windows/máy chậm — timeout ở cấp describe
 // để cả file không flaky.
@@ -82,7 +88,7 @@ describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
 
   test('should pass verification and capture evidence correctly', async () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
 
     // Verify first command: cmd-zero (exit-code-zero)
@@ -134,7 +140,7 @@ describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
 
   test('should fail when exit code is non-zero', async () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
 
     const failingPlan = JSON.parse(JSON.stringify(plan));
@@ -156,7 +162,7 @@ describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
 
   test('should fail when output includes expectation is not met', async () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
 
     const failingPlan = JSON.parse(JSON.stringify(plan));
@@ -176,7 +182,7 @@ describe('runTaskVerification core engine', { timeout: 60_000 }, () => {
 
   test('should reject path traversal in CWD or expected file path', async () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
 
     const evilPlan = JSON.parse(JSON.stringify(plan));

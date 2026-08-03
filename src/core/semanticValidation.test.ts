@@ -1,40 +1,47 @@
 import { test, expect, describe, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, cpSync, readFileSync } from 'fs';
+import { mkdtempSync, rmSync, writeFileSync, cpSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { runCliOperation } from '../adapters/shared/cliOperations.js';
 import { manifestPath } from './emitTransactionActivate.js';
 import { runSemanticValidation } from './semanticValidation.js';
-import { seedCanonicalProgress } from '../../test/helpers/canonicalProgress.js';
+import { seedCanonicalProgress, seedCanonicalAnswers } from '../../test/helpers/canonicalProgress.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '../..');
 
-/** Mirrors test/integration/cli-protocol.test.ts's seedEmitReadyWorkspace. */
+/**
+ * Mirrors test/integration/cli-protocol.test.ts's seedEmitReadyWorkspace.
+ * P3 tightened `emit` to require the canonical store already be in
+ * `ready-for-validation` (the honest post-interview handoff phase), and P10
+ * made tier-1 emit read answers off the canonical store, not the legacy
+ * Design/.interview/answers.json file. This helper had drifted from both:
+ * it left the phase at the `initializeInterviewStore` default (`interview`)
+ * and hand-wrote the dead answers.json, so `emit` fails closed with
+ * INTERVIEW_NOT_READY_FOR_VALIDATION. Align it with the canonical seed.
+ */
 function seedEmitReadyWorkspace(workspace: string): void {
   cpSync(join(REPO_ROOT, 'Design/Content'), join(workspace, 'Design/Content'), { recursive: true });
-  seedCanonicalProgress(workspace, { branch: 'cli' });
-  const interviewDir = join(workspace, 'Design/.interview');
-  mkdirSync(interviewDir, { recursive: true });
-  writeFileSync(
-    join(interviewDir, 'answers.json'),
-    JSON.stringify({
-      S0: 'CLI tool',
-      S1: 'Nỗi đau A, xoay xở B',
-      S2: 'Dev (Contributor)',
-      S3: 'Must: chạy lệnh chính. Should: log đẹp.',
-      S4: 'Config, Job',
-      S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
-      S6: 'Solo, 2 tuần',
-      C1: 'Node.js (TypeScript)',
-      C2: 'flags/arguments',
-      C3: 'file config JSON ~/.config/myapp.json',
-      C4: 'macOS',
-      C5: 'NPM registry',
-    }),
-    'utf8'
-  );
+  seedCanonicalProgress(workspace, {
+    phase: 'ready-for-validation',
+    branch: 'cli',
+    current_step: null,
+  });
+  seedCanonicalAnswers(workspace, {
+    S0: 'CLI tool',
+    S1: 'Nỗi đau A, xoay xở B',
+    S2: 'Dev (Contributor)',
+    S3: 'Must: chạy lệnh chính. Should: log đẹp.',
+    S4: 'Config, Job',
+    S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
+    S6: 'Solo, 2 tuần',
+    C1: 'Node.js (TypeScript)',
+    C2: 'flags/arguments',
+    C3: 'file config JSON ~/.config/myapp.json',
+    C4: 'macOS',
+    C5: 'NPM registry',
+  });
 }
 
 describe('P1 (DEBT1) — runSemanticValidation', () => {

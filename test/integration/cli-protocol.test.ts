@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { runCliOperation } from '../../src/adapters/shared/cliOperations.js';
 import { exitCodeFor } from '../../src/adapters/shared/cliResult.js';
+import { evaluatePreAction } from '../../src/core/evaluatePreAction.js';
 import { manifestPath } from '../../src/core/emitTransactionActivate.js';
 import { seedCanonicalProgress, seedCanonicalAnswers } from '../helpers/canonicalProgress.js';
 
@@ -60,7 +61,11 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
 
   function seedEmitReadyWorkspace(workspace: string): void {
     cpSync(join(REPO_ROOT, 'Design/Content'), join(workspace, 'Design/Content'), { recursive: true });
-    seedCanonicalProgress(workspace, { branch: 'cli' });
+    seedCanonicalProgress(workspace, {
+      phase: 'ready-for-validation',
+      branch: 'cli',
+      current_step: null,
+    });
     // P10 — tier-1 emit reads payload.answers off the canonical store, not
     // the legacy Design/.interview/answers.json file (dead for tier-1 since
     // the P2.2a canonical-authority cutover; see handleEmit).
@@ -153,7 +158,47 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
 
     expect(existsSync(execStatePath)).toBe(true);
     const state = JSON.parse(readFileSync(execStatePath, 'utf8'));
+    const manifest = JSON.parse(readFileSync(manifestPath(tempDir, 'tier1'), 'utf8'));
+    const journal = JSON.parse(readFileSync(join(tempDir, '.design-everything/emit-journal.json'), 'utf8'));
     expect(state.phase).toBe('plan-validating');
+    expect(journal).toMatchObject({
+      step: 'done',
+      handoff: {
+        manifest_generation_id: manifest.generation_id,
+        state_status: 'created',
+      },
+    });
+    expect(state.handoff).toMatchObject({
+      manifest_generation_id: manifest.generation_id,
+      interview_state_revision: journal.handoff.interview_state_revision,
+      manifest_digest: journal.handoff.manifest_digest,
+      plan_digest: journal.handoff.plan_digest,
+      docs_digest: journal.handoff.docs_digest,
+    });
+  });
+
+  test('P3.1 — deleting execution-state.json after an emit denies direct code writes, next, and start', async () => {
+    seedEmitReadyWorkspace(tempDir);
+    expect((await runCliOperation(tempDir, ['emit'])).ok).toBe(true);
+
+    const execStatePath = join(tempDir, '.design-everything/execution-state.json');
+    rmSync(execStatePath);
+
+    const next = await runCliOperation(tempDir, ['next']);
+    const start = await runCliOperation(tempDir, ['start', '--task', 'T1-scaffold']);
+    const codeWrite = evaluatePreAction({
+      workspace: tempDir,
+      session_id: 'p3-missing-state',
+      runtime: 'claude',
+      action_kind: 'write',
+      tool_name: 'write_to_file',
+      target_paths: ['src/should-not-be-written.ts'],
+      command_argv: [],
+    });
+
+    expect(next).toMatchObject({ ok: false, reason_code: 'EXECUTION_STATE_MISSING' });
+    expect(start).toMatchObject({ ok: false, reason_code: 'EXECUTION_STATE_MISSING' });
+    expect(codeWrite).toMatchObject({ decision: 'deny', reason_code: 'MISSING_EXECUTION_STATE' });
   });
 
   test('P3.1 — re-emitting tier-1 never resets execution state that already progressed past plan-validating', async () => {
@@ -225,8 +270,10 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
     expect(emitRes.ok).toBe(true);
 
     const execStatePath = join(tempDir, '.design-everything/execution-state.json');
+    const existingState = JSON.parse(readFileSync(execStatePath, 'utf8'));
+    const recoveryCommand = 'node adapter/claude-code/cli.mjs verify --task T1-scaffold';
     const blockedState = {
-      ...JSON.parse(readFileSync(execStatePath, 'utf8')),
+      ...existingState,
       phase: 'blocked',
       active_task: 'T1-scaffold',
       block_reason: {
@@ -234,9 +281,16 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
         reason_code: 'TASK_COMMAND_FAILED_ABORT_POLICY',
         origin_phase: 'executing',
         task_id: 'T1-scaffold',
-        recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T1-scaffold',
+        recoverable_by: recoveryCommand,
         detail: 'Task verification failed under abort policy.',
         created_at: new Date().toISOString(),
+        remediation: {
+          actions: ['read', 'write-task-scope', 'run-command'],
+          paths: ['src/scaffold.ts'],
+          command: recoveryCommand,
+          task_id: 'T1-scaffold',
+          plan_revision: existingState.plan_revision,
+        },
       },
     };
     writeFileSync(execStatePath, JSON.stringify(blockedState, null, 2), 'utf8');

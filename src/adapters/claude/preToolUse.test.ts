@@ -346,8 +346,8 @@ describe('onPreToolUse hook', () => {
   });
 
   test('should deny when execution-state.json is missing or corrupted outside interview phase', () => {
-    // Phase is ready-to-build, but no execution-state.json exists
-    seedCanonicalProgress(testWorkspaceRoot, { phase: 'ready-to-build', branch: 'web', current_step: null });
+    // The legacy phase has migrated to ready-for-validation, but no execution-state.json exists.
+    seedCanonicalProgress(testWorkspaceRoot, { phase: 'ready-for-validation', branch: 'web', current_step: null });
 
     // No execution-state.json file -> deny
     const resultMissing = onPreToolUse({

@@ -14,7 +14,7 @@ import { createHash } from 'crypto';
 function validProgress(overrides: Record<string, unknown> = {}) {
   return {
     version: '4.0.0',
-    phase: 'ready-to-build',
+    phase: 'ready-for-validation',
     branch: 'web',
     calibrate_mode: 'fast',
     current_step: null,
@@ -47,6 +47,21 @@ function validManifest(overrides: Record<string, unknown> = {}) {
     hook_ids: [],
     assets: [],
     installed_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function activeTier1Manifest(overrides: Record<string, unknown> = {}) {
+  return {
+    version: '1.0.0',
+    generation_id: 'test-generation',
+    shape: 'web',
+    catalog_version: 'test',
+    catalog_digest: 'a'.repeat(64),
+    input_digest: 'b'.repeat(64),
+    artifacts: [],
+    created_at: new Date().toISOString(),
+    activated_at: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -125,6 +140,32 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
     expect(res.reason_code).toBe('CORRUPT_PROGRESS_STATE');
   });
 
+  test('an active tier-1 manifest without execution state is unhealthy and denies code writes', () => {
+    initializeInterviewStore(tempDir);
+    writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(validProgress(), null, 2));
+    writeFileSync(
+      join(tempDir, '.design-everything/emit-manifest.json'),
+      JSON.stringify(activeTier1Manifest(), null, 2)
+    );
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((issue) => issue.reason_code === 'MISSING_EXECUTION_STATE')).toBe(true);
+
+    const res = evaluatePreAction({
+      workspace: tempDir,
+      session_id: 'test-session',
+      runtime: 'claude',
+      action_kind: 'write',
+      tool_name: 'write_to_file',
+      target_paths: ['src/app.ts'],
+      command_argv: [],
+    });
+
+    expect(res.decision).toBe('deny');
+    expect(res.reason_code).toBe('MISSING_EXECUTION_STATE');
+  });
+
   test('authorizeRecovery authorizes valid recovery commands', () => {
     mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
     writeFileSync(
@@ -181,7 +222,7 @@ describe('B2e — Installed runtime health and fail-closed recovery contract', (
       JSON.stringify(
         {
           version: '7.0.0',
-          phase: 'ready-to-build',
+          phase: 'ready-for-validation',
           branch: 'web',
           current_step: null,
           answered: [],

@@ -41,7 +41,7 @@ GATE không đọc được "ý định" hay chất lượng câu trả lời �
 | Field | Kiểu | Bắt buộc | Ý nghĩa |
 |---|---|---|---|
 | `version` | string | ✓ | Phiên bản schema state. V7.0.0 khoá capability token. |
-| `phase` | `interview` \| `docs-emitted` \| `ready-to-build` | ✓ | Pha hiện tại của phiên. |
+| `phase` | `interview` \| `docs-emitted` \| `ready-for-validation` | ✓ | Pha hiện tại của phiên. `ready-for-validation` chỉ nói phỏng vấn đã xong; không mở code gate. |
 | `session_id` | string | ✓ | ID phiên phỏng vấn định danh duy nhất cho khoá capability. |
 | `state_revision` | number | ✓ | Số revision tăng tự động sau mỗi giao dịch state commit. |
 | `branch` | `<shape-id>` \| null | ✓ | `null` trước khi chốt câu chọn hình-hài (S7); sau S7 phải là một `<shape-id>` có thật trong registry [taxonomy.md](../../Content/taxonomy.md) (vd `web`, `mobile`, `hybrid`, `cli`). |
@@ -83,7 +83,7 @@ Enforcement chia làm hai lớp tách bạch — **đây là điểm cốt lõi 
 4. **Rẽ nhánh sau câu chọn hình-hài `S7` — skill set, hook validate.** Khi commit `S7`, skill gán `branch = <shape-id>` từ câu trả lời đã chốt, rồi chọn `current_step` đầu nhánh shape đó. Hook chỉ kiểm `branch` thuộc registry hình-hài và chỉ được set đúng một lần (xem §5).
 5. **Kết thúc nhánh.** Khi câu cuối của nhánh được commit:
    - `phase = "docs-emitted"` nếu còn thiếu file doc đầu ra;
-   - `phase = "ready-to-build"` khi mọi doc bắt buộc đã emit và gate tương ứng đã mở; lúc này `current_step = null`.
+   - `phase = "ready-for-validation"` khi mọi doc bắt buộc đã emit và gate tương ứng đã mở; lúc này `current_step = null`. Đây chưa phải là quyền code: emit phải tạo handoff execution-state rồi `/build validate` mới có thể mở `ready-to-execute`.
 
 ## 5. Bất biến
 
@@ -93,7 +93,7 @@ Enforcement chia làm hai lớp tách bạch — **đây là điểm cốt lõi 
 - `answered` không được chứa `id` ngoài `interview-script`.
 - `branch` là `null` hoặc một `<shape-id>` có thật trong registry hình-hài; một khi đã khác `null` thì **không được đổi** trong cùng phiên — rẽ nhánh là quyết định một chiều, muốn đổi shape phải sửa doc có chủ đích rồi chỉnh state tường minh.
 - Nếu `branch != null` thì câu chọn hình-hài `S7` phải nằm trong `answered`.
-- Nếu `phase = "ready-to-build"` thì mọi gate cần cho build phải xuất hiện trong `gates_passed`.
+- Nếu `phase = "ready-for-validation"` thì mọi gate artifact cần cho build phải xuất hiện trong `gates_passed`; điều này không thay thế semantic validation.
 
 ## 6. Luật validate
 
@@ -122,8 +122,21 @@ Cấu trúc chi tiết của `execution-state.json`:
 - `active_milestone`: string | null (id của milestone đang chạy)
 - `completed_tasks`: array<string> (danh sách id các task đã hoàn thành)
 - `evidence`: array<evidence_record> (bằng chứng nghiệm thu append-only)
-- `block_reason`: string | null (lý do bị block nếu có)
+- `block_reason`: `BlockRecord` | null. `BlockRecord` gồm `kind`, `reason_code`, `origin_phase`, `task_id`, `recoverable_by`, `detail`, `created_at` và `remediation` bind chính xác `actions`, `paths`, `command`, `task_id`, `plan_revision`.
+- `handoff` (tùy chọn chỉ để đọc state cũ): binding emit Tier-1 mới gồm `manifest_generation_id`, manifest/plan/docs digest, canonical interview revision và thời điểm activate. State mới tạo từ emit luôn có binding này.
 - `updated_at`: string (ISO-8601 UTC)
+
+### B1c — handoff invariant
+
+- `ready-to-build` là tên legacy duy nhất được `migrateInterviewStore` đổi một chiều thành `ready-for-validation`; canonical store không nhận tên cũ.
+- Tier-1 emit production ghi journal `handoff-pending` trước khi tạo `.design-everything/execution-state.json`; journal chỉ chuyển `done` sau khi state `plan-validating` mang binding manifest/plan/docs/interview revision đã bền vững.
+- Recovery chỉ rollback execution state khi binding của nó khớp đúng journal đang dang dở. Không có manifest-only self-heal: manifest active nhưng state thiếu/corrupt là lỗi sức khỏe và mọi code action phải deny.
+- `validated_*_digest` để trống tại handoff. Chúng chỉ được lấp khi semantic validation trả đủ plan/docs/validation digest; artifact gate pass không đồng nghĩa plan validation pass.
+
+### B1d — blocked remediation invariant
+
+- Chỉ `validation`, `artifact-integrity`, `snapshot-stale` có thể được validation recovery gỡ. `verification-failed`, `verification-aborted`, `review-incomplete` và `policy-corrupt` giữ nguyên task/evidence và đi theo `recoverable_by` đã persist.
+- Blocked action chỉ nhận action/path/command đã bind trong `remediation`; mismatch task, revision hay command fail closed. Một boolean `pass=true` thiếu ba validation digest không thể mở `ready-to-execute`.
 
 Định nghĩa `evidence_record`:
 - `task_id`: string

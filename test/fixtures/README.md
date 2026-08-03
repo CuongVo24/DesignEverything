@@ -9,7 +9,7 @@ fixtures/
 ├── progress/
 │   ├── init-s0.json           # State khi vừa tạo phiên phỏng vấn mới
 │   ├── mid-web.json           # State đang ở giữa buổi phỏng vấn (nhánh Web)
-│   ├── ready-to-build.json    # State khi hoàn thành toàn bộ phỏng vấn và xuất doc
+│   ├── ready-to-build.json    # Legacy state dùng riêng để test migrator
 │   └── invalid/
 │       ├── missing-field.json        # Lỗi: Thiếu trường bắt buộc (ví dụ: version)
 │       ├── invalid-branch.json       # Lỗi: Giá trị branch ngoài enum cho phép
@@ -34,8 +34,8 @@ Dùng để kiểm thử schema loader, validator trạng thái, và logic kiể
     *   *Mục đích*: Test luồng phỏng vấn đang diễn ra.
     *   *Trạng thái*: Phase `interview`, nhánh `web`, bước hiện tại `W2`, mảng `answered` chứa 8 câu hỏi đã trả lời, `answered_len_at_last_turn` bằng `8`.
 *   **`ready-to-build.json`**:
-    *   *Mục đích*: Test trạng thái hoàn tất phỏng vấn và sẵn sàng cho phép lập trình.
-    *   *Trạng thái*: Phase `ready-to-build`, nhánh `web`, bước hiện tại `null`, mảng `answered` chứa tất cả 12 câu hỏi đã trả lời.
+    *   *Mục đích*: Test migrator cho trạng thái legacy hoàn tất phỏng vấn.
+    *   *Trạng thái legacy*: Phase `ready-to-build`, nhánh `web`, bước hiện tại `null`, mảng `answered` chứa tất cả 12 câu hỏi đã trả lời. Migrator phải đổi nó thành `ready-for-validation`; production không được dùng trực tiếp.
 
 ---
 

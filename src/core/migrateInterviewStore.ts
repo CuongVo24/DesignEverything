@@ -65,7 +65,14 @@ export function migrateInterviewStore(workspaceRoot: string): MigrateInterviewSt
         `MIGRATION_BLOCKED_LEGACY_CORRUPT: progress.json exists but is not valid JSON (${(err as Error).message}); refusing to silently treat it as absent.`
       );
     }
-    const parsed = progressSchema.safeParse(raw);
+    // `ready-to-build` was the pre-P3 terminal interview phase. Convert it
+    // only while importing a legacy progress.json; canonical stores never
+    // accept that phase because it falsely implies coding may begin.
+    const candidate =
+      raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as { phase?: unknown }).phase === 'ready-to-build'
+        ? { ...(raw as Record<string, unknown>), phase: 'ready-for-validation' }
+        : raw;
+    const parsed = progressSchema.safeParse(candidate);
     if (!parsed.success) {
       throw new Error(
         `MIGRATION_BLOCKED_LEGACY_CORRUPT: progress.json exists but failed schema validation; refusing to silently treat it as absent. ${parsed.error.message}`

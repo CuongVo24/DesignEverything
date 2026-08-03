@@ -162,6 +162,35 @@ function checkEmitManifestIntegrity(workspaceRoot: string): HealthIssue[] {
   return issues;
 }
 
+/**
+ * A tier-1 manifest is not a substitute for execution-state.json.  The
+ * manifest only proves files were activated; the execution state is the
+ * authority that keeps the code gate closed until semantic validation passes.
+ */
+function checkTier1ExecutionHandoff(workspaceRoot: string, hasExecState: boolean): HealthIssue[] {
+  if (hasExecState) return [];
+
+  const relPath = '.design-everything/emit-manifest.json';
+  const p = join(workspaceRoot, relPath);
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = emitManifestSchema.safeParse(JSON.parse(readFileSync(p, 'utf8')));
+    if (!parsed.success || !parsed.data.activated_at) return [];
+  } catch {
+    // checkEmitManifestIntegrity owns reporting malformed manifests.
+    return [];
+  }
+
+  return [{
+    severity: 'error',
+    reason_code: 'MISSING_EXECUTION_STATE',
+    artifact: '.design-everything/execution-state.json',
+    detail: 'An active tier-1 emit manifest exists but its bound execution state is missing; code remains denied until the handoff is recovered or emitted again.',
+    safe_next_command: targetLocalCliCommand('emit'),
+    can_auto_repair: false,
+  }];
+}
+
 export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
   const issues: HealthIssue[] = [];
   const now = new Date().toISOString();
@@ -290,6 +319,7 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
     issues.push(...checkInstallManifestIntegrity(workspaceRoot, installManifestPath));
   }
   issues.push(...checkEmitManifestIntegrity(workspaceRoot));
+  issues.push(...checkTier1ExecutionHandoff(workspaceRoot, hasExecState));
 
   const hasErrors = issues.some((i) => i.severity === 'error');
   const hasWarnings = issues.some((i) => i.severity === 'warning');

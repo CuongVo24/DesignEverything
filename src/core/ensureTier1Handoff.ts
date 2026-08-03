@@ -1,44 +1,52 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { emitManifestSchema } from './schemas/emitManifest.js';
-import { manifestPath } from './emitTransactionActivate.js';
-import { completeTier1Activation } from './advanceExecutionState.js';
+import { emitJournalSchema, emitManifestSchema } from './schemas/emitManifest.js';
+import { journalPath, manifestPath } from './emitTransactionActivate.js';
+import { loadExecutionState } from './advanceExecutionState.js';
+
+export type Tier1HandoffHealth =
+  | 'not-applicable'
+  | 'ready'
+  | 'state-required'
+  | 'state-corrupt'
+  | 'recovery-required';
 
 /**
- * Closes a real crash window: production `emit` (handleEmit in
- * cliOperations.ts) calls activateTier1Emit (promotes docs, activates the
- * tier-1 manifest) and then completeTier1Activation (creates
- * execution-state.json at plan-validating) as two separate, sequential
- * calls — not one transaction. A process killed between them leaves a
- * workspace with docs live and a tier-1 manifest activated, but no
- * execution-state.json at all, and nothing else in the system ever creates
- * one. Every subsequent read (status/next/hooks) would then either treat
- * the workspace as still mid-interview or deny with
- * EXECUTION_STATE_REQUIRED forever, even though tier-1 emit itself fully
- * succeeded.
+ * Inspect, but never manufacture, a tier-1 handoff.
  *
- * This is the self-heal: call it at the top of every CLI entry point. It is
- * a no-op unless the tier-1 manifest is genuinely activated AND
- * execution-state.json is genuinely missing, and it delegates to
- * completeTier1Activation, which is itself idempotent (never resets state
- * that already progressed past plan-validating) — so calling this on every
- * invocation, including ones where the handoff already completed normally,
- * is always safe.
+ * Before P3 this helper silently created execution-state.json whenever an
+ * activated manifest existed. That raced an incomplete emit journal: a later
+ * recovery could roll the manifest/docs back while leaving an orphan state.
+ * Missing/corrupt state is now a fail-closed condition with an explicit
+ * recovery route, not a manifest-only self-heal.
  */
-export function ensureTier1Handoff(workspaceRoot: string): void {
-  const execStatePath = join(workspaceRoot, '.design-everything/execution-state.json');
-  if (existsSync(execStatePath)) return;
+export function ensureTier1Handoff(workspaceRoot: string): Tier1HandoffHealth {
+  const manifestFile = manifestPath(workspaceRoot, 'tier1');
+  if (!existsSync(manifestFile)) return 'not-applicable';
 
-  const tier1ManifestPath = manifestPath(workspaceRoot, 'tier1');
-  if (!existsSync(tier1ManifestPath)) return;
-
-  let parsed;
   try {
-    parsed = emitManifestSchema.safeParse(JSON.parse(readFileSync(tier1ManifestPath, 'utf8')));
+    const manifest = emitManifestSchema.parse(JSON.parse(readFileSync(manifestFile, 'utf8')));
+    if (!manifest.activated_at) return 'not-applicable';
   } catch {
-    return;
+    return 'state-corrupt';
   }
-  if (!parsed.success || !parsed.data.activated_at) return;
 
-  completeTier1Activation(workspaceRoot);
+  const jPath = journalPath(workspaceRoot, 'tier1');
+  if (existsSync(jPath)) {
+    try {
+      const journal = emitJournalSchema.parse(JSON.parse(readFileSync(jPath, 'utf8')));
+      if (journal.step !== 'done') return 'recovery-required';
+    } catch {
+      return 'recovery-required';
+    }
+  }
+
+  const execStatePath = join(workspaceRoot, '.design-everything/execution-state.json');
+  if (!existsSync(execStatePath)) return 'state-required';
+  try {
+    loadExecutionState(execStatePath);
+    return 'ready';
+  } catch {
+    return 'state-corrupt';
+  }
 }

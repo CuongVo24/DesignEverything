@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { loadInterviewStore, initializeInterviewStore, CANONICAL_STORE_REL_PATH } from './interviewStore.js';
@@ -42,6 +42,19 @@ describe('P2.2b — migration durability', () => {
       ...overrides,
     };
   }
+
+  test('migrates the legacy ready-to-build phase once into canonical ready-for-validation', () => {
+    writeFileSync(
+      join(tempDir, 'progress.json'),
+      JSON.stringify(legacyProgress({ phase: 'ready-to-build', current_step: null }), null, 2)
+    );
+
+    expect(migrateInterviewStore(tempDir)).toBe('migrated');
+    expect(loadInterviewStore(tempDir).payload.progress.phase).toBe('ready-for-validation');
+    // The legacy file remains an auditable input; only the canonical store is
+    // allowed to carry the new phase name.
+    expect(JSON.parse(readFileSync(join(tempDir, 'progress.json'), 'utf8')).phase).toBe('ready-to-build');
+  });
 
   test('an existing canonical store is schema/checksum-validated before being declared already-current, never masked as a false no-op', () => {
     initializeInterviewStore(tempDir);

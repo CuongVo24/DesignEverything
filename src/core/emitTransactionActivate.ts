@@ -1,12 +1,31 @@
 import fs from 'fs';
 import { join, dirname } from 'path';
 import type { StagedGeneration } from './emitTransactionStage.js';
-import { emitManifestSchema, type EmitManifest, type EmitJournal } from './schemas/emitManifest.js';
+import {
+  emitManifestSchema,
+  type EmitManifest,
+  type EmitJournal,
+  type EmitJournalHandoff,
+} from './schemas/emitManifest.js';
 import type { DeepenModuleId } from './schemas/deepenScript.js';
+import type { Tier1Handoff } from './schemas/executionState.js';
 
 export type ActivateEmitResult =
   | { status: 'activated'; manifest: EmitManifest }
   | { status: 'blocked'; reason: 'revision-mismatch' | 'user-file-collision'; details: string[] };
+
+/**
+ * Tier-1's design-to-build handoff is finalized while the emit journal is
+ * still in flight. The callback must be side-effect free until `complete`,
+ * then create/preserve the state bound by `prepare` before this transaction
+ * can be marked done.
+ */
+export interface Tier1ActivationHandoff {
+  execution_state_path: '.design-everything/execution-state.json';
+  interview_state_revision: number;
+  prepare: (manifest: EmitManifest) => Tier1Handoff;
+  complete: (handoff: Tier1Handoff) => 'created' | 'preserved';
+}
 
 // P7.2 — `tier2-${module}` gives each tier-2 module its own manifest/
 // journal/backup namespace (re-emitting one module must never treat
@@ -75,8 +94,13 @@ export function activateEmit(
   root: string,
   generation: StagedGeneration,
   expectedRevision: string | null,
-  channel: EmitChannel = 'tier1'
+  channel: EmitChannel = 'tier1',
+  options: { tier1Handoff?: Tier1ActivationHandoff } = {}
 ): ActivateEmitResult {
+  if (options.tier1Handoff && channel !== 'tier1') {
+    throw new Error('TIER1_HANDOFF_REQUIRES_TIER1_CHANNEL');
+  }
+  const tier1Handoff = options.tier1Handoff;
   const current = readActiveManifest(root, channel);
   const currentGenerationId = current?.generation_id ?? null;
   if (expectedRevision !== currentGenerationId) {
@@ -120,6 +144,9 @@ export function activateEmit(
     fs.mkdirSync(dirname(dest), { recursive: true });
     fs.copyFileSync(manifestPath(root, channel), dest);
   }
+  if (tier1Handoff) {
+    backupFile(root, backupDir, tier1Handoff.execution_state_path);
+  }
   for (const artifact of generation.manifest.artifacts) {
     backupFile(root, backupDir, artifact.path);
   }
@@ -161,12 +188,52 @@ export function activateEmit(
   fs.mkdirSync(dirname(manifestPath(root, channel)), { recursive: true });
   fs.writeFileSync(manifestPath(root, channel), JSON.stringify(activatedManifest, null, 2), 'utf8');
 
+  let handoffJournal: EmitJournalHandoff | undefined;
+  if (tier1Handoff) {
+    const handoff = tier1Handoff.prepare(activatedManifest);
+    handoffJournal = {
+      execution_state_path: tier1Handoff.execution_state_path,
+      interview_state_revision: tier1Handoff.interview_state_revision,
+      manifest_generation_id: handoff.manifest_generation_id,
+      manifest_digest: handoff.manifest_digest,
+      plan_digest: handoff.plan_digest,
+      docs_digest: handoff.docs_digest,
+      state_status: 'pending',
+    };
+    writeJournal(root, channel, {
+      generation_id: generation.generation_id,
+      step: 'handoff-pending',
+      backup_dir: backupDir,
+      previous_generation_id: currentGenerationId,
+      started_at: new Date().toISOString(),
+      handoff: handoffJournal,
+    });
+
+    const disposition = tier1Handoff.complete(handoff);
+    handoffJournal = {
+      ...handoffJournal,
+      state_status: disposition,
+    };
+    // Keep the journal at handoff-pending until the completed state binding
+    // itself is durable. A crash here is recoverable because both the exact
+    // handoff identity and the prior execution-state backup are recorded.
+    writeJournal(root, channel, {
+      generation_id: generation.generation_id,
+      step: 'handoff-pending',
+      backup_dir: backupDir,
+      previous_generation_id: currentGenerationId,
+      started_at: new Date().toISOString(),
+      handoff: handoffJournal,
+    });
+  }
+
   writeJournal(root, channel, {
     generation_id: generation.generation_id,
     step: 'done',
     backup_dir: backupDir,
     previous_generation_id: currentGenerationId,
     started_at: new Date().toISOString(),
+    handoff: handoffJournal,
   });
 
   return { status: 'activated', manifest: activatedManifest };

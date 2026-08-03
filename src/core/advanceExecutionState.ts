@@ -7,10 +7,166 @@ import {
   executionStateSchema,
   BlockRecord,
   BlockKind,
+  BlockRemediation,
+  Tier1Handoff,
 } from './schemas/index.js';
 import { TARGET_LOCAL_CLI_COMMAND } from '../version.js';
 
 const CLI = TARGET_LOCAL_CLI_COMMAND;
+
+const VALIDATION_RECOVERABLE_KINDS = new Set<BlockKind>([
+  'validation',
+  'artifact-integrity',
+  'snapshot-stale',
+]);
+
+const EXECUTION_PHASES = new Set<ExecutionState['phase']>([
+  'plan-validating',
+  'ready-to-execute',
+  'executing',
+  'verifying',
+  'repairing',
+  'reviewing',
+  'blocked',
+  'ready-to-ship',
+]);
+
+export interface BlockRecordInput {
+  kind: BlockKind;
+  reason_code: string;
+  detail: string;
+  origin_phase?: ExecutionState['phase'];
+  task_id?: string | null;
+  recoverable_by?: string;
+  remediation?: Omit<BlockRemediation, 'task_id' | 'plan_revision' | 'command'> & {
+    command?: string;
+  };
+}
+
+function defaultRemediation(
+  state: Pick<ExecutionState, 'active_task' | 'plan_revision'>,
+  kind: BlockKind,
+  taskId: string | null,
+  command: string
+): BlockRemediation {
+  if (kind === 'verification-failed' || kind === 'verification-aborted') {
+    return {
+      actions: ['read', 'write-task-scope', 'run-command'],
+      // A caller that knows the active task must replace this empty scope
+      // with that task's exact allowed_paths. Empty is deliberately safe.
+      paths: [],
+      command,
+      task_id: taskId,
+      plan_revision: state.plan_revision,
+    };
+  }
+
+  return {
+    actions: ['read', 'run-command'],
+    paths: [],
+    command,
+    task_id: taskId,
+    plan_revision: state.plan_revision,
+  };
+}
+
+/**
+ * Construct every new blocked record from state, so recovery capability is
+ * bound to the exact task and plan revision that produced the failure.
+ */
+export function createBlockRecord(
+  state: Pick<ExecutionState, 'phase' | 'active_task' | 'plan_revision'>,
+  input: BlockRecordInput
+): BlockRecord {
+  const taskId = input.task_id === undefined ? state.active_task : input.task_id;
+  const defaultCommand = input.kind === 'verification-failed' || input.kind === 'verification-aborted'
+    ? `${CLI} verify --task ${taskId ?? ''}`.trim()
+    : input.kind === 'review-incomplete'
+      ? `${CLI} review`
+      : input.kind === 'policy-corrupt'
+        ? `${CLI} repair`
+        : `${CLI} validate`;
+  const command = input.remediation?.command ?? input.recoverable_by ?? defaultCommand;
+  const fallback = defaultRemediation(state, input.kind, taskId, command);
+  const remediation: BlockRemediation = {
+    ...fallback,
+    ...input.remediation,
+    command,
+    task_id: taskId,
+    plan_revision: state.plan_revision,
+  };
+
+  return {
+    kind: input.kind,
+    reason_code: input.reason_code,
+    origin_phase: input.origin_phase ?? state.phase,
+    task_id: taskId,
+    recoverable_by: command,
+    detail: input.detail,
+    created_at: new Date().toISOString(),
+    remediation,
+  };
+}
+
+function phaseFromUnknown(value: unknown): ExecutionState['phase'] {
+  return typeof value === 'string' && EXECUTION_PHASES.has(value as ExecutionState['phase'])
+    ? value as ExecutionState['phase']
+    : 'blocked';
+}
+
+function migrateLegacyBlockReason(parsed: unknown): { value: unknown; migrated: boolean } {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { value: parsed, migrated: false };
+  }
+
+  const state = parsed as Record<string, unknown>;
+  const block = state.block_reason;
+  if (block === null || block === undefined) {
+    return { value: parsed, migrated: false };
+  }
+  const hasScopedRemediation =
+    typeof block === 'object' && block !== null && !Array.isArray(block) && 'remediation' in block;
+  if (hasScopedRemediation) {
+    return { value: parsed, migrated: false };
+  }
+
+  const detail = typeof block === 'string'
+    ? block
+    : typeof block === 'object' && block !== null && typeof (block as { detail?: unknown }).detail === 'string'
+      ? (block as { detail: string }).detail
+      : 'Legacy blocked state has no trustworthy typed remediation record.';
+  const normalized = detail.toLowerCase();
+  const legacyKind: BlockKind = normalized.includes('snapshot') || normalized.includes('stale')
+    ? 'snapshot-stale'
+    : normalized.includes('semantic') || normalized.includes('validation')
+      ? 'validation'
+      : 'policy-corrupt';
+  const safeState: Pick<ExecutionState, 'phase' | 'active_task' | 'plan_revision'> = {
+    phase: phaseFromUnknown(state.phase),
+    active_task: typeof state.active_task === 'string' ? state.active_task : null,
+    plan_revision: typeof state.plan_revision === 'number' && Number.isInteger(state.plan_revision) && state.plan_revision >= 0
+      ? state.plan_revision
+      : 0,
+  };
+  // A legacy record cannot prove its old action/path/task/revision scope.
+  // It may only read and run the one conservative recovery command; unknown
+  // text becomes policy-corrupt rather than guessed into a permissive kind.
+  const command = legacyKind === 'policy-corrupt' ? `${CLI} repair` : `${CLI} validate`;
+  const migratedBlock = createBlockRecord(safeState, {
+    kind: legacyKind,
+    reason_code: legacyKind === 'policy-corrupt'
+      ? 'LEGACY_BLOCK_REASON_UNCLASSIFIED'
+      : 'LEGACY_BLOCK_REASON_MIGRATED',
+    detail,
+    recoverable_by: command,
+    remediation: { actions: ['read', 'run-command'], paths: [], command },
+  });
+
+  return {
+    value: { ...state, block_reason: migratedBlock },
+    migrated: true,
+  };
+}
 
 export function initExecutionState(): ExecutionState {
   return {
@@ -43,9 +199,13 @@ export function loadExecutionState(path: string): ExecutionState {
   } catch (err: any) {
     throw new Error(`Execution state is malformed JSON: ${err.message}`);
   }
-  const result = executionStateSchema.safeParse(parsed);
+  const migration = migrateLegacyBlockReason(parsed);
+  const result = executionStateSchema.safeParse(migration.value);
   if (!result.success) {
     throw new Error(`Invalid execution state schema: ${JSON.stringify(result.error.format())}`);
+  }
+  if (migration.migrated) {
+    saveExecutionState(path, result.data);
   }
   return result.data;
 }
@@ -74,28 +234,48 @@ export function transitionToReadyToExecute(
   }
 ): ExecutionState {
   if (state.phase !== 'plan-validating' && state.phase !== 'blocked' && state.phase !== 'ready-to-execute') {
-    throw new Error(`Cannot transition to ready-to-execute from phase: ${state.phase}`);
+    throw new Error(`TRANSITION_PHASE_NOT_ALLOWED: cannot transition to ready-to-execute from ${state.phase}`);
   }
 
-  // B1d: If blocked due to verification failure or abort, validate does NOT clear the block or active_task!
-  if (state.phase === 'blocked' && state.block_reason && typeof state.block_reason === 'object') {
-    const kind = (state.block_reason as any).kind;
-    if (kind === 'verification-failed' || kind === 'verification-aborted' || kind === 'policy-corrupt') {
-      // Keep active task & block, cannot unblock via validate pass
+  // Validation may recover only blocks whose proof is validation evidence.
+  // Verification, review and integrity-policy failures retain the exact
+  // active task/evidence and must take their own remediation route.
+  if (state.phase === 'blocked') {
+    if (!state.block_reason || !VALIDATION_RECOVERABLE_KINDS.has(state.block_reason.kind)) {
       return state;
     }
   }
 
+  // A boolean is not evidence. The production caller obtains all three
+  // digests after the real validation service passes; callers cannot open the
+  // build gate merely by supplying `true` without that provenance.
+  const hasValidationProof = Boolean(
+    digests &&
+      digests.plan_digest.length > 0 &&
+      digests.docs_digest.length > 0 &&
+      digests.validation_digest.length > 0
+  );
+  if (validationPass && !hasValidationProof) {
+    if (state.phase === 'blocked') return state;
+    const blockRec = createBlockRecord(state, {
+      kind: 'validation',
+      reason_code: 'VALIDATION_PROOF_REQUIRED',
+      detail: 'Validation reported pass without the required plan, docs, and validation digests.',
+    });
+    return {
+      ...state,
+      phase: 'blocked',
+      block_reason: blockRec,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
   if (!validationPass) {
-    const blockRec: BlockRecord = {
+    const blockRec = createBlockRecord(state, {
       kind: 'validation',
       reason_code: 'SEMANTIC_VALIDATION_FAILED',
-      origin_phase: state.phase,
-      task_id: state.active_task,
-      recoverable_by: '/build',
       detail: 'Semantic plan validation failed.',
-      created_at: new Date().toISOString(),
-    };
+    });
     return {
       ...state,
       phase: 'blocked',
@@ -257,15 +437,13 @@ export function applyReviewOutcome(
     // can never reach ready-to-ship through review, no matter how clean.
     return closeFeatureReview({ ...state, open_break_tasks: [] }, milestoneId, plan);
   }
-  const blockRecord: BlockRecord = {
+  const blockRecord = createBlockRecord(state, {
     kind: 'review-incomplete',
     reason_code: 'FEATURE_HAS_OPEN_BREAK_TASKS',
-    origin_phase: 'reviewing',
     task_id: null,
     recoverable_by: `${CLI} review --milestone ${milestoneId}`,
     detail: `Feature ${milestoneId} có ${breakTaskIds.length} break-task chưa xử lý; chưa được coi là done.`,
-    created_at: new Date().toISOString(),
-  };
+  });
   return {
     ...state,
     phase: 'reviewing',
@@ -456,16 +634,19 @@ export function recordEvidence(
 
     const failurePolicy = activeTaskCard?.failure_policy || 'abort';
     const verifyCommand = `${CLI} verify --task ${state.active_task ?? ''}`;
+    const repairPaths = Array.isArray(activeTaskCard?.allowed_paths) ? activeTaskCard.allowed_paths : [];
     if (failurePolicy === 'abort') {
-      const blockRecord: BlockRecord = {
+      const blockRecord = createBlockRecord(state, {
         kind: 'verification-failed',
         reason_code: 'TASK_COMMAND_FAILED_ABORT_POLICY',
-        origin_phase: state.phase,
-        task_id: state.active_task,
         recoverable_by: verifyCommand,
         detail: `Task verification failed under abort policy. Command failed with exit code ${record.exit_code}.`,
-        created_at: new Date().toISOString(),
-      };
+        remediation: {
+          actions: ['read', 'write-task-scope', 'run-command'],
+          paths: repairPaths,
+          command: verifyCommand,
+        },
+      });
       return {
         ...state,
         phase: 'blocked',
@@ -474,15 +655,17 @@ export function recordEvidence(
         updated_at: new Date().toISOString(),
       };
     } else {
-      const blockRecord: BlockRecord = {
+      const blockRecord = createBlockRecord(state, {
         kind: 'verification-failed',
         reason_code: 'TASK_COMMAND_FAILED',
-        origin_phase: state.phase,
-        task_id: state.active_task,
         recoverable_by: verifyCommand,
         detail: `Task verification command failed with exit code ${record.exit_code}.`,
-        created_at: new Date().toISOString(),
-      };
+        remediation: {
+          actions: ['read', 'write-task-scope', 'run-command'],
+          paths: repairPaths,
+          command: verifyCommand,
+        },
+      });
       return {
         ...state,
         phase: 'repairing',
@@ -495,10 +678,9 @@ export function recordEvidence(
 }
 
 export function completeTier1Emit(workspaceRoot: string): ExecutionState {
-  const execStatePath = `${workspaceRoot}/.design-everything/execution-state.json`;
-  const state = initExecutionState();
-  saveExecutionState(execStatePath, state);
-  return state;
+  // Kept as a compatibility entry point for old Core callers. Production tier-1
+  // emit goes through completeTier1Activation inside the emit recovery journal.
+  return completeTier1Activation(workspaceRoot);
 }
 
 /**
@@ -511,7 +693,7 @@ export function completeTier1Emit(workspaceRoot: string): ExecutionState {
  */
 export function completeTier1Activation(
   workspaceRoot: string,
-  opts: { planDigest?: string; docsDigest?: string } = {}
+  opts: { handoff?: Tier1Handoff } = {}
 ): ExecutionState {
   const execStatePath = `${workspaceRoot}/.design-everything/execution-state.json`;
   if (existsSync(execStatePath)) {
@@ -519,8 +701,9 @@ export function completeTier1Activation(
   }
   const state: ExecutionState = {
     ...initExecutionState(),
-    validated_plan_digest: opts.planDigest ?? '',
-    validated_docs_digest: opts.docsDigest ?? '',
+    // These are intentionally blank before semantic validation. Handoff
+    // digests prove what was activated, not that its plan has passed.
+    handoff: opts.handoff,
   };
   saveExecutionState(execStatePath, state);
   return state;
@@ -530,7 +713,6 @@ export function evaluateBuildReadiness(
   progress: { phase: string; branch: string | null },
   execState: ExecutionState | null
 ): { ready: boolean; reason_code: string; next_command: string; message: string } {
-  void progress;
   if (!execState) {
     return {
       ready: false,
@@ -552,13 +734,13 @@ export function evaluateBuildReadiness(
   if (execState.phase === 'blocked') {
     return {
       ready: false,
-      reason_code: 'EXECUTION_STATE_BLOCKED',
-      next_command: '/build',
-      message: `Execution state is blocked: ${execState.block_reason ?? 'unknown reason'}. Run /build to retry.`,
+      reason_code: execState.block_reason?.reason_code ?? 'EXECUTION_STATE_BLOCKED',
+      next_command: execState.block_reason?.recoverable_by ?? `${CLI} repair`,
+      message: `Execution state is blocked: ${execState.block_reason?.detail ?? 'unknown reason'}.`,
     };
   }
 
-  if (execState.phase === 'ready-to-execute' || execState.phase === 'executing' || execState.phase === 'verifying' || execState.phase === 'repairing' || execState.phase === 'ready-to-ship') {
+  if (execState.phase === 'ready-to-execute' || execState.phase === 'repairing') {
     return {
       ready: true,
       reason_code: 'READY_TO_EXECUTE',
@@ -567,15 +749,58 @@ export function evaluateBuildReadiness(
     };
   }
 
+  if (execState.phase === 'executing') {
+    return {
+      ready: false,
+      reason_code: 'TASK_ALREADY_ACTIVE',
+      next_command: execState.active_task ? `${CLI} verify --task ${execState.active_task}` : `${CLI} status`,
+      message: 'A task is already active; verify or repair that task before starting another one.',
+    };
+  }
+
+  if (execState.phase === 'verifying') {
+    return {
+      ready: false,
+      reason_code: 'TASK_VERIFICATION_REQUIRED',
+      next_command: execState.active_task ? `${CLI} verify --task ${execState.active_task}` : `${CLI} status`,
+      message: 'The active task still requires verification.',
+    };
+  }
+
+  if (execState.phase === 'reviewing') {
+    return {
+      ready: false,
+      reason_code: 'REVIEW_REQUIRED',
+      next_command: execState.active_milestone ? `${CLI} review --milestone ${execState.active_milestone}` : `${CLI} status`,
+      message: 'The current milestone requires review before another build task can begin.',
+    };
+  }
+
+  if (execState.phase === 'ready-to-ship') {
+    return {
+      ready: false,
+      reason_code: 'BUILD_COMPLETE',
+      next_command: `${CLI} status`,
+      message: 'All build tasks are complete.',
+    };
+  }
+
   return {
     ready: false,
     reason_code: 'EXECUTION_STATE_NOT_READY',
-    next_command: '/build',
-    message: `Current execution phase is ${execState.phase}, which is not ready for coding.`,
+    next_command: progress.phase === 'ready-for-validation' ? `${CLI} validate` : `${CLI} status`,
+    message: `Current execution phase is ${execState.phase}, which is not ready for build tasks.`,
   };
 }
 
 export function blockExecution(state: ExecutionState, blockRecord: BlockRecord): ExecutionState {
+  if (
+    blockRecord.remediation.plan_revision !== state.plan_revision ||
+    blockRecord.remediation.task_id !== blockRecord.task_id ||
+    blockRecord.remediation.command !== blockRecord.recoverable_by
+  ) {
+    throw new Error('BLOCK_REMEDIATION_BINDING_INVALID');
+  }
   return {
     ...state,
     phase: 'blocked',
@@ -586,19 +811,44 @@ export function blockExecution(state: ExecutionState, blockRecord: BlockRecord):
 
 export function recoverBlockedExecution(
   state: ExecutionState,
-  proof: { kind: BlockKind; pass: boolean }
+  proof: {
+    kind: BlockKind;
+    pass: boolean;
+    digests?: {
+      plan_digest: string;
+      docs_digest: string;
+      validation_digest: string;
+    };
+  }
 ): { ok: boolean; state: ExecutionState; reason_code: string } {
   if (state.phase !== 'blocked') {
     return { ok: false, state, reason_code: 'NOT_BLOCKED' };
   }
 
-  const currentBlock = typeof state.block_reason === 'object' && state.block_reason ? state.block_reason : null;
-  if (currentBlock && currentBlock.kind !== proof.kind) {
+  const currentBlock = state.block_reason;
+  if (!currentBlock) {
+    return { ok: false, state, reason_code: 'BLOCK_RECORD_REQUIRED' };
+  }
+  if (currentBlock.kind !== proof.kind) {
     return { ok: false, state, reason_code: 'BLOCK_KIND_MISMATCH' };
   }
 
   if (!proof.pass) {
     return { ok: false, state, reason_code: 'RECOVERY_PROOF_FAILED' };
+  }
+
+  if (!VALIDATION_RECOVERABLE_KINDS.has(currentBlock.kind)) {
+    return { ok: false, state, reason_code: 'BLOCK_KIND_REQUIRES_OWN_REMEDIATION' };
+  }
+
+  const hasValidationProof = Boolean(
+    proof.digests &&
+      proof.digests.plan_digest.length > 0 &&
+      proof.digests.docs_digest.length > 0 &&
+      proof.digests.validation_digest.length > 0
+  );
+  if (!hasValidationProof) {
+    return { ok: false, state, reason_code: 'VALIDATION_PROOF_REQUIRED' };
   }
 
   return {
@@ -607,6 +857,9 @@ export function recoverBlockedExecution(
       ...state,
       phase: state.active_task ? 'repairing' : 'ready-to-execute',
       block_reason: null,
+      validated_plan_digest: proof.digests!.plan_digest,
+      validated_docs_digest: proof.digests!.docs_digest,
+      validation_result_digest: proof.digests!.validation_digest,
       updated_at: new Date().toISOString(),
     },
     reason_code: 'RECOVERED',
@@ -629,30 +882,19 @@ export function allowedRemediation(state: ExecutionState): {
     return { allowed_actions: ['read'], allowed_paths: [], next_command: '/build' };
   }
 
-  const block = typeof state.block_reason === 'object' ? state.block_reason : null;
-  if (!block) {
-    return { allowed_actions: ['read'], allowed_paths: ['Design/**', 'docs/**'], next_command: '/build' };
-  }
-
-  if (block.kind === 'validation' || block.kind === 'artifact-integrity' || block.kind === 'snapshot-stale') {
-    return {
-      allowed_actions: ['read', 'write-docs'],
-      allowed_paths: ['Design/**', 'docs/**', 'progress.json'],
-      next_command: block.recoverable_by || '/build',
-    };
-  }
-
-  if (block.kind === 'verification-failed' || block.kind === 'verification-aborted') {
-    return {
-      allowed_actions: ['read', 'write-task-scope', 'verify'],
-      allowed_paths: ['src/**', 'test/**'],
-      next_command: block.recoverable_by || `${CLI} verify --task ${block.task_id ?? ''}`,
-    };
+  const block = state.block_reason;
+  if (
+    !block ||
+    block.remediation.task_id !== block.task_id ||
+    block.remediation.plan_revision !== state.plan_revision ||
+    block.remediation.command !== block.recoverable_by
+  ) {
+    return { allowed_actions: ['read'], allowed_paths: [], next_command: `${CLI} repair` };
   }
 
   return {
-    allowed_actions: ['read'],
-    allowed_paths: [],
-    next_command: block.recoverable_by || '/build',
+    allowed_actions: [...block.remediation.actions],
+    allowed_paths: [...block.remediation.paths],
+    next_command: block.remediation.command,
   };
 }

@@ -126,7 +126,7 @@ describe('E2E Execution Flow Journey', () => {
       JSON.stringify(
         {
           version: '2.0.0',
-          phase: 'ready-to-build',
+          phase: 'ready-for-validation',
           branch: 'web',
           calibrate_mode: 'deep',
           current_step: null,

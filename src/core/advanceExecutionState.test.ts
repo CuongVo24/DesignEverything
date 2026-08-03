@@ -14,6 +14,12 @@ import {
   GatePolicy,
 } from './index.js';
 
+const validationDigests = {
+  plan_digest: 'a'.repeat(64),
+  docs_digest: 'b'.repeat(64),
+  validation_digest: 'c'.repeat(64),
+};
+
 describe('advanceExecutionState and checkExecutionGate logic', () => {
   const plan: ExecutionPlanV3 = {
     metadata: {
@@ -95,7 +101,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     expect(failState.block_reason).toBeDefined();
 
     // Transition with validation success
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     expect(state.phase).toBe('ready-to-execute');
     expect(state.block_reason).toBeNull();
 
@@ -189,9 +195,23 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     expect(state.completed_tasks).toContain('T2');
   });
 
+  test('P3.1 — validation pass without digest provenance remains fail-closed', () => {
+    const state = transitionToReadyToExecute(initExecutionState(), true);
+
+    expect(state.phase).toBe('blocked');
+    expect(state.block_reason).toMatchObject({
+      kind: 'validation',
+      reason_code: 'VALIDATION_PROOF_REQUIRED',
+    });
+    expect(state.validated_plan_digest).toBe('');
+    expect(state.validated_docs_digest).toBe('');
+    expect(state.validation_result_digest).toBe('');
+    expect(() => startTask(state, 'M1', 'T1', plan)).toThrow(/phase: blocked/i);
+  });
+
   test('P3.2 — abort-policy verification failure produces a typed BlockRecord, not a raw string', () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
     state = recordEvidence(state, {
       task_id: 'T1',
@@ -230,7 +250,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
 
   test('X06 — a passing validate call must NOT clear a verification-failed block (validation and execution failure are distinct)', () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
     state = recordEvidence(state, {
       task_id: 'T1',
@@ -268,7 +288,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
     // result must not be able to reopen execution — verification failure
     // is a distinct failure mode from plan validation and can only be
     // recovered by fixing the underlying task, not by re-validating.
-    const reValidated = transitionToReadyToExecute(state, true);
+    const reValidated = transitionToReadyToExecute(state, true, validationDigests);
 
     expect(reValidated.phase).toBe('blocked');
     expect((reValidated.block_reason as { kind: string }).kind).toBe('verification-failed');
@@ -292,7 +312,7 @@ describe('advanceExecutionState and checkExecutionGate logic', () => {
 
   test('should check execution gates allows_paths correctly', () => {
     let state = initExecutionState();
-    state = transitionToReadyToExecute(state, true);
+    state = transitionToReadyToExecute(state, true, validationDigests);
     state = startTask(state, 'M1', 'T1', plan);
 
     const policy: GatePolicy = {

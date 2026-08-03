@@ -27,9 +27,21 @@ export const emitJournalStepSchema = z.enum([
   'backing-up',
   'promoting',
   'writing-manifest',
+  'handoff-pending',
   'done',
 ]);
 export type EmitJournalStep = z.infer<typeof emitJournalStepSchema>;
+
+export const emitJournalHandoffSchema = z.object({
+  execution_state_path: z.literal('.design-everything/execution-state.json'),
+  interview_state_revision: z.number().int().min(0),
+  manifest_generation_id: z.string().min(1),
+  manifest_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  plan_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  docs_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  state_status: z.enum(['pending', 'created', 'preserved']),
+});
+export type EmitJournalHandoff = z.infer<typeof emitJournalHandoffSchema>;
 
 export const emitJournalSchema = z.object({
   generation_id: z.string().min(1),
@@ -37,5 +49,6 @@ export const emitJournalSchema = z.object({
   backup_dir: z.string().min(1),
   previous_generation_id: z.string().nullable(),
   started_at: z.string().datetime(),
+  handoff: emitJournalHandoffSchema.optional(),
 });
 export type EmitJournal = z.infer<typeof emitJournalSchema>;

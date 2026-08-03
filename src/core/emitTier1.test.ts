@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync, existsSync, cpSync } from 'fs';
 import { tmpdir } from 'os';
 import { activateTier1Emit } from './emitTier1.js';
 import { manifestPath } from './emitTransactionActivate.js';
+import { initializeInterviewStore, transactInterviewStore } from './interviewStore.js';
 import type { InterviewAnswers } from './emit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,10 +27,25 @@ const cliAnswers: InterviewAnswers = {
 };
 
 let root: string;
+let handoffInput: { interview_state_revision: number };
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'emit-tier1-test-'));
   cpSync(join(projectRoot, 'Design/Content'), join(root, 'Design/Content'), { recursive: true });
+  const initial = initializeInterviewStore(root);
+  const ready = transactInterviewStore(root, initial.state_revision, (envelope) => ({
+    ...envelope,
+    payload: {
+      ...envelope.payload,
+      progress: {
+        ...envelope.payload.progress,
+        phase: 'ready-for-validation',
+        current_step: null,
+        branch: 'cli',
+      },
+    },
+  }));
+  handoffInput = { interview_state_revision: ready.state_revision };
 });
 
 afterEach(() => {
@@ -38,7 +54,7 @@ afterEach(() => {
 
 describe('P7.1 — activateTier1Emit is the sole application-service authority for production emit', () => {
   test('a complete cli generation activates through the real transaction kernel, not a direct write loop', () => {
-    const result = activateTier1Emit(root, cliAnswers, 'cli');
+    const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
@@ -56,21 +72,21 @@ describe('P7.1 — activateTier1Emit is the sole application-service authority f
     // First, activate a real generation so an active manifest exists on disk
     // (the exact precondition the old catch-block fallback in cliOperations
     // handleEmit relied on to fabricate ok:true after a thrown error).
-    const first = activateTier1Emit(root, cliAnswers, 'cli');
+    const first = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(first.ok).toBe(true);
 
-    const failing = activateTier1Emit(root, cliAnswers, 'not-a-real-branch');
+    const failing = activateTier1Emit(root, cliAnswers, 'not-a-real-branch', handoffInput);
     expect(failing.ok).toBe(false);
     if (failing.ok) return;
     expect(failing.reason_code).toBe('EMIT_RENDER_FAILED');
   });
 
   test('re-emitting the same shape activates a new generation without leaving the tree partially mixed', () => {
-    const first = activateTier1Emit(root, cliAnswers, 'cli');
+    const first = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    const second = activateTier1Emit(root, cliAnswers, 'cli');
+    const second = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(second.ok).toBe(true);
     if (!second.ok) return;
 
@@ -81,7 +97,7 @@ describe('P7.1 — activateTier1Emit is the sole application-service authority f
   test('loads derived recipes before validation instead of silently skipping production provenance checks', () => {
     rmSync(join(root, 'Design/Content/interview-script/derived-recipes.yaml'));
 
-    const result = activateTier1Emit(root, cliAnswers, 'cli');
+    const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(result).toMatchObject({
       ok: false,
       reason_code: 'EMIT_DERIVED_RECIPES_LOAD_FAILED',

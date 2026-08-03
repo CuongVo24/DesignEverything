@@ -162,7 +162,7 @@ describe('advanceState engine', () => {
     expect(checkRate(progress, 3).ok).toBe(false);
   });
 
-  test('should transition phase to docs-emitted or ready-to-build upon completing interview', () => {
+  test('should transition phase to docs-emitted or ready-for-validation upon completing interview', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
     progress.current_step = 'CAL0';
 
@@ -182,12 +182,12 @@ describe('advanceState engine', () => {
       progress = commit(progress);
     }
 
-    // Clone progress to test docs-emitted (default) and ready-to-build
+    // Clone progress to test docs-emitted (default) and ready-for-validation.
     const progressDocsEmitted = commit(progress);
     expect(progressDocsEmitted.current_step).toBeNull();
     expect(progressDocsEmitted.phase).toBe('docs-emitted');
 
-    // Setup for ready-to-build
+    // Setup for ready-for-validation.
     let progressReady = { ...progress };
     const webQuestions = script.questions.filter((q) => q.branch === 'core' || q.branch === 'web');
     progressReady.emitted_docs = webQuestions
@@ -197,7 +197,7 @@ describe('advanceState engine', () => {
 
     progressReady = commit(progressReady);
     expect(progressReady.current_step).toBeNull();
-    expect(progressReady.phase).toBe('ready-to-build');
+    expect(progressReady.phase).toBe('ready-for-validation');
   });
 
   test('should support hybrid branch flow committing S7 and routing all core, web, and mobile questions', () => {

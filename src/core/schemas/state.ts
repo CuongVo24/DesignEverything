@@ -29,7 +29,11 @@ import { turnCapabilityRecordSchema } from '../turnCapability.js';
 
 export const progressSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
-  phase: z.enum(['interview', 'docs-emitted', 'ready-to-build', 'ready-for-validation']),
+  // `ready-to-build` was a legacy name that implied the code gate had opened
+  // as soon as the interview ended.  New canonical stores must use the
+  // honest handoff phase instead; migrateInterviewStore owns the one-way
+  // conversion for historical progress.json files.
+  phase: z.enum(['interview', 'docs-emitted', 'ready-for-validation']),
   session_id: z.string().default('default-session'),
   state_revision: z.number().int().min(0).default(0),
   branch: z.string().nullable().refine(

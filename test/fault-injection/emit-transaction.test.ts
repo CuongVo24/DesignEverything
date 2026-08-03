@@ -3,12 +3,16 @@ import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 import {
   prepareEmit,
   activateEmit,
   recoverEmit,
   manifestPath,
 } from '../../src/core/emitTransaction.js';
+import { journalPath } from '../../src/core/emitTransactionActivate.js';
+import { completeTier1Activation } from '../../src/core/advanceExecutionState.js';
+import type { EmitManifest } from '../../src/core/schemas/emitManifest.js';
 import { loadArtifactCatalog } from '../../src/core/loadArtifactCatalog.js';
 import { compileRuntimeCatalog, type RuntimeCatalog } from '../../src/core/compileRuntimeCatalog.js';
 import { loadScript } from '../../src/core/loadScript.js';
@@ -28,6 +32,17 @@ function loadTestCatalog(): RuntimeCatalog {
 describe('B5b — Emit Transaction Fault Injection Suite', () => {
   let tmpDir: string;
   let catalog: RuntimeCatalog;
+
+  function handoffFor(manifest: EmitManifest) {
+    return {
+      manifest_generation_id: manifest.generation_id,
+      manifest_digest: createHash('sha256').update(JSON.stringify(manifest, null, 2)).digest('hex'),
+      plan_digest: 'd'.repeat(64),
+      docs_digest: 'e'.repeat(64),
+      interview_state_revision: 17,
+      activated_at: manifest.activated_at ?? new Date().toISOString(),
+    };
+  }
 
   beforeEach(() => {
     tmpDir = join(tmpdir(), `de-emit-fault-${Date.now()}`);
@@ -189,5 +204,77 @@ describe('B5b — Emit Transaction Fault Injection Suite', () => {
     // Initial vision content preserved
     const currentVision = readFileSync(join(tmpDir, 'docs/00-vision.md'), 'utf8');
     expect(currentVision).toContain('Initial content');
+  });
+
+  it('FE-07 — a crash after handoff-pending but before state creation rolls docs and manifest back without fabricating state', () => {
+    const activeGenId = JSON.parse(readFileSync(manifestPath(tmpDir, 'tier1'), 'utf8')).generation_id;
+    const staged = prepareEmit(
+      tmpDir,
+      { docs: [{ file: 'docs/00-vision.md', content: '# Vision v2\\nBefore handoff state' }], shape: 'web', inputDigest: 'f'.repeat(64) },
+      catalog
+    );
+
+    expect(() =>
+      activateEmit(tmpDir, staged, activeGenId, 'tier1', {
+        tier1Handoff: {
+          execution_state_path: '.design-everything/execution-state.json',
+          interview_state_revision: 17,
+          prepare: handoffFor,
+          complete: () => {
+            throw new Error('SIMULATED_CRASH_BEFORE_HANDOFF_STATE');
+          },
+        },
+      })
+    ).toThrow('SIMULATED_CRASH_BEFORE_HANDOFF_STATE');
+
+    const journal = JSON.parse(readFileSync(journalPath(tmpDir, 'tier1'), 'utf8'));
+    expect(journal.step).toBe('handoff-pending');
+    expect(journal.handoff).toMatchObject({
+      manifest_generation_id: staged.generation_id,
+      state_status: 'pending',
+    });
+    expect(existsSync(join(tmpDir, '.design-everything/execution-state.json'))).toBe(false);
+
+    expect(recoverEmit(tmpDir, 'tier1')).toBe('rolled-back');
+    expect(readFileSync(join(tmpDir, 'docs/00-vision.md'), 'utf8')).toContain('Initial content');
+    expect(existsSync(join(tmpDir, '.design-everything/execution-state.json'))).toBe(false);
+  });
+
+  it('FE-08 — a crash after bound execution-state creation rolls that exact state back with the interrupted generation', () => {
+    const activeGenId = JSON.parse(readFileSync(manifestPath(tmpDir, 'tier1'), 'utf8')).generation_id;
+    const staged = prepareEmit(
+      tmpDir,
+      { docs: [{ file: 'docs/00-vision.md', content: '# Vision v2\\nAfter handoff state' }], shape: 'web', inputDigest: '0'.repeat(64) },
+      catalog
+    );
+
+    expect(() =>
+      activateEmit(tmpDir, staged, activeGenId, 'tier1', {
+        tier1Handoff: {
+          execution_state_path: '.design-everything/execution-state.json',
+          interview_state_revision: 17,
+          prepare: handoffFor,
+          complete: (handoff) => {
+            completeTier1Activation(tmpDir, { handoff });
+            throw new Error('SIMULATED_CRASH_AFTER_HANDOFF_STATE');
+          },
+        },
+      })
+    ).toThrow('SIMULATED_CRASH_AFTER_HANDOFF_STATE');
+
+    const execStatePath = join(tmpDir, '.design-everything/execution-state.json');
+    const state = JSON.parse(readFileSync(execStatePath, 'utf8'));
+    const journal = JSON.parse(readFileSync(journalPath(tmpDir, 'tier1'), 'utf8'));
+    expect(state.phase).toBe('plan-validating');
+    expect(state.handoff).toMatchObject({
+      manifest_generation_id: staged.generation_id,
+      interview_state_revision: 17,
+    });
+    expect(journal.step).toBe('handoff-pending');
+    expect(journal.handoff.state_status).toBe('pending');
+
+    expect(recoverEmit(tmpDir, 'tier1')).toBe('rolled-back');
+    expect(readFileSync(join(tmpDir, 'docs/00-vision.md'), 'utf8')).toContain('Initial content');
+    expect(existsSync(execStatePath)).toBe(false);
   });
 });

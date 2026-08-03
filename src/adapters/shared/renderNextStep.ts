@@ -120,12 +120,10 @@ export function renderNextStep(
 
   // 3. Phase: Blocked
   if (state.phase === 'blocked') {
-    const block = typeof state.block_reason === 'object' && state.block_reason ? state.block_reason : null;
-    const detail = block ? block.detail : String(state.block_reason || 'Không rõ nguyên nhân');
-    const nextCmd = block ? block.recoverable_by : `${CLI} validate`;
-    const allowedScope = block && (block.kind === 'verification-failed' || block.kind === 'verification-aborted')
-      ? ['src/**', 'test/**']
-      : ['Design/**', 'docs/**'];
+    const block = state.block_reason;
+    const detail = block?.detail ?? 'Không rõ nguyên nhân';
+    const nextCmd = block?.recoverable_by ?? `${CLI} repair`;
+    const allowedScope = block?.remediation.paths ?? [];
 
     return {
       state: 'blocked',

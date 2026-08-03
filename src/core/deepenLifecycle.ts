@@ -1,6 +1,7 @@
 import type { Progress, ExecutionState } from './schemas/index.js';
 import type { EmitManifest } from './schemas/emitManifest.js';
 import type { DeepenModuleId } from './schemas/deepenScript.js';
+import { createBlockRecord } from './advanceExecutionState.js';
 
 export interface DeepenRuntimeSnapshot {
   progress: Progress;
@@ -88,15 +89,13 @@ export function invalidateSnapshotForTier2(
   return {
     ...state,
     phase: 'blocked',
-    block_reason: {
+    block_reason: createBlockRecord(state, {
       kind: 'snapshot-stale',
       reason_code: 'TIER2_PLAN_AFFECTING_CHANGE',
-      origin_phase: state.phase,
       task_id: null,
       recoverable_by: '/build validate',
       detail: `Module deepen "${module}" vừa emit lại và có thể đổi nội dung architecture/test-strategy mà kế hoạch đã validate dựa vào. Chạy /build validate lại trước khi tiếp tục execution.`,
-      created_at: new Date().toISOString(),
-    },
+    }),
     updated_at: new Date().toISOString(),
   };
 }

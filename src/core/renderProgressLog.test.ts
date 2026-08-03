@@ -1,6 +1,6 @@
 import { expect, test, describe } from 'vitest';
 import { renderProgressLog } from './renderProgressLog.js';
-import { initExecutionState } from './advanceExecutionState.js';
+import { createBlockRecord, initExecutionState } from './advanceExecutionState.js';
 import { ExecutionPlanV3 } from './schemas/executionPlan.js';
 import { ExecutionState, EvidenceRecord } from './schemas/index.js';
 
@@ -98,10 +98,25 @@ describe('renderProgressLog', () => {
   });
 
   test('lần fail xuất hiện ở Những Lần Vấp kèm exit code và log stderr', () => {
-    const state = stateWith({
+    const baseState = stateWith({
       phase: 'repairing',
       active_task: 'T1-scaffold',
-      block_reason: 'Task verification command failed with exit code 1.',
+    });
+    const state = {
+      ...baseState,
+      block_reason: createBlockRecord(baseState, {
+        kind: 'verification-failed',
+        reason_code: 'TASK_COMMAND_FAILED',
+        origin_phase: 'verifying',
+        task_id: 'T1-scaffold',
+        recoverable_by: 'node adapter/claude-code/cli.mjs verify --task T1-scaffold',
+        detail: 'Task verification command failed with exit code 1.',
+        remediation: {
+          actions: ['read', 'write-task-scope', 'run-command'],
+          paths: ['package.json'],
+          command: 'node adapter/claude-code/cli.mjs verify --task T1-scaffold',
+        },
+      }),
       evidence: [
         evidence({}),
         evidence({
@@ -112,7 +127,7 @@ describe('renderProgressLog', () => {
           captured_at: '2026-07-18T09:15:00.000Z',
         }),
       ],
-    });
+    };
 
     const md = renderProgressLog({ plan, state });
 

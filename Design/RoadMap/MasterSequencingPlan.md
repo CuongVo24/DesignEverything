@@ -12,10 +12,10 @@
 
 | Mốc | Việc | Trạng thái | Bằng chứng |
 |---|---|---|---|
-| **Phase 0** | Đóng working tree (53 file uncommitted, gồm code RB-05 thật) | ✅ DONE 2026-08-02 | `8ef786f` (RB-05 seam + e2e), `5830215` (audit matrix), `dfb1b98` (roadmap docs); build/lint/typecheck/test xanh: 125 file, 847 test |
-| **Gate A1** | Nâng 22 contract `v1-fix-bugs` PARTIAL → IMPLEMENTED (P2→P10 của `plan-v1-fix.md` §6) | ⏳ TODO | Cột Implementation `v1-fix-bugs/README.md` — hiện 2/24 |
+| **Phase 0** | Đóng working tree (48 file uncommitted, gồm code A1-P3 thật) | ✅ DONE 2026-08-03 | build/lint/typecheck/test xanh: 125 file, 888 test (thêm 1 regression-pin test cho fix bên dưới). Trong lúc đóng phát hiện và sửa 1 regression production thật (xem A1-P3) + 4 fixture drift (replay-script seed, semanticValidation seed, hook-adversarial thiếu catalog, tampered-runtime thiếu canonical store) — không phải "847 test xanh" như bản ghi cũ, số đó đã lỗi thời |
+| **Gate A1** | Nâng 22 contract `v1-fix-bugs` PARTIAL → IMPLEMENTED (P2→P10 của `plan-v1-fix.md` §6) | ⏳ TODO | Cột Implementation `v1-fix-bugs/README.md` — hiện 5/24 (B1a, B1b, B1c, B1d, B3c) |
 | ↳ A1-P2 | B1a/B1b — capability lifecycle + canonical store | ✅ Implementation đóng 2026-08-02 (Proof vẫn UNIT_ONLY, chờ A2) | R19 FIXED, R18 FIXED; B1a/B1b `README.md` = IMPLEMENTED |
-| ↳ A1-P3 | B1c/B1d — handoff authority + typed blocked remediation | TODO | R05 đóng |
+| ↳ A1-P3 | B1c/B1d — handoff authority + typed blocked remediation | ✅ Implementation đóng 2026-08-03 (Proof vẫn UNIT_ONLY, chờ A2) | R05/X06 giữ FIXED; `npm exec vitest run …` = 887 tests, `npm run typecheck:all` xanh. Đóng kèm sửa 1 lỗ hổng fail-open thật: `evaluatePreAction.ts`'s `EXECUTION_STATE_REQUIRED` check giữ `ready-for-validation` trong exclusion list sau khi phase này kế thừa ngữ nghĩa của `ready-to-build` đã bị gỡ — workspace docs đã emit nhưng thiếu `execution-state.json` (hỏng/xoá nhầm) rơi qua fallback gate-policy và bị **allow** ghi code, thay vì deny |
 | ↳ A1-P4 | B2a/B2b/B2c — path/ownership/command policy | ⏳ 2/3 đóng 2026-08-02 (R07 vẫn PARTIAL) | R06 FIXED (trước đó), R08 FIXED (trước đó, thuộc B2b), X02 FIXED (pre-create vs. overwrite phân biệt qua `getActiveManagedPaths`); R07 còn thiếu capability issuer production/operation binding/scratch size/TTL — xem `b2a_protected_artifact_policy_contract.md` cập nhật 2026-08-02 |
 | ↳ A1-P5 | B2d/B2e — gate snapshot + runtime health | TODO | X15, R03 đóng |
 | ↳ A1-P6 | B3a/B3b/B3c — answer/slots/provenance/catalog | TODO | U05, X12, U06, X23 đóng |

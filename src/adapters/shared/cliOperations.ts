@@ -32,13 +32,12 @@ import {
   commitInterviewAnswer,
   loadSlotsFile,
   activateTier1Emit,
-  completeTier1Activation,
   ensureTier1Handoff,
   evaluateBuildReadiness,
+  createBlockRecord,
   runSemanticValidation,
   manifestPath,
   ExecutionState,
-  BlockRecord,
   deepenModuleIdSchema,
 } from '../../core/index.js';
 import { renderNextStep } from './renderNextStep.js';
@@ -114,19 +113,25 @@ function readBreakCount(filePath: string, label: string): number {
 }
 
 export async function runCliOperation(workspaceRoot: string, argv: string[]): Promise<CliResultEnvelope> {
-  // P3.1/P7 crash-window self-heal — activateTier1Emit (docs promoted,
-  // tier-1 manifest activated) and completeTier1Activation
-  // (execution-state.json created) are two separate calls in handleEmit
-  // below, not one transaction. A process killed between them leaves a
-  // workspace with tier-1 fully activated but no execution-state.json,
-  // which nothing else ever creates. Idempotent and a no-op unless exactly
-  // that inconsistent state is found, so running it on every subcommand is
-  // always safe.
-  ensureTier1Handoff(workspaceRoot);
-
   // Parse subcommand
   const subIndex = argv.findIndex((arg) => !arg.endsWith('.mjs') && !arg.endsWith('.js') && arg !== 'node');
   const subcommand = subIndex !== -1 ? argv[subIndex].toLowerCase() : 'status';
+
+  // P3: never manufacture state from an activated manifest. An in-flight
+  // handoff journal must be repaired/rolled back explicitly before any other
+  // operation can observe or act on the partly promoted generation.
+  const handoffHealth = ensureTier1Handoff(workspaceRoot);
+  if (handoffHealth === 'recovery-required' && subcommand !== 'repair') {
+    return {
+      ok: false,
+      operation: subcommand,
+      reason_code: 'EMIT_HANDOFF_RECOVERY_REQUIRED',
+      severity: 'error',
+      message: 'Tier-1 emit chưa hoàn tất; hãy chạy repair để khôi phục transaction trước khi tiếp tục.',
+      next_command: targetLocalCliCommand('repair'),
+      runtime_version: RUNTIME_VERSION,
+    };
+  }
 
   switch (subcommand) {
     case 'status':
@@ -394,6 +399,20 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
       };
     }
   } else {
+    // An activated tier-1 manifest without its bound execution state is not
+    // an empty workspace. Initializing fresh here would let a damaged handoff
+    // turn into a ready-to-execute state without replaying the emit journal.
+    if (existsSync(manifestPath(workspaceRoot, 'tier1'))) {
+      return {
+        ok: false,
+        operation: 'validate',
+        reason_code: 'EXECUTION_STATE_REQUIRED',
+        severity: 'error',
+        message: 'Tier-1 emit đã tồn tại nhưng execution-state.json bị thiếu. Hãy repair hoặc emit lại để khôi phục handoff.',
+        next_command: targetLocalCliCommand('repair'),
+        runtime_version: RUNTIME_VERSION,
+      };
+    }
     state = initExecutionState();
   }
 
@@ -401,7 +420,7 @@ function handleValidate(workspaceRoot: string): CliResultEnvelope {
   // policy-corrupt blocks are never cleared by validate — transitionToReadyToExecute
   // already returns these unchanged; mirror that in the envelope instead of
   // lying with VALIDATION_PASSED like the old hardcoded-pass code did.
-  if (state.phase === 'blocked' && typeof state.block_reason === 'object' && state.block_reason) {
+  if (state.phase === 'blocked' && state.block_reason) {
     const kind = state.block_reason.kind;
     if (kind === 'verification-failed' || kind === 'verification-aborted' || kind === 'policy-corrupt') {
       return {
@@ -584,6 +603,17 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       runtime_version: RUNTIME_VERSION,
     };
   }
+  if (progress.phase !== 'ready-for-validation' || progress.current_step !== null) {
+    return {
+      ok: false,
+      operation: 'emit',
+      reason_code: 'INTERVIEW_NOT_READY_FOR_VALIDATION',
+      severity: 'error',
+      message: 'Phỏng vấn chưa ở trạng thái ready-for-validation; hãy hoàn tất đúng các bước trước khi emit.',
+      next_command: targetLocalCliCommand('status'),
+      runtime_version: RUNTIME_VERSION,
+    };
+  }
 
   // P10 — tier-1 answers come from the canonical interview store
   // (payload.answers keyed by step id, plus payload.slots keyed by the
@@ -594,6 +624,7 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
   // tier-2 deepen answers (see deepenApplicationServices.ts /
   // emitTier2.ts's loadAnswers, which never run before a tier-1 emit).
   let answers: Record<string, string> = { ...canonicalOutcome.envelope.payload.answers };
+  let handoffRevision = canonicalOutcome.envelope.state_revision;
   for (const [key, rec] of Object.entries(canonicalOutcome.envelope.payload.slots)) {
     answers[key] = rec.value;
   }
@@ -633,13 +664,14 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
 
     try {
       const now = new Date().toISOString();
-      transactInterviewStore(workspaceRoot, canonicalOutcome.envelope.state_revision, (env) => {
+      const updatedEnvelope = transactInterviewStore(workspaceRoot, canonicalOutcome.envelope.state_revision, (env) => {
         const slots = { ...env.payload.slots };
         for (const [key, value] of Object.entries(loaded.slots)) {
           slots[key] = { value, provenance: 'emit:slots-file', updated_at: now };
         }
         return { ...env, payload: { ...env.payload, slots } };
       });
+      handoffRevision = updatedEnvelope.state_revision;
     } catch {
       // best-effort — a concurrent writer already advanced the revision;
       // the emit still proceeds with the in-memory merged answers, only the
@@ -652,7 +684,9 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
   // kernel. There is no direct writeFileSync loop here anymore, and no
   // catch branch that turns a thrown render/validation error into a
   // fabricated success by reading a stale manifest.
-  const result = activateTier1Emit(workspaceRoot, answers, branch);
+  const result = activateTier1Emit(workspaceRoot, answers, branch, {
+    interview_state_revision: handoffRevision,
+  });
   if (!result.ok) {
     return {
       ok: false,
@@ -665,12 +699,6 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
     };
   }
 
-  // P3.1 — a successful tier-1 activation must always hand off into
-  // execution-state.json at plan-validating. completeTier1Activation is
-  // idempotent: it never resets state that has already moved past
-  // plan-validating from a prior emit.
-  completeTier1Activation(workspaceRoot);
-
   return {
     ok: true,
     operation: 'emit',
@@ -682,7 +710,7 @@ function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnvelope {
       manifest_generation_id: result.manifest_generation_id,
       warnings: result.warnings,
     },
-    next_command: targetLocalCliCommand('status'),
+    next_command: targetLocalCliCommand('validate'),
     runtime_version: RUNTIME_VERSION,
   };
 }
@@ -736,7 +764,7 @@ function handleNext(workspaceRoot: string): CliResultEnvelope {
   // check below, so surface its real reason (PLAN_VALIDATION_REQUIRED)
   // instead of the generic snapshot-staleness error.
   const readiness = evaluateBuildReadiness({ phase: execState.phase, branch: null }, execState);
-  if (!readiness.ready && readiness.reason_code === 'PLAN_VALIDATION_REQUIRED') {
+  if (!readiness.ready) {
     return {
       ok: false,
       operation: 'next',
@@ -859,7 +887,7 @@ function handleStart(workspaceRoot: string, argv: string[]): CliResultEnvelope {
   // fail the digest check below, so surface PLAN_VALIDATION_REQUIRED instead
   // of the generic STALE_SNAPSHOT error.
   const readiness = evaluateBuildReadiness({ phase: execState.phase, branch: null }, execState);
-  if (!readiness.ready && readiness.reason_code === 'PLAN_VALIDATION_REQUIRED') {
+  if (!readiness.ready) {
     return {
       ok: false,
       operation: 'start',
@@ -1053,15 +1081,14 @@ async function handleVerify(workspaceRoot: string, argv: string[]): Promise<CliR
       };
       promoted = true;
     } catch (e: unknown) {
-      const blockRecord: BlockRecord = {
+      const recoveryCommand = targetLocalCliCommand('verify --task T3-verify');
+      const blockRecord = createBlockRecord(nextState, {
         kind: 'artifact-integrity',
         reason_code: 'PLAN_PROMOTION_FAILED',
-        origin_phase: nextState.phase,
-        task_id: nextState.active_task,
-        recoverable_by: targetLocalCliCommand('verify --task T3-verify'),
+        recoverable_by: recoveryCommand,
         detail: `Plan promotion failed: ${(e as Error).message}`,
-        created_at: new Date().toISOString(),
-      };
+        remediation: { actions: ['read', 'run-command'], paths: [], command: recoveryCommand },
+      });
       nextState = { ...nextState, phase: 'blocked' as const, block_reason: blockRecord, updated_at: new Date().toISOString() };
     }
   }

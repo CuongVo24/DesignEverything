@@ -53,7 +53,7 @@ describe('renderInject function', () => {
       version: '0.1.0',
       session_id: 'session-1',
       state_revision: 0,
-      phase: 'ready-to-build',
+      phase: 'ready-for-validation',
       branch: 'web',
       current_step: null,
       answered: [],

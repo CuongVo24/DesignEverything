@@ -155,7 +155,10 @@ export function commitStep(
     );
 
     if (hasAllDocs && hasAllGates) {
-      nextProgress.phase = 'ready-to-build';
+      // Interview completion does not open the code gate. The only honest
+      // canonical handoff is to validation; execution-state then moves to
+      // ready-to-execute after a semantic validation pass.
+      nextProgress.phase = 'ready-for-validation';
     } else {
       nextProgress.phase = 'docs-emitted';
     }

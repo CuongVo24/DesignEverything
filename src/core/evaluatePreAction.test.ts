@@ -266,7 +266,7 @@ describe('evaluatePreAction core engine', () => {
         session_id: 'test-session',
         state: baseExecState({ phase: 'executing', active_task: 'T1' }),
         plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
-        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+        progress: baseProgress({ phase: 'ready-for-validation', current_step: null }),
       };
       const decision = evaluatePreAction(request);
       expect(decision.decision).toBe('deny');
@@ -284,7 +284,7 @@ describe('evaluatePreAction core engine', () => {
         session_id: 'test-session',
         state: baseExecState({ phase: 'executing', active_task: 'T1' }),
         plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
-        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+        progress: baseProgress({ phase: 'ready-for-validation', current_step: null }),
       };
       const decision = evaluatePreAction(request);
       expect(decision.decision).toBe('allow');
@@ -302,7 +302,7 @@ describe('evaluatePreAction core engine', () => {
         session_id: 'test-session',
         state: baseExecState({ phase: 'executing', active_task: 'T1' }),
         plan: { tasks: { T1: { id: 'T1', allowed_paths: ['src/**'], commands: [] } } },
-        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+        progress: baseProgress({ phase: 'ready-for-validation', current_step: null }),
       };
       const decision = evaluatePreAction(request);
       expect(decision.decision).toBe('deny');
@@ -319,7 +319,7 @@ describe('evaluatePreAction core engine', () => {
         workspace: testWorkspace,
         session_id: 'test-session',
         state: baseExecState({ phase: 'plan-validating' }),
-        progress: baseProgress({ phase: 'ready-to-build', current_step: null }),
+        progress: baseProgress({ phase: 'ready-for-validation', current_step: null }),
       };
       const decision = evaluatePreAction(request);
       expect(decision.decision).toBe('deny');
@@ -407,6 +407,13 @@ describe('evaluatePreAction core engine', () => {
           recoverable_by: '/build',
           detail: '02-scope.md is missing Must items.',
           created_at: new Date().toISOString(),
+          remediation: {
+            actions: ['read', 'write-docs', 'run-command'],
+            paths: ['Design/02-scope.md'],
+            command: '/build',
+            task_id: null,
+            plan_revision: 1,
+          },
         }),
       };
 
@@ -432,6 +439,13 @@ describe('evaluatePreAction core engine', () => {
           recoverable_by: '/build',
           detail: '02-scope.md is missing Must items.',
           created_at: new Date().toISOString(),
+          remediation: {
+            actions: ['read', 'write-docs', 'run-command'],
+            paths: ['Design/02-scope.md'],
+            command: '/build',
+            task_id: null,
+            plan_revision: 1,
+          },
         }),
       };
 
@@ -458,6 +472,13 @@ describe('evaluatePreAction core engine', () => {
           recoverable_by: recoverCmd,
           detail: 'Exit code 1 on npm test',
           created_at: new Date().toISOString(),
+          remediation: {
+            actions: ['read', 'write-task-scope', 'run-command'],
+            paths: [],
+            command: recoverCmd,
+            task_id: 'T1-setup',
+            plan_revision: 1,
+          },
         }),
       };
 
@@ -484,6 +505,13 @@ describe('evaluatePreAction core engine', () => {
           recoverable_by: recoverCmd,
           detail: 'Exit code 1 on npm test',
           created_at: new Date().toISOString(),
+          remediation: {
+            actions: ['read', 'write-task-scope', 'run-command'],
+            paths: [],
+            command: recoverCmd,
+            task_id: 'T1-setup',
+            plan_revision: 1,
+          },
         }),
       };
 
@@ -734,6 +762,70 @@ describe('evaluatePreAction core engine', () => {
           rmSync(brokenWorkspace, { recursive: true, force: true });
         }
       });
+    });
+  });
+
+  describe('EXECUTION_STATE_REQUIRED — ready-for-validation with no execution-state.json must fail closed', () => {
+    // Regression pin: `ready-for-validation` is the direct successor of the
+    // retired `ready-to-build` phase (migrateInterviewStore converts old
+    // stores one-way) and inherits its "code gate not open yet" semantics.
+    // A stale copy of the exclusion list below once still excluded
+    // `ready-for-validation` from this deny check — from when it meant
+    // something distinct, pre-rename — which made the whole branch
+    // unreachable (the schema only allows interview/docs-emitted/
+    // ready-for-validation) and let a workspace with docs already emitted
+    // but a missing/deleted execution-state.json fall through to the
+    // interview-time gate-policy fallback and get silently ALLOWED to
+    // write code, instead of denied. See evaluatePreAction.ts's
+    // EXECUTION_STATE_REQUIRED check.
+    test('denies a code write when phase is ready-for-validation, docs already exist, but execution-state.json is missing', () => {
+      const workspace = mkdtempSync(join(tmpdir(), 'pre-action-exec-state-required-'));
+      try {
+        const designDir = join(workspace, 'Design/Content');
+        mkdirSync(designDir, { recursive: true });
+        cpSync(join(projectRoot, 'Design/Content'), designDir, { recursive: true });
+
+        // A real `ready-for-validation` workspace has docs on disk (tier-1
+        // emit wrote them) — seed the ones scope-locked's gate requires so
+        // this test proves EXECUTION_STATE_REQUIRED fires specifically,
+        // not a docs-missing gate denying for an unrelated reason.
+        const docsDir = join(workspace, 'docs');
+        mkdirSync(docsDir, { recursive: true });
+        for (const f of ['00-vision.md', '01-personas.md', '02-scope.md']) {
+          writeFileSync(join(docsDir, f), '# real content\n', 'utf8');
+        }
+
+        const base = initializeInterviewStore(workspace).payload.progress;
+        transactInterviewStore(workspace, 0, (env) => ({
+          ...env,
+          payload: {
+            ...env.payload,
+            progress: {
+              ...base,
+              phase: 'ready-for-validation',
+              current_step: null,
+              answered: ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'],
+              emitted_docs: ['00-vision.md', '01-personas.md', '02-scope.md'],
+            },
+          },
+        }));
+        // No execution-state.json written — simulates corruption, an
+        // interrupted handoff, or a manually deleted file.
+
+        const decision = evaluatePreAction({
+          runtime: 'claude',
+          tool_name: 'Write',
+          action_kind: 'write',
+          target_paths: ['src/index.ts'],
+          command_argv: [],
+          workspace,
+          session_id: 'test-session',
+        });
+        expect(decision.decision).toBe('deny');
+        expect(decision.reason_code).toBe('EXECUTION_STATE_REQUIRED');
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
     });
   });
 });

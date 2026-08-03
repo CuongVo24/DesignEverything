@@ -15,6 +15,9 @@ import {
   executionStateSchema,
   blockKindSchema,
   blockRecordSchema,
+  remediationActionSchema,
+  blockRemediationSchema,
+  tier1HandoffSchema,
 } from './executionState.js';
 import {
   internalMutationOperationSchema,
@@ -89,6 +92,7 @@ import {
   emitManifestSchema,
   emitJournalStepSchema,
   emitJournalSchema,
+  emitJournalHandoffSchema,
 } from './emitManifest.js';
 
 export {
@@ -141,6 +145,9 @@ export {
   INTERVIEW_STORE_VERSION,
   blockKindSchema,
   blockRecordSchema,
+  remediationActionSchema,
+  blockRemediationSchema,
+  tier1HandoffSchema,
   internalMutationOperationSchema,
   internalMutationCapabilitySchema,
   healthStatusSchema,
@@ -156,6 +163,7 @@ export {
   emitManifestSchema,
   emitJournalStepSchema,
   emitJournalSchema,
+  emitJournalHandoffSchema,
 };
 
 export type Question = z.infer<typeof questionSchema>;
@@ -175,6 +183,9 @@ export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>;
 export type ExecutionState = z.infer<typeof executionStateSchema>;
 export type BlockKind = z.infer<typeof blockKindSchema>;
 export type BlockRecord = z.infer<typeof blockRecordSchema>;
+export type RemediationAction = z.infer<typeof remediationActionSchema>;
+export type BlockRemediation = z.infer<typeof blockRemediationSchema>;
+export type Tier1Handoff = z.infer<typeof tier1HandoffSchema>;
 export type InternalMutationOperation = z.infer<typeof internalMutationOperationSchema>;
 export type InternalMutationCapability = z.infer<typeof internalMutationCapabilitySchema>;
 export type HealthStatus = z.infer<typeof healthStatusSchema>;
@@ -229,6 +240,7 @@ export type EmitManifestArtifact = z.infer<typeof emitManifestArtifactSchema>;
 export type EmitManifest = z.infer<typeof emitManifestSchema>;
 export type EmitJournalStep = z.infer<typeof emitJournalStepSchema>;
 export type EmitJournal = z.infer<typeof emitJournalSchema>;
+export type EmitJournalHandoff = z.infer<typeof emitJournalHandoffSchema>;
 
 
 
