@@ -39,7 +39,7 @@ render). B22d và B22e đều chờ B22c xong vì cả hai đọc lại nhịp l
 - **Dữ liệu ở Lõi, render ở Adapter (D53).** `options`/`option_hints` nằm trong `script.yaml`
   (Nội dung) và schema `interview-script.md` (Lõi); B22c/B22d chỉ đọc, không tự chế lựa chọn.
 - **Một lượt = một commit (D54).** Không đổi `turnCapability.ts` hay `checkRate`
-  ([advanceState.ts:171](../../../../src/core/advanceState.ts)). Thẻ tương tác chỉ đổi cách thu câu
+  ([advanceState.ts:174](../../../../src/core/advanceState.ts)). Thẻ tương tác chỉ đổi cách thu câu
   trả lời của MỘT câu đang chờ, không gộp nhiều câu vào một lượt — đó là lane khác (§7 của plan).
 - **Luôn còn đường tự nhập (D55).** `options` không thay thế `default`; mọi câu có `options` phải
   giữ được nhánh free-text, và `default` phải xuất hiện như một lựa chọn có nhãn khuyến nghị.
