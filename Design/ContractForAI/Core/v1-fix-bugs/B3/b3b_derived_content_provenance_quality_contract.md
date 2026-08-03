@@ -66,5 +66,17 @@ Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): s�
 (`IMPLEMENTED_WAITING_FOR_REVIEW`) về đúng 3 trục — Implementation hạ từ ngụ ý "đã xong" xuống
 `PARTIAL` để khớp README.md. Cập nhật 2026-08-01: production `emitTier1` đã tải
 `derived-recipes.yaml` và truyền recipes vào `validateStagedEmit`; recipe asset thiếu/corrupt fail
-closed trước activation. U06/X23 vẫn `PARTIAL` vì provenance chỉ warning và chưa có acknowledgement
-capability/user-visible artifact cho output dẫn xuất.
+closed trước activation.
+
+Cập nhật 2026-08-03 (A1-P6): thêm phần "user-visible artifact" của U06/X23 —
+`.design-everything/emit-warning-acknowledgements.json` (append-only, best-effort) giờ ghi lại mọi
+batch cảnh báo `derived-recipe-provenance-missing` mỗi lần một generation có cảnh báo đó được
+activate (`emitTier1.ts`, `appendWarningAcknowledgement`). U06/X23 vẫn `PARTIAL`: phần "acknowledgement
+capability" (chặn activation cho tới khi có ack tường minh, giống `needs_user_ack`/`ackWarnings` của
+commit) **cố ý chưa làm** trong đợt này — thử nghiệm một bản chặn cứng cho thấy nó phá ~11 test có sẵn
+trong `test/integration/cli-protocol.test.ts` (thuộc B4c) vốn dùng chung fixture
+`seedEmitReadyWorkspace` để test hành vi validate/build/next/start hoàn toàn không liên quan tới
+provenance. `plan-v1-fix.md` P7 (B3d/B3e) đã tự khai "một application service tier-1 duy nhất... require
+acknowledgement cho blocking warning" — đây là chỗ đúng để dựng gate cứng cùng lúc với sửa mọi
+fixture gọi `emit`, không phải một patch hẹp ở đây. Xem `emitTier1.ts`'s comment tại
+`appendWarningAcknowledgement` cho chi tiết đầy đủ.

@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { mkdtempSync, rmSync, existsSync, cpSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync, cpSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { activateTier1Emit } from './emitTier1.js';
 import { manifestPath } from './emitTransactionActivate.js';
@@ -103,5 +103,37 @@ describe('P7.1 — activateTier1Emit is the sole application-service authority f
       reason_code: 'EMIT_DERIVED_RECIPES_LOAD_FAILED',
     });
     expect(existsSync(manifestPath(root, 'tier1'))).toBe(false);
+  });
+});
+
+describe('P6.2/U06/X23 — derived-recipe provenance warnings are recorded as a user-visible artifact', () => {
+  test('activation still succeeds when provenance warnings are present (not a hard gate — see emitTier1.ts comment)', () => {
+    const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.reason_code).toBe('EMIT_ACTIVATED');
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  test('a provenance warning batch is recorded in a user-visible append-only log', () => {
+    const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const logPath = join(root, '.design-everything/emit-warning-acknowledgements.json');
+    expect(existsSync(logPath)).toBe(true);
+    const log = JSON.parse(readFileSync(logPath, 'utf8'));
+    expect(Array.isArray(log)).toBe(true);
+    expect(log.length).toBe(1);
+    expect(log[0]).toMatchObject({ generation_id: result.manifest_generation_id });
+    expect(log[0].warnings.length).toBeGreaterThan(0);
+  });
+
+  test('a second emit with no derived recipes at all (unloadable) never reaches the log — failure happens before validation', () => {
+    rmSync(join(root, 'Design/Content/interview-script/derived-recipes.yaml'));
+    const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
+    expect(result.ok).toBe(false);
+    const logPath = join(root, '.design-everything/emit-warning-acknowledgements.json');
+    expect(existsSync(logPath)).toBe(false);
   });
 });

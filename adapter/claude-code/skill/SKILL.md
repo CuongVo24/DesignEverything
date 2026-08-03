@@ -120,8 +120,8 @@ Khi `commit` trả về `interview_done: true`:
    `Design/.interview/slots-buildplan.json`.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json" --json` — sinh cây `docs/`
    + `docs/conventions/`.
-4. Nếu output emit có `consistency_warnings` không rỗng: trình bày từng cảnh báo cho người dùng
-   và YÊU CẦU người dùng xác nhận hoặc điều chỉnh slot. Model KHÔNG được tự ý auto-ack cảnh báo.
+4. Nếu output emit có `data.warnings` không rỗng: trình bày từng cảnh báo cho người dùng và YÊU
+   CẦU người dùng xác nhận hoặc điều chỉnh slot. Model KHÔNG được tự ý auto-ack cảnh báo.
 5. **THÔNG BÁO CHÍNH XÁC VỀ TRẠNG THÁI (HANDOFF TRUTH):**
    - Nói rõ: "Bộ tài liệu thiết kế `docs/` đã được sinh thành công. **TUY NHIÊN, kế hoạch thực thi (`execution-plan.json`) CHƯA được validate.**"
    - Tuyệt đối KHÔNG tuyên bố "gate đã mở" hay "có thể bắt đầu viết code ngay".

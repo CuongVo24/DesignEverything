@@ -68,3 +68,28 @@ khớp README.md. X12 (slots-file đọc path/key tuỳ ý) một phần đã s�
 và same-key resubmission không còn ghi đè im lặng (`interviewApplicationServices.ts`), nhưng chưa có
 directory allowlist ngoài workspace-confinement và slot key chưa scope theo câu hỏi hiện tại — vẫn
 `finding-coverage-matrix.md` X12 PARTIAL. U05 (Must rỗng vẫn lọt) vẫn PARTIAL, chưa qua CLI thật.
+
+Cập nhật 2026-08-03 (A1-P6, đối chiếu lại checklist §3 với code thật): nhiều mục đã đóng từ trước
+nhưng checklist chưa cập nhật —
+
+- `validateAnswer.ts` **đã** enforce đủ `required/min_trimmed_chars/min_items/required_fields/
+  enum_values/pattern/warning_rules`, ba outcome `valid/invalid/needs_user_ack` đúng thiết kế. Ghi chú
+  cũ ở B3b §3 nói "pattern/min_items/required_fields/enum_values còn lại của B3a" đã lỗi thời — không
+  còn đúng với code hiện hành.
+- "Raw answer đã confirmed là append-only" — cấu trúc code hiện tại (`advanceState.ts`'s `nextStepId`
+  chỉ chọn câu chưa nằm trong `answered`) khiến `current_step` không bao giờ quay lại một câu đã trả
+  lời; overwrite `answers[stepId]` **không có đường chạy được trong production** — cùng dạng "dead
+  path" như capability issuer ở R07/B2a. Không cần implement thêm cho tới khi có surface amend thật
+  (R21, hoãn sau 7.0.0).
+- "Không consume capability khi user cần sửa" — đã đúng: `commitInterviewAnswer` trả sớm ở mọi nhánh
+  invalid/needs_user_ack (`interviewApplicationServices.ts`) trước khi gọi `commitStep` (nơi capability
+  thật sự bị tiêu thụ).
+- Key allowlist theo current question — đóng ở A1-P4đ (`slot_keys` trong `script.yaml`, enforce ở
+  `interviewApplicationServices.ts`), dùng chung code path cho cả B2a/R07 lẫn B3a/U05.
+
+**Còn mở, thật sự chưa làm:** slots envelope chưa có đủ field `slot_schema_version`/
+`source_answer_revisions`/`producer_version` như §4 mô tả (hiện chỉ `{value, provenance, updated_at}`)
+— đây là một migration schema lớn hơn, chưa làm trong đợt này. `--slots-file` (production path, qua
+`loadSlotsFile.ts`) đọc bất kỳ đâu trong workspace đã canonicalize, không bị bó hẹp về riêng
+`.design-everything/scratch/` như §3 gợi ý — `loadQuestionSlots.ts` (đúng scratch path) vẫn không có
+production caller.
