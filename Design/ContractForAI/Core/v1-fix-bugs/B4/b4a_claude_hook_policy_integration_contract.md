@@ -30,7 +30,7 @@ Nối SessionStart/UserPromptSubmit/PreToolUse vào các Core contract mới, b�
 - [ ] Shell payload đi qua B2b; unknown deny.
 - [ ] Hook response có stable reason_code, message, next_command và không lộ token/path secret.
 - [ ] Uninstalled target thật sự vẫn uninvolved, không cản project ngoài scope.
-- [ ] Tách evaluatePreAction hiện đang phình lớn thành orchestrator dưới 200 dòng và các policy module B2; adapter không tái gom logic vào một file.
+- [x] Tách evaluatePreAction hiện đang phình lớn thành orchestrator dưới 200 dòng và các policy module B2; adapter không tái gom logic vào một file.
 
 ## 4. Interfaces / Files expected to change
 
@@ -69,3 +69,12 @@ khớp README.md. X18 (test chưa chạy installer/wrapper/adversarial thật) n
 rồi spawn hook target-local. X02 (hook allow ghi thẳng state/docs, pre-create managed docs) một
 phần FIXED — direct write/edit vào progress.json/answers.json bị deny; pre-create doc tại catalog
 path trước khi emit vẫn allow (finding-coverage-matrix.md X02 PARTIAL). R03/R04 vẫn OPEN.
+
+Cập nhật 2026-08-05 (A1-P8, structural — không đổi hành vi): `evaluatePreAction.ts` (771 dòng) đã
+tách thành orchestrator 115 dòng + `src/core/preAction/` (types, shared, guards, phaseInterview,
+phaseInterviewGate, phaseBlocked, phasePlanValidating, phaseExecuting — mỗi file <200 dòng).
+Orchestrator chỉ chạy guard phase-độc-lập (health, capability, canonical path, shell-operator scan,
+load state/progress, CLI-shell authority, EXECUTION_STATE_REQUIRED gate) rồi dispatch đúng một phase
+handler. Refactor behavior-preserving: 915/915 test xanh trước và sau, build + lint + typecheck sạch.
+Checklist item "Tách evaluatePreAction... dưới 200 dòng" CLOSED. Các item còn lại của B4a (SessionStart/
+UserPromptSubmit/PreToolUse mapping) chưa đánh giá đủ trong lần A1-P8 này ⇒ B4a giữ PARTIAL.

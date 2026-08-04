@@ -1,84 +1,30 @@
-import { join } from 'path';
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import { loadInterviewStore, transactInterviewStore } from './interviewStore.js';
-import { loadGatePolicy } from './loadGatePolicy.js';
-import { evaluateGate, isBlocked } from './evaluateGate.js';
-import { buildGateSnapshot, getActiveManagedPaths } from './gateSnapshot.js';
-import { loadExecutionState, allowedRemediation } from './advanceExecutionState.js';
-import { assertValidatedSnapshot, loadEmittedDocs } from './validatedSnapshot.js';
-import { loadDeepenState } from './deepenState.js';
-import { authorizeMutation, type CatalogPathEntry } from './artifactOwnership.js';
-import { loadRuntimeCatalogFor } from './runtimeCatalogLoader.js';
-import { classifyCommand } from './classifyCommand.js';
-import { stripQuotedContent } from './tokenizeShellCommand.js';
-import { classifyCliSubcommand } from './classifyCliSubcommand.js';
-import { canonicalizeWorkspacePath, matchesPathPattern } from './pathPolicy.js';
-import { inspectRuntimeHealth } from './runtimeHealth.js';
 import {
   PreActionRequest,
   PreActionDecision,
   AdapterCapability,
-  type Progress,
 } from './schemas/index.js';
+import type { PhaseContext } from './preAction/types.js';
+import { classifyCliShellCommand, collectDeepenPending } from './preAction/shared.js';
+import {
+  checkHealth,
+  normalizeTargetPaths,
+  scanShellCommand,
+  loadExecStateGuard,
+  loadProgressGuard,
+} from './preAction/guards.js';
+import { phaseInterview } from './preAction/phaseInterview.js';
+import { phaseBlocked } from './preAction/phaseBlocked.js';
+import { phasePlanValidating } from './preAction/phasePlanValidating.js';
+import { phaseExecuting } from './preAction/phaseExecuting.js';
 
 /**
- * Cảnh báo mềm B20a: module deepen đã opt-in nhưng chưa emit. Best-effort, không
- * bao giờ throw (deepen-state hỏng/thiếu → []). KHÔNG đổi decision/enforcement.
+ * Pre-action policy entry point. This orchestrator runs the phase-independent
+ * guards (health, capability, path canonicalization, shell-operator scan,
+ * state/progress load, CLI-shell authority, EXECUTION_STATE_REQUIRED gate),
+ * then dispatches to exactly one phase handler in ./preAction/. The heavy
+ * per-phase logic lives in those modules (B4a — keep this file a thin
+ * orchestrator, never re-gather policy into one giant function).
  */
-/**
- * Proves the invocation is `node <cli.mjs|cli.js>` as the direct script
- * argument to node — not merely a command whose argv happens to contain the
- * literal string "cli.mjs"/"cli.js" somewhere (e.g. `node malicious.js
- * cli.mjs`), which the previous `argv.includes('cli.mjs')` check allowed.
- */
-function isCliInvocation(argv: string[]): boolean {
-  if (argv.length < 2) return false;
-  const exe = argv[0].toLowerCase().replace(/\.exe$/, '');
-  if (exe !== 'node') return false;
-  const script = argv[1].replace(/\\/g, '/');
-  return script === 'cli.mjs' || script === 'cli.js' || script.endsWith('/cli.mjs') || script.endsWith('/cli.js');
-}
-
-type CliShellDecision = { decision: 'allow' | 'deny'; reason_code: string; user_message: string };
-
-// P8.2 — the subcommand-level authority resolve-cli-invocation.mjs's
-// authorizeCliOperation applies on its own, now applied by Core so the
-// wrapper's decision and Core's decision can never diverge. Returns null for
-// a non-CLI shell command (fall through to classifyCommand as before); a
-// missing subcommand defaults to 'status', mirroring resolveCliInvocation.mjs.
-function classifyCliShellCommand(argv: string[], phase: string | null | undefined): CliShellDecision | null {
-  if (!isCliInvocation(argv)) return null;
-  const subcommand = argv[2] || 'status';
-  const result = classifyCliSubcommand(subcommand, phase);
-  if (result.decision === 'allow') {
-    return { decision: 'allow', reason_code: 'cli-allowed', user_message: 'CLI tool execution allowed.' };
-  }
-  return { decision: 'deny', reason_code: result.reason_code, user_message: result.message };
-}
-
-// P6 10.3 — best-effort, same degrade-to-empty pattern as
-// collectDeepenPending: a missing/broken catalog must never turn the write
-// gate into a hard crash, it just falls back to exact-path-only
-// classification (today's behavior) for that call.
-function collectCatalogEntries(workspace: string): CatalogPathEntry[] {
-  try {
-    return loadRuntimeCatalogFor(workspace).artifacts;
-  } catch {
-    return [];
-  }
-}
-
-function collectDeepenPending(workspace: string): string[] {
-  try {
-    const state = loadDeepenState(workspace);
-    return (Object.keys(state.modules) as (keyof typeof state.modules)[]).filter(
-      (m) => state.modules[m].opted_in && state.modules[m].emitted_at === null
-    );
-  } catch {
-    return [];
-  }
-}
-
 export function evaluatePreAction(
   request: PreActionRequest,
   capability?: AdapterCapability
@@ -97,19 +43,11 @@ function evaluatePreActionInner(
 ): PreActionDecision {
   const workspace = request.workspace;
 
-  // 0. Fail-closed Runtime Health Check
-  const health = inspectRuntimeHealth(workspace);
-  if (health.status === 'broken' && request.action_kind === 'write') {
-    const issue = health.issues[0];
-    return {
-      decision: 'deny',
-      reason_code: issue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
-      user_message: `Runtime state is broken: ${issue?.detail || 'State corrupted'}. Run "${issue?.safe_next_command || '/build'}" to recover.`,
-      enforcement: 'hard',
-    };
-  }
+  // 0. Fail-closed runtime health check.
+  const healthDeny = checkHealth(request, workspace);
+  if (healthDeny) return healthDeny;
 
-  // 1. Check capability interception early
+  // 1. Capability interception.
   if (capability && !capability.intercepts.includes(request.tool_name)) {
     return {
       decision: 'allow',
@@ -119,140 +57,31 @@ function evaluatePreActionInner(
     };
   }
 
-  // 2. Path normalization & traversal check
-  const resolvedPaths: string[] = [];
-  if (request.target_paths && request.target_paths.length > 0) {
-    for (const targetPath of request.target_paths) {
-      const canon = canonicalizeWorkspacePath(workspace, targetPath);
-      if (!canon.ok) {
-        return {
-          decision: 'deny',
-          reason_code: canon.reason_code,
-          user_message: canon.message,
-          enforcement: 'hard',
-        };
-      }
-      resolvedPaths.push(canon.canonicalPath);
-    }
-  }
+  // 2. Path normalization & traversal check.
+  const paths = normalizeTargetPaths(workspace, request.target_paths);
+  if (!paths.ok) return paths.deny;
+  const resolvedPaths = paths.paths;
 
-  // 3. Command argv shell operators check
-  let commandStr = '';
-  let baseCmd = '';
-  if (request.command_argv && request.command_argv.length > 0) {
-    // P4.3 — prefer the original raw command text for the operator scan
-    // when the caller supplied it: re-joining tokenized argv with a single
-    // space is lossy, since a quoted argv token that legitimately contains
-    // "&&"/";"/"|" as literal content (e.g. a commit message) becomes
-    // indistinguishable from a real chaining operator once rejoined. Falls
-    // back to the joined argv for callers that don't populate command_raw.
-    commandStr = (request.command_raw ?? request.command_argv.join(' ')).trim();
-    baseCmd = request.command_argv[0] || '';
+  // 3. Command argv shell-operator / git-mutation scan.
+  const scan = scanShellCommand(request);
+  if (!scan.ok) return scan.deny;
+  const { commandStr, baseCmd } = scan;
 
-    // P4.3 lossy-round-trip fix: scan a quote-redacted copy, not commandStr
-    // itself — a quoted argv token that legitimately contains "&&"/";"/"|"
-    // as literal text (e.g. a commit message) must not be misclassified as
-    // a real chaining/redirect operator once (re)joined into one string.
-    const scanStr = stripQuotedContent(commandStr);
-    const hasSeparator = /[&;|]/.test(scanStr);
-    const hasRedirect = /[<>]/.test(scanStr);
-    const hasSubstitution = /\$\(|`/.test(scanStr);
-    const hasInlineInterpreter = /node\s+-e|python\s+-c/i.test(scanStr);
+  // 4. Load execution state.
+  const stateRes = loadExecStateGuard(request, workspace);
+  if (!stateRes.ok) return stateRes.deny;
+  const execState = stateRes.execState;
 
-    if (hasSeparator || hasRedirect || hasSubstitution || hasInlineInterpreter) {
-      return {
-        decision: 'deny',
-        reason_code: 'shell-operators-blocked',
-        user_message: `Lệnh thực thi bị chặn do chứa ký tự shell đặc biệt hoặc inline interpreter: ${commandStr}.`,
-        enforcement: 'hard',
-      };
-    }
+  // 5. Load progress from the canonical interview store.
+  const progRes = loadProgressGuard(request, workspace, execState);
+  if (!progRes.ok) return progRes.deny;
+  const { progress, canonicalRevision } = progRes;
 
-    if (baseCmd === 'git') {
-      const sub = request.command_argv[1];
-      const disallowedGit = ['apply', 'checkout', 'reset', 'commit', 'push', 'merge', 'rebase', 'add', 'rm', 'mv'];
-      if (disallowedGit.includes(sub)) {
-        return {
-          decision: 'deny',
-          reason_code: 'git-mutation-blocked',
-          user_message: `Không được phép sử dụng lệnh git ghi sửa "${sub}" trong pha thực thi để tránh mất mát code/state.`,
-          enforcement: 'hard',
-        };
-      }
-    }
-  }
-
-  // 4. Load execution state (or use request.state)
-  let execState = request.state || null;
-  const execStatePath = join(workspace, '.design-everything/execution-state.json');
-  if (!execState && existsSync(execStatePath)) {
-    try {
-      execState = loadExecutionState(execStatePath);
-    } catch (error: unknown) {
-      return {
-        decision: 'deny',
-        reason_code: 'state-invalid',
-        user_message: `Tệp trạng thái thực thi bị lỗi hoặc không hợp lệ: ${(error as Error).message}`,
-        enforcement: 'hard',
-      };
-    }
-  }
-
-  // 5. Load progress state from the canonical interview store (P2.2a) — no
-  // progress.json read here anymore. A caller may supply a pre-loaded
-  // snapshot via request.progress (mirrors request.state); when absent this
-  // loads canonical directly rather than fabricating or falling back to
-  // legacy state.
-  let progress: Progress | null = (request.progress as Progress | undefined) ?? null;
-  let canonicalRevision: number | null = null;
-  if (!progress) {
-    if (!execState) {
-      try {
-        const envelope = loadInterviewStore(workspace);
-        progress = envelope.payload.progress;
-        canonicalRevision = envelope.state_revision;
-      } catch (error: unknown) {
-        const msg = (error as Error).message;
-        if (msg.startsWith('STORE_MISSING')) {
-          return {
-            decision: 'deny',
-            reason_code: 'progress-missing',
-            user_message: 'Thiếu trạng thái phỏng vấn (canonical interview store) trong thư mục.',
-            enforcement: 'hard',
-          };
-        }
-        return {
-          decision: 'deny',
-          reason_code: 'progress-invalid',
-          user_message: `Không thể nạp canonical interview store: ${msg}`,
-          enforcement: 'hard',
-        };
-      }
-    } else {
-      try {
-        const envelope = loadInterviewStore(workspace);
-        progress = envelope.payload.progress;
-        canonicalRevision = envelope.state_revision;
-      } catch {
-        // ignore — matches prior best-effort behavior once execState exists
-      }
-    }
-  }
-
-  // P8.2/P8.4 — a CLI-shaped shell invocation gets Core's own subcommand+
-  // phase authority here, ahead of every phase-specific branch below
-  // (including the EXECUTION_STATE_REQUIRED gate immediately after this).
-  // CLI meta-operations (status/commit/deepen/...) manage state itself and
-  // were never meant to be blocked by "no execution-state.json yet" the
-  // same way an actual code write is — this mirrors exactly where the
-  // now-removed .mjs wrapper authority used to decide CLI commands:
-  // unconditionally, before any phase logic ran.
-  //
-  // Exception: a 'blocked' execState phase keeps its own, strictly tighter
-  // gate (allowedRemediation's exact recoverable_by match, P3.2) — the
-  // generic subcommand table would otherwise unconditionally allow e.g.
-  // any `verify` invocation, including a padded/lookalike one, which
-  // recoverable_by's exact-match check exists specifically to deny.
+  // 6. A CLI-shaped shell invocation gets Core's own subcommand+phase authority
+  // here, ahead of every phase branch (mirroring where the removed .mjs wrapper
+  // authority used to decide CLI commands: unconditionally, before phase logic).
+  // Exception: a 'blocked' phase keeps its own strictly tighter recoverable_by
+  // gate, so the generic subcommand table must not run for it.
   if (request.action_kind === 'shell' && execState?.phase !== 'blocked') {
     const cliResult = classifyCliShellCommand(request.command_argv, progress?.phase);
     if (cliResult) {
@@ -260,21 +89,13 @@ function evaluatePreActionInner(
     }
   }
 
-  // `ready-for-validation` is the direct successor of the retired
-  // `ready-to-build` phase (migrateInterviewStore converts old stores
-  // one-way) and inherits its semantics: interview done, docs emitted,
-  // code gate NOT open until /build creates execution-state.json. It must
-  // stay OUT of this exclusion list — only `interview`/`docs-emitted`
-  // (genuinely mid-interview, where the gate-policy fallback below is the
-  // right authority) are safe to exempt. Before this fix, `ready-for-validation`
-  // sat in the exclusion list from when it meant something distinct from
-  // `ready-to-build`; once the phase rename made it inherit ready-to-build's
-  // role, leaving it excluded made this branch permanently unreachable (the
-  // schema only allows these three phases) and let a workspace with docs
-  // emitted but no execution-state.json (corruption, interrupted handoff,
-  // manually deleted file) fall through to the interview-time gate-policy
-  // check and get allowed to write code — silently reopening the gate this
-  // check exists to keep shut.
+  // 7. EXECUTION_STATE_REQUIRED gate. `ready-for-validation` is the successor of
+  // the retired `ready-to-build` phase (docs emitted, code gate NOT open until
+  // /build creates execution-state.json) and must stay OUT of this exclusion
+  // list — only genuinely mid-interview phases are exempt. Leaving it excluded
+  // let a workspace with docs emitted but no execution-state.json fall through
+  // to the interview-time gate and get allowed to write code, silently
+  // reopening the gate this check exists to keep shut.
   if (!execState && progress && progress.phase !== 'interview' && progress.phase !== 'docs-emitted') {
     return {
       decision: 'deny',
@@ -284,488 +105,11 @@ function evaluatePreActionInner(
     };
   }
 
-  if (!execState) {
-    if (request.action_kind === 'read') {
-      return {
-        decision: 'allow',
-        reason_code: 'read-only-allowed',
-        user_message: 'Đọc tệp được phép.',
-        enforcement: 'hard',
-      };
-    }
+  // 8. Dispatch to exactly one phase handler.
+  const ctx: PhaseContext = { request, workspace, resolvedPaths, commandStr, baseCmd, execState, progress, canonicalRevision };
 
-    if (request.action_kind === 'write') {
-      const isDocWrite = resolvedPaths.every(
-        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/scratch/') || p === 'progress.json'
-      );
-      // P4.2/X02 — the real catalog is now always passed in, but a
-      // managed-output path only denies when it is already "claimed": it
-      // exists on disk, or it is part of the active tier-1 emit manifest.
-      // A managed-output path that is neither is a genuine interview-phase
-      // pre-create (drafting a doc before the first real emit), which stays
-      // allowed — see authorizeMutation's `preCreateAllowed` branch. This
-      // closes the previously-blanket bypass (every doc write allowed
-      // regardless of catalog membership) down to only the pre-create case
-      // the bypass was ever meant to cover.
-      const catalogEntries = collectCatalogEntries(request.workspace);
-      const activeManagedPaths = isDocWrite ? getActiveManagedPaths(request.workspace) : new Set<string>();
-      // P4.2/R07 — bind scratch writes to the caller's real session
-      // (request.session_id, the live host session) and the interview's
-      // actual current question (progress.current_step), not just any
-      // well-shaped {session}/{question} pair.
-      const scratchContext = isDocWrite ? { sessionId: request.session_id, questionId: progress?.current_step ?? null } : undefined;
-      for (const targetPath of resolvedPaths) {
-        const options = isDocWrite
-          ? {
-              preCreateAllowed: !activeManagedPaths.has(targetPath) && !existsSync(join(workspace, targetPath)),
-              scratchContext,
-              // P4.2/R07 — write-gate size cap, threaded from the adapter
-              // hook when it supplied the content being written.
-              contentSizeBytes: request.content_size_bytes,
-            }
-          : undefined;
-        const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries, options);
-        if (auth.decision === 'deny') {
-          return {
-            decision: 'deny',
-            reason_code: auth.reason_code,
-            user_message: auth.user_message,
-            enforcement: 'hard',
-          };
-        }
-      }
-      if (isDocWrite) {
-        return {
-          decision: 'allow',
-          reason_code: 'interview-doc-write-allowed',
-          user_message: 'Ghi tài liệu được phép.',
-          enforcement: 'hard',
-        };
-      }
-    }
-
-    if (request.action_kind === 'shell') {
-      // CLI-shaped invocations are already decided by the universal check
-      // right after progress was loaded, above — anything reaching here is
-      // confirmed non-CLI.
-      const reqExt = request as unknown as { shell_kind?: string; command?: string };
-      const classification = classifyCommand({
-        shell: reqExt.shell_kind,
-        raw: request.command_raw ?? reqExt.command,
-        argv: request.command_argv,
-        cwd: request.workspace,
-      });
-
-      if (classification.outcome === 'proven_read_only') {
-        return {
-          decision: 'allow',
-          reason_code: classification.reason_code,
-          user_message: classification.message,
-          enforcement: 'hard',
-        };
-      } else {
-        return {
-          decision: 'deny',
-          reason_code: classification.reason_code,
-          user_message: classification.message,
-          enforcement: 'hard',
-        };
-      }
-    }
-
-    // Fallback to gate policy checks
-    let policy = request.policy || null;
-    const policyPath = join(workspace, 'Design/Content/interview-script/gate-policy.yaml');
-    if (!policy) {
-      if (!existsSync(policyPath)) {
-        return {
-          decision: 'deny',
-          reason_code: 'gate-policy-missing',
-          user_message: 'Thiếu tệp gate-policy.yaml.',
-          enforcement: 'hard',
-        };
-      }
-
-      try {
-        policy = loadGatePolicy(policyPath);
-      } catch (error: unknown) {
-        return {
-          decision: 'deny',
-          reason_code: 'gate-policy-invalid',
-          user_message: `Lỗi nạp gate-policy.yaml: ${(error as Error).message}`,
-          enforcement: 'hard',
-        };
-      }
-    }
-
-    const validationPass = false;
-    const completedTasks: string[] = [];
-    const docsDir = join(workspace, 'docs');
-    const existingDocs: string[] = [];
-    if (existsSync(docsDir)) {
-      const getFiles = (dir: string): string[] => {
-        let list: string[] = [];
-        const files = readdirSync(dir);
-        for (const f of files) {
-          const fp = join(dir, f);
-          if (statSync(fp).isDirectory()) {
-            list = list.concat(getFiles(fp));
-          } else {
-            list.push(fp);
-          }
-        }
-        return list;
-      };
-      try {
-        existingDocs.push(...getFiles(docsDir));
-      } catch {
-        // ignore
-      }
-    }
-
-    // Build the snapshot once against the real workspace root (not
-    // process.cwd(), which evaluateGate's array-overload would otherwise
-    // fall back to — wrong whenever workspace !== process.cwd(), e.g. any
-    // installed-target or test workspace). Building it explicitly here also
-    // means every gate in the loop below is evaluated against identical
-    // bytes/digests.
-    const gateSnapshot = buildGateSnapshot(workspace, existingDocs, validationPass, completedTasks);
-
-    let blockedGate = null;
-    // X11 — gates_passed must be recomputed fresh from the current snapshot
-    // every call, not appended to forever. The old code only ever pushed a
-    // gate id in and never removed one, so a doc deleted/corrupted after its
-    // gate opened left that gate id stuck in gates_passed, and advanceState's
-    // hasAllGates check (which treats gates_passed as authoritative) kept
-    // reporting the phase as ready even though the gate would evaluate
-    // closed again right now. This loop is still the sole authority that
-    // writes gates_passed (grep-confirmed: no other production call site
-    // mutates it), so a full replace — not a merge — is safe and correct.
-    const openGateIds: string[] = [];
-    for (const gate of policy.gates) {
-      if (gate.requires_validation || gate.task_id || gate.requires_evidence) {
-        continue;
-      }
-      const { open } = evaluateGate(gate, gateSnapshot);
-      if (open) {
-        openGateIds.push(gate.id);
-      }
-
-      const coreToolMap: Record<string, 'Write' | 'Edit' | 'Bash'> = {
-        'write': 'Write',
-        'shell': 'Bash',
-      };
-      const toolMapped = coreToolMap[request.action_kind];
-      if (toolMapped && isBlocked(gate, toolMapped, gateSnapshot) && !blockedGate) {
-        blockedGate = gate;
-      }
-    }
-
-    const gatesPassedChanged =
-      !!progress &&
-      (openGateIds.length !== progress.gates_passed.length ||
-        openGateIds.some((id) => !progress!.gates_passed.includes(id)) ||
-        progress.gates_passed.some((id) => !openGateIds.includes(id)));
-
-    if (gatesPassedChanged && progress && canonicalRevision !== null) {
-      try {
-        transactInterviewStore(workspace, canonicalRevision, (env) => ({
-          ...env,
-          payload: { ...env.payload, progress: { ...env.payload.progress, gates_passed: openGateIds } },
-        }));
-      } catch {
-        // best-effort — a concurrent writer already advanced the revision;
-        // gates_passed is recomputed fresh on the next evaluatePreAction call.
-      }
-    }
-
-    if (blockedGate) {
-      return {
-        decision: 'deny',
-        reason_code: 'gate-policy-blocked',
-        user_message: blockedGate.message,
-        enforcement: 'hard',
-      };
-    }
-
-    return {
-      decision: 'allow',
-      reason_code: 'interview-allowed',
-      user_message: 'Được phép thực hiện trong pha phỏng vấn.',
-      enforcement: 'hard',
-    };
-  }
-
-  // 7. Handle Blocked / Plan-Validating execution phase
-  if (execState.phase === 'blocked') {
-    // P3.2: blocked no longer means deny-everything. The typed BlockRecord
-    // declares an exact remediation scope via allowedRemediation(); only
-    // that declared scope is allowed, everything else still denies. This is
-    // NOT a blanket recovery allow — allowedRemediation itself fails closed
-    // to read-only when the block has no usable reason.
-    const remediation = allowedRemediation(execState);
-
-    if (request.action_kind === 'read' && remediation.allowed_actions.includes('read')) {
-      return {
-        decision: 'allow',
-        reason_code: 'blocked-remediation-read-allowed',
-        user_message: 'Đọc tệp được phép trong khi quy trình đang blocked.',
-        enforcement: 'hard',
-      };
-    }
-
-    if (request.action_kind === 'write') {
-      const canWriteDocs =
-        remediation.allowed_actions.includes('write-docs') ||
-        remediation.allowed_actions.includes('write-task-scope');
-      const pathsMatchRemediation =
-        resolvedPaths.length > 0 &&
-        resolvedPaths.every((p) => remediation.allowed_paths.some((pattern) => matchesPathPattern(p, pattern)));
-      if (canWriteDocs && pathsMatchRemediation) {
-        return {
-          decision: 'allow',
-          reason_code: 'blocked-remediation-write-allowed',
-          user_message: 'Ghi trong phạm vi khắc phục được khai báo cho block hiện tại là được phép.',
-          enforcement: 'hard',
-        };
-      }
-    }
-
-    if (request.action_kind === 'shell' && remediation.allowed_actions.includes('run-command')) {
-      const trimmedCmd = commandStr.trim();
-      const trimmedRecoverCmd = (remediation.next_command || '').trim();
-      if (trimmedCmd && trimmedRecoverCmd && trimmedCmd === trimmedRecoverCmd) {
-        return {
-          decision: 'allow',
-          reason_code: 'blocked-remediation-verify-allowed',
-          user_message: 'Lệnh khắc phục chính xác (recoverable_by) được phép.',
-          enforcement: 'hard',
-        };
-      }
-    }
-
-    return {
-      decision: 'deny',
-      reason_code: 'state-blocked',
-      user_message: `Quy trình thực thi đang bị chặn (blocked). Lý do: ${execState.block_reason?.detail || 'Không rõ lý do.'}. Vui lòng chạy đúng lệnh khắc phục được chỉ định.`,
-      enforcement: 'hard',
-    };
-  }
-
-  if (execState.phase === 'plan-validating') {
-    if (request.action_kind === 'read') {
-      return {
-        decision: 'allow',
-        reason_code: 'read-only-allowed',
-        user_message: 'Đọc tệp được phép.',
-        enforcement: 'hard',
-      };
-    }
-
-    if (request.action_kind === 'write') {
-      const isAllDocs = resolvedPaths.every(
-        (p) => p.startsWith('Design/') || p.startsWith('docs/') || p.startsWith('.design-everything/')
-      );
-      if (!isAllDocs) {
-        return {
-          decision: 'deny',
-          reason_code: 'PLAN_VALIDATION_REQUIRED',
-          user_message: 'Không có task hoạt động (active_task) nào đang chạy. Vui lòng chạy lệnh "validate" để bắt đầu quy trình.',
-          enforcement: 'hard',
-        };
-      }
-
-      // P4.2/DEBT2 — within the plan-validating design/docs scope, route
-      // through the same catalog-aware authorizeMutation the executing and
-      // interview phases already use, instead of a bare 3-prefix blanket
-      // allow (which let an agent-host actor hand-write any catalog-managed
-      // doc, engine-state file, or engine-policy file during this phase).
-      // A catalog that fails to load degrades to empty entries (same
-      // best-effort contract as collectCatalogEntries' other call site,
-      // §P6 10.3) — every path just falls through to user-owned instead of
-      // managed-output, matching the interview-phase branch's existing,
-      // tested behavior for the same situation.
-      const catalogEntries = collectCatalogEntries(request.workspace);
-      for (const targetPath of resolvedPaths) {
-        const auth = authorizeMutation('write', 'agent-host', targetPath, undefined, catalogEntries);
-        if (auth.decision === 'deny') {
-          return {
-            decision: 'deny',
-            reason_code: auth.reason_code,
-            user_message: auth.user_message,
-            enforcement: 'hard',
-          };
-        }
-      }
-      return {
-        decision: 'allow',
-        reason_code: 'plan-validating-write-allowed',
-        user_message: 'Được phép sửa đổi kế hoạch và tài liệu thiết kế.',
-        enforcement: 'hard',
-      };
-    }
-
-    if (request.action_kind === 'shell') {
-      // CLI-shaped invocations are already decided by the universal check
-      // right after progress was loaded, above.
-      const classification = classifyCommand({
-        argv: request.command_argv,
-        raw: commandStr,
-        cwd: request.workspace,
-      });
-      if (classification.outcome === 'proven_read_only') {
-        return {
-          decision: 'allow',
-          reason_code: classification.reason_code,
-          user_message: classification.message,
-          enforcement: 'hard',
-        };
-      }
-      return {
-        decision: 'deny',
-        reason_code: classification.reason_code,
-        user_message: `Lệnh "${baseCmd}" bị chặn trong pha validate kế hoạch (${classification.message}). Vui lòng chạy lệnh "validate" trước.`,
-        enforcement: 'hard',
-      };
-    }
-  }
-
-  // 8. Handle active task execution phase
-  const execPlanPath = join(workspace, '.design-everything/execution-plan.json');
-  let planJson = request.plan || null;
-  if (!planJson && existsSync(execPlanPath)) {
-    try {
-      planJson = JSON.parse(readFileSync(execPlanPath, 'utf8'));
-      const emittedDocs = loadEmittedDocs(workspace, execPlanPath);
-      assertValidatedSnapshot({ docs: emittedDocs, plan: planJson!, state: execState });
-    } catch (error: unknown) {
-      return {
-        decision: 'deny',
-        reason_code: 'stale-digest',
-        user_message: `Xác thực Snapshot thất bại: ${(error as Error).message}`,
-        enforcement: 'hard',
-      };
-    }
-  }
-
-  if (!execState.active_task) {
-    return {
-      decision: 'deny',
-      reason_code: 'task-inactive',
-      user_message: 'Không có task hoạt động (active_task) nào đang chạy. Vui lòng kích hoạt một task bằng lệnh "start" trước.',
-      enforcement: 'hard',
-    };
-  }
-
-  let policy = request.policy || null;
-  const policyPath = join(workspace, 'Design/Content/interview-script/gate-policy.yaml');
-  if (!policy && existsSync(policyPath)) {
-    try {
-      policy = loadGatePolicy(policyPath);
-    } catch {
-      // ignore
-    }
-  }
-
-  const activeTask = planJson?.tasks?.[execState.active_task];
-  let allowedPaths = activeTask?.allowed_paths || [];
-  if (allowedPaths.length === 0 && policy) {
-    const taskGate = policy.gates.find((g: any) => g.task_id === execState.active_task); // eslint-disable-line @typescript-eslint/no-explicit-any
-    allowedPaths = taskGate?.allows_paths || [];
-  }
-
-  if (request.action_kind === 'read') {
-    return {
-      decision: 'allow',
-      reason_code: 'read-only-allowed',
-      user_message: 'Đọc tệp được phép.',
-      enforcement: 'hard',
-      matched_task_id: execState.active_task,
-    };
-  }
-
-  if (request.action_kind === 'write') {
-    // Check glob match for all resolvedPaths against allowedPaths using the
-    // shared canonical path matcher (segment-aware, regex-metacharacter-safe)
-    // instead of a homegrown regex that let literal dots/pluses in a glob
-    // act as unintended wildcards/quantifiers.
-    const isAllPathsAllowed = resolvedPaths.every((path) =>
-      allowedPaths.some((allowedGlob: string) => matchesPathPattern(path, allowedGlob))
-    );
-
-    if (!isAllPathsAllowed) {
-      return {
-        decision: 'deny',
-        reason_code: 'path-outside-scope',
-        user_message: `Đường dẫn bị chặn. Lý do: không nằm trong danh sách được sửa (allows_paths) của active task. Tiếp theo: Vui lòng chạy "status", "verify", "repair" hoặc "validate".`,
-        enforcement: 'hard',
-        matched_task_id: execState.active_task,
-      };
-    }
-
-    return {
-      decision: 'allow',
-      reason_code: 'write-allowed',
-      user_message: 'Sửa đổi tệp hợp lệ.',
-      enforcement: 'hard',
-      matched_task_id: execState.active_task,
-    };
-  }
-
-  if (request.action_kind === 'shell') {
-    // CLI-shaped invocations are already decided by the universal check
-    // right after progress was loaded, above.
-    const shellClassification = classifyCommand({
-      argv: request.command_argv,
-      raw: commandStr,
-      cwd: request.workspace,
-    });
-    if (shellClassification.outcome === 'proven_read_only') {
-      return {
-        decision: 'allow',
-        reason_code: shellClassification.reason_code,
-        user_message: shellClassification.message,
-        enforcement: 'hard',
-        matched_task_id: execState.active_task,
-      };
-    }
-
-    // Exact verification command matching
-    let isExactVerification = false;
-    if (activeTask && activeTask.commands) {
-      const cmdStr = commandStr.trim();
-      for (const cmd of activeTask.commands) {
-        const verificationCmdStr = cmd.argv.join(' ');
-        if (cmdStr === verificationCmdStr || cmdStr.replace(/['"]/g, '') === verificationCmdStr.replace(/['"]/g, '')) {
-          isExactVerification = true;
-          break;
-        }
-      }
-    }
-
-    if (isExactVerification) {
-      return {
-        decision: 'allow',
-        reason_code: 'command-allowed',
-        user_message: 'Lệnh kiểm chứng chính xác được phép.',
-        enforcement: 'hard',
-        matched_task_id: execState.active_task,
-      };
-    }
-
-    return {
-      decision: 'deny',
-      reason_code: 'command-not-registered',
-      user_message: `Lệnh thực thi bị chặn: "${commandStr}". Nhiệm vụ hoạt động hiện tại: "${execState.active_task}". Chỉ cho phép các lệnh đọc thông tin an toàn hoặc lệnh kiểm chứng chính xác của task. Tiếp theo: Vui lòng chạy "status", "verify", "repair" hoặc "validate".`,
-      enforcement: 'hard',
-      matched_task_id: execState.active_task,
-    };
-  }
-
-  return {
-    decision: 'deny',
-    reason_code: 'unsupported-action',
-    user_message: 'Hành động không được hỗ trợ.',
-    enforcement: 'hard',
-  };
+  if (!execState) return phaseInterview(ctx);
+  if (execState.phase === 'blocked') return phaseBlocked(ctx);
+  if (execState.phase === 'plan-validating') return phasePlanValidating(ctx);
+  return phaseExecuting(ctx);
 }
