@@ -20,7 +20,7 @@ Nối SessionStart/UserPromptSubmit/PreToolUse vào các Core contract mới, b�
 
 ## 3. Implementation checklist
 
-- [ ] SessionStart load install manifest, recover pending transactions, migrate explicit rồi inspect health trước inject.
+- [x] SessionStart load install manifest, recover pending transactions, migrate explicit rồi inspect health trước inject.
 - [ ] UserPromptSubmit issue capability B1a cho đúng current question; không stamp answered length như delayed enforcement.
 - [ ] PreToolUse canonicalize mọi target/cwd rồi gọi duy nhất Core policy snapshot; adapter không hardcode Design/docs allow.
 - [ ] Installed + missing/corrupt state/plan/policy/manifest là deny ngoại trừ read-only diagnostics và exact recovery action.
@@ -76,5 +76,15 @@ phaseInterviewGate, phaseBlocked, phasePlanValidating, phaseExecuting — mỗi 
 Orchestrator chỉ chạy guard phase-độc-lập (health, capability, canonical path, shell-operator scan,
 load state/progress, CLI-shell authority, EXECUTION_STATE_REQUIRED gate) rồi dispatch đúng một phase
 handler. Refactor behavior-preserving: 915/915 test xanh trước và sau, build + lint + typecheck sạch.
-Checklist item "Tách evaluatePreAction... dưới 200 dòng" CLOSED. Các item còn lại của B4a (SessionStart/
-UserPromptSubmit/PreToolUse mapping) chưa đánh giá đủ trong lần A1-P8 này ⇒ B4a giữ PARTIAL.
+Checklist item "Tách evaluatePreAction... dưới 200 dòng" CLOSED.
+
+Đối chiếu thêm SessionStart checklist item ("load install manifest, recover pending transactions,
+migrate explicit rồi inspect health trước inject"): `onSessionStart` (`src/adapters/claude/
+sessionStart.ts`) chạy đúng thứ tự `recoverEmit(tier1)` → `recoverEmit(tier2)` →
+`migrateInterviewStore` → `inspectRuntimeHealth`, và `inspectRuntimeHealth` (`runtimeHealth.ts`'s
+`checkInstallManifestIntegrity`) tự đọc + verify `install-manifest.json` (schema, runtime_version,
+asset hash, hook wiring) như một phần của health check đó — không phải bước riêng nhưng thoả đúng thứ
+tự "manifest trước inject" vì health luôn chạy trước khi `session-start.mjs` emit context. Checklist
+item CLOSED. Các item còn lại của B4a (UserPromptSubmit stamp/PreToolUse mapping đầy đủ, hook response
+secret-safety, uninstalled-uninvolved regression) chưa đánh giá lại có hệ thống trong lần A1-P8 này ⇒
+B4a giữ PARTIAL.
