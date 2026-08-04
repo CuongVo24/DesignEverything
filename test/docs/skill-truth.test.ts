@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { CLI_COMMAND_SURFACE, CLI_GLOBAL_FLAGS } from '../../src/adapters/shared/cliOperations.js';
 
@@ -94,9 +94,18 @@ describe('P10 — skill truth: taught CLI usage matches the real dispatcher surf
 
 describe('P10 — skill truth: CLI_COMMAND_SURFACE matches the real getArg/hasFlag parser', () => {
   it('every flag declared in CLI_COMMAND_SURFACE has a real parser call site, and vice versa', () => {
+    // A1-P8/B4c — the dispatcher was split from one monolith into a thin
+    // launcher (cliOperations.ts) plus one module per operation under
+    // src/adapters/shared/cliOps/; scan the whole directory instead of a
+    // fixed file list so this check can't silently go blind on the next split.
+    const cliOpsDir = join(REPO_ROOT, 'src/adapters/shared/cliOps');
+    const cliOpsSources = readdirSync(cliOpsDir)
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => readFileSync(join(cliOpsDir, f), 'utf8'));
     const sources = [
       readFileSync(join(REPO_ROOT, 'src/adapters/shared/cliOperations.ts'), 'utf8'),
       readFileSync(join(REPO_ROOT, 'src/adapters/shared/deepenCliOperations.ts'), 'utf8'),
+      ...cliOpsSources,
     ].join('\n');
 
     const parsed = new Set<string>();

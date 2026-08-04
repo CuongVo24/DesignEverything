@@ -29,7 +29,7 @@ Chuẩn hóa CLI để exit 0 chỉ khi operation pass, không nuốt corruption
 - [ ] consistency warning có severity; unacknowledged blocking warning không được success.
 - [ ] Deepen missing asset/invalid phase trả reason code và non-zero.
 - [ ] CLI không tự build dist, sửa hooks hoặc reset state ngoài explicit recovery/install operation.
-- [ ] Tách CLI monolithic thành launcher dưới 100 dòng và operation modules hand-authored dưới 200 dòng; không duy trì switch logic nghìn dòng ở mỗi adapter.
+- [x] Tách CLI monolithic thành launcher dưới 100 dòng và operation modules hand-authored dưới 200 dòng; không duy trì switch logic nghìn dòng ở mỗi adapter.
 
 ## 4. Interfaces / Files expected to change
 
@@ -70,3 +70,15 @@ thành reason code rõ; `projectProfileState.ts` `loadProjectProfile` vẫn nu�
 `null` — finding-coverage-matrix.md X15 vẫn PARTIAL. X09 nay có installed-target spawn `cli.mjs
 validate --json`, assert exit 2, stdout là một envelope JSON lỗi và stderr rỗng; B4c vẫn `PARTIAL`
 vì chưa có matrix process proof đủ success/corrupt/missing asset/conflict/internal theo §6.
+
+Cập nhật 2026-08-05 (A1-P8, structural — không đổi hành vi): `cliOperations.ts` (1262 dòng, switch
++ 10 `handleX` inline) đã tách thành launcher 75 dòng (`runCliOperation` — parse subcommand, chạy
+guard handoff-recovery, dispatch) + `src/adapters/shared/cliOps/` (`commandSurface.ts`, `support.ts`,
+`status.ts` [status/init/repair], `commit.ts`, `validate.ts`, `emit.ts`, `next.ts`, `start.ts`,
+`verify.ts`, `review.ts` — mỗi file <200 dòng, `deepenCliOperations.ts` giữ nguyên vị trí cũ, không
+đổi). `CLI_COMMAND_SURFACE`/`CLI_GLOBAL_FLAGS`/`runCliOperation` vẫn export từ `cliOperations.ts` nên
+mọi call site cũ (`src/core/index.ts`, test) không đổi import path. `test/docs/skill-truth.test.ts`'s
+nguồn quét getArg/hasFlag đã sửa từ danh sách file cứng sang quét cả thư mục `cliOps/` để không mù khi
+tách file. Refactor behavior-preserving: 915/915 test xanh trước và sau, build + lint + typecheck sạch.
+Checklist item "Tách CLI monolithic..." CLOSED. Các item còn lại của B4c (envelope field coverage,
+exit-class mapping đầy đủ, matrix process proof) chưa đánh giá lại trong lần A1-P8 này ⇒ B4c giữ PARTIAL.
