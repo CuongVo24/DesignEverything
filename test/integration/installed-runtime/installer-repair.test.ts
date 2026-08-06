@@ -130,4 +130,45 @@ describe('installer-repair — rerunning the installer over an existing install 
     }
     expect(commands).toContain(userHook);
   });
+
+  // B4d #5/#7 — a pre-P9 install wrote hooks pointing straight at the repo
+  // checkout (no .design-everything/runtime/<version>/ layout existed yet).
+  // A rerun must recognize those as "ours" by the adapter/claude-code/hooks/
+  // path segment and repair them in place, not leave the dead absolute entry
+  // sitting alongside a newly-added versioned one.
+  it('migrates a legacy pre-P9 hook pointing at an absolute repo path, without duplicating it', () => {
+    execFileSync('node', [CLAUDE_INSTALLER, tempTarget], { encoding: 'utf8' });
+
+    const settingsPath = join(tempTarget, '.claude/settings.json');
+    const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    settings.hooks.PreToolUse = [
+      {
+        matcher: 'Write|Edit|MultiEdit|NotebookEdit|Bash',
+        hooks: [
+          {
+            type: 'command',
+            command: 'node "/some/dev/checkout/DesignEverything/adapter/claude-code/hooks/pre-tool-use.mjs"',
+          },
+        ],
+      },
+    ];
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+
+    const rerun = execFileSync('node', [CLAUDE_INSTALLER, tempTarget], { encoding: 'utf8' });
+    expect(rerun).toContain('sửa lại (hook cũ/legacy đã migrate)');
+
+    const manifest = JSON.parse(
+      readFileSync(join(tempTarget, '.design-everything/install-manifest.json'), 'utf8')
+    );
+    const after = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    const commands = (after.hooks.PreToolUse as { hooks: { command: string }[] }[]).flatMap((e) =>
+      e.hooks.map((h) => h.command)
+    );
+    const matching = commands.filter((c) => c.includes('/hooks/pre-tool-use.mjs'));
+    expect(matching).toHaveLength(1);
+    expect(matching[0]).toContain(
+      `.design-everything/runtime/${manifest.runtime_version}/hooks/pre-tool-use.mjs`
+    );
+    expect(matching[0]).not.toContain('/some/dev/checkout/DesignEverything/');
+  });
 });
