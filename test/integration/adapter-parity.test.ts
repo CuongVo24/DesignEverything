@@ -188,3 +188,22 @@ describe('X24 — deepen asset parity between installed Claude and Codex targets
     );
   });
 });
+
+// B4e checklist #5 — "Build/release fail nếu launcher nhúng digest/version khác shared
+// manifest". Both launchers read RUNTIME_VERSION from the bundle at import time rather than
+// hardcoding it, so there is structurally nothing to drift — this pins that invariant so a
+// future edit that bakes a literal version into either launcher fails loudly here instead of
+// silently reintroducing the fork B4e closed.
+describe('B4e #5 — launchers carry no hardcoded runtime version literal', () => {
+  const SEMVER_LITERAL = /['"`]\d+\.\d+\.\d+['"`]/;
+
+  it('adapter/claude-code/cli.mjs has no literal semver string', () => {
+    const source = readFileSync(CLAUDE_CLI, 'utf8');
+    expect(source).not.toMatch(SEMVER_LITERAL);
+  });
+
+  it('adapter/codex-plugin/cli.mjs has no literal semver string', () => {
+    const source = readFileSync(CODEX_CLI, 'utf8');
+    expect(source).not.toMatch(SEMVER_LITERAL);
+  });
+});

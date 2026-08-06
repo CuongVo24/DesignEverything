@@ -59,8 +59,21 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
-**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `cliOperations.ts` duy nhất
-đã hợp nhất logic — giữ lại — nhưng Codex hook vẫn có `matchGlob`/allowed-paths tự suy riêng (R17),
-nên policy semantics vẫn fork khỏi Core. Đóng ở P9 sau khi Codex hook dùng chung Core policy.
+**Cập nhật 2026-08-06 (A1-P9):** đóng Implementation. Ghi chú 2026-07-25 dưới đây (giữ nguyên,
+không xoá lịch sử) coi R17 là lý do PARTIAL — nhưng khảo sát lại code cho A1-P9 xác nhận R17 đã
+FIXED từ trước: `adapter/codex-plugin/hooks/post-tool-use.mjs` gọi `filterUnexpectedFiles` từ Core
+bundle (`src/adapters/codex/filterUnexpectedFiles.ts:1,21`), hàm này dùng `matchesPathPattern`
+của Core, không còn `matchGlob` tự chế — `finding-coverage-matrix.md:79` đã ghi FIXED, chỉ contract
+này chưa được cập nhật theo. Cả 8/8 mục checklist §3 đã tick và có evidence: mục #5 ("build/release
+fail nếu launcher nhúng digest/version khác shared manifest") trước đây chỉ là suy luận kiến trúc
+(không có literal version nào để drift) — nay có test tĩnh khoá bất biến đó tại
+`test/integration/adapter-parity.test.ts` ("B4e #5 — launchers carry no hardcoded runtime version
+literal"). ConformanceMatrix.md đã cập nhật ghi nhận R17 đóng. Proof giữ `SEAM_PARTIAL` — nâng lên
+`VERIFIED` thuộc Gate A2/P11, không phải phần việc của A1-P9.
+
+**Ghi chú gốc (2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1), giữ để lưu vết:** "Không phải DONE.
+`cliOperations.ts` duy nhất đã hợp nhất logic — giữ lại — nhưng Codex hook vẫn có
+`matchGlob`/allowed-paths tự suy riêng (R17), nên policy semantics vẫn fork khỏi Core. Đóng ở P9
+sau khi Codex hook dùng chung Core policy."

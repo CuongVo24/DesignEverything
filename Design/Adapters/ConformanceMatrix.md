@@ -83,6 +83,7 @@ Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đ
 - **Shared Runtime Runner:** 100% logic CLI operations (`status`, `init`, `commit`, `validate`, `emit`, `repair`, `next`, `start`, `verify`, `review`) được xử lý bởi `src/adapters/shared/cliOperations.ts`.
 - **Thin Launchers:** Cả `adapter/claude-code/cli.mjs` và `adapter/codex-plugin/cli.mjs` đều trở thành launcher mỏng (< 100 dòng), ủy quyền toàn bộ việc thực thi cho shared runner.
 - **Parity Verification:** Đã viết integration test `test/integration/adapter-parity.test.ts` và E2E benchmark `test/replay/crossRuntimeReplay.test.ts` đảm bảo 100% tương thích về JSON envelope, reason code, version evidence và state transitions. ✅ Đã code + test.
+- **Cập nhật 2026-08-06 (A1-P9, đóng R17):** post-tool hook của Codex trước đây tự suy allowed-path bằng `matchGlob` tự chế, khác semantics với Core — đã thay bằng `filterUnexpectedFiles` (`src/adapters/codex/filterUnexpectedFiles.ts`) dùng chung `matchesPathPattern` của Core, cùng policy semantics với Claude's PreToolUse thay vì fork riêng. Bằng chứng: `test/integration/installed-runtime/codex-post-tool-use.test.ts`.
 
 ## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync) — PLANNED, chưa cắt
 
