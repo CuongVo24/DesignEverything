@@ -71,4 +71,7 @@ Token đến từ hook/runtime context cho đúng câu hỏi hiện tại — KH
 dùng token đã commit. KHÔNG dùng `--turn <id>` — cờ này không còn được engine chấp nhận làm căn
 cứ uỷ quyền.
 
-Quy tắc: (1) chỉ đề xuất khi người dùng hỏi / opt-in và phase hợp lệ; (2) hỏi từng câu, dịch ngược + chờ xác nhận; (3) không tự auto-ack; (4) cite nguồn theo grammar SourceRef.
+Quy tắc: (1) chỉ đề xuất khi người dùng hỏi / opt-in và phase hợp lệ; (2) hỏi từng câu, dịch ngược
++ chờ xác nhận; (3) không tự auto-ack; (4) mỗi khối nội dung sinh vào `docs/design/` PHẢI cite
+nguồn theo grammar SourceRef của `taxonomy-tier2.md` — trỏ về đúng answer hoặc doc tầng 1 đã tồn
+tại; khối không truy được nguồn thật gắn cờ `> ⚠ unknown — cần hỏi người`, KHÔNG tự bịa.

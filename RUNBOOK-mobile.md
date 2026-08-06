@@ -37,9 +37,12 @@ Tiếp tục phỏng vấn đến **M5** (với các câu hỏi đặc thù cho 
 *   **Sinh tài liệu**: AI gọi động cơ phát hành tài liệu `emitTree` trên tập câu trả lời đã thu thập.
 *   **Kết quả**: Sinh chính xác 9 file tài liệu đặt vào thư mục `docs/`. Trong đó, file 07 duy nhất là **`07-release.md`** (đặc tả phân phối App Store, không sinh `07-deployment.md`). Các mỏ neo truy vết trong các file docs tự động mang tiền tố `apps/mobile/src/`.
 
-### Mốc 5: Mở cổng viết code (Gate Opened)
-*   **Hành động**: Gọi lại lệnh viết code `Write apps/mobile/src/index.ts`.
-*   **Kết quả**: Hook `onPreToolUse` quét thư mục `docs/`, thấy đầy đủ 3 file `00-vision.md`, `01-personas.md`, `02-scope.md` $\rightarrow$ Trả về **`allow`** $\rightarrow$ Tự động ghi `'scope-locked'` vào mảng `gates_passed`.
+### Mốc 5: Emit xong — chưa mở cổng (Handoff Truth)
+*   **Hành động**: `emit` sinh xong `docs/`; AI gọi lại lệnh viết code `Write apps/mobile/src/index.ts` ngay.
+*   **Kết quả**: docs tồn tại KHÔNG tự mở cổng — `execution-state.json` mới chỉ ở phase
+    `plan-validating`, hook `onPreToolUse` trả về **`deny`** kèm `reason_code:
+    PLAN_VALIDATION_REQUIRED`. Phải chạy `/build` (validate) và PASS trước; chỉ khi đó phase mới
+    chuyển `ready-to-execute`, hook mới `allow` và ghi `'scope-locked'` vào mảng `gates_passed`.
 
 ---
 

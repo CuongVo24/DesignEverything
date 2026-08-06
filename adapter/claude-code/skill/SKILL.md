@@ -150,10 +150,17 @@ Token đến từ `--next` cho đúng câu hỏi hiện tại — KHÔNG tự b�
 commit. `--subject <sid>` chỉ cần khi `--next` trả về một `subject_id` khác null (câu hỏi lặp
 theo từng thực thể).
 
+Mỗi khối nội dung sinh vào `docs/design/` PHẢI cite nguồn theo grammar SourceRef của
+[taxonomy-tier2.md](../../../Design/Content/taxonomy-tier2.md) — trỏ về đúng answer/slot hoặc
+doc tầng 1 đã tồn tại. Khối nào không truy được nguồn thật thì gắn cờ
+`> ⚠ unknown — cần hỏi người` thay vì tự bịa hoặc viết văn mẫu chung chung.
+
 ## Điều cấm
 
 - Không tự bịa câu hỏi ngoài script; không đổi thứ tự; không bỏ câu vì "đoán được".
 - Không tự trả lời thay người dùng rồi commit hàng loạt.
 - Không sửa tay `progress.json`, `execution-state.json`, `Design/.interview/answers.json` — chỉ qua CLI.
 - Không viết tay bất kỳ file nào trong `docs/` — kể cả giữa phỏng vấn.
+- Không viết file ngoài `docs/` và `Design/` khi phỏng vấn chưa xong (hook `PreToolUse` cũng sẽ
+  chặn — đừng tìm cách lách bằng đường dẫn khác).
 - Không tự tiện tuyên bố gate đã mở hoặc khuyên người dùng xóa tệp trạng thái/reinstall khi có lỗi. Dùng `safe_next_command` từ Core.

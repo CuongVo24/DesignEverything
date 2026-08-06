@@ -105,14 +105,21 @@ docs/
 
 ---
 
-## 5. Mở Cổng Chặn (Gate Opened)
+## 5. Emit Xong — Chưa Mở Cổng (Handoff Truth)
 
-Khi các tệp tài liệu thiết kế đã hiện diện đầy đủ trong thư mục `docs/`:
+Docs `docs/` hiện diện đầy đủ **không** tự mở cổng viết mã nguồn — đây là điểm nhiều bản nháp cũ
+của tài liệu này mô tả sai; đúng luồng gồm hai bước tách biệt:
 
-1.  AI gọi lại công cụ chỉnh sửa mã nguồn: `Write src/index.ts`.
-2.  Hook `onPreToolUse` quét thư mục `docs/`, xác nhận sự tồn tại của `00-vision.md`, `01-personas.md`, `02-scope.md` $\rightarrow$ Mở cổng `scope-locked`.
-3.  **Kết quả**: Trả về `allow`, mở khóa hoàn toàn để bắt đầu viết code dự án.
-4.  Trạng thái `gates_passed` được cập nhật thêm `'scope-locked'`:
+1.  `emit` sinh xong `docs/`, nhưng `execution-state.json` chỉ chuyển sang phase
+    `plan-validating` (chưa `ready-to-execute`).
+2.  Nếu AI gọi ngay công cụ chỉnh sửa mã nguồn (`Write src/index.ts`) ở phase này: hook
+    `onPreToolUse` từ chối, trả về `deny` kèm `reason_code: PLAN_VALIDATION_REQUIRED` — sự tồn
+    tại của docs không đủ để mở khóa.
+3.  Bước bắt buộc tiếp theo: chạy `/build` (CLI `validate`) để hệ thống chạy
+    `runSemanticValidation` thật (đối chiếu manifest/artifact-digest/plan-schema/gate-docs). Chỉ
+    khi validate PASS, `execution-state.json` mới chuyển sang `ready-to-execute`.
+4.  **Chỉ sau khi `ready-to-execute`**, hook mới `allow` ghi mã nguồn, và `gates_passed` mới được
+    cập nhật thêm `'scope-locked'`:
     ```json
     {
       "gates_passed": ["scope-locked"]

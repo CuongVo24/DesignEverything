@@ -58,14 +58,17 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: SNAPSHOT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SNAPSHOT_ONLY
 
-**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). SKILL.md handoff wording
-("chưa validate, gate chưa mở") là cải thiện thật và nên giữ, nhưng cùng lúc bị xóa mất: cú pháp
-lệnh `deepen` khả thi, quy tắc SourceRef/`⚠ unknown` user-visible, và quy tắc scope guard khi
-phỏng vấn chưa xong. Codex skill từng dạy `--turn <TURN_ID>` thay vì capability token; đã sửa
-2026-07-25 (H0, `plan-v1-bonus-tasks.md`) — cả Claude/Codex skill nay dạy `--capability-token`.
-Không đóng contract: `deepen` CLI vẫn chưa được wire vào dispatcher production
-(`src/adapters/shared/cliOperations.ts` không có case `deepen`), nên chưa có executable path
-thật để chạy fixture trên target cài thật. Đóng ở P10 sau khi B1a/B3e đóng, `deepen` được wire
-(P6/P7) và skill được chạy trên target cài thật.
+**Implementation đóng 2026-08-06 (A1-P10).** Lịch sử: SKILL.md handoff wording ("chưa validate,
+gate chưa mở") được sửa đúng ở 2026-07-25 (`85f78f2`) nhưng cùng lúc xóa mất ba thứ: cú pháp lệnh
+`deepen` khả thi, quy tắc SourceRef/`⚠ unknown` user-visible, và quy tắc scope guard khi phỏng
+vấn chưa xong. Ba gap đó đã đóng dần: `--turn` → `--capability-token` (2026-07-25, H0); `deepen`
+wired vào dispatcher production + command block khả thi cho cả Claude/Codex +
+`test/docs/skill-truth.test.ts` (`CLI_COMMAND_SURFACE` cross-check hai chiều, chặn drift) +
+`test/integration/installed-runtime/deepen-fixture.test.ts` (2026-07-28/29); SourceRef/`⚠ unknown`
+citation rule và scope guard line khôi phục lại cả hai SKILL.md (2026-08-06, A1-P10). Đóng luôn
+U03: `docs/RUN-web-sample.md`, `RUNBOOK-web.md`, `RUNBOOK-mobile.md` không còn nói "docs tồn tại
+là mở khóa code" — sửa thành đúng luồng `emit → plan-validating (deny) → /build validate →
+ready-to-execute (allow)`. Proof vẫn `SNAPSHOT_ONLY` — fixture target-local thật cho toàn bộ
+handoff card (không chỉ deepen) thuộc A2 (B5a/B5c).
