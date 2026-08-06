@@ -80,6 +80,7 @@ import {
   interviewStorePayloadSchema,
   interviewStoreEnvelopeSchema,
   INTERVIEW_STORE_VERSION,
+  SLOT_ENVELOPE_SCHEMA_VERSION,
 } from './interviewStore.js';
 import {
   artifactSourceSchema,
@@ -143,6 +144,7 @@ export {
   interviewStorePayloadSchema,
   interviewStoreEnvelopeSchema,
   INTERVIEW_STORE_VERSION,
+  SLOT_ENVELOPE_SCHEMA_VERSION,
   blockKindSchema,
   blockRecordSchema,
   remediationActionSchema,

@@ -51,7 +51,7 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B2 | B2c — Canonical path matcher | Core | — | APPROVED | PARTIAL | UNIT_ONLY |
 | B2 | B2d — Gate evidence recomputation | Core | B2c | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B2 | B2e — Runtime health and recovery | Core | B1d, B2a, B2d | APPROVED | IMPLEMENTED | UNIT_ONLY |
-| B3 | B3a — Answer and slot validation | Core | B1a, B2c | APPROVED | PARTIAL | UNIT_ONLY |
+| B3 | B3a — Answer and slot validation | Core | B1a, B2c | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B3 | B3b — Derived content provenance | Content | B3a | APPROVED | PARTIAL | UNIT_ONLY |
 | B3 | B3c — Authoritative artifact catalog | Core | B2c | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B3 | B3d — Transactional emit | Core | B2d, B3b, B3c | APPROVED | IMPLEMENTED | UNIT_ONLY |

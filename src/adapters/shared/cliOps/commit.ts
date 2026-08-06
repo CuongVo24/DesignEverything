@@ -1,5 +1,4 @@
-import { join } from 'path';
-import { canonicalizeWorkspacePath, commitInterviewAnswer, loadSlotsFile } from '../../../core/index.js';
+import { commitInterviewAnswer, loadSlotsFile } from '../../../core/index.js';
 import { CliResultEnvelope } from '../cliResult.js';
 import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../../../version.js';
 import { getArg } from './support.js';
@@ -27,24 +26,9 @@ export function handleCommit(workspaceRoot: string, argv: string[]): CliResultEn
 
   let slotsPayload: Record<string, string> | undefined;
   if (slotsFileArg) {
-    const canon = canonicalizeWorkspacePath(workspaceRoot, slotsFileArg);
-    if (!canon.ok) {
-      return {
-        ok: false,
-        operation: 'commit',
-        reason_code: 'INVALID_SLOTS_FILE',
-        severity: 'error',
-        message: `Tệp slots nằm ngoài workspace: ${canon.message}`,
-        runtime_version: RUNTIME_VERSION,
-      };
-    }
-    // P6.3 — the file's content is now actually read and committed, not just
-    // checked for existence. join() against workspaceRoot also fixes a latent
-    // bug: canon.canonicalPath is workspace-relative, so the prior
-    // existsSync(canon.canonicalPath) resolved against process.cwd() instead
-    // of the target workspace.
-    const absSlotsPath = join(workspaceRoot, canon.canonicalPath);
-    const loaded = loadSlotsFile(absSlotsPath);
+    // A1-P6 (B3a) — canonicalization + scratch-path containment now live
+    // inside loadSlotsFile itself, shared with `emit --slots-file`.
+    const loaded = loadSlotsFile(workspaceRoot, slotsFileArg);
     if (!loaded.ok) {
       return {
         ok: false,

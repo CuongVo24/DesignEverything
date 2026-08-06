@@ -1,11 +1,23 @@
 import { z } from 'zod';
 import { progressSchema } from './state.js';
 
+// A1-P6 (B3a) — additive envelope enrichment: envelopes written before these
+// fields existed simply omit them (optional, same backward-compatible
+// pattern as producer_version/corrections below). slot_schema_version
+// versions this envelope shape itself (bump on the next breaking change);
+// question_id is the interview step this slot's value came from, when
+// known; source_answer_revisions ties a slot to the store state_revision(s)
+// its value was derived from (there is no answer-revisioning system yet —
+// R21/amend is deferred past 7.0.0 — so this is the store's existing
+// state_revision counter, not a fabricated per-answer version).
 export const slotProvenanceRecordSchema = z.object({
   value: z.string(),
   provenance: z.string(),
   updated_at: z.string().datetime(),
   producer_version: z.string().optional(),
+  slot_schema_version: z.string().optional(),
+  question_id: z.string().optional(),
+  source_answer_revisions: z.array(z.string()).optional(),
 });
 
 export const correctionEntrySchema = z.object({
@@ -42,6 +54,10 @@ export const interviewStoreEnvelopeSchema = z.object({
   payload: interviewStorePayloadSchema,
   updated_at: z.string().datetime(),
 });
+
+// Versions the slot envelope shape above, independent of RUNTIME_VERSION/
+// package version; bump only when the envelope shape itself changes.
+export const SLOT_ENVELOPE_SCHEMA_VERSION = '1.0.0';
 
 export type SlotProvenanceRecord = z.infer<typeof slotProvenanceRecordSchema>;
 export type CorrectionEntry = z.infer<typeof correctionEntrySchema>;

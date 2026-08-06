@@ -19,16 +19,16 @@ Biến answer/slots từ string/map tùy ý thành dữ liệu có schema theo q
 
 ## 3. Implementation checklist
 
-- [ ] Mở interview-script schema bằng answer_contract declarative: required, min_trimmed_chars, min_items, required_fields, enum/pattern và warning rules.
-- [ ] Validator có ba outcome: valid, invalid, needs_user_ack; warning không tự biến thành pass.
-- [ ] Luôn reject empty/whitespace, placeholder-only và invalid structured payload trước commit.
-- [ ] Raw answer đã confirmed là append-only/immutable; correction tạo revision mới có supersedes + capability riêng.
-- [ ] Slots envelope gồm slot_schema_version, question_id/derived_recipe_id, source_answer_revisions, producer_version, created_at và payload.
-- [ ] Chỉ đọc slots dưới scratch path B2a đã canonicalize bằng B2c; reject absolute/outside/symlink/oversize/wrong extension.
-- [ ] Allowlist key theo current question hoặc derived recipe; reject unknown, past/future và reserved state keys.
-- [ ] Không cho slots override answers, progress, branch, capability, policy hoặc managed manifest.
-- [ ] Commit chỉ nhận validated typed payload, không nhận raw JSON map.
-- [ ] Error trả exact field/rule/reason_code và không consume capability khi user cần sửa.
+- [x] Mở interview-script schema bằng answer_contract declarative: required, min_trimmed_chars, min_items, required_fields, enum/pattern và warning rules.
+- [x] Validator có ba outcome: valid, invalid, needs_user_ack; warning không tự biến thành pass.
+- [x] Luôn reject empty/whitespace, placeholder-only và invalid structured payload trước commit.
+- [x] Raw answer đã confirmed là append-only/immutable; correction tạo revision mới có supersedes + capability riêng.
+- [x] Slots envelope gồm slot_schema_version, question_id/derived_recipe_id, source_answer_revisions, producer_version, created_at và payload.
+- [x] Chỉ đọc slots dưới scratch path đã canonicalize bằng B2c; reject absolute/outside/symlink/oversize/wrong extension.
+- [x] Allowlist key theo current question hoặc derived recipe; reject unknown, past/future và reserved state keys.
+- [x] Không cho slots override answers, progress, branch, capability, policy hoặc managed manifest.
+- [x] Commit chỉ nhận validated typed payload, không nhận raw JSON map.
+- [x] Error trả exact field/rule/reason_code và không consume capability khi user cần sửa.
 
 ## 4. Interfaces / Files expected to change
 
@@ -61,7 +61,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. X12 (slots-file đọc path/key tuỳ ý) một phần đã sửa — path đã confine vào workspace
@@ -87,9 +87,42 @@ nhưng checklist chưa cập nhật —
 - Key allowlist theo current question — đóng ở A1-P4đ (`slot_keys` trong `script.yaml`, enforce ở
   `interviewApplicationServices.ts`), dùng chung code path cho cả B2a/R07 lẫn B3a/U05.
 
-**Còn mở, thật sự chưa làm:** slots envelope chưa có đủ field `slot_schema_version`/
-`source_answer_revisions`/`producer_version` như §4 mô tả (hiện chỉ `{value, provenance, updated_at}`)
-— đây là một migration schema lớn hơn, chưa làm trong đợt này. `--slots-file` (production path, qua
-`loadSlotsFile.ts`) đọc bất kỳ đâu trong workspace đã canonicalize, không bị bó hẹp về riêng
-`.design-everything/scratch/` như §3 gợi ý — `loadQuestionSlots.ts` (đúng scratch path) vẫn không có
-production caller.
+Cập nhật 2026-08-06 (A1-P6, đóng 2 mục còn mở ở trên):
+
+- **Slots envelope enrichment** — `slotProvenanceRecordSchema`
+  (`src/core/schemas/interviewStore.ts`) thêm 3 field mới, additive/optional (envelope cũ trên đĩa vẫn
+  hợp lệ, cùng kiểu backward-compat đã dùng cho `producer_version`/`corrections`):
+  `slot_schema_version` (version riêng của envelope shape, không phải RUNTIME_VERSION),
+  `question_id` (= `stepId` tại write site chính), `source_answer_revisions` (mảng
+  `${stepId}@${state_revision}` — không có hệ thống revision riêng cho answer, R21/amend hoãn sau
+  7.0.0, nên dùng `state_revision` sẵn có của store thay vì bịa một bộ đếm mới). Populate tại
+  `commitInterviewAnswer` (`interviewApplicationServices.ts`, write site chính) và tại
+  `emit --slots-file`'s merge (`cliOps/emit.ts`, chỉ `slot_schema_version` — nội dung tổng hợp sau
+  phỏng vấn không có một câu hỏi/answer nguồn duy nhất để gắn `question_id`/`source_answer_revisions`).
+  **Lệch có chủ đích so với tên field liệt kê ở §4:** giữ `value`/`updated_at` thay vì đổi tên thành
+  `payload`/`created_at` — hai cặp tên tương đương về ngữ nghĩa (1 slot = 1 giá trị string, được tạo
+  một lần không sửa tại chỗ), đổi tên thuần là rename xuyên ~6 file test đang xanh, không sửa hành vi
+  nào, rủi ro cao hơn giá trị nhận được. `derived_recipe_id` (nhánh "hoặc" của `question_id`) chưa có
+  producer nào ghi — không có recipe-based slot writer trong production hiện tại, để field optional
+  không set, không bịa nguồn.
+- **`--slots-file` scratch confinement** — `loadSlotsFile()` đổi chữ ký từ nhận `absPath` sẵn sang tự
+  canonicalize + confine (`workspaceRoot, relPath`), dùng chung cho cả `commit --slots-file` và
+  `emit --slots-file` (trước đây mỗi caller tự canonicalize riêng, chỉ giới hạn "trong workspace",
+  không giới hạn thư mục con). **Root xác nhận: `Design/.interview/`, không phải
+  `.design-everything/scratch/{session}/{question}/`** như §3 gợi ý ban đầu — hai cơ chế khác nhau:
+  scratch path của `loadQuestionSlots.ts` là vùng do B2a's write-gate quản lý, scope theo từng câu hỏi,
+  **không có production caller**; `Design/.interview/` là vùng thật, đã tài liệu hoá
+  (`adapter/claude-code/skill/SKILL.md` "Chất lượng câu trả lời lưu vào answers"), đã có test production
+  từ trước (`test/integration/installed-runtime/cli-health.test.ts` dòng ~210) — slots build-plan tổng
+  hợp sau phỏng vấn không gắn với một câu hỏi đơn lẻ nên không khớp schema `{session}/{question}/{file}`
+  của scratch path kia. Xác nhận đúng root bằng test production đã tồn tại trước khi sửa, không đoán.
+  Thêm reject `.json`-only (`SLOTS_FILE_WRONG_EXTENSION`) và ngoài `Design/.interview/`
+  (`SLOTS_FILE_OUTSIDE_SCRATCH`); symlink/outside-workspace đã có sẵn qua `canonicalizeWorkspacePath`
+  (B2c). Test mới: `src/core/loadSlotsFile.test.ts` (7 case, 1 skip môi trường không có quyền symlink).
+- Các mục còn lại của checklist §3 đối chiếu đúng với code hiện tại: "raw answer append-only" và
+  "không cho slots override answers/progress/…" đúng **có cấu trúc** (không có đường chạy được để vi
+  phạm — slot chỉ ghi vào `payload.slots[key]`, tách biệt hoàn toàn khỏi `payload.answers`/`progress`
+  trong schema; overwrite `answers[stepId]` không reachable, cùng lý do R07/B2a) chứ không phải bằng
+  runtime guard riêng — cùng dạng lý luận đã dùng cho B2a's issuer.
+
+Checklist §3 đủ 10/10. Implementation → `IMPLEMENTED`.

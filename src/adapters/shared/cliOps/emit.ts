@@ -1,10 +1,9 @@
-import { join } from 'path';
 import {
   ensureCanonicalStore,
-  canonicalizeWorkspacePath,
   loadSlotsFile,
   transactInterviewStore,
   activateTier1Emit,
+  SLOT_ENVELOPE_SCHEMA_VERSION,
 } from '../../../core/index.js';
 import { CliResultEnvelope } from '../cliResult.js';
 import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../../../version.js';
@@ -80,19 +79,9 @@ export function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnve
   // audit/provenance trail per-question slots already get.
   const slotsFileArg = getArg(argv, '--slots-file');
   if (slotsFileArg) {
-    const canon = canonicalizeWorkspacePath(workspaceRoot, slotsFileArg);
-    if (!canon.ok) {
-      return {
-        ok: false,
-        operation: 'emit',
-        reason_code: 'INVALID_SLOTS_FILE',
-        severity: 'error',
-        message: `Tệp slots nằm ngoài workspace: ${canon.message}`,
-        runtime_version: RUNTIME_VERSION,
-      };
-    }
-    const absSlotsPath = join(workspaceRoot, canon.canonicalPath);
-    const loaded = loadSlotsFile(absSlotsPath);
+    // A1-P6 (B3a) — canonicalization + scratch-path containment now live
+    // inside loadSlotsFile itself, shared with `commit --slots-file`.
+    const loaded = loadSlotsFile(workspaceRoot, slotsFileArg);
     if (!loaded.ok) {
       return {
         ok: false,
@@ -110,7 +99,10 @@ export function handleEmit(workspaceRoot: string, argv: string[]): CliResultEnve
       const updatedEnvelope = transactInterviewStore(workspaceRoot, canonicalOutcome.envelope.state_revision, (env) => {
         const slots = { ...env.payload.slots };
         for (const [key, value] of Object.entries(loaded.slots)) {
-          slots[key] = { value, provenance: 'emit:slots-file', updated_at: now };
+          // A1-P6 (B3a) — question_id/source_answer_revisions stay unset: this
+          // content is model-synthesized post-interview (SKILL.md build-plan
+          // handoff step), not derived from any single question's answer.
+          slots[key] = { value, provenance: 'emit:slots-file', updated_at: now, slot_schema_version: SLOT_ENVELOPE_SCHEMA_VERSION };
         }
         return { ...env, payload: { ...env.payload, slots } };
       });

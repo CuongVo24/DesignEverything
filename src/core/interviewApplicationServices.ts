@@ -5,6 +5,7 @@ import { loadScript } from './loadScript.js';
 import { commitStep, checkRate, stampTurn } from './advanceState.js';
 import { issueTurnCapability } from './turnCapability.js';
 import { validateAnswer } from './validateAnswer.js';
+import { SLOT_ENVELOPE_SCHEMA_VERSION } from './schemas/interviewStore.js';
 import type { InterviewStoreEnvelope } from './schemas/interviewStore.js';
 import type { Progress } from './schemas/index.js';
 
@@ -316,7 +317,14 @@ export function commitInterviewAnswer(
             { previous_value: priorSlot.value, previous_revision: env.state_revision, corrected_at: now },
           ];
         }
-        slots[key] = { value, provenance: `interview:${stepId}`, updated_at: now };
+        slots[key] = {
+          value,
+          provenance: `interview:${stepId}`,
+          updated_at: now,
+          slot_schema_version: SLOT_ENVELOPE_SCHEMA_VERSION,
+          question_id: stepId,
+          source_answer_revisions: [`${stepId}@${env.state_revision}`],
+        };
       }
     }
 
