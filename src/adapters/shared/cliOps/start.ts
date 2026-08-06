@@ -8,6 +8,7 @@ import {
   evaluateBuildReadiness,
   loadEmittedDocs,
   assertValidatedSnapshot,
+  inspectRuntimeHealth,
   ExecutionState,
 } from '../../../core/index.js';
 import { CliResultEnvelope, redactInternalError } from '../cliResult.js';
@@ -23,6 +24,23 @@ export function handleStart(workspaceRoot: string, argv: string[]): CliResultEnv
       reason_code: 'MISSING_TASK_ID',
       severity: 'error',
       message: 'Thiếu tham số --task <task_id>.',
+      runtime_version: RUNTIME_VERSION,
+    };
+  }
+
+  // B2e §3 — same health-first gate as handleStatus/handleNext (status.ts,
+  // next.ts): start must deny on the same Core health result those two read,
+  // not grow its own separate corruption-detection story.
+  const health = inspectRuntimeHealth(workspaceRoot);
+  if (health.status === 'broken') {
+    const primaryIssue = health.issues[0];
+    return {
+      ok: false,
+      operation: 'start',
+      reason_code: primaryIssue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
+      severity: 'error',
+      message: `Runtime state bị hỏng: ${primaryIssue?.detail || 'State corrupted'}`,
+      next_command: primaryIssue?.safe_next_command || targetLocalCliCommand('repair'),
       runtime_version: RUNTIME_VERSION,
     };
   }

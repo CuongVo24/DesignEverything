@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createHash } from 'crypto';
@@ -92,6 +92,45 @@ describe('P5.1 — buildGateSnapshot must be fail-closed for missing artifacts',
       expect(artifact.exists).toBe(false);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+});
+
+// A1-P5 (B2d) — a symlink swapped in for a real artifact must never read as
+// a valid regular file, even when it resolves to real content. Symlink
+// creation needs elevated privilege on Windows unless Developer Mode is on,
+// so this probes support once and skips rather than flaking CI.
+function canCreateSymlinks(): boolean {
+  const probeDir = mkdtempSync(join(tmpdir(), 'de-symlink-probe-'));
+  try {
+    const target = join(probeDir, 'target.txt');
+    writeFileSync(target, 'x');
+    symlinkSync(target, join(probeDir, 'link.txt'));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    rmSync(probeDir, { recursive: true, force: true });
+  }
+}
+
+describe.skipIf(!canCreateSymlinks())('B2d — symlink artifacts must never be treated as valid', () => {
+  test('a symlink at the artifact path reads as exists=false, not as the target it points to', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'de-gate-snapshot-symlink-'));
+    const outsideTarget = join(tmpdir(), `de-gate-snapshot-outside-${Date.now()}.md`);
+    try {
+      mkdirSync(join(workspace, 'docs'), { recursive: true });
+      writeFileSync(outsideTarget, '# Content living outside the workspace');
+      symlinkSync(outsideTarget, join(workspace, 'docs', 'vision.md'));
+
+      const snapshot = buildGateSnapshot(workspace, ['docs/vision.md']);
+      const artifact = snapshot.artifacts['docs/vision.md'];
+      expect(artifact.exists).toBe(false);
+      expect(artifact.nonEmpty).toBe(false);
+      expect(artifact.sha256).toBe('');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+      rmSync(outsideTarget, { force: true });
     }
   });
 });

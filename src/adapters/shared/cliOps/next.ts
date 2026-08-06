@@ -7,6 +7,7 @@ import {
   evaluateBuildReadiness,
   loadEmittedDocs,
   assertValidatedSnapshot,
+  inspectRuntimeHealth,
   ExecutionState,
 } from '../../../core/index.js';
 import { CliResultEnvelope, redactInternalError } from '../cliResult.js';
@@ -15,6 +16,26 @@ import { RUNTIME_VERSION, targetLocalCliCommand } from '../../../version.js';
 export function handleNext(workspaceRoot: string): CliResultEnvelope {
   const execStatePath = join(workspaceRoot, '.design-everything/execution-state.json');
   const execPlanPath = join(workspaceRoot, '.design-everything/execution-plan.json');
+
+  // B2e §3 — status and next-step must read the same Core health result
+  // instead of each growing its own catch-and-guess logic for corruption
+  // this function doesn't otherwise check (e.g. a corrupt execution-plan.json
+  // used to surface here as a generic STALE_SNAPSHOT from the try/catch
+  // below, with no reason_code distinguishing it from a genuinely stale
+  // digest). Mirrors handleStatus's health-first gate in status.ts.
+  const health = inspectRuntimeHealth(workspaceRoot);
+  if (health.status === 'broken') {
+    const primaryIssue = health.issues[0];
+    return {
+      ok: false,
+      operation: 'next',
+      reason_code: primaryIssue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
+      severity: 'error',
+      message: `Runtime state bị hỏng: ${primaryIssue?.detail || 'State corrupted'}`,
+      next_command: primaryIssue?.safe_next_command || targetLocalCliCommand('repair'),
+      runtime_version: RUNTIME_VERSION,
+    };
+  }
 
   if (!existsSync(execStatePath)) {
     return {

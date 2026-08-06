@@ -89,7 +89,7 @@ gates:
         version: '4.0.0',
         updated_at: new Date().toISOString(),
       },
-      trace_links: {},
+      trace_links: [],
       risks: [
         {
           id: 'R1-tech-uncertainty',

@@ -196,8 +196,12 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
       command_argv: [],
     });
 
-    expect(next).toMatchObject({ ok: false, reason_code: 'EXECUTION_STATE_MISSING' });
-    expect(start).toMatchObject({ ok: false, reason_code: 'EXECUTION_STATE_MISSING' });
+    // B2e §3 — next/start now consult the same Core health result codeWrite
+    // (evaluatePreAction) already did, so all three report the same
+    // MISSING_EXECUTION_STATE reason_code instead of next/start's own
+    // previously-separate 'EXECUTION_STATE_MISSING' string.
+    expect(next).toMatchObject({ ok: false, reason_code: 'MISSING_EXECUTION_STATE' });
+    expect(start).toMatchObject({ ok: false, reason_code: 'MISSING_EXECUTION_STATE' });
     expect(codeWrite).toMatchObject({ decision: 'deny', reason_code: 'MISSING_EXECUTION_STATE' });
   });
 

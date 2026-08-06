@@ -14,6 +14,9 @@ import { loadDeepenState } from './deepenState.js';
 import { loadDeepenScript } from './loadDeepenScript.js';
 import { classifyProjectProfileState } from './projectProfileState.js';
 import { emitManifestSchema } from './schemas/emitManifest.js';
+import { executionPlanSchemaV3 } from './schemas/executionPlan.js';
+import { loadGatePolicy } from './loadGatePolicy.js';
+import { loadArtifactCatalog } from './loadArtifactCatalog.js';
 import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../version.js';
 
 function sha256File(p: string): string {
@@ -192,6 +195,97 @@ function checkTier1ExecutionHandoff(workspaceRoot: string, hasExecState: boolean
   }];
 }
 
+/**
+ * A1-P5 (B2e) — execution-plan.json has no centralized loader; every other
+ * caller (semanticValidation.ts, phaseExecuting.ts) parses it inline and
+ * degrades a corrupt plan into a soft "fail" check, never surfacing it on
+ * the health/status/next-step surface this function feeds. Missing is not
+ * an error (the plan may simply not have been synthesized yet); present but
+ * unparseable is, matching checkEmitManifestIntegrity's existing pattern.
+ */
+function checkExecutionPlanIntegrity(workspaceRoot: string): HealthIssue[] {
+  const relPath = '.design-everything/execution-plan.json';
+  const p = join(workspaceRoot, relPath);
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = executionPlanSchemaV3.safeParse(JSON.parse(readFileSync(p, 'utf8')));
+    if (!parsed.success) {
+      return [{
+        severity: 'error',
+        reason_code: 'CORRUPT_EXECUTION_PLAN',
+        artifact: relPath,
+        detail: `execution-plan.json does not match the expected schema: ${JSON.stringify(parsed.error.format())}`,
+        safe_next_command: targetLocalCliCommand('validate'),
+        can_auto_repair: false,
+      }];
+    }
+  } catch (err: unknown) {
+    return [{
+      severity: 'error',
+      reason_code: 'CORRUPT_EXECUTION_PLAN',
+      artifact: relPath,
+      detail: `Failed to parse execution-plan.json: ${(err as Error).message}`,
+      safe_next_command: targetLocalCliCommand('validate'),
+      can_auto_repair: false,
+    }];
+  }
+  return [];
+}
+
+/**
+ * A1-P5 (B2e) — gate-policy.yaml and artifact-catalog.yaml are installer-
+ * shipped content assets (stage.mjs copies them under workspaceRoot's
+ * Design/Content/), already hash-verified against install-manifest.json by
+ * checkInstallManifestIntegrity when a manifest is present. That only
+ * catches tampering after install, not a file that was corrupt from the
+ * start or a dev-mode workspace with no install manifest to hash against —
+ * both loaders throw on parse/schema failure, so any exception here is a
+ * real integrity error, not absence (a missing file is reported by neither;
+ * that is either "not installed yet" or covered separately).
+ */
+function checkGatePolicyIntegrity(workspaceRoot: string): HealthIssue[] {
+  const relPath = 'Design/Content/interview-script/gate-policy.yaml';
+  // workspaceRoot first — the target actually being inspected must win over
+  // an incidental match in the engine's own source tree (e.g. tests running
+  // with process.cwd() at the monorepo root, which has its own real copy).
+  const candidates = [join(workspaceRoot, relPath), join(process.cwd(), relPath)];
+  const p = candidates.find((c) => existsSync(c));
+  if (!p) return [];
+  try {
+    loadGatePolicy(p);
+    return [];
+  } catch (err: unknown) {
+    return [{
+      severity: 'error',
+      reason_code: 'CORRUPT_GATE_POLICY',
+      artifact: relPath,
+      detail: `Failed to load gate-policy.yaml: ${(err as Error).message}`,
+      safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+      can_auto_repair: true,
+    }];
+  }
+}
+
+function checkArtifactCatalogIntegrity(workspaceRoot: string): HealthIssue[] {
+  const relPath = 'Design/Content/artifact-catalog.yaml';
+  const candidates = [join(workspaceRoot, relPath), join(process.cwd(), relPath)];
+  const p = candidates.find((c) => existsSync(c));
+  if (!p) return [];
+  try {
+    loadArtifactCatalog(p);
+    return [];
+  } catch (err: unknown) {
+    return [{
+      severity: 'error',
+      reason_code: 'CORRUPT_ARTIFACT_CATALOG',
+      artifact: relPath,
+      detail: `Failed to load artifact-catalog.yaml: ${(err as Error).message}`,
+      safe_next_command: 'node adapter/claude-code/install.mjs <target-dir>',
+      can_auto_repair: true,
+    }];
+  }
+}
+
 export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
   const issues: HealthIssue[] = [];
   const now = new Date().toISOString();
@@ -321,6 +415,9 @@ export function inspectRuntimeHealth(workspaceRoot: string): HealthReport {
   }
   issues.push(...checkEmitManifestIntegrity(workspaceRoot));
   issues.push(...checkTier1ExecutionHandoff(workspaceRoot, hasExecState));
+  issues.push(...checkExecutionPlanIntegrity(workspaceRoot));
+  issues.push(...checkGatePolicyIntegrity(workspaceRoot));
+  issues.push(...checkArtifactCatalogIntegrity(workspaceRoot));
 
   // P4.2/R03 (X15) — project-profile.json existed entirely outside the
   // health surface before this: loadProjectProfile's callers (emit.ts,

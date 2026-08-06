@@ -428,3 +428,89 @@ describe('DEBT3.2 — install-manifest.json is parsed and hash-verified, not jus
     expect(report.issues.some((i) => i.reason_code === 'CORRUPT_PROJECT_PROFILE')).toBe(false);
   });
 });
+
+// A1-P5 (B2e) — execution-plan.json, gate-policy.yaml and artifact-catalog
+// integrity previously had no health surface at all: a corrupt copy of any
+// of the three was silently swallowed by whichever caller happened to parse
+// it inline (semanticValidation.ts, phaseExecuting.ts, phaseInterviewGate.ts),
+// never reaching status/next-step/pre-action as a health error.
+describe('A1-P5 — execution-plan.json, gate-policy.yaml and artifact-catalog integrity', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = join(tmpdir(), `de-test-a1p5-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
+    mkdirSync(join(tempDir, '.design-everything'), { recursive: true });
+    initializeInterviewStore(tempDir);
+    writeFileSync(join(tempDir, 'progress.json'), JSON.stringify(validProgress(), null, 2));
+    writeFileSync(
+      join(tempDir, '.design-everything/install-manifest.json'),
+      JSON.stringify(validManifest(), null, 2)
+    );
+    return () => {
+      if (existsSync(tempDir)) {
+        try {
+          rmSync(tempDir, { recursive: true, force: true });
+        } catch {
+          // Ignore
+        }
+      }
+    };
+  });
+
+  test('a missing execution-plan.json is not itself a health problem', () => {
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_EXECUTION_PLAN')).toBe(false);
+  });
+
+  test('a corrupt (non-JSON) execution-plan.json reports broken with CORRUPT_EXECUTION_PLAN', () => {
+    writeFileSync(join(tempDir, '.design-everything/execution-plan.json'), '{ not valid json ...');
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_EXECUTION_PLAN')).toBe(true);
+  });
+
+  test('an execution-plan.json that fails schema validation reports CORRUPT_EXECUTION_PLAN', () => {
+    writeFileSync(
+      join(tempDir, '.design-everything/execution-plan.json'),
+      JSON.stringify({ metadata: { version: '3.0.0' } }, null, 2)
+    );
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_EXECUTION_PLAN')).toBe(true);
+  });
+
+  test('a missing gate-policy.yaml is not itself a health problem', () => {
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_GATE_POLICY')).toBe(false);
+  });
+
+  test('a corrupt gate-policy.yaml reports broken with CORRUPT_GATE_POLICY', () => {
+    mkdirSync(join(tempDir, 'Design/Content/interview-script'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'Design/Content/interview-script/gate-policy.yaml'),
+      'gates: [this is not: valid: yaml structure'
+    );
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_GATE_POLICY')).toBe(true);
+  });
+
+  test('a missing artifact-catalog.yaml is not itself a health problem', () => {
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_ARTIFACT_CATALOG')).toBe(false);
+  });
+
+  test('a corrupt artifact-catalog.yaml reports broken with CORRUPT_ARTIFACT_CATALOG', () => {
+    mkdirSync(join(tempDir, 'Design/Content'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'Design/Content/artifact-catalog.yaml'),
+      'artifacts: [this is not: valid: yaml structure'
+    );
+
+    const report = inspectRuntimeHealth(tempDir);
+    expect(report.status).toBe('broken');
+    expect(report.issues.some((i) => i.reason_code === 'CORRUPT_ARTIFACT_CATALOG')).toBe(true);
+  });
+});

@@ -19,15 +19,15 @@ Loại gate basename/file-exists-only và cache append-only; mỗi quyết đị
 
 ## 3. Implementation checklist
 
-- [ ] requires_docs dùng canonical exact relative path từ artifact catalog, không so basename.
-- [ ] Artifact chỉ hợp lệ khi regular file đúng root, non-empty sau trim, thuộc current managed manifest và digest khớp last successful emit.
-- [ ] Gate requires_validation đọc current validation digest khớp plan/docs digests.
-- [ ] requires_evidence đọc evidence pass hiện tại, không chỉ completed task id.
-- [ ] evaluateGate là pure recomputation từ snapshot; không mutate state.
-- [ ] gates_passed nếu còn giữ để hiển thị chỉ là cache kèm input_digest, bị thay toàn bộ/revoke khi snapshot đổi.
-- [ ] Xóa/sửa/đổi symlink artifact làm gate đóng ngay.
-- [ ] Duplicate basename ở docs/archive không có giá trị.
-- [ ] Policy schema/linter reject path mơ hồ, duplicate requirement và artifact ngoài catalog.
+- [x] requires_docs dùng canonical exact relative path từ artifact catalog, không so basename.
+- [x] Artifact chỉ hợp lệ khi regular file đúng root, non-empty sau trim, thuộc current managed manifest và digest khớp last successful emit.
+- [x] Gate requires_validation đọc current validation digest khớp plan/docs digests.
+- [x] requires_evidence đọc evidence pass hiện tại, không chỉ completed task id.
+- [x] evaluateGate là pure recomputation từ snapshot; không mutate state.
+- [x] gates_passed nếu còn giữ để hiển thị chỉ là cache kèm input_digest, bị thay toàn bộ/revoke khi snapshot đổi.
+- [x] Xóa/sửa/đổi symlink artifact làm gate đóng ngay.
+- [x] Duplicate basename ở docs/archive không có giá trị.
+- [x] Policy schema/linter reject path mơ hồ, duplicate requirement và artifact ngoài catalog.
 
 ## 4. Interfaces / Files expected to change
 
@@ -60,10 +60,29 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: UNIT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. X10 (gate so basename nên docs/archive giả artifact) và X11 (gates_passed
 append-only, không revoke) trong finding-coverage-matrix.md nay đã FIXED — `evaluateGate.ts`
 candidateKeys không basename-anywhere, và `evaluatePreAction.ts` derive `gates_passed` fresh mỗi
 lần (db90029). R09 (gate snapshot chưa xác minh manifest/digest active) vẫn OPEN.
+
+Cập nhật 2026-08-06 (A1-P5): R09 đối chiếu lại `finding-coverage-matrix.md` — đã ghi `FIXED` từ
+trước (P5.1/DEBT3.1, `src/core/gateSnapshot.test.ts`), note "vẫn OPEN" ở trên đã lỗi thời, không
+còn khớp code lẫn matrix. Đóng 2 mục còn lại thật của checklist §3:
+
+- **Symlink escape** — `buildGateSnapshot`'s artifact loop và `computeManifestBinding` dùng
+  `statSync`/`readFileSync` (theo symlink) thay vì `lstatSync`; một symlink thay thế artifact thật,
+  trỏ ra ngoài workspace, đọc như file hợp lệ có digest khớp. Sửa: `lstatSync` trước, symlink luôn
+  coi là `exists: false` (không theo target). Test: `gateSnapshot.test.ts`'s "symlink artifacts must
+  never be treated as valid" (skip khi môi trường không có quyền tạo symlink — Windows cần Developer
+  Mode/elevated, xác nhận bằng probe runtime, không hardcode skip theo OS).
+- **Policy linter — artifact ngoài catalog** — trước đây không gì cross-reference `requires_docs`
+  của gate-policy.yaml với artifact-catalog.yaml; một path gõ sai/lỗi thời sẽ khoá gate vĩnh viễn mà
+  không ai biết tới khi chạy thật. Thêm test content-integrity (`contentIntegrity.test.ts`) so từng
+  `requires_docs` (basename) với path trong catalog. "path mơ hồ" (X10) và "duplicate requirement"
+  (uniqueness refine trong `gateSchema` + duplicate-id check trong `loadGatePolicy`) đã đóng từ
+  trước, chỉ riêng "artifact ngoài catalog" là mục thật còn thiếu.
+
+Checklist §3 đủ 9/9. Implementation → `IMPLEMENTED`.

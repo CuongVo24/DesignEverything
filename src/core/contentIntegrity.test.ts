@@ -1,8 +1,9 @@
 import { expect, test, describe } from 'vitest';
 import { loadScript } from './loadScript.js';
 import { loadGatePolicy } from './loadGatePolicy.js';
+import { loadArtifactCatalog } from './loadArtifactCatalog.js';
 import { loadShapes } from './loadShapes.js';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 
@@ -13,6 +14,7 @@ const scriptPath = join(__dirname, '../../Design/Content/interview-script/script
 const policyPath = join(__dirname, '../../Design/Content/interview-script/gate-policy.yaml');
 const taxonomyPath = join(__dirname, '../../Design/Content/taxonomy.md');
 const gatePolicyMdPath = join(__dirname, '../../Design/Core/Schemas/gate-policy.md');
+const catalogPath = join(__dirname, '../../Design/Content/artifact-catalog.yaml');
 
 describe('Content Integrity (Tầng 1)', () => {
   test('script.yaml must load successfully and contain exactly 26 questions with unique IDs', () => {
@@ -49,6 +51,26 @@ describe('Content Integrity (Tầng 1)', () => {
     for (const question of script.questions) {
       if (question.gate !== null) {
         expect(policyGateIds.has(question.gate)).toBe(true);
+      }
+    }
+  });
+
+  // A1-P5 (B2d §3) — a gate can require a doc that no artifact in the
+  // catalog will ever produce, which no schema/uniqueness check catches: a
+  // typo'd or stale requires_docs entry would demand a file the system can
+  // never emit, permanently blocking that gate. Cross-referencing against
+  // the catalog by basename (requires_docs is basename-only, catalog paths
+  // are `docs/...`-prefixed) catches that at content-authoring time.
+  test('every requires_docs entry in gate-policy.yaml must resolve to a tier-1 artifact in the catalog', () => {
+    const policy = loadGatePolicy(policyPath);
+    const catalog = loadArtifactCatalog(catalogPath);
+    const catalogBasenames = new Set(
+      catalog.artifacts.filter((a) => a.path).map((a) => basename(a.path as string))
+    );
+
+    for (const gate of policy.gates) {
+      for (const doc of gate.requires_docs) {
+        expect(catalogBasenames.has(doc)).toBe(true);
       }
     }
   });

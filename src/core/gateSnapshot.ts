@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'fs';
+import { existsSync, lstatSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { createHash } from 'crypto';
 import { canonicalizeWorkspacePath } from './pathPolicy.js';
@@ -88,7 +88,13 @@ function computeManifestBinding(workspaceRoot: string, manifest: EmitManifest | 
   const mismatches: string[] = [];
   for (const artifact of manifest.artifacts) {
     const abs = resolve(workspaceRoot, artifact.path);
-    if (!existsSync(abs)) {
+    let isSymlink = false;
+    try {
+      isSymlink = lstatSync(abs).isSymbolicLink();
+    } catch {
+      isSymlink = false;
+    }
+    if (isSymlink || !existsSync(abs)) {
       mismatches.push(artifact.path);
       continue;
     }
@@ -146,7 +152,21 @@ export function buildGateSnapshot(
     let sha256 = '';
     let size = 0;
 
-    if (existsSync(absPath)) {
+    // B2d §3 — "Artifact chỉ hợp lệ khi regular file đúng root" and "Xóa/
+    // sửa/đổi symlink artifact làm gate đóng ngay". `existsSync`/`statSync`
+    // both follow symlinks, so a symlink swapped in for the real artifact
+    // (pointing anywhere, including outside the workspace) would otherwise
+    // read as an existing regular file with a valid digest. `lstatSync`
+    // inspects the link itself, never the target, so a symlink here is
+    // always treated as the artifact being absent.
+    let isSymlink = false;
+    try {
+      isSymlink = lstatSync(absPath).isSymbolicLink();
+    } catch {
+      isSymlink = false;
+    }
+
+    if (!isSymlink && existsSync(absPath)) {
       try {
         const stat = statSync(absPath);
         if (stat.isFile()) {
