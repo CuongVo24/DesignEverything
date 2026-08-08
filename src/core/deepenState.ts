@@ -12,6 +12,7 @@ import { extractMustFeatures } from './validatePlan.js';
 import { slugifyList } from './slugify.js';
 import { collectDecisions } from './renderDecisionLog.js';
 import { verifyTurnCapability } from './turnCapability.js';
+import { acquireLock, releaseLock } from './interviewStore.js';
 
 const STATE_REL_PATH = '.design-everything/deepen-state.json';
 
@@ -57,6 +58,60 @@ export function saveDeepenState(workspace: string, state: DeepenState): void {
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify(state, null, 2), 'utf8');
   renameSync(tmp, path);
+}
+
+/**
+ * B3e §3 — "Mỗi deepen commit cần transaction B1b... không tạo một authority
+ * store thứ hai." Before this, every deepen-state.json writer (opt-in,
+ * capability issue, commit) did its own unprotected load -> mutate -> save
+ * with no compare-and-swap and no lock — two concurrent writers could race
+ * a lost update exactly like interview-state.json could before B1b's
+ * transactInterviewStore existed. This reuses that SAME workspace lock
+ * (interviewStore.ts's acquireLock/releaseLock, `.design-everything/
+ * interview-state.lock`) rather than inventing a second lock file, so an
+ * interview commit and a deepen commit can never race each other either —
+ * one shared serialization point for every canonical-state write in the
+ * workspace, matching the checklist's "không tạo một authority store thứ
+ * hai" instead of merely relocating the race into a deepen-only lock.
+ *
+ * `sideEffect` runs INSIDE the lock, after `mutator` computes the next
+ * state but BEFORE it is durably written — so a caller that also needs to
+ * persist something else in the same logical commit (commitDeepen's
+ * answers.json write) fails closed in the safe direction: if the side
+ * effect throws, deepen-state.json is never updated, so the capability
+ * stays unconsumed and the instance stays uncommitted (retryable). The
+ * previous, unprotected ordering could do the opposite — state marked
+ * answered/capability consumed with the answer text write still pending —
+ * which is unrecoverable (`commitDeepenAnswer` rejects a second commit of
+ * an already-answered instance).
+ */
+export function transactDeepenStore(
+  workspaceRoot: string,
+  expectedRevision: number,
+  mutator: (state: DeepenState) => DeepenState,
+  sideEffect?: (nextState: DeepenState) => void
+): DeepenState {
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    throw new Error(
+      `INVALID_EXPECTED_REVISION: expectedRevision must be a non-negative integer, got ${String(expectedRevision)}`
+    );
+  }
+  const lockNonce = acquireLock(workspaceRoot);
+  try {
+    const current = loadDeepenState(workspaceRoot);
+    const currentRevision = current.state_revision || 0;
+    if (currentRevision !== expectedRevision) {
+      throw new Error(
+        `REVISION_CONFLICT: Expected deepen state revision ${expectedRevision}, but found ${currentRevision}`
+      );
+    }
+    const mutated = mutator(current);
+    if (sideEffect) sideEffect(mutated);
+    saveDeepenState(workspaceRoot, mutated);
+    return mutated;
+  } finally {
+    releaseLock(workspaceRoot, lockNonce);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +187,7 @@ export function expandQuestionInstances(
 }
 
 /** Thay {subject-slug}/{NNN} trong target_doc của một câu per_subject. */
-function fillTargetDoc(q: DeepenQuestion, subject: string): string | null {
+export function fillTargetDoc(q: DeepenQuestion, subject: string): string | null {
   if (!q.target_doc) return null;
   let doc = q.target_doc.replace(/\{subject-slug\}/g, subject);
   const nnn = subject.match(/(\d{3})$/);
@@ -165,6 +220,14 @@ export function commitDeepenAnswer(
     questionId: string;
     subjectId: string | null;
     capabilityToken: string;
+    /**
+     * B3e §3 — false/omitted (default) is the original one-shot commit:
+     * rejects if this instance was ever answered before. true is an
+     * explicit amendment: requires a prior answer to exist and pushes a
+     * NEW generation rather than rejecting or overwriting it — the old
+     * entry stays in `answered` untouched.
+     */
+    rerun?: boolean;
   }
 ): DeepenState {
   const mod = state.modules[args.module];
@@ -182,10 +245,20 @@ export function commitDeepenAnswer(
   } else if (!args.subjectId) {
     throw new Error(`Câu ${args.questionId} là per_subject:${question.per_subject} nhưng thiếu subjectId.`);
   }
-  const already = mod.answered.some(
+  const priorGenerations = mod.answered.filter(
     (a) => a.question_id === args.questionId && a.subject_id === args.subjectId
   );
-  if (already) {
+  const currentEntry =
+    priorGenerations.length > 0
+      ? priorGenerations.reduce((a, b) => (a.generation > b.generation ? a : b))
+      : null;
+  if (args.rerun) {
+    if (!currentEntry) {
+      throw new Error(
+        `Instance ${args.questionId}@${args.subjectId ?? '-'} chưa được commit — không thể rerun.`
+      );
+    }
+  } else if (currentEntry) {
     throw new Error(`Instance ${args.questionId}@${args.subjectId ?? '-'} đã được commit trước đó.`);
   }
   if (!args.capabilityToken) {
@@ -215,7 +288,12 @@ export function commitDeepenAnswer(
     status: 'consumed',
   };
   const nmod = next.modules[args.module];
-  nmod.answered.push({ question_id: args.questionId, subject_id: args.subjectId });
+  nmod.answered.push({
+    question_id: args.questionId,
+    subject_id: args.subjectId,
+    generation: currentEntry ? currentEntry.generation + 1 : 1,
+    supersedes: currentEntry ? currentEntry.generation : null,
+  });
   return next;
 }
 

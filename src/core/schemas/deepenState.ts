@@ -1,10 +1,21 @@
 import { z } from 'zod';
 import { deepenModuleIdSchema, type DeepenModuleId } from './deepenScript.js';
 
-/** Một instance câu đã commit: câu × subject. KHÔNG lưu nội dung answer, chỉ tiến độ. */
+/**
+ * Một instance câu đã commit: câu × subject. KHÔNG lưu nội dung answer, chỉ
+ * tiến độ. `generation`/`supersedes` (B3e §3) — mỗi rerun push một entry MỚI
+ * thay vì overwrite entry cũ, nên `answered` là lịch sử đầy đủ: entry có
+ * `generation` cao nhất cho cùng (question_id, subject_id) là bản hiện hành,
+ * `supersedes` trỏ ngược generation nó thay thế (null cho generation 1).
+ * `.default()` giữ tương thích ngược với deepen-state.json cũ trên đĩa chưa
+ * có 2 field này — parse ra generation:1/supersedes:null, đúng ngữ nghĩa
+ * "lần commit đầu tiên".
+ */
 export const deepenAnswerRefSchema = z.object({
   question_id: z.string(),
   subject_id: z.string().nullable(),
+  generation: z.number().int().min(1).default(1),
+  supersedes: z.number().int().min(1).nullable().default(null),
 });
 
 export const deepenModuleStateSchema = z.object({

@@ -6,6 +6,7 @@ import { tmpdir } from 'os';
 import {
   loadDeepenState,
   saveDeepenState,
+  transactDeepenStore,
   listDeepenSubjects,
   expandQuestionInstances,
   optInModule,
@@ -119,6 +120,71 @@ describe('commitDeepenAnswer — capability + validation cases', () => {
     expect(() =>
       commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null })
     ).toThrow(/đã được commit/);
+  });
+
+  it('rerun trên instance chưa từng commit bị chặn', () => {
+    const s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
+    const issued = issueTurnCapability(s.state_revision || 0, {
+      sessionId: s.session_id || 'default-session',
+      operationKind: 'deepen',
+      questionId: 'DS1a',
+      subjectId: null,
+    });
+    expect(() =>
+      commitDeepenAnswer(
+        { ...s, pending_turn_capability: issued.capability },
+        script,
+        { module: 'glossary', questionId: 'DS1a', subjectId: null, capabilityToken: issued.token, rerun: true }
+      )
+    ).toThrow(/chưa được commit — không thể rerun/);
+  });
+
+  it('rerun: generation tăng, supersedes trỏ đúng, entry cũ không bị xoá', () => {
+    let s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null });
+    const first = s.modules.glossary.answered.find((a) => a.question_id === 'DS1a')!;
+    expect(first.generation).toBe(1);
+    expect(first.supersedes).toBe(null);
+
+    const issued = issueTurnCapability(s.state_revision || 0, {
+      sessionId: s.session_id || 'default-session',
+      operationKind: 'deepen',
+      questionId: 'DS1a',
+      subjectId: null,
+    });
+    s = commitDeepenAnswer(
+      { ...s, pending_turn_capability: issued.capability },
+      script,
+      { module: 'glossary', questionId: 'DS1a', subjectId: null, capabilityToken: issued.token, rerun: true }
+    );
+
+    const entries = s.modules.glossary.answered.filter((a) => a.question_id === 'DS1a');
+    expect(entries.length).toBe(2);
+    const second = entries.find((a) => a.generation === 2)!;
+    expect(second.supersedes).toBe(1);
+    // Entry gốc (generation 1) vẫn còn nguyên trong lịch sử.
+    expect(entries.some((a) => a.generation === 1)).toBe(true);
+  });
+
+  it('rerun không phá completeness: instance vẫn tính là answered', () => {
+    let s = optInModule(defaultDeepenState(), 'glossary', 'explicit');
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1a', subjectId: null });
+    s = commitDeepen(s, { module: 'glossary', questionId: 'DS1b', subjectId: null });
+    const beforeRerun = canEmitModule(s, script, 'glossary', []);
+    expect(beforeRerun.ok).toBe(true);
+
+    const issued = issueTurnCapability(s.state_revision || 0, {
+      sessionId: s.session_id || 'default-session',
+      operationKind: 'deepen',
+      questionId: 'DS1a',
+      subjectId: null,
+    });
+    s = commitDeepenAnswer(
+      { ...s, pending_turn_capability: issued.capability },
+      script,
+      { module: 'glossary', questionId: 'DS1a', subjectId: null, capabilityToken: issued.token, rerun: true }
+    );
+    expect(canEmitModule(s, script, 'glossary', []).ok).toBe(true);
   });
 
   it('replay của capability token đã tiêu thụ bị chặn', () => {
@@ -237,6 +303,58 @@ describe('listDeepenSubjects', () => {
     expect(subjects.length).toBeGreaterThanOrEqual(2);
     expect(subjects[0]).toBe('adr-001');
     expect(subjects.every((s, i) => s === `adr-${String(i + 1).padStart(3, '0')}`)).toBe(true);
+  });
+});
+
+describe('transactDeepenStore', () => {
+  it('happy path: mutator áp dụng và ghi xuống đĩa, trả về state đã mutate', () => {
+    const dir = ws();
+    const s0 = loadDeepenState(dir);
+    const mutated = transactDeepenStore(dir, s0.state_revision || 0, (current) =>
+      optInModule(current, 'glossary', 'explicit')
+    );
+    expect(mutated.modules.glossary.opted_in).toBe(true);
+    expect(loadDeepenState(dir).modules.glossary.opted_in).toBe(true);
+  });
+
+  it('expectedRevision không khớp revision trên đĩa → REVISION_CONFLICT, không ghi', () => {
+    const dir = ws();
+    saveDeepenState(dir, { ...defaultDeepenState(), state_revision: 5 });
+    expect(() =>
+      transactDeepenStore(dir, 0, (current) => optInModule(current, 'glossary', 'explicit'))
+    ).toThrow(/REVISION_CONFLICT/);
+    expect(loadDeepenState(dir).modules.glossary.opted_in).toBe(false);
+  });
+
+  it('sideEffect throw → transaction abort, deepen-state.json không đổi (fail closed)', () => {
+    const dir = ws();
+    const before = loadDeepenState(dir);
+    expect(() =>
+      transactDeepenStore(
+        dir,
+        before.state_revision || 0,
+        (current) => optInModule(current, 'glossary', 'explicit'),
+        () => {
+          throw new Error('side effect failed');
+        }
+      )
+    ).toThrow(/side effect failed/);
+    expect(loadDeepenState(dir).modules.glossary.opted_in).toBe(false);
+  });
+
+  it('sideEffect chạy TRƯỚC saveDeepenState với state đã mutate', () => {
+    const dir = ws();
+    const before = loadDeepenState(dir);
+    let sawOptedIn = false;
+    transactDeepenStore(
+      dir,
+      before.state_revision || 0,
+      (current) => optInModule(current, 'glossary', 'explicit'),
+      (next) => {
+        sawOptedIn = next.modules.glossary.opted_in;
+      }
+    );
+    expect(sawOptedIn).toBe(true);
   });
 });
 

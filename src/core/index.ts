@@ -70,12 +70,14 @@ export { loadDeepenScript } from './loadDeepenScript.js';
 export {
   loadDeepenState,
   saveDeepenState,
+  transactDeepenStore,
   listDeepenSubjects,
   expandQuestionInstances,
   optInModule,
   commitDeepenAnswer,
   canEmitModule,
   computeSourceDigest,
+  fillTargetDoc,
 } from './deepenState.js';
 export type { QuestionInstance } from './deepenState.js';
 export { emitDoc, emitTree, generateExecutionPlanJson } from './emit.js';
@@ -199,13 +201,16 @@ export {
   listDeepenStatus,
   optInDeepenModule,
   issueDeepenCapability,
+  issueDeepenRerunCapability,
   commitDeepen,
+  rerunDeepen,
 } from './deepenApplicationServices.js';
 export type {
   DeepenModuleStatus,
   DeepenNextSuccess,
   DeepenCommitArgs,
   DeepenServiceError,
+  DeepenAnswerHistoryEntry,
 } from './deepenApplicationServices.js';
 export { installManifestSchema } from './schemas/installManifest.js';
 export type { InstallManifest, InstallManifestAsset } from './schemas/installManifest.js';

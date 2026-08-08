@@ -39,6 +39,17 @@ Mở (opt-in) một module tầng 2 chỉ được phép khi cả ba điều ki�
 
 `adr` và `test-strategy` là hai module **plan-affecting** — chúng mô tả lại chính architecture/test-strategy mà một execution plan đã validate dựa vào. Emit lại một trong hai module này khi execution đã đi qua khỏi `plan-validating` sẽ đánh dấu snapshot stale (`invalidateSnapshotForTier2`): state chuyển `blocked` với `block_reason.kind = 'snapshot-stale'`, `recoverable_by = '/build validate'`. `glossary` và `feature-spec` không bao giờ invalidate theo cách này.
 
+### Rerun (amendment) một câu deepen đã trả lời
+
+Một instance (câu × subject) đã commit không bị khoá vĩnh viễn — có thể **rerun** để sửa lại câu trả lời, nhưng đây là amendment (bản mới), không phải overwrite bản cũ:
+
+1. [`issueDeepenRerunCapability`](../../src/core/deepenApplicationServices.ts) issue một capability nhắm đúng instance ĐÃ answered (khác `issueDeepenCapability`, vốn chỉ tìm câu **chưa** trả lời). Instance chưa từng commit bị deny `DEEPEN_RERUN_NOT_YET_ANSWERED`.
+2. [`rerunDeepen`](../../src/core/deepenApplicationServices.ts) tiêu thụ capability đó và push một `generation` mới vào `deepen-state.json`'s `modules[x].answered` — entry cũ (generation trước) vẫn còn nguyên, `supersedes` trỏ ngược về nó. "Đã answered" cho một instance = tồn tại ≥1 generation; "hiện hành" = generation lớn nhất.
+3. Giá trị answer text hiện hành vẫn chỉ có một bản trong `Design/.interview/answers.json` (mọi renderer/`computeSourceDigest`/`emitTier2` đọc không đổi), nhưng MỌI generation — kể cả bản đầu — được append vào `Design/.interview/deepen-answer-history.json`, nên câu trả lời cũ không bao giờ mất, chỉ không còn là bản hiện hành.
+4. Rerun một module plan-affecting (`adr`/`test-strategy`) và emit lại module đó vẫn kích hoạt `invalidateSnapshotForTier2` như một lần commit/emit bình thường.
+
+Rerun hiện chỉ có ở tầng Core (application service) — CLI/adapter chưa có subcommand `--rerun` tương ứng; đó là phạm vi B4, chưa mở trong B3e.
+
 ## Ngữ pháp SourceRef (Nguồn gốc thông tin)
 
 Mỗi khối nội dung (heading hoặc block thông tin quan trọng) trong tài liệu tầng 2 bắt buộc phải kết thúc bằng **đúng một dòng** chỉ định nguồn gốc thông tin theo ngữ pháp chuẩn dưới đây. Không tự ý viết biến thể khác để hỗ trợ parser tự động đọc:
