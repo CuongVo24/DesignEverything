@@ -47,8 +47,8 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B1 | B1c — Design/build handoff state | Core | B1b | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B1 | B1d — Block reason transition | Core | B1c | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B2 | B2a — Protected artifact policy | Core | B1b | APPROVED | IMPLEMENTED | UNIT_ONLY |
-| B2 | B2b — Shell command classifier | Core | — | APPROVED | PARTIAL | UNIT_ONLY |
-| B2 | B2c — Canonical path matcher | Core | — | APPROVED | PARTIAL | UNIT_ONLY |
+| B2 | B2b — Shell command classifier | Core | — | APPROVED | IMPLEMENTED | UNIT_ONLY |
+| B2 | B2c — Canonical path matcher | Core | — | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B2 | B2d — Gate evidence recomputation | Core | B2c | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B2 | B2e — Runtime health and recovery | Core | B1d, B2a, B2d | APPROVED | IMPLEMENTED | UNIT_ONLY |
 | B3 | B3a — Answer and slot validation | Core | B1a, B2c | APPROVED | IMPLEMENTED | UNIT_ONLY |

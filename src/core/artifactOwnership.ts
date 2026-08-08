@@ -1,7 +1,8 @@
-import { normalize, join } from 'path';
+import { join } from 'path';
 import { readdirSync, statSync, unlinkSync, rmdirSync } from 'fs';
 import { InternalMutationCapability, InternalMutationOperation } from './schemas/index.js';
 import { matchesCatalogPattern } from './catalogPathMatch.js';
+import { normalizeDrive } from './pathPolicy.js';
 
 export type ArtifactClass = 'engine-state' | 'engine-policy' | 'managed-output' | 'interview-scratch' | 'user-owned';
 
@@ -14,13 +15,12 @@ export interface CatalogPathEntry {
   path_pattern?: string;
 }
 
-export function normalizePath(path: string): string {
-  const norm = normalize(path).replace(/\\/g, '/');
-  if (norm.length >= 2 && norm[1] === ':') {
-    return norm[0].toLowerCase() + norm.slice(1);
-  }
-  return norm;
-}
+// B2c §3 — "cùng module được dùng bởi evaluatePreAction, evaluateGate,
+// artifact ownership, slots containment và emit manifest". This used to be
+// a second, byte-identical copy of pathPolicy.ts's normalizeDrive under a
+// different name; re-exported here so existing callers/imports of
+// `normalizePath` from this module are unaffected.
+export const normalizePath = normalizeDrive;
 
 export function classifyArtifact(path: string, catalogEntries: (string | CatalogPathEntry)[] = []): ArtifactClass {
   const norm = normalizePath(path);
