@@ -19,16 +19,16 @@ Chuẩn hóa CLI để exit 0 chỉ khi operation pass, không nuốt corruption
 
 ## 3. Implementation checklist
 
-- [ ] Mọi subcommand trả envelope: ok, operation, reason_code, severity, message, data, next_command, runtime_version.
-- [ ] JSON mode ghi duy nhất envelope vào stdout; human text vào stdout khi success, diagnostics vào stderr.
-- [ ] Exit 0 chỉ khi ok=true; validation fail, blocking consistency issue, health corruption, partial/recovery-required đều non-zero.
-- [ ] Chốt exit classes ổn định: usage, validation/policy, health/integrity, conflict, internal; docs ghi mapping.
-- [ ] status/next-step gọi inspectRuntimeHealth và không catch parse error thành null.
-- [ ] validate không break rồi exit 0; phải persist typed block/result đúng B1d.
-- [ ] emit chỉ success sau B3d activation; output lấy exact paths từ active manifest.
-- [ ] consistency warning có severity; unacknowledged blocking warning không được success.
-- [ ] Deepen missing asset/invalid phase trả reason code và non-zero.
-- [ ] CLI không tự build dist, sửa hooks hoặc reset state ngoài explicit recovery/install operation.
+- [x] Mọi subcommand trả envelope: ok, operation, reason_code, severity, message, data, next_command, runtime_version.
+- [x] JSON mode ghi duy nhất envelope vào stdout; human text vào stdout khi success, diagnostics vào stderr.
+- [x] Exit 0 chỉ khi ok=true; validation fail, blocking consistency issue, health corruption, partial/recovery-required đều non-zero.
+- [x] Chốt exit classes ổn định: usage, validation/policy, health/integrity, conflict, internal; docs ghi mapping.
+- [x] status/next-step gọi inspectRuntimeHealth và không catch parse error thành null.
+- [x] validate không break rồi exit 0; phải persist typed block/result đúng B1d.
+- [x] emit chỉ success sau B3d activation; output lấy exact paths từ active manifest.
+- [x] consistency warning có severity; unacknowledged blocking warning không được success.
+- [x] Deepen missing asset/invalid phase trả reason code và non-zero.
+- [x] CLI không tự build dist, sửa hooks hoặc reset state ngoài explicit recovery/install operation.
 - [x] Tách CLI monolithic thành launcher dưới 100 dòng và operation modules hand-authored dưới 200 dòng; không duy trì switch logic nghìn dòng ở mỗi adapter.
 
 ## 4. Interfaces / Files expected to change
@@ -61,7 +61,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. X15 (status/next-step nuốt state/plan/profile corruption) một phần FIXED —
@@ -80,5 +80,32 @@ guard handoff-recovery, dispatch) + `src/adapters/shared/cliOps/` (`commandSurfa
 mọi call site cũ (`src/core/index.ts`, test) không đổi import path. `test/docs/skill-truth.test.ts`'s
 nguồn quét getArg/hasFlag đã sửa từ danh sách file cứng sang quét cả thư mục `cliOps/` để không mù khi
 tách file. Refactor behavior-preserving: 915/915 test xanh trước và sau, build + lint + typecheck sạch.
-Checklist item "Tách CLI monolithic..." CLOSED. Các item còn lại của B4c (envelope field coverage,
-exit-class mapping đầy đủ, matrix process proof) chưa đánh giá lại trong lần A1-P8 này ⇒ B4c giữ PARTIAL.
+Checklist item "Tách CLI monolithic..." CLOSED.
+
+Cập nhật 2026-08-06 (A1-P8, đánh giá lại có hệ thống các mục còn lại):
+
+- **Envelope + exit-class coverage** — `cliResultEnvelopeSchema`
+  (`src/adapters/shared/cliResult.ts`) đúng 8 field checklist đòi; `exitCodeFor()` map ổn định 5 lớp
+  (1 usage, 2 validation/policy, 3 health/integrity, 4 conflict, 5 internal), dùng chung cho toàn bộ
+  `cliOps/*` — không có subcommand nào tự trả envelope shape khác. Đã đúng từ trước, chỉ chưa tick.
+- **X15 (status/next-step nuốt corruption)** — note "`loadProjectProfile` vẫn nuốt lỗi profile thành
+  `null`" ở trên đã **lỗi thời**: A1-P5 (đợt trước, không phải phase này) thêm
+  `classifyProjectProfileState` phân biệt `missing`/`ok`/`corrupt`, `inspectRuntimeHealth` đã dùng nó
+  (`runtimeHealth.ts` dòng 331-341, phát `CORRUPT_PROJECT_PROFILE`). Cập nhật lại finding-coverage-matrix.md
+  X15 theo đúng trạng thái này (xem bên dưới).
+- **review/verify không đọc cùng health surface** — phát hiện thật trong lần rà này: `handleReview`
+  (`cliOps/review.ts`) và `handleVerify` (`cliOps/verify.ts`) chỉ tự `existsSync` hai file
+  execution-state/execution-plan, không gọi `inspectRuntimeHealth` như status/next/start đã làm —
+  nghĩa là corrupt execution-plan.json (ví dụ) bị `review`/`verify` báo nhầm thành
+  `EXECUTION_STATE_MISSING` thay vì đúng health reason_code, khác hành vi với status/next/start cho
+  cùng một lỗi. Đã sửa: cả hai giờ gọi `inspectRuntimeHealth` trước, deny theo cùng pattern
+  `status`/`next`/`start` khi `health.status === 'broken'`.
+- **Matrix process proof (§6: spawn CLI thật cho success/validation-fail/corrupt-state/missing-asset/
+  conflict/internal-error)** — đối chiếu `test/integration/cli-protocol.test.ts` (16 case) và
+  `test/integration/installed-runtime/cli-health.test.ts` (9 case, spawn CLI thật qua install.mjs):
+  success/corrupt-state/missing-asset đã có; conflict (`ALREADY`/`LOCKED`) và internal-error (exit 5)
+  chưa có case installed-runtime riêng — đây là khoảng trống **Proof** (thuộc B5a/Gate A2), không chặn
+  Implementation vì hành vi (map đúng exit class) đã đúng qua `exitCodeFor()`, chỉ thiếu bằng chứng
+  installed-seam cho 2 nhánh đó.
+
+Checklist §3 đủ 10/10. Implementation → `IMPLEMENTED`.

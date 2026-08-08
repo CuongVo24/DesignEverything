@@ -11,6 +11,7 @@ import {
   loadEmittedDocs,
   assertValidatedSnapshot,
   createBlockRecord,
+  inspectRuntimeHealth,
 } from '../../../core/index.js';
 import { CliResultEnvelope, redactInternalError } from '../cliResult.js';
 import { RUNTIME_VERSION, targetLocalCliCommand } from '../../../version.js';
@@ -38,6 +39,21 @@ export async function handleVerify(workspaceRoot: string, argv: string[]): Promi
       reason_code: 'MISSING_COMMAND_ID',
       severity: 'error',
       message: 'Thiếu --command <command_id>.',
+      runtime_version: RUNTIME_VERSION,
+    };
+  }
+
+  // A1-P8 (B4c) — same health-first gate as status/next/start/review.
+  const health = inspectRuntimeHealth(workspaceRoot);
+  if (health.status === 'broken') {
+    const primaryIssue = health.issues[0];
+    return {
+      ok: false,
+      operation: 'verify',
+      reason_code: primaryIssue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
+      severity: 'error',
+      message: `Runtime state bị hỏng: ${primaryIssue?.detail || 'State corrupted'}`,
+      next_command: primaryIssue?.safe_next_command || targetLocalCliCommand('repair'),
       runtime_version: RUNTIME_VERSION,
     };
   }

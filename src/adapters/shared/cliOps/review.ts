@@ -12,6 +12,7 @@ import {
   renderBreakTaskIndex,
   breakTaskFileName,
   loadProjectConventionsFromCwd,
+  inspectRuntimeHealth,
 } from '../../../core/index.js';
 import { CliResultEnvelope } from '../cliResult.js';
 import { RUNTIME_VERSION, targetLocalCliCommand } from '../../../version.js';
@@ -26,6 +27,23 @@ export async function handleReview(workspaceRoot: string, argv: string[]): Promi
       reason_code: 'MISSING_MILESTONE_ID',
       severity: 'error',
       message: 'Thiếu --milestone <M4-...>.',
+      runtime_version: RUNTIME_VERSION,
+    };
+  }
+
+  // A1-P8 (B4c) — same health-first gate as status/next/start: review/verify
+  // must deny on the same Core health result those already read, not keep
+  // their own separate existsSync-only corruption story.
+  const health = inspectRuntimeHealth(workspaceRoot);
+  if (health.status === 'broken') {
+    const primaryIssue = health.issues[0];
+    return {
+      ok: false,
+      operation: 'review',
+      reason_code: primaryIssue?.reason_code || 'RUNTIME_HEALTH_BROKEN',
+      severity: 'error',
+      message: `Runtime state bị hỏng: ${primaryIssue?.detail || 'State corrupted'}`,
+      next_command: primaryIssue?.safe_next_command || targetLocalCliCommand('repair'),
       runtime_version: RUNTIME_VERSION,
     };
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { existsSync, mkdirSync, rmSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execFileSync } from 'child_process';
@@ -101,5 +101,27 @@ describe('B5a/X18 — installed target recognizes its own real CLI launcher path
     });
     expect(res?.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(res?.hookSpecificOutput.permissionDecisionReason).toContain('unknown and cannot be proven read-only');
+  });
+
+  // A1-P8 (B4b) — resolveCliLauncherPath now prefers install-manifest.json's
+  // declared launcher asset over disk-location inference. A corrupt/missing
+  // manifest must not break CLI-invocation recognition itself (that is
+  // inspectRuntimeHealth's job, reported separately) — it must fall back to
+  // the same disk-location inference this always used.
+  it('CLI-invocation recognition survives a corrupt install-manifest.json by falling back to disk-location inference', () => {
+    const manifestPath = join(tempTarget, '.design-everything/install-manifest.json');
+    const backup = readFileSync(manifestPath, 'utf8');
+    try {
+      writeFileSync(manifestPath, '{ not valid json ...');
+
+      const res = runHook({
+        cwd: tempTarget,
+        tool_name: 'Bash',
+        tool_input: { command: `node "${cliPath}" status --json` },
+      });
+      expect(res).toBeNull();
+    } finally {
+      writeFileSync(manifestPath, backup);
+    }
   });
 });

@@ -21,15 +21,15 @@ Nối SessionStart/UserPromptSubmit/PreToolUse vào các Core contract mới, b�
 ## 3. Implementation checklist
 
 - [x] SessionStart load install manifest, recover pending transactions, migrate explicit rồi inspect health trước inject.
-- [ ] UserPromptSubmit issue capability B1a cho đúng current question; không stamp answered length như delayed enforcement.
-- [ ] PreToolUse canonicalize mọi target/cwd rồi gọi duy nhất Core policy snapshot; adapter không hardcode Design/docs allow.
-- [ ] Installed + missing/corrupt state/plan/policy/manifest là deny ngoại trừ read-only diagnostics và exact recovery action.
-- [ ] Direct mutation engine-state/policy/managed-output deny theo B2a ở mọi interview phase.
-- [ ] Code action trước ready-to-execute deny; không có nhánh skip validation khi execution-state null.
-- [ ] blocked remediation allow theo B1d, không deny-all và không mở-write-all.
-- [ ] Shell payload đi qua B2b; unknown deny.
-- [ ] Hook response có stable reason_code, message, next_command và không lộ token/path secret.
-- [ ] Uninstalled target thật sự vẫn uninvolved, không cản project ngoài scope.
+- [x] UserPromptSubmit issue capability B1a cho đúng current question; không stamp answered length như delayed enforcement.
+- [x] PreToolUse canonicalize mọi target/cwd rồi gọi duy nhất Core policy snapshot; adapter không hardcode Design/docs allow.
+- [x] Installed + missing/corrupt state/plan/policy/manifest là deny ngoại trừ read-only diagnostics và exact recovery action.
+- [x] Direct mutation engine-state/policy/managed-output deny theo B2a ở mọi interview phase.
+- [x] Code action trước ready-to-execute deny; không có nhánh skip validation khi execution-state null.
+- [x] blocked remediation allow theo B1d, không deny-all và không mở-write-all.
+- [x] Shell payload đi qua B2b; unknown deny.
+- [x] Hook response có stable reason_code, message, next_command và không lộ token/path secret.
+- [x] Uninstalled target thật sự vẫn uninvolved, không cản project ngoài scope.
 - [x] Tách evaluatePreAction hiện đang phình lớn thành orchestrator dưới 200 dòng và các policy module B2; adapter không tái gom logic vào một file.
 
 ## 4. Interfaces / Files expected to change
@@ -61,7 +61,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. X18 (test chưa chạy installer/wrapper/adversarial thật) nay đã CLOSED —
@@ -85,6 +85,36 @@ sessionStart.ts`) chạy đúng thứ tự `recoverEmit(tier1)` → `recoverEmit
 `checkInstallManifestIntegrity`) tự đọc + verify `install-manifest.json` (schema, runtime_version,
 asset hash, hook wiring) như một phần của health check đó — không phải bước riêng nhưng thoả đúng thứ
 tự "manifest trước inject" vì health luôn chạy trước khi `session-start.mjs` emit context. Checklist
-item CLOSED. Các item còn lại của B4a (UserPromptSubmit stamp/PreToolUse mapping đầy đủ, hook response
-secret-safety, uninstalled-uninvolved regression) chưa đánh giá lại có hệ thống trong lần A1-P8 này ⇒
-B4a giữ PARTIAL.
+item CLOSED.
+
+Cập nhật 2026-08-06 (A1-P8, đánh giá lại có hệ thống các mục còn lại):
+
+- **R03** — cả hai phần B2e và B4a đã đóng trong cùng commit `bd31b6a` (2026-08-03): note "R03 vẫn
+  OPEN" ở trên đã lỗi thời. `session-start.mjs` dòng 40-52 đã inject `reason_code`/`detail`/
+  `safe_next_command` có cấu trúc vào `additionalContext` khi health broken — đúng "structured
+  recovery command trong UI" mà note cũ nói chưa làm. Xem `finding-coverage-matrix.md` R03.
+- **R04** — vẫn `SEAM_PARTIAL` (không phải OPEN — note cũ dùng sai từ), không đổi: đây là khoảng
+  trống **Proof** (thiếu installed-hook test case cho cả hai nhánh `plan-validating`/`blocked`), thuộc
+  Gate A2 (B5a), không phải việc của A1-P8. Không thêm test seam ở đây để giữ đúng ranh giới
+  Implementation/Proof.
+- **UserPromptSubmit** (`src/adapters/claude/userPromptSubmit.ts`) — đối chiếu code: health check trước
+  (dòng 10-20), `issuePromptCapability` là authority duy nhất cho capability + current step (P2.2a
+  canonical store, không còn `answered_len_at_last_turn` stamping kiểu delayed-enforcement cũ). Đúng
+  thiết kế.
+- **PreToolUse mapping** (`src/adapters/claude/preToolUse.ts` + `adapter/claude-code/hooks/
+  pre-tool-use.mjs`) — adapter chỉ map input rồi gọi `evaluatePreAction` (Core) một lần duy nhất, không
+  canonicalize hay hardcode allow path nào ở tầng adapter (canonicalize thật nằm trong Core). Wrapper
+  (`pre-tool-use.mjs` dòng 30) đã map `MultiEdit`/`NotebookEdit` → `'Edit'` từ trước; `Bash` đi qua
+  `classifyCommand`/B2b. Đúng thiết kế, không phải nợ.
+- **Hook response secret-safety** — rà token/path trong mọi `user_message`/deny message của
+  `evaluatePreAction`/CLI operations: không tìm thấy chỗ nào nhúng giá trị capability token vào message
+  (chỉ trả như field `capabilityToken` riêng, có chủ đích, không phải leak); lỗi nội bộ đi qua
+  `redactInternalError` trước khi vào message. Đủ cho mức kiểm tra hợp lý trong phạm vi phase này.
+- **Uninstalled-uninvolved** — `pre-tool-use.mjs` dòng 16-22: `process.exit(0)` ngay khi cả 3 marker
+  (`interview-state.json`/`progress.json`/`install-manifest.json`) đều không có, đúng hành vi. Implementation
+  đúng theo code; **chưa có regression test riêng cho case này** trong `hook-adversarial.test.ts` (có
+  X05 — hướng ngược lại, đã có install thì không được coi là uninvolved — nhưng chưa có case "chưa
+  install thật thì không bị chặn"). Đây là khoảng trống Proof, để lại cho A2 (B5a), không chặn
+  Implementation.
+
+Checklist §3 đủ 11/11. Implementation → `IMPLEMENTED`.

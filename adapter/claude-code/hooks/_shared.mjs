@@ -2,7 +2,7 @@
 // Hooks nhận JSON qua stdin theo giao thức hook của Claude Code và trả JSON qua stdout.
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 
 // Engine root = repo DesignEverything (nơi chứa dist/ + node_modules) — chỉ
 // còn dùng khi chạy trực tiếp từ source checkout (dev mode), xem dưới.
@@ -33,9 +33,39 @@ export function resolveModule(subpath) {
   return join(ENGINE_ROOT, 'dist', subpath);
 }
 
-/** Target-local cli.mjs (sibling of runtime.mjs) when installed; dev-mode source path otherwise. */
+/**
+ * Target-local cli.mjs (sibling of runtime.mjs) when installed; dev-mode
+ * source path otherwise.
+ *
+ * A1-P8 (B4b) — the checklist asks for the launcher path to come from
+ * install-manifest.json's declared launcher asset, not purely from where
+ * this hook happens to sit on disk. Both agree in practice (the installer
+ * always places the launcher exactly where staging says it does), but only
+ * the manifest is the declared source of truth; disk-location inference is
+ * now the fallback for a missing/corrupt manifest or a manifest whose
+ * declared path doesn't actually exist, not the primary source.
+ */
 export function resolveCliLauncherPath() {
-  if (existsSync(SIBLING_BUNDLE)) return join(HOOKS_DIR, '..', 'cli.mjs');
+  if (existsSync(SIBLING_BUNDLE)) {
+    // P9 layout: hooks/ -> runtime/<version>/ -> runtime/ -> .design-everything/
+    const manifestPath = join(HOOKS_DIR, '..', '..', '..', 'install-manifest.json');
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      const launcherAsset = Array.isArray(manifest.assets)
+        ? manifest.assets.find((a) => a && a.kind === 'launcher' && typeof a.path === 'string')
+        : null;
+      if (launcherAsset) {
+        const targetRoot = join(HOOKS_DIR, '..', '..', '..', '..');
+        const launcherPath = join(targetRoot, launcherAsset.path);
+        if (existsSync(launcherPath)) return launcherPath;
+      }
+    } catch {
+      // Missing/corrupt manifest must not break CLI-invocation recognition
+      // itself — inspectRuntimeHealth already reports
+      // CORRUPT_INSTALL_MANIFEST separately for that. Fall through below.
+    }
+    return join(HOOKS_DIR, '..', 'cli.mjs');
+  }
   return join(ENGINE_ROOT, 'adapter/claude-code/cli.mjs');
 }
 

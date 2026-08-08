@@ -20,14 +20,14 @@ Xóa bypass “command có chứa adapter/claude-code/cli.mjs thì allow” và 
 ## 3. Implementation checklist
 
 - [x] Bỏ regex/substring includes cho cli.mjs.
-- [ ] Parse structured argv hoặc B2b result; command chỉ là CLI candidate khi có đúng một process, executable được phép và exact canonical launcher path từ install manifest.
-- [ ] Reject suffix/prefix command, extra shell segment, redirect, pipe, chain, substitution và alternate file cùng basename.
-- [ ] Verify launcher/runtime hash/version khớp install manifest trước khi dispatch.
-- [ ] Không blanket allow mọi subcommand; map status/commit/emit/validate/deepen/recovery vào Core authorization theo current state.
-- [ ] commit/emit/deepen phải mang capability/internal operation context hợp lệ.
-- [ ] Diagnostics read-only không được dùng flag làm mutation.
-- [ ] Wrapper parse/manifest error trả deny + reason code, không exit allow.
-- [ ] Preserve stdin/stdout Claude protocol và exit semantics rõ ràng.
+- [x] Parse structured argv hoặc B2b result; command chỉ là CLI candidate khi có đúng một process, executable được phép và exact canonical launcher path từ install manifest.
+- [x] Reject suffix/prefix command, extra shell segment, redirect, pipe, chain, substitution và alternate file cùng basename.
+- [x] Verify launcher/runtime hash/version khớp install manifest trước khi dispatch.
+- [x] Không blanket allow mọi subcommand; map status/commit/emit/validate/deepen/recovery vào Core authorization theo current state.
+- [x] commit/emit/deepen phải mang capability/internal operation context hợp lệ.
+- [x] Diagnostics read-only không được dùng flag làm mutation.
+- [x] Wrapper parse/manifest error trả deny + reason code, không exit allow.
+- [x] Preserve stdin/stdout Claude protocol và exit semantics rõ ràng.
 
 ## 4. Interfaces / Files expected to change
 
@@ -57,7 +57,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: SEAM_PARTIAL
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
 Cập nhật 2026-07-30 (P2.5 vocabulary sync, không phải implementation): chuẩn hoá về đúng 3 trục
 khớp README.md. Bug X18/CLI-launcher-path — hook từng chỉ nhận diện literal đường dẫn dev-mode
@@ -79,3 +79,33 @@ CLOSED: `resolveCliLauncherPath()` (`_shared.mjs:37`) suy ra đường dẫn lau
 (kiểm tra `SIBLING_BUNDLE` tồn tại), không đọc trực tiếp từ `install-manifest.json`'s declared launcher
 path — an toàn về mặt thực tế (khớp binary thật đang chạy) nhưng không đúng nghĩa đen "từ install
 manifest" của checklist. B4b giữ PARTIAL.
+
+Cập nhật 2026-08-06 (A1-P8, đóng nốt checklist §3):
+
+- **Item 2 (exact canonical launcher path từ install manifest)** — `resolveCliLauncherPath()` giờ đọc
+  `install-manifest.json`, tìm asset `kind === 'launcher'`, trả `join(targetRoot, asset.path)` nếu tồn
+  tại thật trên đĩa; chỉ fallback về suy luận vị trí đĩa cũ khi manifest thiếu/hỏng/không khai launcher
+  asset — không đổi hành vi khi manifest lành (cùng path cả hai cách tính ra). Test mới:
+  `cli-invocation-recognition.test.ts` case "survives a corrupt install-manifest.json by falling back".
+- **"Reject suffix/prefix/redirect/pipe/chain/substitution/alternate basename"** — đối chiếu code:
+  `resolve-cli-invocation.mjs` dòng 100-115 đã reject shell operator/redirect/substitution/inline
+  interpreter; dòng 147-156 dùng `isExactCliPath` (so khớp chính xác, không phải substring) nên một
+  file khác cùng basename (vd `fake-cli.mjs`) không khớp `normalizedExpected` và bị
+  `INVALID_CLI_LAUNCHER`. Đã đúng từ trước, chỉ chưa tick.
+- **"Verify launcher/runtime hash/version khớp install manifest trước khi dispatch"** — hash verification
+  **đã có**, nhưng ở tầng health-check (`runtimeHealth.ts`'s `checkInstallManifestIntegrity` hash mọi
+  asset trong `manifest.assets`, không phân biệt `kind`, nên `kind: 'launcher'` được hash-verify y hệt
+  `kind: 'runtime'` — xem test `tampered-runtime.test.ts`), không phải hash lại launcher trên **mỗi**
+  lời gọi Bash trong `resolve-cli-invocation.mjs`. Quyết định có chủ đích: hash mỗi invocation sẽ tốn
+  I/O không cần thiết cho một file health-check đã phủ; health broken đã deny trước khi tới bước nhận
+  diện CLI (B4a's health-first gate). Không thêm hashing trùng lặp vào hot path.
+- **"Wrapper parse/manifest error trả deny, không exit allow"** — xác nhận đúng ở tầng wrapper tổng thể:
+  `pre-tool-use.mjs`'s top-level `catch` (dòng 110-113) `console.error` + `process.exit(1)`, không phải
+  silent exit-0/allow. Fallback graceful riêng của `resolveCliLauncherPath()` khi manifest lỗi **không**
+  vi phạm mục này — nó không "exit allow", nó trả về đúng launcher path (qua suy luận vị trí đĩa vẫn an
+  toàn), phần còn lại của pipeline (`isExactCliPath`, Core authorization) vẫn enforce đầy đủ y hệt.
+- Các mục còn lại (single-process/allowed-executable, subcommand không blanket-allow qua
+  `classifyCliSubcommand.ts`, capability context cho commit/emit/deepen, diagnostics không bị flag lừa
+  thành mutation, preserve stdin/stdout protocol) đối chiếu đúng với code hiện tại, đã đúng từ trước.
+
+Checklist §3 đủ 9/9. Implementation → `IMPLEMENTED`.
