@@ -8,6 +8,7 @@ import { exitCodeFor } from '../../src/adapters/shared/cliResult.js';
 import { evaluatePreAction } from '../../src/core/evaluatePreAction.js';
 import { manifestPath } from '../../src/core/emitTransactionActivate.js';
 import { seedCanonicalProgress, seedCanonicalAnswers } from '../helpers/canonicalProgress.js';
+import { onUserPromptSubmit } from '../../src/adapters/claude/userPromptSubmit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '../..');
@@ -59,6 +60,57 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
     expect(res.message).not.toContain(tempDir);
   });
 
+  test('A1-04 (Wave A1) — commit ANSWER_NEEDS_USER_ACK is exit code 2 and carries a usable ack_token through the real CLI dispatcher', async () => {
+    cpSync(join(REPO_ROOT, 'Design/Content'), join(tempDir, 'Design/Content'), { recursive: true });
+    const init = await runCliOperation(tempDir, ['init']);
+    expect(init.ok).toBe(true);
+
+    const cal = onUserPromptSubmit({ workspaceRoot: tempDir });
+    expect(cal.capabilityToken).toBeTruthy();
+    const calCommit = await runCliOperation(tempDir, [
+      'commit',
+      '--capability-token',
+      cal.capabilityToken as string,
+      '--calibrate',
+      'fast',
+    ]);
+    expect(calCommit.ok).toBe(true);
+
+    const s0 = onUserPromptSubmit({ workspaceRoot: tempDir });
+    expect(s0.capabilityToken).toBeTruthy();
+    const refusal = await runCliOperation(tempDir, [
+      'commit',
+      '--capability-token',
+      s0.capabilityToken as string,
+      '--answer',
+      'Nền tảng kết nối mọi người.', // matches S0_GENERIC_PITCH's warning_rules pattern
+    ]);
+
+    expect(refusal.ok).toBe(false);
+    expect(refusal.reason_code).toBe('ANSWER_NEEDS_USER_ACK');
+    expect(refusal.severity).toBe('error');
+    expect(exitCodeFor(refusal)).toBe(2);
+    const ackToken = refusal.data?.ack_token as string | undefined;
+    expect(typeof ackToken).toBe('string');
+    expect((ackToken as string).length).toBeGreaterThan(0);
+
+    // The same capability token is still valid (commitStep never advanced
+    // on a needs_user_ack refusal) — resubmit with --ack-token and it
+    // commits for real.
+    const accepted = await runCliOperation(tempDir, [
+      'commit',
+      '--capability-token',
+      s0.capabilityToken as string,
+      '--answer',
+      'Nền tảng kết nối mọi người.',
+      '--ack-token',
+      ackToken as string,
+    ]);
+    expect(accepted.ok).toBe(true);
+    expect(accepted.reason_code).toBe('COMMIT_SUCCESS');
+    expect(exitCodeFor(accepted)).toBe(0);
+  });
+
   function seedEmitReadyWorkspace(workspace: string): void {
     cpSync(join(REPO_ROOT, 'Design/Content'), join(workspace, 'Design/Content'), { recursive: true });
     seedCanonicalProgress(workspace, {
@@ -99,6 +151,41 @@ describe('B4c — CLI exit, output and health protocol contract', () => {
     expect(existsSync(manifestPath(tempDir, 'tier1'))).toBe(true);
     expect(existsSync(join(tempDir, '.design-everything/emit-journal.json'))).toBe(true);
     expect(existsSync(join(tempDir, 'docs/00-vision.md'))).toBe(true);
+  });
+
+  test('A1-04 (Wave A1) — a genuine provenance gap fails emit closed with EMIT_VALIDATION_FAILED at exit code 2, not a tolerated warning', async () => {
+    // A1-02 promoted derived-recipe-provenance-missing to error severity;
+    // this seeds cli-shape answers with no architecture questions (C1-C5,
+    // S8) answered at all, so 05-architecture.md's populated fallback text
+    // gets no "> Nguồn:" citation to attach (nothing was actually
+    // answered) — the same real gap emitTransactionValidate.test.ts's A1-02
+    // suite exercises directly, proven here through the actual CLI
+    // dispatcher instead of calling validateStagedEmit in-process.
+    cpSync(join(REPO_ROOT, 'Design/Content'), join(tempDir, 'Design/Content'), { recursive: true });
+    seedCanonicalProgress(tempDir, { phase: 'ready-for-validation', branch: 'cli', current_step: null });
+    seedCanonicalAnswers(tempDir, {
+      S0: 'CLI tool',
+      S1: 'Nỗi đau A, xoay xở B',
+      S2: 'Dev (Contributor)',
+      S3: 'Must: chạy lệnh chính. Should: log đẹp.',
+      S4: 'Config, Job',
+      S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
+      S6: 'Solo, 2 tuần',
+      // C1-C5 and S8 deliberately omitted.
+    });
+
+    const res = await runCliOperation(tempDir, ['emit']);
+    expect(res.ok).toBe(false);
+    expect(res.reason_code).toBe('EMIT_VALIDATION_FAILED');
+    expect(res.severity).toBe('error');
+    expect(exitCodeFor(res)).toBe(2);
+    // The deny happened before any doc was activated — a rejected emit
+    // must never leave a partial live tree behind.
+    expect(existsSync(join(tempDir, 'docs/05-architecture.md'))).toBe(false);
+    expect(existsSync(manifestPath(tempDir, 'tier1'))).toBe(false);
+
+    const issues = res.data?.issues as Array<{ id: string; severity: string }> | undefined;
+    expect(issues?.some((i) => i.id === 'derived-recipe-provenance-missing' && i.severity === 'error')).toBe(true);
   });
 
   test('P10 — emit sources tier-1 answers from the canonical store, not the dead legacy Design/.interview/answers.json file', async () => {

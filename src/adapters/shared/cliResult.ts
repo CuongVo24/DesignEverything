@@ -47,7 +47,14 @@ export function exitCodeFor(result: CliResultEnvelope): number {
     code.includes('GATE_CLOSED') ||
     code.includes('PLAN_VALIDATION') ||
     code.includes('POLICY') ||
-    code.includes('DENIED')
+    code.includes('DENIED') ||
+    // A1-04 (Wave A1) — ANSWER_NEEDS_USER_ACK (interviewApplicationServices.ts)
+    // is a real user-actionable refusal (show the warning, get consent,
+    // retry with --ack-token), not an internal engine failure. Matched by
+    // the specific 'NEEDS_USER_ACK' substring rather than a bare 'ACK' —
+    // 'ACK' alone would also match unrelated future codes like a
+    // hypothetical 'PACKAGE_*' or 'TRACK_*'.
+    code.includes('NEEDS_USER_ACK')
   ) {
     return 2;
   }
