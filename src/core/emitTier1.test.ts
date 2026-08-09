@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { mkdtempSync, rmSync, existsSync, cpSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync, cpSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { activateTier1Emit } from './emitTier1.js';
 import { manifestPath } from './emitTransactionActivate.js';
@@ -108,15 +108,15 @@ describe('P7.1 — activateTier1Emit is the sole application-service authority f
 
 describe('P6.2/U06/X23 -> A1-02 (Wave A1) — derived-recipe provenance is now a real, satisfied citation, not a tolerated gap', () => {
   // Before A1-02, a normal cli emit always tripped derived-recipe-
-  // provenance-missing as a non-blocking warning (no tier-1 template cited
-  // its sources) and this describe block existed to prove that warning got
-  // logged. A1-02 made emit.ts's renderer attach real "> Nguồn:" citations
-  // (see emit.ts's withSourceNote/collectDecisions wiring) and promoted the
-  // check to error severity (emitTransactionValidate.ts) — so a clean cli
-  // emit no longer produces that issue at all, at either severity. These
-  // tests now pin THAT: the citations the renderer adds are real enough
-  // that a normal answers fixture emits clean, not "clean because we
-  // stopped checking".
+  // provenance-missing as a non-blocking warning, and it was recorded to a
+  // best-effort append-only log (appendWarningAcknowledgement). A1-02 made
+  // emit.ts's renderer attach real "> Nguồn:" citations (see emit.ts's
+  // withSourceNote/collectDecisions wiring) and promoted the check to
+  // error severity — a clean cli emit no longer produces that issue at
+  // any severity, which made the log mechanism permanently unreachable.
+  // A1-03 removed it rather than leave dead code with a docstring
+  // describing behavior that could never run; this test pins the
+  // renderer-correctness half of that removal's precondition.
   test('a complete cli emit produces zero derived-recipe-provenance-missing issues (renderer citations are real)', () => {
     const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(result.ok).toBe(true);
@@ -124,24 +124,40 @@ describe('P6.2/U06/X23 -> A1-02 (Wave A1) — derived-recipe provenance is now a
     expect(result.reason_code).toBe('EMIT_ACTIVATED');
     expect(result.warnings.some((w) => w.id === 'derived-recipe-provenance-missing')).toBe(false);
   });
+});
 
-  test('no provenance-acknowledgement log entry is written when nothing needed acknowledging', () => {
+describe('A1-03 (Wave A1) — staging directory is always cleaned up, success or reject', () => {
+  function stagedGenerationDirs(): string[] {
+    const stagingRoot = join(root, '.design-everything/staging');
+    if (!existsSync(stagingRoot)) return [];
+    return readdirSync(stagingRoot);
+  }
+
+  test('a successful activation leaves no orphaned staging directory behind', () => {
     const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    // appendWarningAcknowledgement only ever fires when provenanceWarnings
-    // is non-empty; a clean emit (see test above) never populates it, so
-    // the log is never created — not "created but empty".
-    const logPath = join(root, '.design-everything/emit-warning-acknowledgements.json');
-    expect(existsSync(logPath)).toBe(false);
+    // prepareEmit's staging dir is named after the generation it just
+    // activated — activateEmit copies out of it rather than moving it, so
+    // without A1-03's cleanup it would still be sitting on disk here.
+    expect(stagedGenerationDirs()).not.toContain(result.manifest_generation_id);
+    expect(stagedGenerationDirs().length).toBe(0);
   });
 
-  test('a second emit with no derived recipes at all (unloadable) never reaches the log — failure happens before validation', () => {
-    rmSync(join(root, 'Design/Content/interview-script/derived-recipes.yaml'));
+  test('a rejected activation (user-file-collision) also leaves no orphaned staging directory', () => {
+    // No manifest exists yet, so activateEmit's collision check treats any
+    // pre-existing file at a target doc path as a real, un-managed user
+    // file — never silently adopted. prepareEmit still stages the full
+    // generation before this rejection is discovered at the activate step,
+    // which is exactly the path this test needs.
+    mkdirSync(join(root, 'docs'), { recursive: true });
+    writeFileSync(join(root, 'docs/00-vision.md'), 'pre-existing user content, not from this engine', 'utf8');
+
     const result = activateTier1Emit(root, cliAnswers, 'cli', handoffInput);
     expect(result.ok).toBe(false);
-    const logPath = join(root, '.design-everything/emit-warning-acknowledgements.json');
-    expect(existsSync(logPath)).toBe(false);
+    if (result.ok) return;
+    expect(result.reason_code).toBe('EMIT_FILE_COLLISION');
+    expect(stagedGenerationDirs().length).toBe(0);
   });
 });
