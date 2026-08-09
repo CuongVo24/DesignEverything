@@ -7,7 +7,7 @@ import { createHash } from 'crypto';
  * turnCapabilityRecordSchema's shape (src/core/schemas/state.ts /
  * turnCapability.ts) deliberately: same layered verify failure modes, same
  * single-use-by-status discipline. See the G0 interface note at
- * Design/ContractForAI/Core/v1-fix-bugs/B3/b3b-g0-interface-note.md for why
+ * Design/ContractForAI/Core/v1-fix-bugs/b3b-g0-interface-note.md for why
  * this exists and what it does NOT cover (derived-recipe provenance is a
  * deterministic reject, never ack-able — see that note §0).
  */

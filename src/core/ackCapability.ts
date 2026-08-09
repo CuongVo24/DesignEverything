@@ -13,7 +13,7 @@ import { verifyAckCapability, type AckExpectation, type VerifyAckResult } from '
  * thật, realtime, phân phối đa nền tảng — see QualityRubric.md §G). This is
  * deliberately NOT used for derived-recipe provenance, which is a
  * deterministic reject; see the G0 interface note at
- * Design/ContractForAI/Core/v1-fix-bugs/B3/b3b-g0-interface-note.md §0.
+ * Design/ContractForAI/Core/v1-fix-bugs/b3b-g0-interface-note.md §0.
  *
  * Replaces the bare `ackWarnings?: boolean` pattern
  * (interviewApplicationServices.ts, cliOps/commit.ts's `--ack-warnings`)

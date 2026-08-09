@@ -925,6 +925,17 @@ hardcode ở đây theo đúng nguyên tắc §0).
   chỉ là một boolean flag do caller tự khai; không có gì chặn model tự ý
   set `--ack-warnings` mà không thực sự hỏi người dùng. Ghi nhận là gap
   còn lại, không phải đã đóng đầy đủ theo đúng ý plan.
+  **Đóng 2026-08-09 (Wave A1, A1-03b):** gap này đã đóng đúng nghĩa —
+  `ackWarnings: boolean` thay bằng `ackToken: string`, verify/consume qua
+  `consumeAckCapability` (`src/core/ackCapability.ts`, mirror
+  `turnCapability.ts`): bind digest cảnh báo + digest answer text + revision
+  interview, single-use qua tạo file độc quyền (`wx`). CLI đổi
+  `--ack-warnings` → `--ack-token`. 10 test mới trong
+  `interviewApplicationServices.test.ts` xác nhận model không thể tự set
+  token hợp lệ — chỉ token do chính engine phát hành sau lần từ chối đầu mới
+  dùng được, và chỉ dùng được một lần. Xem
+  `b3b_derived_content_provenance_quality_contract.md` §7 và
+  `MasterSequencingPlan.md`'s dòng A1-Wave-A1.
 - [ ] `loadQuestionSlots` nhận absolute workspace root và canonical
   scratch path: đã đúng từ trước (`canonicalizeWorkspacePath`), không đổi
   trong đợt này.

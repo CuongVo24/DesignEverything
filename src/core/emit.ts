@@ -68,7 +68,7 @@ export type InterviewAnswers = Record<string, string>;
  * doc-wide guess. Never invents a citation: empty text or an empty
  * `sourceIds` list returns `text` unchanged rather than attaching a marker
  * that would claim a source that isn't there. See
- * Design/ContractForAI/Core/v1-fix-bugs/B3/b3b-g0-interface-note.md §0.
+ * Design/ContractForAI/Core/v1-fix-bugs/b3b-g0-interface-note.md §0.
  */
 function withSourceNote(text: string, sourceIds: string[]): string {
   if (!text.trim() || sourceIds.length === 0) return text;
