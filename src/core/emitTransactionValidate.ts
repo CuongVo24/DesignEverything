@@ -8,6 +8,7 @@ import { checkDocsConsistency } from './checkDocsConsistency.js';
 import type { EmittedDoc } from './emit.js';
 import type { ProjectProfile } from './schemas/index.js';
 import type { DerivedRecipe } from './schemas/derivedRecipes.js';
+import { runDerivedRecipe } from './runDerivedRecipe.js';
 
 export interface StageValidationIssue {
   id: string;
@@ -99,19 +100,22 @@ export function validateStagedEmit(
     });
   }
 
-  // 4. Derived-recipe provenance (P6 10.2) — an artifact whose catalog entry
-  // declares source.recipe_ids must show SOME provenance signal (a
-  // "> Nguồn:" line, tier2RenderHelpers' established convention, or the
-  // recipe's own fallback.on_missing_source text) somewhere in the staged
-  // content. Deliberately coarse and warning-only: no tier-1 doc-template
-  // emits per-item SourceRef markers yet (that convention only exists for
-  // tier-2 render today, via assembleArtifact), so a hard per-item check via
-  // runDerivedRecipe would need structured items no current renderer
-  // produces — promoting this to error-severity needs template-authoring
-  // work, tracked separately.
+  // 4. Derived-recipe provenance, markdown docs (A1-02, Wave A1) — an
+  // artifact whose catalog entry declares source.recipe_ids must show a
+  // real provenance signal in the staged content: a "> Nguồn:" line (now
+  // emitted per-block by emit.ts's withSourceNote/collectDecisions wiring —
+  // see e.g. filledSlots['flow_diagram']/['risk_register']/
+  // ['decision_table']), or the recipe's own fallback.on_missing_source
+  // text where the content is honestly not answer-derived. This used to be
+  // warning-only because no tier-1 template emitted per-item markers yet;
+  // now that emit.ts does, a missing marker is a real gap, not a checker
+  // limitation, so it blocks activation (error) rather than requiring ack.
+  // JSON/state artifacts are excluded here — a text regex can never
+  // legitimately match JSON content; see step 5 for their structural check.
   if (derivedRecipes.length > 0) {
     const recipesById = new Map(derivedRecipes.map((r) => [r.id, r]));
     for (const artifact of manifest.artifacts) {
+      if (artifact.kind !== 'doc') continue;
       const catalogEntry = catalog.artifacts.find((a) => a.id === artifact.id);
       const recipeIds = catalogEntry?.source.recipe_ids ?? [];
       if (recipeIds.length === 0) continue;
@@ -131,8 +135,63 @@ export function validateStagedEmit(
         if (!hasSourceMarker && !hasUnknownMarker) {
           issues.push({
             id: 'derived-recipe-provenance-missing',
-            severity: 'warning',
+            severity: 'error',
             message: `Artifact "${artifact.id}" được recipe "${recipeId}" khai báo nguồn, nhưng nội dung staged không có dấu hiệu provenance nào ("> Nguồn:" hoặc fallback unknown).`,
+          });
+        }
+      }
+    }
+  }
+
+  // 5. Derived-recipe provenance, JSON/state artifacts (A1-02) — the
+  // execution-plan.json risks/tasks already carry real `source_refs`
+  // (synthesizeExecutionPlan.ts: populated for interview-derived entries,
+  // deliberately absent for procedural ones — see planRiskSchema/
+  // taskCardSchema's source_refs comment). This runs runDerivedRecipe (the
+  // same checker B3b's own unit tests exercise) as production authority for
+  // real, not a text-scan proxy for it. Items without source_refs are
+  // excluded from the checked set by design — they were never claimed to
+  // be answer-derived, so "missing source" doesn't apply to them.
+  const EXECUTION_PLAN_JSON_PATH = '.design-everything/execution-plan.json';
+  if (derivedRecipes.length > 0 && planArtifact) {
+    const recipesById = new Map(derivedRecipes.map((r) => [r.id, r]));
+    const catalogEntry = catalog.artifacts.find((a) => a.path === EXECUTION_PLAN_JSON_PATH);
+    const recipeIds = catalogEntry?.source.recipe_ids ?? [];
+    let planJson: { risks?: unknown[]; tasks?: Record<string, unknown> } | null = null;
+    try {
+      planJson = JSON.parse(readFileSync(join(stagingDir, planArtifact.path), 'utf8'));
+    } catch {
+      planJson = null; // already reported as execution-plan-unreadable above
+    }
+
+    if (planJson) {
+      for (const recipeId of recipeIds) {
+        const recipe = recipesById.get(recipeId);
+        if (!recipe) continue;
+        const knownIds = recipe.inputs.question_ids ?? [];
+
+        const items =
+          recipe.id === 'execution-plan-risk-classification'
+            ? (planJson.risks ?? [])
+                .filter((r): r is { title: string; status: string; source_refs?: string[] } =>
+                  Array.isArray((r as { source_refs?: string[] }).source_refs) && (r as { source_refs: string[] }).source_refs.length > 0
+                )
+                .map((r) => ({ risk: r.title, classification: r.status, source_refs: r.source_refs }))
+            : recipe.id === 'build-plan'
+              ? Object.values(planJson.tasks ?? {})
+                  .filter((t): t is { id: string; intent: string; type: string; source_refs?: string[] } =>
+                    Array.isArray((t as { source_refs?: string[] }).source_refs) && (t as { source_refs: string[] }).source_refs.length > 0
+                  )
+                  .map((t) => ({ task_id: t.id, title: t.intent, source_refs: t.source_refs, tier: t.type }))
+              : [];
+        if (items.length === 0) continue;
+
+        const result = runDerivedRecipe(recipe, items, knownIds);
+        if (!result.all_pass) {
+          issues.push({
+            id: 'derived-recipe-json-provenance-invalid',
+            severity: 'error',
+            message: `execution-plan.json's ${recipe.id === 'build-plan' ? 'tasks' : 'risks'} failed derived-recipe coverage for recipe "${recipeId}": ${JSON.stringify(result.item_results.filter((r) => r.coverage === 'flag'))}`,
           });
         }
       }

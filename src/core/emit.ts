@@ -26,7 +26,7 @@ import { inspectProjectProfile, inferProfileAnswersFromInterview } from './inspe
 import { synthesizeExecutionPlan } from './synthesizeExecutionPlan.js';
 import { planWeeklySchedule, renderWeeklySchedule } from './planWeeklySchedule.js';
 import { entityDiagramFromSlots, flowDiagramFromSlots } from './renderMermaid.js';
-import { renderDecisionTable } from './renderDecisionLog.js';
+import { renderDecisionTable, collectDecisions } from './renderDecisionLog.js';
 import { extractMustFeatures, extractWontFeatures } from './validatePlan.js';
 import type { ProjectProfile } from './schemas/index.js';
 
@@ -60,6 +60,20 @@ function resolveProjectProfile(cwd: string, answers: InterviewAnswers, branch: s
 }
 
 export type InterviewAnswers = Record<string, string>;
+
+/**
+ * A1-02 (Wave A1, 8.1.0 rollout) — appends a truthful, human-readable
+ * provenance line to rendered content so `derived-recipe-provenance-missing`
+ * (emitTransactionValidate.ts) has something real to find instead of a
+ * doc-wide guess. Never invents a citation: empty text or an empty
+ * `sourceIds` list returns `text` unchanged rather than attaching a marker
+ * that would claim a source that isn't there. See
+ * Design/ContractForAI/Core/v1-fix-bugs/B3/b3b-g0-interface-note.md §0.
+ */
+function withSourceNote(text: string, sourceIds: string[]): string {
+  if (!text.trim() || sourceIds.length === 0) return text;
+  return `${text}\n\n> Nguồn: ${sourceIds.join(', ')}`;
+}
 
 export interface EmittedDoc {
   file: string;     // relative path (e.g. '00-vision.md')
@@ -239,9 +253,13 @@ export function emitTree(
       coreEntities: filledSlots['core_entities'],
       entityRelationships: filledSlots['entity_relationships'],
     });
+  // A1-02 — every node in this diagram comes from splitting the S5 answer
+  // into steps (flowDiagramFromSlots), so S5 is the one honest citation for
+  // the whole diagram; a directly-supplied override has no traceable
+  // question and gets no marker.
   filledSlots['flow_diagram'] =
     answers['flow_diagram'] ||
-    flowDiagramFromSlots({ mainFlowSteps: filledSlots['main_flow_steps'] });
+    withSourceNote(flowDiagramFromSlots({ mainFlowSteps: filledSlots['main_flow_steps'] }), ['S5']);
 
   // S8 — yêu cầu phi chức năng. Đây là hai thứ đổi kiến trúc nhiều nhất mà người
   // mới không biết để tự nêu: dữ liệu nhạy cảm (quyết định mức bảo mật) và quy mô
@@ -269,16 +287,51 @@ export function emitTree(
   // điền xong, nếu không bảng sẽ ghi "(chưa chốt)" cho chính thứ vừa chốt. Dựng
   // từ cùng bộ slot với 05-architecture nên hai file không thể lệch nhau.
   filledSlots['decision_table'] =
-    answers['decision_table'] || renderDecisionTable({ branch, slots: filledSlots });
+    answers['decision_table'] ||
+    // Every row already cites its own question in the "Nối từ câu" column
+    // (renderDecisionLog.ts) — this line just points a human/checker at
+    // that existing, real per-row mechanism rather than repeating it.
+    `${renderDecisionTable({ branch, slots: filledSlots })}\n\n> Nguồn: mỗi hàng nối trực tiếp một câu phỏng vấn — xem cột "Nối từ câu".`;
+
+  // A1-02 — attach the same per-decision citation renderDecisionTable just
+  // used (collectDecisions is the single source of truth for slot->question
+  // mapping) onto the raw 05-architecture.md sections themselves. Must run
+  // AFTER decision_table above, not before: mutating these slot values
+  // first would leak "> Nguồn: ..." text into the table's cells via
+  // toCell()'s newline collapsing.
+  //
+  // Citing only ANSWERED questions, not merely non-empty slots, matters: S8
+  // (data_sensitivity_and_security/expected_scale_and_performance) falls
+  // back to real, non-empty methodology-default text when unanswered
+  // (lines above) — citing "S8" there when the user never answered S8
+  // would be exactly the fabricated citation A1-02 exists to prevent.
+  for (const decision of collectDecisions({ branch, slots: filledSlots })) {
+    if (decision.slot === '__branch__') continue;
+    const current = filledSlots[decision.slot];
+    if (current === undefined) continue;
+    const sourceIds = decision.source_question.split('/').filter((qid) => Boolean(answers[qid]));
+    filledSlots[decision.slot] = withSourceNote(current, sourceIds);
+  }
 
   // 08-build-plan.md — file dẫn xuất (D28): slot do skill điền lúc emit;
   // fallback deterministic dựng từ answers thô S3 (Must) + S5 (flow) nếu skill không cung cấp.
   filledSlots['build_plan_principles'] =
     answers['build_plan_principles'] ||
     'Đi từng milestone một, theo đúng thứ tự — không nhảy cóc. Milestone đầu tiên luôn là "khung xương biết đi" (walking skeleton): một lát cắt mỏng nhất của flow chính chạy được từ đầu tới cuối, dù xấu. Mỗi milestone sau chỉ thêm đúng một mục Must, và phải chạy lại được flow chính trước khi sang milestone kế. Chưa xong Must thì chưa đụng Should/Could.';
-  filledSlots['build_milestones'] =
-    answers['build_milestones'] ||
-    `M0 — Khung xương biết đi: dựng project chạy được với lát cắt mỏng nhất của flow chính (xem 04-flows.md). Done-when: chạy được một lượt flow từ đầu tới cuối với dữ liệu cứng.\n\nCác milestone kế tiếp — mỗi mục Must trong 02-scope.md là một milestone, xếp theo thứ tự xuất hiện trong flow chính:\n${filledSlots['must_have_scope']}\n\nDone-when của mỗi milestone: bước tương ứng trong 04-flows.md chạy được thật (không mock), và các milestone trước vẫn chạy.`;
+  // A1-02 — doc-08-build-plan is recipe-tagged (build-plan); a caller-
+  // supplied override (skill, or --slots-file per B3a) reaches emit.ts with
+  // no digest/revision Core can verify at this layer, so it gets the
+  // recipe's own unknown-fallback marker rather than a citation Core can't
+  // back up. Every milestone after M0 in the deterministic fallback below
+  // is literally "one Must (S3) placed in flow order (S5)" — already
+  // stated in the text — so withSourceNote just makes that citation
+  // machine-checkable too.
+  filledSlots['build_milestones'] = answers['build_milestones']
+    ? `${answers['build_milestones']}\n\n> ⚠ unknown — cần hỏi người (nguồn S3/S5 chưa được engine xác minh)`
+    : withSourceNote(
+        `M0 — Khung xương biết đi: dựng project chạy được với lát cắt mỏng nhất của flow chính (xem 04-flows.md). Done-when: chạy được một lượt flow từ đầu tới cuối với dữ liệu cứng.\n\nCác milestone kế tiếp — mỗi mục Must trong 02-scope.md là một milestone, xếp theo thứ tự xuất hiện trong flow chính:\n${filledSlots['must_have_scope']}\n\nDone-when của mỗi milestone: bước tương ứng trong 04-flows.md chạy được thật (không mock), và các milestone trước vẫn chạy.`,
+        ['S3', 'S5']
+      );
   filledSlots['build_verification_notes'] =
     answers['build_verification_notes'] ||
     `Sau mỗi milestone: chạy lại toàn bộ flow chính trong 04-flows.md như một người dùng thật, và rà các điểm dễ vỡ đã ghi nhận: ${filledSlots['main_flow_risks_or_edge_cases'] || '(xem 04-flows.md mục Điểm Dễ Vỡ)'}`;
@@ -309,9 +362,18 @@ export function emitTree(
   // Glossary: skill điền thuật ngữ nghiệp vụ riêng của dự án lúc emit (D28);
   // fallback deterministic là bảng thuật ngữ của chính phương pháp — luôn đúng
   // cho mọi dự án, giúp người mới đọc docs không vấp khái niệm.
-  filledSlots['docs_readme_glossary'] =
-    answers['docs_readme_glossary'] ||
-    `| Thuật ngữ | Nghĩa |
+  //
+  // A1-02 — readme-glossary's recipe declares S2/S4 as its source, but Core
+  // (a "weak executor" trust boundary) has no way to verify that skill-
+  // supplied `answers['docs_readme_glossary']` text actually traces to
+  // those answers — so per QualityRubric.md §F/G it gets the recipe's own
+  // unknown_policy fallback text rather than being accepted as sourced.
+  // The static methodology table below is NOT project-specific content in
+  // the first place (same text for every project), so it needs no S2/S4
+  // citation — it gets an honest note saying exactly that instead.
+  filledSlots['docs_readme_glossary'] = answers['docs_readme_glossary']
+    ? `${answers['docs_readme_glossary']}\n\n> ⚠ unknown — cần hỏi người (nguồn S2/S4 chưa được engine xác minh)`
+    : `| Thuật ngữ | Nghĩa |
 |---|---|
 | Must / Should / Could / Won't | Bốn tầng phạm vi MVP (xem 02-scope.md). Won't là cố ý KHÔNG làm, không phải quên. |
 | M0 — khung xương biết đi | Milestone đầu tiên: lát cắt mỏng nhất của flow chính chạy end-to-end với dữ liệu cứng. |
@@ -319,7 +381,9 @@ export function emitTree(
 | allowed_paths | Danh sách file được phép sửa trong một task; sửa ngoài phạm vi sẽ bị gate chặn. |
 | verify / evidence | Lệnh kiểm chứng do engine tự chạy và bằng chứng nó ghi lại; task chỉ done khi verify pass. |
 
-(Thuật ngữ nghiệp vụ riêng của dự án: xem thực thể trong 03-data-model.md.)`;
+(Thuật ngữ nghiệp vụ riêng của dự án: xem thực thể trong 03-data-model.md.)
+
+> Nguồn: bảng thuật ngữ phương pháp DesignEverything, không phải nội dung riêng dự án — không cần trích nguồn phỏng vấn.`;
 
   filledSlots['docs_readme_file_map'] =
     answers['docs_readme_file_map'] ||
@@ -442,14 +506,19 @@ export function emitTree(
     filledSlots['first_supported_environment'] =
       `- Trạng thái: BỊ CHẶN (Blocked)\n- Lý do: ${synthesis.message || 'Thiếu project manifest hoặc chưa xác nhận cấu hình.'}`;
 
+    // Blocked state: every row here is procedural (workspace has no valid
+    // profile yet), not derived from any interview answer — say so rather
+    // than cite a question that isn't the real reason this row exists.
     filledSlots['risk_register'] =
-      `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n| R-blocked | Cao | spike-required | ${synthesis.message || 'Khởi tạo tệp tin cấu hình dự án.'} |`;
+      `| Mã rủi ro | Mức độ | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) | Nguồn |\n|---|---|---|---|---|\n| R-blocked | Cao | spike-required | ${synthesis.message || 'Khởi tạo tệp tin cấu hình dự án.'} | quy trình hệ thống |` +
+      `\n\n> Nguồn: mỗi hàng nối trực tiếp một câu phỏng vấn hoặc "quy trình hệ thống" — xem cột "Nguồn".`;
 
     filledSlots['feasibility_spikes'] =
       '- **Khảo sát rủi ro**: Khởi tạo tệp manifest của stack đã chốt ngay tại thư mục gốc (`package.json` cho Node CLI, `pyproject.toml` hoặc `requirements.txt` cho Python CLI, scaffold Vite cho web), sau đó chạy lại lệnh `emit` để engine sinh lại execution plan theo stack thật.';
 
     filledSlots['task_cards'] =
-      `### [Task T0-discovery] Khảo sát môi trường và cấu hình tệp dự án\n- Loại: spike\n- Mục tiêu: Thiết lập cấu hình dự án hợp lệ.\n- Preconditions: Không.\n- Lệnh kiểm chứng: Không.`;
+      `### [Task T0-discovery] Khảo sát môi trường và cấu hình tệp dự án\n- Loại: spike\n- Mục tiêu: Thiết lập cấu hình dự án hợp lệ.\n- Preconditions: Không.\n- Lệnh kiểm chứng: Không.\n- Nguồn: quy trình hệ thống (không từ câu trả lời)` +
+      `\n\n> Nguồn: mỗi task ghi rõ nguồn ở dòng "- Nguồn:" riêng.`;
 
     filledSlots['acceptance_evidence_rules'] =
       '- **Chặn quy trình (Blocked)**: Toàn bộ quá trình triển khai bị chặn cho đến khi phát hiện được project manifest hợp lệ.';
@@ -457,9 +526,20 @@ export function emitTree(
     filledSlots['first_supported_environment'] =
       `- Target: ${profile.target}\n- Runtime: ${profile.runtime}\n- Package Manager: ${profile.package_manager}\n- Language: ${profile.language}\n- Capabilities: ${profile.capabilities.join(', ')}`;
 
+    // A1-02 — a "Nguồn" column per row: risks with `source_refs` (see
+    // synthesizeExecutionPlan.ts) name the exact question(s) they came
+    // from; procedural risks (R1/R2, resolved by T0/T1 regardless of any
+    // answer) say so honestly instead of citing a question that isn't
+    // their real basis.
     filledSlots['risk_register'] =
-      `| Mã rủi ro | Tiêu đề | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) |\n|---|---|---|---|\n` +
-      planJson.risks.map((r) => `| ${r.id} | ${r.title} | ${r.status} | ${r.exit_criterion} |`).join('\n');
+      `| Mã rủi ro | Tiêu đề | Trạng thái | Tiêu chuẩn thoát (Exit Criterion) | Nguồn |\n|---|---|---|---|---|\n` +
+      planJson.risks
+        .map(
+          (r) =>
+            `| ${r.id} | ${r.title} | ${r.status} | ${r.exit_criterion} | ${r.source_refs && r.source_refs.length > 0 ? r.source_refs.join(', ') : 'quy trình hệ thống'} |`
+        )
+        .join('\n') +
+      `\n\n> Nguồn: mỗi hàng nối trực tiếp một câu phỏng vấn hoặc "quy trình hệ thống" — xem cột "Nguồn".`;
 
     filledSlots['feasibility_spikes'] =
       planJson.risks
@@ -467,6 +547,10 @@ export function emitTree(
         .map((r) => `- **Spike ${r.id}**: ${r.exit_criterion}`)
         .join('\n') || '- Không có spike yêu cầu khảo sát thêm.';
 
+    // A1-02 — same per-item citation as risk_register above: feature tasks
+    // compiled from a Must (synthesizeExecutionPlan.ts) carry real
+    // source_refs; the fixed T0-discovery..T3-verify scaffold tasks don't
+    // quote a specific answer, so they say so rather than fabricate one.
     filledSlots['task_cards'] = Object.values(planJson.tasks)
       .map((task) => {
         const cmdLines = task.commands.map((cmd) => `  * \`${cmd.argv.join(' ')}\` (expected: ${cmd.expected.kind} ${cmd.expected.value || ''})`).join('\n');
@@ -475,9 +559,10 @@ export function emitTree(
           `- Milestone: ${task.milestone}\n` +
           `- Preconditions: ${task.preconditions.join(', ') || 'Không'}\n` +
           `- Allowed paths: ${task.allowed_paths.join(', ') || 'Không'}\n` +
-          `- Lệnh kiểm chứng:\n${cmdLines || '  * Không'}`;
+          `- Lệnh kiểm chứng:\n${cmdLines || '  * Không'}\n` +
+          `- Nguồn: ${task.source_refs && task.source_refs.length > 0 ? task.source_refs.join(', ') : 'quy trình hệ thống (không từ câu trả lời)'}`;
       })
-      .join('\n\n');
+      .join('\n\n') + `\n\n> Nguồn: mỗi task ghi rõ nguồn ở dòng "- Nguồn:" riêng.`;
 
     filledSlots['acceptance_evidence_rules'] =
       '- **Bằng chứng (Evidence)**: Mỗi task hoàn thành phải đính kèm tệp log output hoặc bằng chứng tương ứng.\n- **Tiếp tục (Resume)**: Khi đổi phiên làm việc hoặc khởi động lại Agent, đọc lại `execution-state.json` và tiếp tục từ task chưa hoàn thành gần nhất.';

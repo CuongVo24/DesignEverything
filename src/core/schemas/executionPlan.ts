@@ -43,6 +43,14 @@ export const taskCardSchema = z.object({
   evidence_required: z.array(z.string()).default([]),
   failure_policy: z.string().min(1),
   requires_capability: z.string().nullable().optional(),
+  // A1-02 (Wave A1, 8.1.0 rollout) — additive, optional. Present only for
+  // tasks traceable to a specific interview answer (e.g. Must-derived
+  // feature tasks -> ['S3', 'S5']); intentionally absent for
+  // procedurally-generated tasks (T0-discovery..T3-verify from
+  // stackRecipes.ts) that don't quote or derive from a specific answer.
+  // Absence is not an error — it means "not claimed as answer-derived",
+  // not "missing citation". See b3b-g0-interface-note.md §0.
+  source_refs: z.array(z.string()).optional(),
 });
 export type TaskCard = z.infer<typeof taskCardSchema>;
 
@@ -51,6 +59,9 @@ export const planRiskSchema = z.object({
   title: z.string().min(1),
   status: z.enum(['confirmed', 'assumption', 'spike-required']),
   exit_criterion: z.string().min(1),
+  // A1-02 — see taskCardSchema.source_refs comment; same additive,
+  // present-only-when-answer-derived convention.
+  source_refs: z.array(z.string()).optional(),
 });
 export type PlanRisk = z.infer<typeof planRiskSchema>;
 

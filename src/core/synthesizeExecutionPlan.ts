@@ -157,10 +157,17 @@ export function synthesizeExecutionPlan(options: {
       ? mustFeatures.map((must) => ({ must_id: must, flow_id: flowId, task_ids: allTaskIds }))
       : [{ must_id: 'MUST-walking-skeleton', flow_id: flowId, task_ids: allTaskIds }];
 
-  // Risks: the runtime/scaffold risks are resolved by T0/T1. If the answers
-  // surface technical uncertainty, add an unresolved risk that the T0 spike owns.
-  const answerText = Object.values(answers || {}).join(' ').toLowerCase();
-  const hasRiskSignal = RISK_KEYWORDS.some((kw) => answerText.includes(kw));
+  // Risks: the runtime/scaffold risks are resolved by T0/T1 — procedural,
+  // not derived from any specific answer, so they carry no source_refs (see
+  // planRiskSchema.source_refs). If R1 (interview risk question) or S8
+  // (sensitivity/scale) surface technical uncertainty, add an unresolved
+  // risk that the T0 spike owns, sourced exactly to those two answers —
+  // A1-02 (Wave A1) tightened this from scanning ALL answers to scanning
+  // only the two questions derived-recipes.yaml's execution-plan-risk-
+  // classification recipe actually declares as its inputs, so the
+  // source_refs this risk carries are true, not a guess.
+  const riskSignalText = `${answers?.['R1'] || ''} ${answers?.['S8'] || ''}`.toLowerCase();
+  const hasRiskSignal = RISK_KEYWORDS.some((kw) => riskSignalText.includes(kw));
   const risks = [
     {
       id: 'R1',
@@ -181,6 +188,7 @@ export function synthesizeExecutionPlan(options: {
             title: 'Technical uncertainty raised during the interview',
             status: 'spike-required' as const,
             exit_criterion: 'T0-discovery spike resolves the uncertainty before implementation.',
+            source_refs: ['R1', 'S8'],
           },
         ]
       : []),
@@ -296,8 +304,11 @@ export function synthesizeExecutionPlan(options: {
         tasks: mustContracts.map((c) => c.id),
       });
 
+      // A1-02 — these tasks exist because of a specific Must feature (S3)
+      // placed in the primary flow (S5); unlike T0-T3's stack-recipe tasks,
+      // that lineage is real and worth citing.
       for (const contract of mustContracts) {
-        synthesizedPlan.tasks[contract.id] = compileContractToTaskCard(contract);
+        synthesizedPlan.tasks[contract.id] = { ...compileContractToTaskCard(contract), source_refs: ['S3', 'S5'] };
       }
     }
 
@@ -310,7 +321,7 @@ export function synthesizeExecutionPlan(options: {
       });
 
       for (const contract of nextContracts) {
-        synthesizedPlan.tasks[contract.id] = compileContractToTaskCard(contract);
+        synthesizedPlan.tasks[contract.id] = { ...compileContractToTaskCard(contract), source_refs: ['S3', 'S5'] };
       }
     }
 

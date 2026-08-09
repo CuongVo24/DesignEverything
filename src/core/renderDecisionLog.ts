@@ -8,6 +8,13 @@ export interface DecisionSpec {
   detail_doc: string;
   /** Nội dung đã chốt (lấy từ slot đã dịch ngược). */
   value: string;
+  /**
+   * A1-02 (Wave A1) — tên slot trong `filledSlots` gốc mà `value` được đọc
+   * ra, hoặc `'__branch__'` khi quyết định lấy thẳng hình-hài. Cho phép
+   * caller (emit.ts) nối ngược "> Nguồn:" vào đúng slot đã sinh nội dung,
+   * không phải đoán lại bằng tay một bảng map riêng.
+   */
+  slot: string;
 }
 
 interface DecisionSource {
@@ -80,6 +87,7 @@ export function collectDecisions(input: { branch: string; slots: Record<string, 
       source_question: spec.source_question,
       detail_doc: spec.detail_doc,
       value: spec.slot === '__branch__' ? input.branch : input.slots[spec.slot] || '',
+      slot: spec.slot,
     }));
 }
 

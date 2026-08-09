@@ -250,3 +250,95 @@ describe('emitTree function', () => {
     }
   });
 });
+
+describe('A1-02 (Wave A1) — real per-artifact provenance in emitted docs', () => {
+  const cliAnswers: InterviewAnswers = {
+    S0: 'CLI tool',
+    S1: 'Nỗi đau A, xoay xở B',
+    S2: 'Dev (Contributor)',
+    S3: 'Must: chạy lệnh chính. Should: log đẹp.',
+    S4: 'Config, Job',
+    S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
+    S6: 'Solo, 2 tuần',
+    S8: 'Vài trăm người dùng, không lưu dữ liệu nhạy cảm.',
+    C1: 'Node.js (TypeScript)',
+    C2: 'flags/arguments',
+    C3: 'file config JSON ~/.config/myapp.json',
+    C4: 'macOS',
+    C5: 'NPM registry',
+  };
+
+  test('04-flows.md cites S5 for the flow diagram', () => {
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    const flows = emitted.find((d) => d.file === '04-flows.md');
+    expect(flows!.content).toMatch(/^>\s*Nguồn: S5/m);
+  });
+
+  test('05-architecture.md cites the specific answered question per populated section, not a doc-wide guess', () => {
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    const arch = emitted.find((d) => d.file === '05-architecture.md')!.content;
+    // C1..C4 were all answered — each of their sections must cite exactly
+    // that question, not some other one.
+    expect(arch).toMatch(/^>\s*Nguồn: C1$/m);
+    expect(arch).toMatch(/^>\s*Nguồn: C2$/m);
+    expect(arch).toMatch(/^>\s*Nguồn: C3$/m);
+    expect(arch).toMatch(/^>\s*Nguồn: C4$/m);
+    expect(arch).toMatch(/^>\s*Nguồn: S8$/m);
+  });
+
+  test('removing S8 degrades its architecture sections to the unsourced fallback text with no citation — never a fabricated one', () => {
+    const noS8: InterviewAnswers = { ...cliAnswers };
+    delete noS8.S8;
+    const emitted = emitTree(noS8, 'cli', realTemplatesDir);
+    const arch = emitted.find((d) => d.file === '05-architecture.md')!.content;
+    // The methodology-default fallback text still appears (S8's slot never
+    // goes empty), but it must NOT claim "> Nguồn: S8" — nobody answered S8.
+    expect(arch).toContain('Chưa khai báo dữ liệu nhạy cảm');
+    expect(arch).not.toMatch(/^>\s*Nguồn: S8$/m);
+  });
+
+  test('docs/decisions.md points at its own existing per-row "Nối từ câu" column', () => {
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    const decisions = emitted.find((d) => d.file === 'decisions.md')!.content;
+    expect(decisions).toContain('Nối từ câu');
+    expect(decisions).toMatch(/^>\s*Nguồn:/m);
+  });
+
+  test('08-build-plan.md cites S3/S5 for the deterministic milestone fallback', () => {
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    const buildPlan = emitted.find((d) => d.file === '08-build-plan.md')!.content;
+    expect(buildPlan).toMatch(/^>\s*Nguồn: S3, S5$/m);
+  });
+
+  test('execution-plan.json risks and tasks carry machine-readable source_refs where answer-derived, and omit it for procedural entries', () => {
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    const planJson = JSON.parse(emitted.find((d) => d.file === '.design-everything/execution-plan.json')!.content);
+
+    const r1 = planJson.risks.find((r: { id: string }) => r.id === 'R1');
+    expect(r1.source_refs).toBeUndefined();
+
+    const featureTask = Object.values(planJson.tasks).find(
+      (t: unknown) => (t as { milestone: string }).milestone.startsWith('M4-')
+    ) as { source_refs?: string[] } | undefined;
+    if (featureTask) {
+      expect(featureTask.source_refs).toEqual(['S3', 'S5']);
+    }
+  });
+
+  test('docs/README.md flags externally-supplied glossary content as unverified rather than trusting it silently', () => {
+    const withSkillGlossary: InterviewAnswers = {
+      ...cliAnswers,
+      docs_readme_glossary: 'Thuật ngữ riêng dự án do skill sinh.',
+    };
+    const emitted = emitTree(withSkillGlossary, 'cli', realTemplatesDir);
+    const readme = emitted.find((d) => d.file === 'README.md')!.content;
+    expect(readme).toContain('Thuật ngữ riêng dự án do skill sinh.');
+    expect(readme).toContain('⚠ unknown — cần hỏi người');
+  });
+
+  test('docs/README.md marks the static methodology glossary fallback as not project-specific rather than citing a question', () => {
+    const emitted = emitTree(cliAnswers, 'cli', realTemplatesDir);
+    const readme = emitted.find((d) => d.file === 'README.md')!.content;
+    expect(readme).toMatch(/^>\s*Nguồn: bảng thuật ngữ phương pháp/m);
+  });
+});
