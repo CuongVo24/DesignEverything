@@ -40,6 +40,53 @@ try {
       cpSync(fixtureSrc, workspace, { recursive: true });
     }
 
+    // A1-02 (Wave A1) made derived-recipe provenance a real deterministic
+    // reject at emit time: a doc whose architecture questions were never
+    // answered gets no "> Nguồn:" citation attached (nothing to cite), and
+    // emit now correctly refuses to activate rather than shipping content
+    // it can't source. This replay used to forge `ready-for-validation`
+    // with zero answers at all — emit "succeeded" only because nobody
+    // checked whether the resulting docs said anything real. Seed a
+    // minimal but genuine answer set instead, so this fixture represents
+    // an honestly-completed interview rather than an empty one wearing a
+    // completed-looking phase.
+    const branch = benchmark.target === 'vite-web' ? 'web' : 'cli';
+    const answers =
+      branch === 'web'
+        ? {
+            S0: 'Vite web app',
+            S1: 'Nỗi đau A, xoay xở B',
+            S2: 'Người dùng phổ thông đã đăng nhập',
+            S3: 'Must: chạy trang chính. Should: giao diện đẹp.',
+            S4: 'Config, Job',
+            S5: 'Mở trang -> đăng nhập -> xem nội dung',
+            S6: 'Solo, 2 tuần',
+            S8: 'Vài trăm người dùng, không lưu dữ liệu nhạy cảm.',
+            W1: 'SPA, không cần SEO',
+            W2: 'Client-side rendering đơn giản',
+            W3: 'Deploy Vercel free-tier',
+            W4: 'NextAuth Google OAuth',
+            W5: 'Không realtime ở MVP',
+          }
+        : {
+            S0: 'CLI tool',
+            S1: 'Nỗi đau A, xoay xở B',
+            S2: 'Dev (Contributor)',
+            S3: 'Must: chạy lệnh chính. Should: log đẹp.',
+            S4: 'Config, Job',
+            S5: 'Mở terminal -> chạy lệnh -> xem kết quả',
+            S6: 'Solo, 2 tuần',
+            S8: 'Vài trăm người dùng, không lưu dữ liệu nhạy cảm.',
+            C1: 'Node.js (TypeScript)',
+            C2: 'flags/arguments',
+            C3: 'file config JSON ~/.config/myapp.json',
+            C4: 'macOS',
+            C5: 'NPM registry',
+          };
+    const interviewDir = join(workspace, 'Design/.interview');
+    mkdirSync(interviewDir, { recursive: true });
+    writeFileSync(join(interviewDir, 'answers.json'), JSON.stringify(answers, null, 2), 'utf8');
+
     // Initialize progress.json
     const progressPath = join(workspace, 'progress.json');
     const progress = {
@@ -48,10 +95,13 @@ try {
       // (progressSchema chỉ còn chấp nhận tên mới). Seed dùng tên cũ khiến hook
       // đọc progress.json back-compat gặp schema-invalid → health broken → deny.
       phase: 'ready-for-validation',
-      branch: benchmark.target === 'vite-web' ? 'web' : 'cli',
+      branch,
       calibrate_mode: 'fast',
       current_step: null,
-      answered: [],
+      // Must overlap with answers.json's keys (migrateInterviewStore.ts
+      // refuses to migrate a legacy pair whose answered steps and answer
+      // keys share no overlap) — same keys as answers.json above.
+      answered: Object.keys(answers),
       emitted_docs: [],
       gates_passed: [],
       last_user_turn_id: null,
