@@ -9,7 +9,7 @@ export function handleCommit(workspaceRoot: string, argv: string[]): CliResultEn
   const capabilityToken = getArg(argv, '--capability-token');
   const answerText = getArg(argv, '--answer');
   const slotsFileArg = getArg(argv, '--slots-file');
-  const ackWarnings = argv.includes('--ack-warnings');
+  const ackToken = getArg(argv, '--ack-token');
 
   if (!capabilityToken) {
     return {
@@ -47,7 +47,7 @@ export function handleCommit(workspaceRoot: string, argv: string[]): CliResultEn
     branchChoice,
     calibrateChoice,
     answerText,
-    ackWarnings,
+    ackToken,
     slotsPayload,
   });
 
@@ -84,6 +84,10 @@ export function handleCommit(workspaceRoot: string, argv: string[]): CliResultEn
       severity: 'error',
       message: `Lỗi commit bước phỏng vấn: ${result.message}`,
       runtime_version: RUNTIME_VERSION,
+      // A1-03b — ANSWER_NEEDS_USER_ACK carries a fresh ack_token the caller
+      // must show the user and resubmit with --ack-token after they
+      // confirm; every other failure leaves data unset as before.
+      ...(result.ack_token ? { data: { ack_token: result.ack_token } } : {}),
     };
   }
 

@@ -230,4 +230,117 @@ describe('P6 10.1 — commitInterviewAnswer atomically commits slots with the an
     });
     expect(acceptedCommit).toMatchObject({ ok: true, reason_code: 'COMMIT_SUCCESS' });
   });
+
+  describe('A1-03b (Wave A1) — needs_user_ack is gated by a real single-use ack token, not a caller-set boolean', () => {
+    function advanceToS0(): { token: string } {
+      initializeInterviewStore(tempDir);
+      const cal = issuePromptCapability(tempDir);
+      if (!cal.ok) throw new Error('setup: could not issue CAL0 capability');
+      const calCommit = commitInterviewAnswer(tempDir, { capabilityToken: cal.token, calibrateChoice: 'fast' });
+      if (!calCommit.ok) throw new Error('setup: CAL0 commit failed');
+      const s0 = issuePromptCapability(tempDir);
+      if (!s0.ok) throw new Error('setup: could not issue S0 capability');
+      return { token: s0.token };
+    }
+
+    const genericPitch = 'Nền tảng kết nối mọi người.'; // triggers S0's WARNING_RULES_TRIGGERED
+
+    test('a warning-triggering answer with no ack token is refused and returns a fresh, usable ack_token', () => {
+      const { token } = advanceToS0();
+      const first = commitInterviewAnswer(tempDir, { capabilityToken: token, answerText: genericPitch });
+
+      expect(first.ok).toBe(false);
+      if (first.ok) return;
+      expect(first.reason_code).toBe('ANSWER_NEEDS_USER_ACK');
+      expect(typeof first.ack_token).toBe('string');
+      expect((first.ack_token as string).length).toBeGreaterThan(0);
+    });
+
+    test('resubmitting the exact same answer with the issued ack_token commits successfully', () => {
+      const { token } = advanceToS0();
+      const first = commitInterviewAnswer(tempDir, { capabilityToken: token, answerText: genericPitch });
+      expect(first.ok).toBe(false);
+      if (first.ok) return;
+
+      // Same capability token is still valid — commitStep hasn't consumed
+      // it (the whole point of needs_user_ack is that nothing advanced yet).
+      const second = commitInterviewAnswer(tempDir, {
+        capabilityToken: token,
+        answerText: genericPitch,
+        ackToken: first.ack_token,
+      });
+      expect(second).toMatchObject({ ok: true, reason_code: 'COMMIT_SUCCESS' });
+    });
+
+    test('an ack_token is single-use — replaying it after a successful commit fails', () => {
+      const { token } = advanceToS0();
+      const first = commitInterviewAnswer(tempDir, { capabilityToken: token, answerText: genericPitch });
+      expect(first.ok).toBe(false);
+      if (first.ok) return;
+
+      const second = commitInterviewAnswer(tempDir, {
+        capabilityToken: token,
+        answerText: genericPitch,
+        ackToken: first.ack_token,
+      });
+      expect(second.ok).toBe(true);
+
+      // S1 has no warning_rules — a throwaway valid answer to get past it
+      // without needing its own ack, so S2 (which does warn on a generic
+      // persona) is reachable next.
+      const s1Cap = issuePromptCapability(tempDir);
+      expect(s1Cap.ok).toBe(true);
+      if (!s1Cap.ok) return;
+      const s1Commit = commitInterviewAnswer(tempDir, {
+        capabilityToken: s1Cap.token,
+        answerText: 'Người dùng hiện đang gặp khó khăn khi làm thủ công.',
+      });
+      expect(s1Commit.ok).toBe(true);
+
+      // Now at S2, try to replay the SAME already-consumed token rather
+      // than requesting the new one this warning would actually need.
+      const s2Cap = issuePromptCapability(tempDir);
+      expect(s2Cap.ok).toBe(true);
+      if (!s2Cap.ok) return;
+      const replay = commitInterviewAnswer(tempDir, {
+        capabilityToken: s2Cap.token,
+        answerText: 'Ai cũng dùng được sản phẩm này.',
+        ackToken: first.ack_token,
+      });
+      expect(replay.ok).toBe(false);
+      if (replay.ok) return;
+      expect(replay.reason_code).toBe('ANSWER_NEEDS_USER_ACK');
+      expect(replay.ack_token).not.toBe(first.ack_token);
+    });
+
+    test('a forged/unknown ack token is rejected the same as presenting none, with a fresh token reissued', () => {
+      const { token } = advanceToS0();
+      const result = commitInterviewAnswer(tempDir, {
+        capabilityToken: token,
+        answerText: genericPitch,
+        ackToken: 'not-a-real-token',
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason_code).toBe('ANSWER_NEEDS_USER_ACK');
+      expect(typeof result.ack_token).toBe('string');
+    });
+
+    test('an ack token issued for different answer text does not cover a changed answer', () => {
+      const { token } = advanceToS0();
+      const first = commitInterviewAnswer(tempDir, { capabilityToken: token, answerText: genericPitch });
+      expect(first.ok).toBe(false);
+      if (first.ok) return;
+
+      const changedText = 'Ứng dụng kết nối mọi người.'; // also matches S0_GENERIC_PITCH, different text/digest
+      const result = commitInterviewAnswer(tempDir, {
+        capabilityToken: token,
+        answerText: changedText,
+        ackToken: first.ack_token,
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason_code).toBe('ANSWER_NEEDS_USER_ACK');
+    });
+  });
 });

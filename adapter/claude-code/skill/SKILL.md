@@ -14,7 +14,7 @@ CLI (mọi thao tác state đều qua đây, KHÔNG tự sửa `progress.json`):
 
 ```bash
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status --json
-node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --capability-token <TOKEN> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>] [--ack-warnings] --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --capability-token <TOKEN> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>] [--ack-token <TOKEN>] --json
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --json
 ```
 
@@ -48,7 +48,9 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --
 - Nếu `commit` trả về `reason_code: ANSWER_NEEDS_USER_ACK`: câu trả lời khớp một `warning_rules`
   của câu hỏi (vd trả lời chung chung, thiếu chi tiết quan trọng). Đọc `message`, trình bày cảnh
   báo cho người dùng, chờ họ xác nhận muốn giữ nguyên hay sửa lại — CHỈ khi họ xác nhận giữ
-  nguyên mới commit lại **cùng answer đó** kèm thêm cờ `--ack-warnings`. KHÔNG tự ý thêm cờ này.
+  nguyên mới commit lại **cùng answer đó** kèm thêm `--ack-token <giá trị data.ack_token>` (token
+  một lần, engine tự phát hành trong response — không tự bịa hay tái dùng token cũ). KHÔNG tự ý
+  thêm cờ này khi người dùng chưa xác nhận.
 - Người dùng trả lời lan man/chưa xác nhận → KHÔNG commit, hỏi lại cho rõ.
 - Người dùng trả lời trước nhiều câu một lúc → vẫn chỉ commit câu hiện tại; giữ các ý còn lại
   để đối chiếu khi đến câu tương ứng (vẫn phải hỏi + dịch ngược từng câu).

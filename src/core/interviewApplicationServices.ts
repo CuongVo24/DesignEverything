@@ -1,10 +1,12 @@
 import { join } from 'path';
+import { createHash } from 'crypto';
 import { loadInterviewStore, transactInterviewStore, initializeInterviewStore } from './interviewStore.js';
 import { migrateInterviewStore } from './migrateInterviewStore.js';
 import { loadScript } from './loadScript.js';
 import { commitStep, checkRate, stampTurn } from './advanceState.js';
 import { issueTurnCapability } from './turnCapability.js';
 import { validateAnswer } from './validateAnswer.js';
+import { issueAckCapability, consumeAckCapability, type AckWarningInput } from './ackCapability.js';
 import { SLOT_ENVELOPE_SCHEMA_VERSION } from './schemas/interviewStore.js';
 import type { InterviewStoreEnvelope } from './schemas/interviewStore.js';
 import type { Progress } from './schemas/index.js';
@@ -158,6 +160,17 @@ export interface CommitInterviewAnswerFail {
   ok: false;
   reason_code: string;
   message: string;
+  /**
+   * A1-03b (Wave A1) — present only on ANSWER_NEEDS_USER_ACK: a freshly
+   * issued AckCapability token (ackCapability.ts) bound to this exact
+   * answer text, warning set, and interview revision. The caller shows the
+   * warnings to the user and, only after they confirm, resubmits with
+   * `ackToken` set to this value. Always reissued on every needs_user_ack
+   * response (including a failed retry) so the caller always has a valid
+   * token to act on next, mirroring turnCapability's reissue-on-challenge
+   * pattern.
+   */
+  ack_token?: string;
 }
 export type CommitInterviewAnswerResult = CommitInterviewAnswerOk | CommitInterviewAnswerFail;
 
@@ -174,12 +187,16 @@ export function commitInterviewAnswer(
     branchChoice?: string;
     calibrateChoice?: string;
     answerText?: string;
-    /** Explicit re-submission after the caller has shown the user the
-     * warnings from a prior needs_user_ack result. The model can never set
-     * this on the first attempt — it only becomes meaningful once
-     * validateAnswer has already returned needs_user_ack once for this
-     * exact answer text. */
-    ackWarnings?: boolean;
+    /** A1-03b (Wave A1) — the token from a prior ANSWER_NEEDS_USER_ACK
+     * response's `ack_token`, presented back after the caller has shown
+     * the user the warnings and they confirmed. Verified via
+     * consumeAckCapability, bound to this exact answer text, warning set,
+     * and interview revision — presenting a stale/forged/wrong-revision
+     * token is rejected the same as presenting none at all, it does not
+     * silently fall through. Replaces the old bare `ackWarnings: boolean`
+     * (plan-v1-bonus-tasks.md:919-925 already flagged that nothing bound
+     * it to the warning content or made it single-use). */
+    ackToken?: string;
     /** Parsed content of --slots-file (adapter/claude-code/skill/SKILL.md's
      * documented flat slot-key -> value map), already read off disk by the
      * caller. Each value is quality-checked the same way the main answer
@@ -226,14 +243,38 @@ export function commitInterviewAnswer(
     if (valRes.outcome === 'invalid') {
       return { ok: false, reason_code: valRes.reason_code, message: valRes.message };
     }
-    if (valRes.outcome === 'needs_user_ack' && !args.ackWarnings) {
-      return {
-        ok: false,
-        reason_code: 'ANSWER_NEEDS_USER_ACK',
-        message:
-          `${valRes.message} Hỏi lại người dùng và chỉ commit lại với --ack-warnings sau khi họ xác nhận, ` +
-          'không tự ý bỏ qua cảnh báo.',
+    if (valRes.outcome === 'needs_user_ack') {
+      const warningItems: AckWarningInput[] = (valRes.warnings ?? [valRes.message]).map((w, i) => ({
+        id: `${valRes.reason_code}-${i}`,
+        message: w,
+      }));
+      const ackExpectation = {
+        workspaceRoot,
+        sessionId: progress.session_id,
+        warnings: warningItems,
+        interviewStateRevision: envelope.state_revision,
+        inputDigest: createHash('sha256').update(args.answerText).digest('hex'),
+        generationId: null,
       };
+
+      const consumed = args.ackToken ? consumeAckCapability(args.ackToken, ackExpectation) : null;
+      if (!consumed || !consumed.valid) {
+        // Always reissue on failure too (including "no token presented at
+        // all") — the caller must never be left with a needs_user_ack
+        // response and nothing actionable to retry with.
+        const { token } = issueAckCapability(ackExpectation);
+        return {
+          ok: false,
+          reason_code: 'ANSWER_NEEDS_USER_ACK',
+          message:
+            `${valRes.message} Hỏi lại người dùng và chỉ commit lại với --ack-token sau khi họ xác nhận, ` +
+            `không tự ý bỏ qua cảnh báo.${consumed ? ` (Token trước đó bị từ chối: ${consumed.reason_code}.)` : ''}`,
+          ack_token: token,
+        };
+      }
+      // consumed.valid === true — the user's explicit ack for this exact
+      // answer/warning-set/revision is now spent (single-use); fall
+      // through to commit.
     }
   }
 
