@@ -29,6 +29,16 @@ export type {
 export { commitStep, checkRate, stampTurn } from './advanceState.js';
 export { issueTurnCapability, verifyTurnCapability, hashToken } from './turnCapability.js';
 export type { TurnCapabilityRecord, IssueCapabilityInput, IssueCapabilityResult, VerifyTurnResult } from './turnCapability.js';
+export { issueAckCapability, consumeAckCapability, verifyAckCapability, computeWarningDigest } from './ackCapability.js';
+export type {
+  AckCapabilityRecord,
+  AckWarningInput,
+  IssueAckCapabilityInput,
+  IssueAckCapabilityResult,
+  AckExpectation,
+  VerifyAckResult,
+  VerifyAckReasonCode,
+} from './ackCapability.js';
 export { evaluateGate, isBlocked, passedGates, checkExecutionGate } from './evaluateGate.js';
 export { buildGateSnapshot, getActiveManagedPaths } from './gateSnapshot.js';
 export type { GateSnapshot, GateArtifactInfo } from './gateSnapshot.js';
