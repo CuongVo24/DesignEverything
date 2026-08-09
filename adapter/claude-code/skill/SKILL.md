@@ -122,9 +122,16 @@ Khi `commit` trả về `interview_done: true`:
    `Design/.interview/slots-buildplan.json`.
 3. Chạy `emit --slots-file "Design/.interview/slots-buildplan.json" --json` — sinh cây `docs/`
    + `docs/conventions/`.
-4. Nếu output emit có `data.warnings` không rỗng: trình bày từng cảnh báo cho người dùng và YÊU
-   CẦU người dùng xác nhận hoặc điều chỉnh slot. Model KHÔNG được tự ý auto-ack cảnh báo.
-5. **THÔNG BÁO CHÍNH XÁC VỀ TRẠNG THÁI (HANDOFF TRUTH):**
+4. Nếu `emit` trả về `ok: false, reason_code: EMIT_VALIDATION_FAILED`: **KHÔNG chạy lại `emit`
+   nhiều lần với hy vọng khác đi** — mọi câu bắt buộc (kể cả S8 và các câu kiến trúc W/M/C) đã được
+   engine ép trả lời không rỗng lúc `commit`, nên lỗi này ở một phỏng vấn hoàn tất bình thường gần
+   như không thể xảy ra; nó báo hiệu state đã bị sửa tay hoặc hỏng ngoài CLI. Đọc `data.issues`,
+   hiển thị nguyên văn cho người dùng, rồi chạy `status --json` (và `repair --json` nếu được chỉ
+   định) thay vì tự đoán sửa. Đây khác với cảnh báo — đây là DENY thật, không có `--ack-token` nào
+   vượt qua được (provenance thiếu nguồn là deterministic reject, không phải cái cần xác nhận).
+5. Nếu output emit `ok: true` có `data.warnings` không rỗng: trình bày từng cảnh báo cho người dùng
+   và YÊU CẦU người dùng xác nhận hoặc điều chỉnh slot. Model KHÔNG được tự ý auto-ack cảnh báo.
+6. **THÔNG BÁO CHÍNH XÁC VỀ TRẠNG THÁI (HANDOFF TRUTH):**
    - Nói rõ: "Bộ tài liệu thiết kế `docs/` đã được sinh thành công. **TUY NHIÊN, kế hoạch thực thi (`execution-plan.json`) CHƯA được validate.**"
    - Tuyệt đối KHÔNG tuyên bố "gate đã mở" hay "có thể bắt đầu viết code ngay".
    - Chỉ định hành động tiếp theo duy nhất: "Vui lòng gọi lệnh `/build` để tiến hành validate kế hoạch thi công trước khi viết code."
