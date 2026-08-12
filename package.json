@@ -1,6 +1,6 @@
 {
   "name": "design-everything",
-  "version": "6.0.0",
+  "version": "8.0.0",
   "description": "Portable foundational documentation design method for AI coding agents",
   "license": "MIT",
   "main": "dist/core/index.js",

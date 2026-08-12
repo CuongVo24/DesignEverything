@@ -92,14 +92,21 @@ Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đ
 vẫn `6.0.0`; xem [v7-release-note.md](../RoadMap/v7-release-note.md) (UNRELEASED — BLOCKED) cho
 trạng thái thật từng mục. Trạng thái tiến độ thật (2026-07-30, đối chiếu với
 `Design/ContractForAI/Core/v1-fix-bugs/finding-coverage-matrix.md`):
-- **Adversarial Installed Runtime (B5a):** test đã chuyển sang chạy trên target cài thật qua
-  `install.mjs` (`test/integration/installed-runtime/hook-adversarial.test.ts`), không còn gọi thẳng
-  TS source hay chạy hook từ REPO_ROOT.
-- **Transaction Fault Injection (B5b):** engine transaction (`prepareEmit`/`activateEmit`/`recoverEmit`)
-  có test crash thật (`test/fault-injection/`), nhưng test crash mid-emit vẫn gọi thẳng Core, chưa
-  crash một tiến trình `cli.mjs emit` thật — chấp nhận theo phạm vi hiện tại, không phải VERIFIED.
-- **Newbie Journey & Weak Executor Evaluation (B5c):** journey suite (`test/journey/`) chạy qua Core
-  loop thuần, chưa qua CLI thật; báo cáo B5c không có reviewer/golden artifact độc lập (R14).
+**Cập nhật 2026-08-10** (đối chiếu lại, không tin nguyên văn cũ — xem §7 từng contract B5 để có bằng
+chứng chi tiết):
+- **Adversarial Installed Runtime (B5a):** IMPLEMENTED/SEAM_PARTIAL. 15 file, 76 test pass trên target
+  cài thật (`test/integration/installed-runtime/`), gồm 1 file mới `phase-authorization-matrix.test.ts`
+  đóng U04/R04. 2 gap thật còn lại trước VERIFIED: X09 exit-class chưa đủ 5 lớp, X23 ack-capability
+  chưa có coverage installed.
+- **Transaction Fault Injection (B5b):** IMPLEMENTED/SEAM_PARTIAL (nâng từ off-axis
+  INVALID_FOR_PRODUCTION_SEAM). Xác nhận `prepareEmit`/`activateEmit`/`transactInterviewStore` chính
+  là hàm production `cliOps/emit.ts` gọi — tiền đề cũ "production không gọi các hàm này" sai.
+  `crash-worker.mjs` spawn tiến trình con thật, hard-kill đúng bước, recovery hai lần idempotent. Gap
+  còn lại: crash-worker import thẳng `dist/`, chưa đi qua toàn bộ tầng CLI trước khi gọi.
+- **Newbie Journey & Weak Executor Evaluation (B5c):** IMPLEMENTED/UNIT_ONLY. R14 (hai reviewer độc
+  lập) đã hạ theo quyết định khoá 2026-08-03 — contract B5c §3 sửa bỏ claim, không chờ người ngoài mới
+  cắt 7.0.0. Journey suite (`test/journey/`) vẫn qua Core loop thuần, chưa qua CLI thật — đây là gap
+  còn lại, khác bản chất với R14 (gap kỹ thuật, không phải claim không kiểm được).
 - **Release Truth Sync (B5d):** đã dọn 100% link `file:///e:/...`; `check-matrix.mjs` nay chặn
   vocabulary/dependency-range sai và cross-check contract-file ↔ README, nhưng docs vẫn cần một lượt
   đối chiếu cuối trước khi coi B5d là VERIFIED.

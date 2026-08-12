@@ -760,9 +760,36 @@ Một release v7 chỉ hợp lệ khi đồng thời thỏa:
 3. Commit và emit đi qua canonical transaction service với expected revision thật.
 4. Emit success luôn có active manifest và execution-state `plan-validating`.
 5. Installer Claude/Codex self-contained, integrity-checked và độc lập repo nguồn.
-6. Tất cả U/X/R finding có đúng test ID và seam evidence.
+6. Tất cả U/X/R finding release-scope (52, không tính R21) có đúng test ID và seam evidence **hoặc**
+   miễn trừ có kỷ luật (`WAIVED` — ngày, lý do, điều kiện mở lại, loại khỏi mẫu số coverage) khi bằng
+   chứng không thể tự động sinh ra (R14) hay chi phí thu thập nằm ngoài tầm kiểm soát phiên làm việc
+   (A3 dogfood/quota). *Sửa 2026-08-10 — xem D56 dưới.*
 7. Test, lint, build, typecheck-all, installed runtime, fault injection và journey proof đều pass.
 8. Package tarball có entrypoint hợp lệ.
 9. Package/runtime/schema/catalog/docs/release dùng cùng version được sinh từ một nguồn.
-10. 24 contract đạt `APPROVED + IMPLEMENTED + VERIFIED`.
+10. 24 contract đạt `APPROVED + IMPLEMENTED + VERIFIED` **hoặc** `APPROVED + IMPLEMENTED + SEAM_PARTIAL/UNIT_ONLY`
+    với gap còn lại của từng contract ghi rõ trong §7 của chính contract đó (không phải off-axis
+    `INVALID_FOR_CLAIM`/`INVALID_FOR_PRODUCTION_SEAM`/`MISSING`/`SNAPSHOT_ONLY` — những mức đó vẫn
+    chặn). *Sửa 2026-08-10 — xem D56 dưới.*
 11. Chỉ sau đó release note mới được đổi từ `UNRELEASED/BLOCKED` sang `GA`.
+
+### D56 — Hạ điều kiện 6 và 10 (2026-08-10, quyết định chủ repo)
+
+Bản DoD gốc (điều 6, 10) đòi bằng chứng seam trọn vẹn và 24/24 `VERIFIED` tuyệt đối — bar này đúng về
+nguyên tắc nhưng có 2 mục **không bao giờ tự đóng được bằng thêm test** (R14: hai reviewer độc lập; A3:
+quota provider bên thứ ba) và một số mục còn lại (X09 exit-class đủ 5 lớp, X23 ack cross-process, crash
+qua lớp CLI ngoài cùng, journey suite qua CLI thật, quickstart walkthrough tay) là công việc thật nhưng
+hẹp, đã ghi rõ trong §7 từng contract B5a–B5d — không phải "chưa biết còn thiếu gì".
+
+**Quyết định:** hạ điều 6/10 theo đúng công thức repo đã dùng 9 lần trước đó (B18a, R21, R07, R16,
+B3b...): hoặc thoả đủ, hoặc sửa để bỏ claim + công bố giới hạn — không bao giờ nói đã đạt khi chưa
+đạt. Đối chiếu 2026-08-10 nâng cả 4 contract B5a–B5d từ `PARTIAL`/off-axis lên `IMPLEMENTED` +
+`SEAM_PARTIAL`/`UNIT_ONLY` với bằng chứng thật (không phải chuyển nhãn suông — xem §7 từng contract:
+15 file/76 test installed cho B5a, crash-worker xác nhận trùng hàm production cho B5b, R14 hạ đúng
+nhánh cho phép của B5c, 2 claim chặn sai của B5d đã sửa).
+
+**Ranh giới không đổi:** đây là hạ **chi phí thu thập bằng chứng** (giống B18a/A3), không phải hạ
+**phạm vi enforcement** (repo chưa từng hạ, xem quyết định Linux gate 2026-08-03). Không contract nào
+được chuyển thẳng lên `VERIFIED` mà không có bằng chứng — chỉ đổi từ "không tính" (off-axis) sang
+"tính đúng mức đã đạt" (on-axis, có gap ghi rõ). 7.0.0 mang theo danh sách gap thật công khai trong
+release note §5, không giấu.

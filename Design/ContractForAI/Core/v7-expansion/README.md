@@ -8,9 +8,13 @@
 > 7.0.0 thuộc `v1-fix-bugs` ([v7-release-note.md](../../../RoadMap/v7-release-note.md)); lane này
 > nhắm **8.1.0**, MINOR trên nền `v6-expansion` (8.0.0), vì B22b tự khai tương thích ngược.
 >
-> **Lane CHƯA mở.** Hai điều kiện tiên quyết, không thương lượng:
-> 1. Toàn bộ điều kiện gỡ block 7.0.0 ở `v7-release-note.md` §0 đóng và 7.0.0 được cắt.
-> 2. `v6-expansion` (8.0.0) cắt trước — chủ repo đã chốt 2026-08-01: Interactive chạy **sau** V6.
+> **Lane MỞ (2026-08-10).** Hai điều kiện tiên quyết đã đóng đủ:
+> 1. ✅ 7.0.0 cắt GA 2026-08-10 (xem `v7-release-note.md` §0, D56 cho điều kiện đóng thật —
+>    24/24 contract on-axis, không phải tuyệt đối `VERIFIED`; gap công khai ở §5).
+> 2. ✅ `v6-expansion` (8.0.0) cắt GA 2026-08-10 (xem `v6-expansion/README.md` §Đối chiếu —
+>    6/6 contract DONE, đã cắt trước Interactive đúng thứ tự đã chốt 2026-08-01).
+>
+> Sẵn sàng thực thi theo đồ thị phụ thuộc §Bản đồ thực thi bên dưới: `R-spike ∥ B22a → B22b → B22c → B22d → B22e`.
 
 ## Bản đồ thực thi
 

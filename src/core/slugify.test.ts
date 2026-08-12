@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { slugify, slugifyList } from './slugify.js';
 
-// Logic slug cũ (inline trong synthesizeExecutionPlan) — dùng làm chuẩn byte-identical.
+// Logic slug cũ (inline trong synthesizeExecutionPlan) — dùng làm chuẩn byte-identical
+// CHỈ cho input không dấu. Input có dấu tiếng Việt đổi hành vi có chủ đích (fix bug xoá
+// nguyên âm có dấu thay vì chuyển về không dấu) — xem describe block riêng bên dưới.
 const legacy = (s: string): string =>
   s
     .toLowerCase()
@@ -11,15 +13,18 @@ const legacy = (s: string): string =>
     .replace(/^-|-$/g, '');
 
 describe('slugify', () => {
-  it('byte-identical với logic cũ trên các Must golden web', () => {
-    for (const must of ['Đăng nhập', 'Xem công thức', 'Tạo công thức', 'Tìm kiếm', 'Shopping List', 'API Gateway']) {
-      expect(slugify(must)).toBe(legacy(must));
+  it('byte-identical với logic cũ cho input không dấu', () => {
+    for (const s of ['Shopping List', 'API Gateway', 'Login', '  spaced out  ', 'a---b', 'v2 API']) {
+      expect(slugify(s)).toBe(legacy(s));
     }
   });
 
-  it('slug golden web khớp tên file thực tế', () => {
-    expect(slugify('Đăng nhập')).toBe('ng-nh-p');
-    expect(slugify('Tìm kiếm')).toBe('t-m-ki-m');
+  it('tiếng Việt có dấu → chuyển về không dấu, không xoá nguyên âm', () => {
+    expect(slugify('Đăng nhập')).toBe('dang-nhap');
+    expect(slugify('Tìm kiếm')).toBe('tim-kiem');
+    expect(slugify('Xem công thức')).toBe('xem-cong-thuc');
+    expect(slugify('Tạo công thức')).toBe('tao-cong-thuc');
+    expect(slugify('Phỏng vấn thiết kế')).toBe('phong-van-thiet-ke');
   });
 
   it('chuỗi không còn ký tự [a-z0-9] → rỗng', () => {
@@ -30,7 +35,7 @@ describe('slugify', () => {
 
 describe('slugifyList', () => {
   it('slug rỗng → item-<index>', () => {
-    expect(slugifyList(['Đăng nhập', '###'])).toEqual(['ng-nh-p', 'item-1']);
+    expect(slugifyList(['Đăng nhập', '###'])).toEqual(['dang-nhap', 'item-1']);
   });
 
   it('trùng slug → hậu tố -2, -3 theo thứ tự', () => {
@@ -38,6 +43,6 @@ describe('slugifyList', () => {
   });
 
   it('không trùng → giữ nguyên slug đơn', () => {
-    expect(slugifyList(['Đăng nhập', 'Tìm kiếm'])).toEqual(['ng-nh-p', 't-m-ki-m']);
+    expect(slugifyList(['Đăng nhập', 'Tìm kiếm'])).toEqual(['dang-nhap', 'tim-kiem']);
   });
 });

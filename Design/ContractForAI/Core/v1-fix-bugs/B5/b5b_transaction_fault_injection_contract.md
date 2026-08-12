@@ -59,11 +59,32 @@ Expected commands:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_PRODUCTION_SEAM
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
-**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). Fault-injection harness
-(`faulty-filesystem.ts`, `crash-worker.mjs`, FE-01..06, FI-01..05) là hạ tầng thật và nên giữ, nhưng
-nó gọi thẳng `prepareEmit`/`activateEmit`/`transactInterviewStore` — các hàm Core mà production CLI
-(`handleEmit`, `handleCommit`) hiện không gọi (X16 vẫn OPEN ở seam CLI thật). Test đang chứng minh
-engine đúng, không chứng minh production path an toàn. Đóng lại ở P11 sau khi P7/P2 nối engine vào
-CLI và fault harness chuyển sang gọi qua public CLI/application service.
+**Nâng 2026-08-10, chưa VERIFIED.** §7 bản 2026-07-25 phía trên đã sai ở tiền đề chính: đọc trực tiếp
+`src/adapters/shared/cliOps/emit.ts` xác nhận production `handleEmit` **gọi thẳng**
+`prepareEmit`/`activateEmit` (dòng import + gọi thật, không phải suy diễn), và `transactInterviewStore`
+cũng được gọi trong cùng file cho phần cập nhật interview store sau emit. X16 không còn "OPEN ở seam
+CLI thật" theo nghĩa văn bản cũ mô tả — hàm production và hàm bị crash-test là MỘT, không phải hai
+đường tách biệt.
+
+**Bằng chứng thật (chạy lại 2026-08-10):** `npx vitest run test/fault-injection` → 3 file, 15 test
+pass. `crash-worker.mjs` (`test/helpers/crash-worker.mjs`) được spawn như **tiến trình con thật** qua
+`execSync` (không phải throw mock trong cùng process), tự patch `fs.writeFileSync`/`renameSync` rồi
+`process.exit(137)` đúng bước journal/lock/rename được yêu cầu, và import các hàm Core biên dịch
+(`dist/`) — đúng những hàm production gọi. Sau crash, test load lại state bằng process test (không
+phải cùng process với crash) và assert old-or-new, chạy recovery hai lần cho idempotent.
+
+**Gap thật còn lại, hẹp hơn nhiều so với văn bản cũ:** `crash-worker.mjs` import thẳng
+`prepareEmit`/`transactInterviewStore` từ `dist/`, **không** đi qua toàn bộ tầng CLI (arg parsing,
+dispatch, exit-code mapping của `cliOps/emit.ts`/`commit.ts`) trước khi gọi các hàm đó — nghĩa là lớp
+mỏng ngoài cùng (CLI wrapper) chưa bị crash cùng lúc với transaction. Vì Core/application-service đã
+được crash thật và các hàm đó xác nhận trùng với production, đây là gap ở lớp ngoài, không phải ở lớp
+transaction — đủ để nâng lên `SEAM_PARTIAL` (không còn off-axis `INVALID_FOR_PRODUCTION_SEAM`), chưa
+đủ để nói `VERIFIED`. Đóng nốt: đổi `crash-worker.mjs` gọi qua `execFileSync('node', [cliPath, 'emit', ...])`
+đã cài thay vì import `dist/` trực tiếp — việc còn lại, không phải việc mới.
+
+**Xác nhận flakiness đã biết, không phải regression mới:** một lần chạy thử trong phiên này ghi nhận
+exit code 134 thay vì 137 cho ca `commit --crash-at=temp-write`; chạy lại ngay sau đó xanh trọn 15/15.
+Khớp đúng `QA-02-F01` đã ghi trong `test/qa-campaign/findings/QA-02-core-agent.md` — lỗi transient dưới
+concurrency cao, không tái hiện khi chạy đơn lẻ.

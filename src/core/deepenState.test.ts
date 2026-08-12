@@ -284,7 +284,7 @@ describe('listDeepenSubjects', () => {
       answers: { S3: 'Must: Đăng nhập, Tìm kiếm. Should: Shopping List.' },
       tier1Docs: {},
     });
-    expect(subjects).toEqual(['ng-nh-p', 't-m-ki-m']);
+    expect(subjects).toEqual(['dang-nhap', 'tim-kiem']);
   });
 
   it('glossary / test-strategy → [] (per_subject none)', () => {

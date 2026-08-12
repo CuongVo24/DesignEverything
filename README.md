@@ -300,4 +300,4 @@ MIT — xem [LICENSE](LICENSE).
 
 ## Trạng thái truthfulness
 
-Hiện repo đã hoàn thành mốc 6.0.0: quy trình thực thi V3 (xác thực kế hoạch ngữ nghĩa, active-task gate, evidence log, repair — xem [V3 Execution Expansion](Design/RoadMap/V3-ExecutionExpansionPlan.md)) cùng vòng feature V5/V6 (feature contract, review đóng vòng, break-task, promote plan sau T3-verify). Số version có một nguồn sự thật là `package.json`, được `scripts/check-version-sync.mjs` kiểm mỗi lần `npm test`.
+Hiện repo đã hoàn thành mốc 8.0.0 (v6-expansion — opt-in progressive deepening tier-2): sau 7.0.0 (v1-fix-bugs — runtime integrity & newbie journey repair), thêm `deepen` tier-2 tuỳ chọn (`glossary`, `feature-spec`, `adr`, `test-strategy` dưới `docs/design/`), không đổi luồng tầng 1 mặc định. Số version có một nguồn sự thật là `package.json`, được `scripts/check-version-sync.mjs` kiểm mỗi lần `npm test`. Xem [v7-release-note.md](Design/RoadMap/v7-release-note.md) cho known limitations của 7.0.0 đã công bố.

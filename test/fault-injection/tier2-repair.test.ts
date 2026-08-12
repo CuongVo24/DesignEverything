@@ -143,9 +143,9 @@ describe('P7.2.4 — repair recovers every tier-2 module channel', () => {
     const featureAnswers: Record<string, string> = {
       ...answers,
       S3: 'Must: Đăng nhập. Should: Shopping List.',
-      'DS2a@ng-nh-p': 'a',
-      'DS2b@ng-nh-p': 'b',
-      'DS2c@ng-nh-p': 'c',
+      'DS2a@dang-nhap': 'a',
+      'DS2b@dang-nhap': 'b',
+      'DS2c@dang-nhap': 'c',
     };
     writeFileSync(join(ws, 'Design/.interview/answers.json'), JSON.stringify(featureAnswers, null, 2));
 
@@ -158,12 +158,12 @@ describe('P7.2.4 — repair recovers every tier-2 module channel', () => {
         sessionId: state.session_id || 'default-session',
         operationKind: 'deepen',
         questionId: q,
-        subjectId: 'ng-nh-p',
+        subjectId: 'dang-nhap',
       });
       state = commitDeepenAnswer({ ...state, pending_turn_capability: issued.capability }, script, {
         module: 'feature-spec',
         questionId: q,
-        subjectId: 'ng-nh-p',
+        subjectId: 'dang-nhap',
         capabilityToken: issued.token,
       });
     }
@@ -211,6 +211,6 @@ describe('P7.2.4 — repair recovers every tier-2 module channel', () => {
     // feature-spec's manifest and live files are completely untouched by
     // recovering glossary's unrelated interrupted journal.
     expect(readFileSync(featureManifestFile, 'utf8')).toBe(featureManifestBefore);
-    expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
+    expect(existsSync(join(ws, 'docs/design/features/dang-nhap.md'))).toBe(true);
   });
 });

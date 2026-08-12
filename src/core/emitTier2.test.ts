@@ -140,12 +140,12 @@ describe('emitTier2 transaction', () => {
     // Ban đầu 2 Must → 2 feature file.
     const answers2: Record<string, string> = {
       ...baseAnswers,
-      'DS2a@ng-nh-p': 'a', 'DS2b@ng-nh-p': 'b', 'DS2c@ng-nh-p': 'c',
-      'DS2a@t-m-ki-m': 'a', 'DS2b@t-m-ki-m': 'b', 'DS2c@t-m-ki-m': 'c',
+      'DS2a@dang-nhap': 'a', 'DS2b@dang-nhap': 'b', 'DS2c@dang-nhap': 'c',
+      'DS2a@tim-kiem': 'a', 'DS2b@tim-kiem': 'b', 'DS2c@tim-kiem': 'c',
     };
     const ws = buildWorkspace(answers2);
     let state: DeepenState = optInModule(defaultDeepenState(), 'feature-spec', 'explicit');
-    for (const subj of ['ng-nh-p', 't-m-ki-m']) {
+    for (const subj of ['dang-nhap', 'tim-kiem']) {
       for (const q of ['DS2a', 'DS2b', 'DS2c']) {
         state = commitDeepen(state, { module: 'feature-spec', questionId: q, subjectId: subj });
       }
@@ -153,16 +153,16 @@ describe('emitTier2 transaction', () => {
     saveDeepenState(ws, state);
     const first = emitTier2({ workspace: ws, modules: ['feature-spec'], script, state });
     expect(first.emitted[0].files.length).toBe(2);
-    expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(true);
+    expect(existsSync(join(ws, 'docs/design/features/tim-kiem.md'))).toBe(true);
 
     // Bỏ Must "Tìm kiếm" khỏi answers rồi re-emit.
     const answers1 = { ...answers2, S3: 'Must: Đăng nhập. Should: Shopping List.' };
     writeFileSync(join(ws, 'Design/.interview/answers.json'), JSON.stringify(answers1));
     const state2 = loadDeepenState(ws);
     const second = emitTier2({ workspace: ws, modules: ['feature-spec'], script, state: state2 });
-    expect(second.emitted[0].removed).toContain('design/features/t-m-ki-m.md');
-    expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(false);
-    expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
+    expect(second.emitted[0].removed).toContain('design/features/tim-kiem.md');
+    expect(existsSync(join(ws, 'docs/design/features/tim-kiem.md'))).toBe(false);
+    expect(existsSync(join(ws, 'docs/design/features/dang-nhap.md'))).toBe(true);
   });
 
   it('P7.2.3 — re-emitting module glossary does not touch module feature-spec\'s manifest/generation', () => {
@@ -170,19 +170,19 @@ describe('emitTier2 transaction', () => {
       ...baseAnswers,
       DS1a: 'Recipe, ShoppingList',
       DS1b: 'Định nghĩa',
-      'DS2a@ng-nh-p': 'a',
-      'DS2b@ng-nh-p': 'b',
-      'DS2c@ng-nh-p': 'c',
-      'DS2a@t-m-ki-m': 'a',
-      'DS2b@t-m-ki-m': 'b',
-      'DS2c@t-m-ki-m': 'c',
+      'DS2a@dang-nhap': 'a',
+      'DS2b@dang-nhap': 'b',
+      'DS2c@dang-nhap': 'c',
+      'DS2a@tim-kiem': 'a',
+      'DS2b@tim-kiem': 'b',
+      'DS2c@tim-kiem': 'c',
     };
     const ws = buildWorkspace(answers);
     let state = optInModule(defaultDeepenState(), 'glossary', 'explicit');
     state = optInModule(state, 'feature-spec', 'explicit');
     state = commitDeepen(state, { module: 'glossary', questionId: 'DS1a', subjectId: null });
     state = commitDeepen(state, { module: 'glossary', questionId: 'DS1b', subjectId: null });
-    for (const subj of ['ng-nh-p', 't-m-ki-m']) {
+    for (const subj of ['dang-nhap', 'tim-kiem']) {
       for (const q of ['DS2a', 'DS2b', 'DS2c']) {
         state = commitDeepen(state, { module: 'feature-spec', questionId: q, subjectId: subj });
       }
@@ -213,8 +213,8 @@ describe('emitTier2 transaction', () => {
     // feature-spec's own manifest/generation must be completely untouched.
     const featureSpecManifestAfter = readFileSync(featureSpecManifestPath, 'utf8');
     expect(featureSpecManifestAfter).toBe(featureSpecManifestBefore);
-    expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
-    expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(true);
+    expect(existsSync(join(ws, 'docs/design/features/dang-nhap.md'))).toBe(true);
+    expect(existsSync(join(ws, 'docs/design/features/tim-kiem.md'))).toBe(true);
   });
 
   it('P7.2.5 — a plan-affecting module (test-strategy) invalidates execution state past plan-validating', () => {

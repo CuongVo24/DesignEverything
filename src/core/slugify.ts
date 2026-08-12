@@ -1,11 +1,16 @@
 /**
  * Slug helper dùng chung — trích từ logic inline trước đây lặp 3 chỗ trong
- * synthesizeExecutionPlan.ts. Giữ NGUYÊN phép biến đổi cũ để output byte-identical.
+ * synthesizeExecutionPlan.ts. Giữ NGUYÊN phép biến đổi cũ để output byte-identical
+ * cho input không dấu. Input có dấu tiếng Việt được chuẩn hoá NFD + strip combining
+ * marks trước, nên nguyên âm có dấu chuyển về không dấu thay vì bị xoá.
  */
 
 /** Chuẩn hoá một chuỗi thành slug. Có thể trả '' nếu chuỗi không còn ký tự [a-z0-9]. */
 export function slugify(input: string): string {
   return input
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')

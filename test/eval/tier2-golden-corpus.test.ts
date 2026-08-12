@@ -160,8 +160,11 @@ describe('B21b — eval tầng 2 trên golden corpus DE', () => {
     const evidencePath = join(evidenceDir, 'v6-tier2-eval.md');
     const dateLinePrefix = `> Ngày đo: `;
     let measuredDate = new Date().toISOString().slice(0, 10);
+    const notesHeading = '## Nhận xét tay của manager';
+    const placeholderNote =
+      '_(Điền khi review: chọn ≥5 khối ngẫu nhiên, đối chiếu rubric B19a — grounding, chống bịa, đúng cardinality.)_';
 
-    const buildLines = (date: string) => [
+    const buildLines = (date: string, notesBody: string) => [
       '# Eval tầng 2 — Golden corpus (DesignEverything tự thiết kế)',
       '',
       `${dateLinePrefix}${date} · ref_sha: \`${goldenMap.ref_sha}\` · fixture: test/fixtures/de-self-answers.json`,
@@ -187,9 +190,9 @@ describe('B21b — eval tầng 2 trên golden corpus DE', () => {
       '- **Khối có nguồn thật:** xem `design/glossary.md` §Thực Thể Từ Data Model → `doc:docs/03-data-model.md#03-data-model/core-entities`.',
       '- **Khối unknown:** `design/test-strategy.md` §Phạm Vi & Tầng Kiểm Thử → `⚠ unknown` (chưa có conventions/test-tiers.md).',
       '',
-      '## Nhận xét tay của manager',
+      notesHeading,
       '',
-      '_(Điền khi review: chọn ≥5 khối ngẫu nhiên, đối chiếu rubric B19a — grounding, chống bịa, đúng cardinality.)_',
+      notesBody,
       '',
     ];
 
@@ -200,23 +203,38 @@ describe('B21b — eval tầng 2 trên golden corpus DE', () => {
       return text.slice(0, dateLineStart) + text.slice(dateLineEnd === -1 ? text.length : dateLineEnd);
     };
 
+    // The manager's hand-review note is written once by a human/reviewer and
+    // must survive every subsequent `npm test` re-run of this suite — a
+    // generator that always stamps the placeholder back in would silently
+    // discard real review content the moment anyone re-runs the eval.
+    const extractNotesBody = (text: string): string | null => {
+      const headingStart = text.indexOf(notesHeading);
+      if (headingStart === -1) return null;
+      const bodyStart = headingStart + notesHeading.length;
+      const body = text.slice(bodyStart).replace(/^\s*\n/, '').trimEnd();
+      return body.length > 0 ? body : null;
+    };
+
     let previousContent: string | null = null;
     try {
       previousContent = readFileSync(evidencePath, 'utf8');
     } catch {
-      // No prior report — first run, use today's date.
+      // No prior report — first run, use today's date and the placeholder note.
     }
+
+    const preservedNotes = previousContent !== null ? extractNotesBody(previousContent) : null;
+    const notesBody = preservedNotes ?? placeholderNote;
 
     const forceRegen = process.env.DE_REGEN_EVIDENCE === '1';
     if (!forceRegen && previousContent !== null) {
-      const candidateBody = stripDateLine(buildLines(measuredDate).join('\n'));
+      const candidateBody = stripDateLine(buildLines(measuredDate, notesBody).join('\n'));
       if (candidateBody === stripDateLine(previousContent)) {
         const priorDateMatch = previousContent.match(/> Ngày đo: (\d{4}-\d{2}-\d{2})/);
         if (priorDateMatch) measuredDate = priorDateMatch[1];
       }
     }
 
-    writeFileSync(evidencePath, buildLines(measuredDate).join('\n'), 'utf8');
+    writeFileSync(evidencePath, buildLines(measuredDate, notesBody).join('\n'), 'utf8');
     expect(true).toBe(true);
   });
 });

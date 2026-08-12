@@ -106,7 +106,7 @@ describe('E2E deepen flow', () => {
     let state: DeepenState = optInModule(defaultDeepenState(), 'feature-spec', 'explicit');
 
     const subjects = listDeepenSubjects('feature-spec', { answers, tier1Docs: docs });
-    expect(subjects.sort()).toEqual(['ng-nh-p', 't-m-ki-m']);
+    expect(subjects.sort()).toEqual(['dang-nhap', 'tim-kiem']);
 
     // Mô phỏng --next/--commit từng instance.
     const instances = expandQuestionInstances(script, 'feature-spec', subjects);
@@ -134,9 +134,9 @@ describe('E2E deepen flow', () => {
     expect(canEmitModule(state, script, 'feature-spec', subjects, digest).ok).toBe(true);
 
     const res = emitTier2({ workspace: ws, modules: ['feature-spec'], script, state });
-    expect(res.emitted[0].files.sort()).toEqual(['design/features/ng-nh-p.md', 'design/features/t-m-ki-m.md']);
-    expect(existsSync(join(ws, 'docs/design/features/ng-nh-p.md'))).toBe(true);
-    expect(existsSync(join(ws, 'docs/design/features/t-m-ki-m.md'))).toBe(true);
+    expect(res.emitted[0].files.sort()).toEqual(['design/features/dang-nhap.md', 'design/features/tim-kiem.md']);
+    expect(existsSync(join(ws, 'docs/design/features/dang-nhap.md'))).toBe(true);
+    expect(existsSync(join(ws, 'docs/design/features/tim-kiem.md'))).toBe(true);
     expect(loadDeepenState(ws).modules['feature-spec'].emitted_at).not.toBeNull();
   });
 

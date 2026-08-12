@@ -89,14 +89,21 @@ checkFutureVersionIsMarkedPlanned(
 // Design/RoadMap/v7-release-note.md's own "Target Version" / "package.json
 // still X" claim must actually match the real package version — this is the
 // note that OWNS the release-truth claim; if it drifts, nothing else can be
-// trusted either.
+// trusted either. This only holds WHILE the release is pending (Status is not
+// GA yet): that's the live-drift window this check exists to catch (a note
+// falsely claiming GA before package.json actually moved). Once the release
+// note's own Status says GA, package.json is expected — by design — to move
+// on to the NEXT target, so "still X" freezes as the version at cut time
+// instead of tracking forever; re-matching it against a moved-on
+// package.json would make an accurate historical record fail a live check.
 const releaseNotePath = new URL('../Design/RoadMap/v7-release-note.md', import.meta.url);
 const releaseNote = readFileSync(releaseNotePath, 'utf8');
 const stillMatch = releaseNote.match(/`package\.json`\s+still\s+([\d.]+)/);
 if (!stillMatch) {
   throw new Error('Design/RoadMap/v7-release-note.md is missing its "package.json still X" statement.');
 }
-if (stillMatch[1] !== pkg.version) {
+const isGa = /\*\*Status\*\*:\s*\*\*GA\*\*/.test(releaseNote);
+if (!isGa && stillMatch[1] !== pkg.version) {
   throw new Error(
     `Design/RoadMap/v7-release-note.md says package.json is still ${stillMatch[1]}, but it's actually ${pkg.version}.`
   );
