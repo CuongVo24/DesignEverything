@@ -43,6 +43,8 @@ describe('B5a — Codex Plugin Installed Parity & Self-Contained Bundle Suite', 
     expect(interviewSkill).toContain('${PLUGIN_ROOT}/cli.mjs');
     expect(interviewSkill).not.toContain('__ENGINE_ROOT__');
     expect(existsSync(join(tmpDir, '.design-everything/install-manifest.json'))).toBe(true);
+    expect(interviewSkill).toContain('text-only');
+    expect(interviewSkill).toContain('deferred in 8.1.0');
 
     const runtimeDir = latestRuntimeDir(tmpDir);
     expect(existsSync(join(runtimeDir, 'runtime.mjs'))).toBe(true);

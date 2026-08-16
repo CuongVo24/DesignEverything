@@ -3,6 +3,13 @@ import { readFileSync } from 'fs';
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const plugin = JSON.parse(readFileSync(new URL('../adapter/codex-plugin/.codex-plugin/plugin.json', import.meta.url), 'utf8'));
 if (plugin.version !== pkg.version) throw new Error(`Plugin version ${plugin.version} does not match package ${pkg.version}.`);
+const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
+const lockRootVersion = lock.version;
+const lockPackageVersion = lock.packages?.['']?.version;
+if (lockRootVersion !== pkg.version || lockPackageVersion !== pkg.version) {
+  throw new Error(`package-lock root versions ${lockRootVersion}/${lockPackageVersion} do not match package ${pkg.version}.`);
+}
+
 
 // P9 — src/version.ts's RUNTIME_VERSION is the single constant every CLI/hook
 // envelope reports; checked by regex against the TS source text (not an

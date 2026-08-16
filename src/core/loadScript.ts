@@ -29,6 +29,7 @@ export function loadScript(path: string): Script {
 
   const script = parsed.data;
   const seenIds = new Set<string>();
+  const dependencies = new Map<string, Set<string>>();
   let seenS6 = false;
 
   let shapesPath = join(dirname(path), 'shapes.yaml');
@@ -61,6 +62,24 @@ export function loadScript(path: string): Script {
       }
     }
 
+    if (question.option_hints) {
+      const reachable = new Set<string>();
+      const visit = (id: string): void => {
+        if (reachable.has(id)) return;
+        reachable.add(id);
+        for (const parent of dependencies.get(id) ?? []) visit(parent);
+      };
+      for (const depId of question.depends_on) visit(depId);
+      for (const sourceId of question.option_hints.synthesize_from) {
+        if (!seenIds.has(sourceId)) {
+          throw new Error(`Question ${question.id} option_hints refers to undeclared or forward-declared id: ${sourceId}`);
+        }
+        if (!reachable.has(sourceId)) {
+          throw new Error(`Question ${question.id} option_hints source must be in its depends_on closure: ${sourceId}`);
+        }
+      }
+    }
+
     // 3. Check valid branch
     if (!validBranches.has(question.branch)) {
       throw new Error(
@@ -77,6 +96,7 @@ export function loadScript(path: string): Script {
     }
 
     seenIds.add(question.id);
+    dependencies.set(question.id, new Set(question.depends_on));
   }
 
   return script;

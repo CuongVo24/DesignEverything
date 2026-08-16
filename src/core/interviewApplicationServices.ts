@@ -50,6 +50,7 @@ export interface IssuePromptCapabilityOk {
   token: string;
   progress: Progress;
   revision: number;
+  committedAnswers: Record<string, string>;
 }
 export interface IssuePromptCapabilityFail {
   ok: false;
@@ -147,6 +148,7 @@ export function issuePromptCapability(workspaceRoot: string): IssuePromptCapabil
     token: issuedToken,
     progress: newEnvelope.payload.progress,
     revision: newEnvelope.state_revision,
+    committedAnswers: { ...newEnvelope.payload.answers },
   };
 }
 

@@ -173,23 +173,12 @@ for (const eventHooks of Object.values(hooksJsonSrc.hooks)) {
 }
 stageWrite('hooks/hooks.json', JSON.stringify(hooksJsonSrc, null, 2), 'hook');
 
-// 1e. Skills.
+// 1e. Skills. The interview skill (skills/design-everything/SKILL.md) is
+// authored directly for Codex as a dedicated text-only fallback — it does
+// not claim native interactive cards (AskUserQuestion), unlike the Claude
+// skill it is paired with. Both it and the build skill ship from this single
+// recursive copy; no per-file rendering step is needed.
 stageCopyDir(join(ADAPTER_DIR, 'skills'), 'skills', 'skill');
-
-// The interview skill is authored once for Claude and rendered for Codex at
-// install time. Before this, the Codex package shipped only the build skill,
-// so a freshly installed real project had no /design-everything entrypoint and
-// could not complete the documented interview -> emit -> build journey.
-const codexInterviewSkill = readFileSync(
-  join(ENGINE_ROOT, 'adapter/claude-code/skill/SKILL.md'),
-  'utf8'
-)
-  .replaceAll(
-    '__ENGINE_ROOT__/adapter/claude-code/cli.mjs',
-    '${PLUGIN_ROOT}/cli.mjs'
-  )
-  .replaceAll('__ENGINE_ROOT__', '${PLUGIN_ROOT}');
-stageWrite('skills/design-everything/SKILL.md', codexInterviewSkill, 'skill');
 
 // 1f. Interview-script + catalog + templates — shipped for the same reason
 // the Claude installer ships them (manifest catalog_version/catalog_digest

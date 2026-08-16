@@ -173,3 +173,7 @@ doc tầng 1 đã tồn tại. Khối nào không truy được nguồn thật t
 - Không viết file ngoài `docs/` và `Design/` khi phỏng vấn chưa xong (hook `PreToolUse` cũng sẽ
   chặn — đừng tìm cách lách bằng đường dẫn khác).
 - Không tự tiện tuyên bố gate đã mở hoặc khuyên người dùng xóa tệp trạng thái/reinstall khi có lỗi. Dùng `safe_next_command` từ Core.
+
+## Interactive cards (8.1)
+
+For questions with options or option_hints, only start after a valid UserPromptSubmit. Call exactly one AskUserQuestion for current_step (header = ID, question = ask, multiSelect = false); render injected labels/descriptions, use label-to-value mapping, and do not add Other because the host supplies it. Fixed recommendations append (Khuyến nghị); contextual choices are not preselected. Generate hint choices only from committed-answer snapshot; missing source is unknown and falls back to free text. Then use confirmation cards (Đúng rồi / Sửa lại / Giải thích thêm); critic and warning acknowledgement each use an explicit acknowledgement card. Timeout, dismiss, unknown label, stale/replayed token, or expiry fail closed: request a fresh prompt, re-show translation and confirmation; never forge a token or retain/prefetch the next answer. Commit once at most with the latest token, then stop for the next prompt.

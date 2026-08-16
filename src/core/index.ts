@@ -11,6 +11,8 @@ export * from './schemas/index.js';
 // RUNTIME_VERSION export at all.
 export { RUNTIME_VERSION } from '../version.js';
 export { loadScript } from './loadScript.js';
+export { resolveQuestionInteraction } from './interactionChoices.js';
+export type { QuestionInteraction } from './interactionChoices.js';
 export { loadGatePolicy } from './loadGatePolicy.js';
 export { loadProgress, saveProgress } from './loadProgress.js';
 export { loadInterviewStore, transactInterviewStore, computePayloadChecksum, initializeInterviewStore } from './interviewStore.js';

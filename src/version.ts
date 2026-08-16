@@ -9,7 +9,7 @@
  * `version` field, so this constant and the package version can never
  * silently drift apart.
  */
-export const RUNTIME_VERSION = '8.0.0';
+export const RUNTIME_VERSION = '8.1.0';
 
 /**
  * Stable command surface inside every installed target. Both installers stage

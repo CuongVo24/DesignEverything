@@ -33,6 +33,29 @@ Repo này buộc agent đi theo hướng phỏng vấn trước khi code để t
     gatesDescription += `- **Gate \`${gate.id}\`**: Không bắt đầu tạo hoặc sửa mã nguồn ứng dụng khi chưa có đầy đủ các tài liệu: ${docsList}.\n`;
   }
 
+  const assistedQuestions = opts.script.questions.filter((question) => question.options || question.option_hints);
+  const interactionCatalog = assistedQuestions.map((question) => {
+    if (question.options) {
+      const choices = question.options.map((option) => {
+        const recommended = question.recommendation?.mode === 'fixed'
+          && question.recommendation.value === option.value
+          ? ' **(khuyến nghị)**'
+          : '';
+        return `\`${option.value}\` — ${option.label}: ${option.description}${recommended}`;
+      }).join('; ');
+      const contextual = question.recommendation?.mode === 'contextual'
+        ? ' Không có lựa chọn được khuyến nghị trước vì phụ thuộc ngữ cảnh.'
+        : '';
+      return `- **${question.id}**: ${choices}. Có thể tự nhập phương án khác.${contextual}`;
+    }
+    const hints = question.option_hints!;
+    return `- **${question.id}**: tạo ${hints.hint_count} gợi ý theo “${hints.hint_style}” từ ${hints.synthesize_from.join(', ')} đã commit; nếu thiếu nguồn, ghi \`unknown\` và hỏi tự nhập.`;
+  }).join('\n');
+  const sectionChoices = `## 3a. Lựa chọn dạng text (fallback)
+Harness này không có thẻ chọn native. Khi đến câu được hỗ trợ, hãy liệt kê các lựa chọn sau dạng text, cho phép người dùng tự nhập câu trả lời khác, rồi dịch ngược và chờ xác nhận. Không được tuyên bố có AskUserQuestion/native card.
+
+${interactionCatalog}`;
+
   const section4 = `## 4. Gate mềm trước khi code
 Không được chủ động sinh code khi các file tài liệu bắt buộc cho gate hiện tại chưa tồn tại.
 
@@ -69,6 +92,8 @@ ${section1}
 ${section2}
 
 ${section3}
+
+${sectionChoices}
 
 ${section4}
 

@@ -1,4 +1,4 @@
-version: 2.0.0
+version: 2.1.0
 questions:
   - id: CAL0
     ask: "Chào mừng! Bạn muốn mình giải thích thật kỹ từng bước và lý do (dành cho người mới học thiết kế), hay muốn đi nhanh thẳng vào việc (dành cho người đã quen)?"
@@ -9,6 +9,11 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận mức độ giải thích: `<giải thích kỹ / đi nhanh>`."
     depends_on: []
+    options:
+      - { value: deep, label: "Giải thích kỹ", description: "Có thêm lý do và hướng dẫn, nhưng mất thời gian hơn." }
+      - { value: fast, label: "Đi nhanh", description: "Tập trung chốt quyết định nhanh với giải thích tối giản." }
+    recommendation: { mode: fixed, value: fast }
+
   - id: S0
     ask: "Nếu kể cho một người bạn trong 10 giây, dự án này là cái gì?"
     default: null
@@ -34,6 +39,11 @@ questions:
     branch: core
     gate: null
     translate_back: "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`. Hiện tại họ giải quyết tạm bằng: `<cách xoay xở hiện nay>`. Đúng ý bạn chứ?"
+    option_hints:
+      synthesize_from: [S0]
+      hint_count: 3
+      hint_style: "nỗi đau + workaround khả dĩ"
+
     depends_on: [S0]
     slot_keys: [problem_summary, current_workaround]
     answer_contract:
@@ -48,6 +58,11 @@ questions:
     branch: core
     gate: null
     translate_back: "Mình tóm lại có các nhóm người dùng chính sau: `<persona 1>` muốn `<job-to-be-done 1>`; `<persona 2>` muốn `<job-to-be-done 2>`. Ổn chưa?"
+    option_hints:
+      synthesize_from: [S0, S1]
+      hint_count: 3
+      hint_style: "persona + job-to-be-done"
+
     depends_on: [S0, S1]
     slot_keys: [primary_persona_summary, primary_persona_job_to_be_done, secondary_persona_summary, secondary_persona_job_to_be_done]
     answer_contract:
@@ -74,6 +89,11 @@ questions:
     branch: core
     gate: scope-locked
     translate_back: "Mình đã nhóm lại thành 4 tầng: Must / Should / Could / Won't. Bản MVP nhỏ nhất mình đề xuất là: `<danh sách Must>`. Phần này để sau là: `<danh sách còn lại>`. Bạn xác nhận giúp mình nhé."
+    option_hints:
+      synthesize_from: [S0, S1, S2]
+      hint_count: 3
+      hint_style: "nhóm Must tiêu biểu"
+
     depends_on: [S0, S1, S2]
     slot_keys: [must_have_scope, should_have_scope, could_have_scope, wont_for_mvp_scope]
     answer_contract:
@@ -95,6 +115,11 @@ questions:
     branch: core
     gate: null
     translate_back: "Mình tóm lại các dữ liệu lõi là: `<danh sách entity>` cùng quan hệ chính giữa chúng. Mỗi loại dữ liệu này phục vụ trực tiếp cho các tính năng Must. Đúng chứ?"
+    option_hints:
+      synthesize_from: [S3]
+      hint_count: 3
+      hint_style: "entity/relationship từ Must"
+
     depends_on: [S0, S1, S2, S3]
     slot_keys: [core_entities, entity_relationships, deferred_data_notes]
     answer_contract:
@@ -109,6 +134,11 @@ questions:
     branch: core
     gate: null
     translate_back: "Mình viết lại luồng chuẩn như sau: `<các bước mở đến xong việc>`. Luồng này sẽ là ví dụ chính để kiểm tra MVP có thật sự dùng được hay không."
+    option_hints:
+      synthesize_from: [S3, S4]
+      hint_count: 3
+      hint_style: "luồng chính từ Must và data"
+
     depends_on: [S0, S1, S2, S3, S4]
     slot_keys: [main_flow_summary, main_flow_steps, main_flow_risks_or_edge_cases]
     answer_contract:
@@ -137,6 +167,13 @@ questions:
     branch: core
     gate: null
     translate_back: "Mình xác nhận hình-hài dự án là: `<web / mobile / hybrid / cli>`."
+    options:
+      - { value: web, label: "Ứng dụng web", description: "Triển khai nhanh và truy cập được từ trình duyệt." }
+      - { value: mobile, label: "App di động", description: "Tận dụng trải nghiệm thiết bị nhưng tăng chi phí phát hành." }
+      - { value: hybrid, label: "Web và mobile", description: "Phủ hai kênh nhưng cần đồng bộ phạm vi và kiểm thử." }
+      - { value: cli, label: "Công cụ dòng lệnh", description: "Hợp tự động hoá kỹ thuật nhưng kém thân thiện với người phổ thông." }
+    recommendation: { mode: fixed, value: web }
+
     depends_on: [S6]
   - id: R1
     ask: "Dự án của bạn có rủi ro hay bất định nào sau đây không: phụ thuộc thư viện/API bên ngoài, chi phí vận hành/tài khoản Store/Cloud, dữ liệu nhạy cảm cần bảo mật, quyền thiết bị phức tạp, hay có phần nào bạn chưa biết cách làm không? (Bạn có thể trả lời 'không biết' hoặc bỏ qua)."
@@ -174,6 +211,12 @@ questions:
     gate: null
     translate_back: "Mình tóm lại nhu cầu hiển thị là: `<cần SEO / không cần SEO>`, nên hướng rendering phù hợp là `<SSR/SSG hoặc SPA>` vì `<lý do gắn với cách người dùng tìm và dùng sản phẩm>`."
     depends_on: [R1, S8]
+    options:
+      - { value: public-seo, label: "Công khai cần SEO", description: "Tăng khả năng được tìm thấy nhưng cần rendering phía server." }
+      - { value: private-app, label: "Ứng dụng riêng tư", description: "Đơn giản hơn vì phần lớn nội dung sau đăng nhập." }
+      - { value: mixed-rendering, label: "Kết hợp hai kiểu", description: "Cân bằng trang công khai và app riêng nhưng tăng độ phức tạp." }
+    recommendation: { mode: contextual }
+
     slot_keys: [client_and_rendering_strategy]
   - id: W2
     ask: "Người dùng của bạn chủ yếu mở sản phẩm trên máy tính, điện thoại, hay lúc nào cũng lẫn cả hai?"
@@ -184,6 +227,12 @@ questions:
     gate: null
     translate_back: "Mình hiểu thiết bị sử dụng chính là `<máy tính / điện thoại / cả hai>`. Vì vậy giao diện nên được thiết kế theo hướng `<responsive mobile-first / desktop-first có lý do cụ thể>`."
     depends_on: [R1, S8, W1]
+    options:
+      - { value: desktop-first, label: "Ưu tiên máy tính", description: "Tối ưu thao tác màn hình lớn nhưng điện thoại là phụ." }
+      - { value: mobile-first, label: "Ưu tiên điện thoại", description: "Tối ưu chạm và màn hình nhỏ nhưng desktop cần thích nghi." }
+      - { value: responsive-both, label: "Responsive cả hai", description: "Phục vụ hai thiết bị nhưng cần kiểm thử nhiều breakpoint." }
+    recommendation: { mode: fixed, value: responsive-both }
+
     slot_keys: [client_and_rendering_strategy, architecture_overview]
   - id: W3
     ask: "Bạn muốn người khác có thể mở sản phẩm bằng link ở giai đoạn nào? Có cần tên miền riêng ngay không, hay chỉ cần một bản chạy được để chia sẻ thử trước?"
@@ -194,6 +243,12 @@ questions:
     gate: null
     translate_back: "Mình tóm lại nhu cầu triển khai là: `<chia sẻ bản thử sớm / cần miền riêng ngay / chỉ nội bộ>`. Vì vậy phương án phù hợp trước mắt là `<Vercel hoặc Netlify free + subdomain / phương án khác có lý do>`."
     depends_on: [R1, S8, W1, W2]
+    options:
+      - { value: preview-subdomain, label: "Subdomain bản thử", description: "Chia sẻ sớm với chi phí thấp nhưng chưa có thương hiệu riêng." }
+      - { value: custom-domain, label: "Tên miền riêng", description: "Tạo độ tin cậy sớm nhưng cần vận hành DNS và chi phí." }
+      - { value: internal-only, label: "Chỉ nội bộ", description: "Giảm rủi ro công khai nhưng khó lấy phản hồi bên ngoài." }
+    recommendation: { mode: fixed, value: preview-subdomain }
+
     slot_keys: [hosting_strategy, deployment_goal, domain_and_access_strategy]
   - id: W4
     ask: "Người dùng có cần vào bằng tài khoản không? Nếu có thì kiểu nào sẽ đỡ rào cản nhất: email, Google, hay một cách đăng nhập khác?"
@@ -204,6 +259,12 @@ questions:
     gate: null
     translate_back: "Mình hiểu bài toán truy cập là: `<cần / không cần tài khoản>`. Nếu cần, phương án đăng nhập phù hợp hiện tại là `<Google OAuth + email/password / phương án khác>` vì `<lý do gắn với độ tiện và đối tượng người dùng>`."
     depends_on: [R1, S8, W1, W2, W3]
+    options:
+      - { value: no-account, label: "Không cần tài khoản", description: "Giảm rào cản vào sản phẩm nhưng hạn chế dữ liệu cá nhân." }
+      - { value: google-email, label: "Google và email", description: "Đăng nhập thuận tiện nhưng phải vận hành luồng xác thực." }
+      - { value: email-only, label: "Chỉ email", description: "Ít phụ thuộc bên thứ ba nhưng người dùng nhập mật khẩu nhiều hơn." }
+    recommendation: { mode: contextual }
+
     slot_keys: [auth_and_access_strategy]
   - id: W5
     ask: "Có chỗ nào cần cập nhật ngay lúc đó không, kiểu chat, thông báo live, hay nhiều người cùng thấy thay đổi tức thì? Và bạn có cần một khu vực admin riêng để quản lý không?"
@@ -231,6 +292,12 @@ questions:
     gate: null
     translate_back: "Mình tóm lại phạm vi nền tảng thử nghiệm đầu tiên là `<Android / iOS / cả hai>`. Với nguồn lực hiện tại, việc tập trung vào `<Android / iOS>` làm MVP sẽ giúp giảm thiểu rủi ro build/test."
     depends_on: [R1, S8]
+    options:
+      - { value: android, label: "Android", description: "Dễ thử nghiệm nếu đã có thiết bị Android thật." }
+      - { value: ios, label: "iOS", description: "Hợp hệ Apple nhưng cần môi trường build và ký riêng." }
+      - { value: both, label: "Cả hai", description: "Mở rộng phạm vi nhưng làm build và kiểm thử phức tạp hơn." }
+    recommendation: { mode: contextual }
+
     slot_keys: [client_and_rendering_strategy, device_capabilities_and_permissions]
   - id: M2
     ask: "Nếu điện thoại mất mạng hoặc mạng chập chờn, người dùng còn phải làm được phần nào không? Hay chỉ cần có mạng là đủ?"
@@ -241,6 +308,12 @@ questions:
     gate: null
     translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn có đồng ý đánh đổi chi phí này để lấy trải nghiệm offline không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1]
+    options:
+      - { value: online-first, label: "Ưu tiên có mạng", description: "Đơn giản nhất nhưng người dùng không làm việc khi mất mạng." }
+      - { value: offline-critical, label: "Offline tác vụ chính", description: "Bảo vệ luồng quan trọng nhưng cần sync có chọn lọc." }
+      - { value: offline-first, label: "Offline trước", description: "Trải nghiệm bền vững nhưng chi phí đồng bộ và xung đột cao." }
+    recommendation: { mode: fixed, value: online-first }
+
     slot_keys: [client_and_rendering_strategy, architecture_overview]
     answer_contract:
       required: true
@@ -268,6 +341,12 @@ questions:
     gate: null
     translate_back: "Mình hiểu nhu cầu push là: `<có / chưa cần>`, dùng để `<nhắc việc gì>`. Nếu triển khai, phương án thực dụng hiện tại là FCM cho thông báo đẩy; nếu chưa có tình huống buộc phải kéo người dùng quay lại, có thể để sau MVP."
     depends_on: [R1, S8, M1, M2, M3]
+    options:
+      - { value: no-push, label: "Chưa cần push", description: "Giữ MVP đơn giản nhưng ít khả năng kéo người dùng quay lại." }
+      - { value: transactional-push, label: "Push giao dịch", description: "Nhắc việc thiết yếu nhưng cần sự kiện và quyền thông báo." }
+      - { value: engagement-push, label: "Push tương tác", description: "Tăng quay lại nhưng dễ gây phiền và đòi hỏi tối ưu." }
+    recommendation: { mode: fixed, value: no-push }
+
     slot_keys: [auth_and_access_strategy]
   - id: M5
     ask: "Bạn đang nghĩ app này kiếm tiền kiểu gì, và ở giai đoạn đầu muốn lên store thật luôn hay chỉ cần bản thử để test với người dùng trước?"
@@ -278,6 +357,13 @@ questions:
     gate: null
     translate_back: "Mình tóm lại phương án phát hành là: `<bản thử / lên store thật ngay>`, và mô hình là `<free trước / in-app purchase / cách khác>`. [CẢNH BÁO] Xin lưu ý rằng đối với Mobile: \"Code xong ≠ Có app trên Store\". Để phát hành được app, bạn bắt buộc phải cấu hình ký ứng dụng (App Signing), chuẩn bị phí tài khoản Developer (Apple App Store: $99/năm, Google Play Store: $25 một lần), và chờ quy trình kiểm duyệt (review) nghiêm ngặt từ họ. Bạn có đồng ý chuẩn bị các thủ tục và chi phí này không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1, M2, M3, M4]
+    options:
+      - { value: internal-test, label: "Thử nghiệm nội bộ", description: "Nhận phản hồi nhanh nhưng chưa tiếp cận người dùng công khai." }
+      - { value: store-free, label: "Store miễn phí", description: "Có phân phối công khai nhưng vẫn qua thủ tục store." }
+      - { value: store-iap, label: "Store in-app purchase", description: "Có doanh thu trong app nhưng chịu phí và chính sách nền tảng." }
+      - { value: store-other, label: "Store cách khác", description: "Linh hoạt mô hình nhưng cần tự xác định quy trình tuân thủ." }
+    recommendation: { mode: fixed, value: internal-test }
+
     slot_keys: [realtime_push_or_sync_strategy, store_readiness_notes]
     answer_contract:
       required: true
@@ -295,6 +381,13 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận ngôn ngữ và môi trường chạy là: `<Node.js / Python / Go / Rust / Bash>`, sử dụng các thư viện chính: `<danh sách thư viện>`."
     depends_on: [R1, S8]
+    options:
+      - { value: node-ts, label: "Node TypeScript", description: "Tận dụng hệ sinh thái phong phú nhưng cần runtime Node." }
+      - { value: python, label: "Python", description: "Viết nhanh và dễ học nhưng đóng gói đa nền tảng cần chú ý." }
+      - { value: go, label: "Go", description: "Binary gọn nhẹ nhưng tốc độ phát triển ban đầu có thể chậm hơn." }
+      - { value: rust, label: "Rust", description: "An toàn và hiệu năng cao nhưng đường học và compile phức tạp." }
+    recommendation: { mode: fixed, value: node-ts }
+
     slot_keys: [architecture_overview]
   - id: C2
     ask: "Giao diện lệnh của app sẽ thế nào? Người dùng truyền flags/arguments (ví dụ --verbose -f file.txt), tương tác qua menu (interactive prompt), hay truyền dữ liệu qua stdin/stdout pipeline?"
@@ -305,6 +398,13 @@ questions:
     gate: null
     translate_back: "Mình tóm tắt phương thức giao tiếp CLI là: `<truyền tham số flags/args / menu tương tác / stdin/stdout pipeline>`. Thư viện xử lý giao diện CLI đề xuất là `<Commander.js / Inquirer.js / Clack / các thư viện tương ứng>`."
     depends_on: [R1, S8, C1]
+    options:
+      - { value: flags, label: "Flags và arguments", description: "Dễ tự động hoá nhưng người mới phải nhớ cú pháp." }
+      - { value: interactive, label: "Menu tương tác", description: "Dễ khám phá nhưng khó dùng trong script tự động." }
+      - { value: pipeline, label: "Pipeline stdin stdout", description: "Ghép công cụ tốt nhưng cần quy ước dữ liệu rõ." }
+      - { value: flags-interactive, label: "Flags và menu", description: "Phục vụ cả hai cách nhưng bề mặt CLI lớn hơn." }
+    recommendation: { mode: fixed, value: flags-interactive }
+
     slot_keys: [client_and_rendering_strategy]
   - id: C3
     ask: "Ứng dụng lưu cấu hình, khóa bảo mật (API keys), và dữ liệu ở đâu? (ví dụ file config JSON ở thư mục home, biến môi trường ENV, hay keychain của hệ điều hành)?"
@@ -325,6 +425,13 @@ questions:
     gate: null
     translate_back: "Mình ghi nhận hệ điều hành hỗ trợ đầu tiên là: `<hệ điều hành của bạn>`. Các hệ điều hành khác sẽ được xem xét sau MVP để tối ưu hóa việc phân phối."
     depends_on: [R1, S8, C1, C2, C3]
+    options:
+      - { value: windows, label: "Windows", description: "Tối ưu máy hiện tại nhưng chưa bảo đảm hệ khác." }
+      - { value: macos, label: "macOS", description: "Hợp hệ Apple nhưng khác biệt shell và đóng gói." }
+      - { value: linux, label: "Linux", description: "Hợp môi trường server nhưng ít bao phủ desktop phổ thông." }
+      - { value: cross-platform, label: "Đa nền tảng", description: "Phủ rộng nhưng cần test path và CRLF kỹ hơn." }
+    recommendation: { mode: contextual }
+
     slot_keys: [device_capabilities_and_permissions]
   - id: C5
     ask: "Bạn định phân phối công cụ này tới người dùng bằng cách nào? (ví dụ xuất bản lên NPM/Pip/Cargo, tải file binary biên dịch sẵn từ GitHub Releases, hay dùng homebrew/scoop)?"
@@ -334,6 +441,13 @@ questions:
     branch: cli
     gate: null
     translate_back: "Mình xác nhận cơ chế phân phối ban đầu: `<cục bộ qua node/npx / npm link / NPM registry>`."
+    options:
+      - { value: local, label: "Chạy cục bộ", description: "Nhanh để thử nghiệm nhưng người khác khó cài đặt." }
+      - { value: registry, label: "Registry ngôn ngữ", description: "Cài đặt quen thuộc nhưng cần duy trì phiên bản phát hành." }
+      - { value: release-binary, label: "Binary phát hành", description: "Không cần runtime nhưng build đa nền tảng phức tạp." }
+      - { value: os-package-manager, label: "Package manager hệ điều hành", description: "Tiện cho người dùng nhưng cần công thức cho từng hệ." }
+    recommendation: { mode: fixed, value: local }
+
     depends_on: [R1, S8, C1, C2, C3, C4]
     slot_keys: [distribution_channel, versioning_strategy, installation_guide]
     answer_contract:

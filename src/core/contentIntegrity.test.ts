@@ -19,12 +19,25 @@ const catalogPath = join(__dirname, '../../Design/Content/artifact-catalog.yaml'
 describe('Content Integrity (Tầng 1)', () => {
   test('script.yaml must load successfully and contain exactly 26 questions with unique IDs', () => {
     const script = loadScript(scriptPath);
-    expect(script.version).toBe('2.0.0');
+    expect(script.version).toBe('2.1.0');
     expect(script.questions.length).toBe(26);
 
     const questionIds = script.questions.map((q) => q.id);
     const uniqueIds = new Set(questionIds);
     expect(uniqueIds.size).toBe(questionIds.length);
+  });
+
+  test('contains exactly the 14 static catalogs and five grounded hint questions', () => {
+    const script = loadScript(scriptPath);
+    const staticIds = script.questions.filter((q) => q.options).map((q) => q.id);
+    const hintIds = script.questions.filter((q) => q.option_hints).map((q) => q.id);
+    expect(staticIds).toEqual(['CAL0', 'S7', 'W1', 'W2', 'W3', 'W4', 'M1', 'M2', 'M4', 'M5', 'C1', 'C2', 'C4', 'C5']);
+    expect(hintIds).toEqual(['S1', 'S2', 'S3', 'S4', 'S5']);
+    expect(script.questions.find((q) => q.id === 'S7')?.options?.map((option) => option.value))
+      .toEqual(['web', 'mobile', 'hybrid', 'cli']);
+    for (const question of script.questions.filter((q) => q.option_hints)) {
+      expect(question.option_hints?.hint_count).toBe(3);
+    }
   });
 
   test('every target_doc in script.yaml questions must exist in taxonomy.md', () => {

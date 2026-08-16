@@ -1,10 +1,16 @@
 import { Progress, Script } from '../../../core/schemas/index.js';
+import { resolveQuestionInteraction } from '../../../core/interactionChoices.js';
 
 /**
  * Builds the injected context text from current progress and interview script.
  * Following the 4 Golden Rules of phỏng vấn.
  */
-export function renderInject(progress: Progress, script: Script, capabilityToken?: string): string {
+export function renderInject(
+  progress: Progress,
+  script: Script,
+  capabilityToken?: string,
+  committedAnswers: Record<string, string> = {},
+): string {
   if (progress.current_step === null) {
     return '';
   }
@@ -36,6 +42,15 @@ Ack prompt: ${critic.ack_prompt.trim()}
 `
     : '';
 
+  const interaction = resolveQuestionInteraction(question, committedAnswers);
+  const interactionSection = interaction.kind === 'static'
+    ? `\n[Lựa chọn (options)]\n${interaction.options.map((option) => {
+      const recommended = interaction.recommendation.mode === 'fixed' && interaction.recommendation.value === option.value;
+      return `- ${option.label}${recommended ? ' (Khuyến nghị)' : ''} [${option.value}]: ${option.description}`;
+    }).join('\n')}\n${interaction.recommendation.mode === 'contextual' ? 'Khuyến nghị phụ thuộc ngữ cảnh — không preselect lựa chọn nào.\n' : ''}Người dùng có thể dùng Other để tự nhập câu trả lời; không được ép chọn danh sách.\n`
+    : interaction.kind === 'hints'
+      ? `\n[Gợi ý lựa chọn — tổng hợp từ answers đã commit]\nTạo đúng ${interaction.hintCount} lựa chọn theo: ${interaction.hintStyle}\n${interaction.sources.map((source) => `- ${source.id}: ${source.value ?? '⚠ unknown — cần hỏi người, không tự bịa'}`).join('\n')}\nNếu nguồn thiếu, không tạo lựa chọn giả; dùng Other/free-text.\n`
+      : '';
   return `[Mục tiêu phiên]
 Hiện tại bạn đang ở trong phiên phỏng vấn thiết kế dự án DesignEverything.
 
@@ -46,7 +61,7 @@ Câu hỏi (ask): ${question.ask}
 Đề xuất mặc định (default): ${question.default ?? 'Không có'}
 File đích (target_doc): ${targetDocText}
 Dịch ngược (translate_back): ${question.translate_back}
-${criticSection}${capabilitySection}
+${interactionSection}${criticSection}${capabilitySection}
 [4 Quy tắc vàng của phỏng vấn]
 1. Hỏi từng câu một: Không hỏi gộp nhiều câu cùng lúc.
 2. Luôn có đề xuất mặc định thông minh: Giúp người dùng dễ dàng trả lời nhanh.
@@ -55,5 +70,5 @@ ${criticSection}${capabilitySection}
 
 [Hướng dẫn cho Skill]
 - Chỉ tiến hành commit bước phỏng vấn hiện tại bằng cách gọi \`commitStep\` SAU KHI người dùng đã xác nhận rõ ràng bản dịch ngược (translate_back) cho câu hỏi hiện tại.
-${critic ? '- Vì câu hỏi này có Critic-pass, sau khi người dùng đồng ý bản dịch ngược, bạn phải đưa ra [Yêu cầu Phản biện (Critic-pass)] ở trên (gồm Challenge và Ack prompt) và chờ người dùng phản hồi đồng ý hoặc điều chỉnh rồi mới gọi commitStep.\n' : ''}- Mỗi lượt tương tác của người dùng chỉ được phép commit tối đa một bước (không commit gộp nhiều bước).`;
+${interaction.kind !== 'free_text' ? '- Với options/hints: gọi AskUserQuestion một câu, header bằng ID, multiSelect=false; map label về value từ block trên. Không tự thêm Other; timeout/dismiss/label lạ không được commit.\n' : ''}${critic ? '- Vì câu hỏi này có Critic-pass, sau khi người dùng đồng ý bản dịch ngược, bạn phải đưa ra [Yêu cầu Phản biện (Critic-pass)] ở trên (gồm Challenge và Ack prompt) và chờ người dùng phản hồi đồng ý hoặc điều chỉnh rồi mới gọi commitStep.\n' : ''}- Mỗi lượt tương tác của người dùng chỉ được phép commit tối đa một bước (không commit gộp nhiều bước).`;
 }
