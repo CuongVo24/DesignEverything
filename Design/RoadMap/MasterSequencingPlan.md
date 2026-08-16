@@ -1,13 +1,16 @@
-# Master Sequencing Plan — 7.0.0 → 8.0.0 → 8.1.0
+# Master Sequencing Plan — 7.0.0 → 8.0.0 → 8.1.0 → 8.1.1 → 8.2.0
 
 > Nguồn sự thật xuyên phiên cho chuỗi gate mở lane `Interactive Question Cards`
-> ([InteractiveQuestionCardsPlan.md](InteractiveQuestionCardsPlan.md)). Không thay thế
+> ([InteractiveQuestionCardsPlan.md](InteractiveQuestionCardsPlan.md)) và lane
+> `Interview Cadence` ([InterviewCadencePlan.md](InterviewCadencePlan.md)). Không thay thế
 > `plan-v1-fix.md`, `ReleaseReadinessPlan.md`, `v6-expansion/README.md` hay `v7-expansion/README.md`
 > — chỉ tổng hợp trạng thái và trỏ ngược. Mỗi mốc đóng phải kèm bằng chứng máy kiểm được (đường dẫn
 > file, commit hash, hoặc lệnh test), không đóng bằng lời.
 >
 > Chuỗi: `7.0.0 (v1-fix-bugs, GA 2026-08-10)` → `8.0.0 (v6-expansion, GA 2026-08-10, commit 6a52408)` →
-> `8.1.0 (lane này, RC 2026-08-16 — 5/6 contract DONE, R-spike còn mở, xem Gate C3)`.
+> `8.1.0 (interactive cards, RC 2026-08-16 — 5/6 contract DONE, R-spike còn mở, xem Gate C3)` →
+> `8.1.1 (hotfix H1-H6, đóng 2026-08-16 — mở đường tới emit lần đầu, xem Gate D1)` →
+> `8.2.0 (interview cadence — undo/batch/multi_select, đang chạy, xem Gate D2)`.
 
 ## Bảng mốc
 
@@ -38,6 +41,8 @@
 | **Gate C1** | Duyệt 6 mục `v7-expansion/README.md` | ✅ DONE — 2 điều kiện tiên quyết (A4, B4) đã đóng, `v7-expansion/README.md` tự ghi "Lane MỞ (2026-08-10)" | `v7-expansion/README.md` header |
 | **Gate C2** | Gỡ cảnh báo "Lane CHƯA mở" | ✅ DONE — `v7-expansion/README.md` không còn cảnh báo này; `InteractiveQuestionCardsPlan.md` header đổi thành "Lane MỞ, đang RC" (P0, commit `4fad0f6`) | `v7-expansion/README.md`, `InteractiveQuestionCardsPlan.md` |
 | **Gate C3** | Thực thi: R-spike ∥ B22a → B22b → B22c → B22d → B22e | 🔄 5/6 DONE (2026-08-16), nhánh `codex/lane-8-1-interactive-cards`, lộ trình P0–P8 chạy hết (P0–P7 DONE). B22a/B22b/B22c(có-điều-kiện)/B22d/B22e đóng; **R-spike còn mở** — chờ chủ repo chạy phiên thật (probe đã dựng ở P2, cùng lớp Gate A3/B1: hành động sống không tự động hoá được trong phiên đối chiếu tài liệu) | §7 5 contract ghi DONE; [r-spike-userpromptsubmit-probe.md](../ContractForAI/Core/v7-expansion/r-spike-userpromptsubmit-probe.md) §7 chờ log thật; [v8.1-release-note.md](v8.1-release-note.md) Status = RC |
+| **Gate D1** | Cắt 8.1.1 — hotfix H1-H6 (đóng bế tắc bootstrap, `--slots-file`, gate PowerShell, `status` question card, `gates_passed`/`ready-for-validation`) | ✅ DONE 2026-08-16 | 6/6 contract DONE tại [v8-hotfix/](../ContractForAI/Core/v8-hotfix/); `npm run typecheck` xanh, `npx vitest run` = 135 file/1040 pass/2 skip |
+| **Gate D2** | Thực thi lane `v8-expansion`: B24a → B24b ∥ B24c → B24d → B24e → B24f | 🔄 Đang chạy (2026-08-16), nhánh `codex/lane-8-1-interactive-cards` | [InterviewCadencePlan.md](InterviewCadencePlan.md) §5; D59-D61 duyệt tại [DecisionLog.md](../DecisionLog.md) |
 
 ## Quyết định đã khoá (không làm lại)
 
@@ -51,9 +56,11 @@
 - **D56 (2026-08-10):** hạ điều 6/10 của DoD `plan-v1-fix.md` §10 — chấp nhận on-axis `IMPLEMENTED` + `UNIT_ONLY`/`SEAM_PARTIAL` thay vì `VERIFIED` tuyệt đối để cắt 7.0.0. Đóng Gate A1/A2/A4.
 - **D57 (2026-08-10):** gỡ "pilot B18a xong" khỏi điều kiện *mở lane* v6-expansion (không gỡ khỏi backlog — Gate B1 vẫn TODO). Đóng Gate B3/B4 cùng D49–D52 (nhưng xem lệch phát hiện ở Gate B2 — D49–D52 chưa thực sự có dòng trong `DecisionLog.md`).
 - **D58 (2026-08-16):** thẻ tương tác lane 8.1 commit văn xuôi (`label: description`), không commit `value` thô — xem [DecisionLog.md](../DecisionLog.md).
+- **D59-D61 (2026-08-16):** lane 8.2 (interview cadence) — bỏ thẻ xác nhận dịch ngược bù bằng `undo` (D59, supersedes D54), gộp nhiều câu vào một lượt do Core quyết batch (D60), `multi_select` cho câu mà slot vốn là danh sách (D61). Xem [DecisionLog.md](../DecisionLog.md), [InterviewCadencePlan.md](InterviewCadencePlan.md).
 
 ## Nguồn chi tiết theo gate
 
 - Gate A: [plan-v1-fix.md](../ContractForAI/Core/v1-fix-bugs/plan-v1-fix.md), [v1-fix-bugs/README.md](../ContractForAI/Core/v1-fix-bugs/README.md), [finding-coverage-matrix.md](../ContractForAI/Core/v1-fix-bugs/finding-coverage-matrix.md), [v7-release-note.md](v7-release-note.md), [dogfood-checklist.md](../../docs/dogfood-checklist.md).
 - Gate B: [ReleaseReadinessPlan.md](ReleaseReadinessPlan.md), [v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md), [V6-DetailedDesignPlan.md](../ContractForAI/Core/v6-expansion/V6-DetailedDesignPlan.md), [v5-feature-pilot-protocol.md](evidence/v5-feature-pilot-protocol.md).
 - Gate C: [v7-expansion/README.md](../ContractForAI/Core/v7-expansion/README.md), [InteractiveQuestionCardsPlan.md](InteractiveQuestionCardsPlan.md). Lộ trình chi tiết P0–P8 đóng Gate C3 không phải file repo — bản canonical trạng thái là bảng mốc này + §7 từng contract B22, cập nhật theo từng phase.
+- Gate D: [v8-hotfix/](../ContractForAI/Core/v8-hotfix/) (D1, 6 contract H1-H6), [InterviewCadencePlan.md](InterviewCadencePlan.md) (D2, lane `v8-expansion`, contract B24a-B24f).

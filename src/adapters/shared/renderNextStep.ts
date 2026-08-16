@@ -3,10 +3,10 @@ import { TARGET_LOCAL_CLI_COMMAND } from '../../version.js';
 
 // The only proven-executable CLI entrypoint today. Cards must reference real
 // subcommands — the ones with a case in cliOperations.ts's dispatcher (status,
-// init, commit, validate, build, repair, emit, next, start, verify, review,
-// deepen) — not an aspirational `npx design-everything` binary that is not
-// published, and not `amend`, which has no dispatcher case (see §0 below).
-// The invariant is enforced by renderNextStep.test.ts against
+// init, commit, undo, validate, build, repair, emit, next, start, verify,
+// review, deepen) — not an aspirational `npx design-everything` binary that
+// is not published, and not `amend`, which has no dispatcher case (see §0
+// below). The invariant is enforced by renderNextStep.test.ts against
 // CLI_COMMAND_SURFACE, so this list cannot silently drift again.
 const CLI = TARGET_LOCAL_CLI_COMMAND;
 

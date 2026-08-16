@@ -4,7 +4,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { initializeInterviewStore, loadInterviewStore } from './interviewStore.js';
-import { issuePromptCapability, commitInterviewAnswer } from './interviewApplicationServices.js';
+import { issuePromptCapability, commitInterviewAnswer, undoLastAnswer } from './interviewApplicationServices.js';
 import { migrateInterviewStore } from './migrateInterviewStore.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -342,5 +342,114 @@ describe('P6 10.1 — commitInterviewAnswer atomically commits slots with the an
       if (result.ok) return;
       expect(result.reason_code).toBe('ANSWER_NEEDS_USER_ACK');
     });
+  });
+});
+
+// B24a (D59) — undo is the compensating control for dropping the mandatory
+// translate-back confirmation card: it must actually roll back everything
+// commitInterviewAnswer wrote for the undone question, in one CAS write.
+describe('B24a — undoLastAnswer rolls back the most recently committed question', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = join(tmpdir(), `de-undo-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
+    mkdirSync(tempDir, { recursive: true });
+    const designDir = join(tempDir, 'Design/Content/interview-script');
+    mkdirSync(designDir, { recursive: true });
+    cpSync(join(projectRoot, 'Design/Content/interview-script'), designDir, { recursive: true });
+    return () => {
+      if (existsSync(tempDir)) {
+        try {
+          rmSync(tempDir, { recursive: true, force: true });
+        } catch {
+          // Ignore
+        }
+      }
+    };
+  });
+
+  test('undo after committing CAL0 clears answers/slots, restores current_step, and requires a fresh token to re-answer', () => {
+    initializeInterviewStore(tempDir);
+    const capRes = issuePromptCapability(tempDir);
+    expect(capRes.ok).toBe(true);
+    if (!capRes.ok) return;
+
+    const commitRes = commitInterviewAnswer(tempDir, {
+      capabilityToken: capRes.token,
+      calibrateChoice: 'fast',
+      answerText: 'Đi nhanh, khuyến nghị mặc định.',
+    });
+    expect(commitRes.ok).toBe(true);
+    if (!commitRes.ok) return;
+    expect(commitRes.progress.current_step).toBe('S0');
+
+    const undoRes = undoLastAnswer(tempDir);
+    expect(undoRes.ok).toBe(true);
+    if (!undoRes.ok) return;
+    expect(undoRes.undone_question_id).toBe('CAL0');
+    expect(undoRes.progress.current_step).toBe('CAL0');
+    expect(undoRes.progress.calibrate_mode).toBeNull();
+    expect(undoRes.progress.answered).not.toContain('CAL0');
+    expect(undoRes.progress.pending_turn_capability).toBeNull();
+
+    const after = loadInterviewStore(tempDir);
+    expect(after.payload.answers.CAL0).toBeUndefined();
+    expect(after.payload.corrections?.answers?.CAL0?.[0]).toMatchObject({
+      previous_value: 'Đi nhanh, khuyến nghị mặc định.',
+    });
+
+    // The old token must not still be usable — undo revoked it, so
+    // re-answering CAL0 requires a brand new capability from a fresh turn.
+    const staleCommit = commitInterviewAnswer(tempDir, {
+      capabilityToken: capRes.token,
+      calibrateChoice: 'fast',
+      answerText: 'Trả lời lại bằng token cũ.',
+    });
+    expect(staleCommit.ok).toBe(false);
+  });
+
+  test('undo removes slots produced by the undone question, not slots from other questions', () => {
+    initializeInterviewStore(tempDir);
+    const cal0 = issuePromptCapability(tempDir);
+    expect(cal0.ok).toBe(true);
+    if (!cal0.ok) return;
+    const afterCal0 = commitInterviewAnswer(tempDir, {
+      capabilityToken: cal0.token,
+      calibrateChoice: 'fast',
+      answerText: 'Đi nhanh.',
+    });
+    expect(afterCal0.ok).toBe(true);
+
+    const s0 = issuePromptCapability(tempDir);
+    expect(s0.ok).toBe(true);
+    if (!s0.ok) return;
+    const afterS0 = commitInterviewAnswer(tempDir, {
+      capabilityToken: s0.token,
+      answerText: 'Ứng dụng giúp X làm Y nhanh hơn cho nhóm nhỏ.',
+      slotsPayload: { vision_elevator_pitch: 'Ứng dụng giúp X làm Y nhanh hơn.' },
+    });
+    expect(afterS0.ok).toBe(true);
+    if (!afterS0.ok) return;
+    expect(afterS0.progress.current_step).toBe('S1');
+
+    const undoRes = undoLastAnswer(tempDir);
+    expect(undoRes.ok).toBe(true);
+    if (!undoRes.ok) return;
+    expect(undoRes.undone_question_id).toBe('S0');
+    expect(undoRes.progress.current_step).toBe('S0');
+
+    const after = loadInterviewStore(tempDir);
+    expect(after.payload.slots.vision_elevator_pitch).toBeUndefined();
+    expect(after.payload.corrections?.slots?.vision_elevator_pitch?.[0]).toMatchObject({
+      previous_value: 'Ứng dụng giúp X làm Y nhanh hơn.',
+    });
+  });
+
+  test('undo on a fresh store with nothing answered fails with UNDO_DENIED_NOTHING_ANSWERED', () => {
+    initializeInterviewStore(tempDir);
+    const result = undoLastAnswer(tempDir);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason_code).toBe('UNDO_DENIED_NOTHING_ANSWERED');
   });
 });

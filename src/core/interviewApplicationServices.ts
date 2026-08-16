@@ -4,6 +4,7 @@ import { loadInterviewStore, transactInterviewStore, initializeInterviewStore } 
 import { migrateInterviewStore } from './migrateInterviewStore.js';
 import { loadScript } from './loadScript.js';
 import { commitStep, checkRate, stampTurn } from './advanceState.js';
+import { undoStep } from './undoStep.js';
 import { issueTurnCapability } from './turnCapability.js';
 import { validateAnswer } from './validateAnswer.js';
 import { issueAckCapability, consumeAckCapability, type AckWarningInput } from './ackCapability.js';
@@ -388,5 +389,111 @@ export function commitInterviewAnswer(
     reason_code: 'COMMIT_SUCCESS',
     progress: newEnvelope.payload.progress,
     revision: newEnvelope.state_revision,
+  };
+}
+
+export interface UndoLastAnswerOk {
+  ok: true;
+  reason_code: 'UNDO_SUCCESS';
+  progress: Progress;
+  revision: number;
+  undone_question_id: string;
+}
+export interface UndoLastAnswerFail {
+  ok: false;
+  reason_code: string;
+  message: string;
+}
+export type UndoLastAnswerResult = UndoLastAnswerOk | UndoLastAnswerFail;
+
+/**
+ * B24a (D59) — the sole authority for undoing the most recently answered
+ * interview question. Mirrors commitInterviewAnswer's shape: the pure
+ * engine (undoStep) runs outside any transaction, then a single
+ * transactInterviewStore fold applies progress + removes answers[qid] +
+ * removes every slot this question produced + records what was removed in
+ * corrections, all in one CAS write (one revision bump, not several).
+ */
+export function undoLastAnswer(workspaceRoot: string): UndoLastAnswerResult {
+  let envelope: InterviewStoreEnvelope;
+  try {
+    envelope = loadInterviewStore(workspaceRoot);
+  } catch (err: unknown) {
+    return { ok: false, reason_code: classifyLoadError(err), message: (err as Error).message };
+  }
+
+  let script;
+  try {
+    script = loadScript(join(workspaceRoot, SCRIPT_REL_PATH));
+  } catch (err: unknown) {
+    return { ok: false, reason_code: 'SCRIPT_MISSING', message: (err as Error).message };
+  }
+
+  const progress = envelope.payload.progress;
+  const qid = progress.answered.length > 0 ? progress.answered[progress.answered.length - 1] : null;
+
+  let updatedProgress: Progress;
+  try {
+    updatedProgress = undoStep(progress, script);
+  } catch (err: unknown) {
+    const msg = (err as Error).message;
+    const codeMatch = msg.match(/^Undo failed \(([A-Z_]+)\):/);
+    return { ok: false, reason_code: codeMatch ? codeMatch[1] : 'UNDO_FAILED', message: msg };
+  }
+
+  // qid is guaranteed non-null here: undoStep only returns successfully
+  // when progress.answered was non-empty (otherwise it throws
+  // UNDO_DENIED_NOTHING_ANSWERED, caught above).
+  const undoneQuestionId = qid as string;
+
+  const newEnvelope = transactInterviewStore(workspaceRoot, envelope.state_revision, (env) => {
+    const now = new Date().toISOString();
+    const answers = { ...env.payload.answers };
+    const removedAnswer = answers[undoneQuestionId];
+    delete answers[undoneQuestionId];
+
+    const correctionAnswers = { ...(env.payload.corrections?.answers ?? {}) };
+    if (removedAnswer !== undefined) {
+      correctionAnswers[undoneQuestionId] = [
+        ...(correctionAnswers[undoneQuestionId] ?? []),
+        { previous_value: removedAnswer, previous_revision: env.state_revision, corrected_at: now },
+      ];
+    }
+
+    // Remove every slot this question produced (slotProvenanceRecordSchema's
+    // question_id field, populated by commitInterviewAnswer above) — a slot
+    // left behind after its owning answer is undone would silently keep
+    // feeding emit with stale content nothing in `answered` justifies
+    // anymore.
+    const slots = { ...env.payload.slots };
+    const correctionSlots = { ...(env.payload.corrections?.slots ?? {}) };
+    for (const [key, record] of Object.entries(env.payload.slots)) {
+      if (record.question_id === undoneQuestionId) {
+        correctionSlots[key] = [
+          ...(correctionSlots[key] ?? []),
+          { previous_value: record.value, previous_revision: env.state_revision, corrected_at: now },
+        ];
+        delete slots[key];
+      }
+    }
+
+    return {
+      ...env,
+      payload: {
+        ...env.payload,
+        progress: updatedProgress,
+        answers,
+        slots,
+        corrections: { slots: correctionSlots, answers: correctionAnswers },
+      },
+    };
+  });
+
+  return {
+    ok: true,
+    reason_code: 'UNDO_SUCCESS',
+    progress: newEnvelope.payload.progress,
+    revision: newEnvelope.state_revision,
+    undone_question_id: undoneQuestionId,
   };
 }

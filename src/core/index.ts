@@ -24,13 +24,16 @@ export {
   ensureCanonicalStore,
   issuePromptCapability,
   commitInterviewAnswer,
+  undoLastAnswer,
 } from './interviewApplicationServices.js';
 export type {
   EnsureStoreOutcome,
   IssuePromptCapabilityResult,
   CommitInterviewAnswerResult,
+  UndoLastAnswerResult,
 } from './interviewApplicationServices.js';
-export { commitStep, checkRate, stampTurn } from './advanceState.js';
+export { commitStep, checkRate, stampTurn, selectNextStep, isQuestionCompatible } from './advanceState.js';
+export { undoStep } from './undoStep.js';
 export { issueTurnCapability, verifyTurnCapability, hashToken } from './turnCapability.js';
 export type { TurnCapabilityRecord, IssueCapabilityInput, IssueCapabilityResult, VerifyTurnResult } from './turnCapability.js';
 export { issueAckCapability, consumeAckCapability, verifyAckCapability, computeWarningDigest } from './ackCapability.js';

@@ -5,6 +5,7 @@ import { RUNTIME_VERSION, targetLocalCliCommand } from '../../version.js';
 import { CLI_COMMAND_SURFACE, CLI_GLOBAL_FLAGS } from './cliOps/commandSurface.js';
 import { handleStatus, handleInit, handleRepair } from './cliOps/status.js';
 import { handleCommit } from './cliOps/commit.js';
+import { handleUndo } from './cliOps/undo.js';
 import { handleValidate } from './cliOps/validate.js';
 import { handleEmit } from './cliOps/emit.js';
 import { handleNext } from './cliOps/next.js';
@@ -44,6 +45,8 @@ export async function runCliOperation(workspaceRoot: string, argv: string[]): Pr
       return handleInit(workspaceRoot);
     case 'commit':
       return handleCommit(workspaceRoot, argv);
+    case 'undo':
+      return handleUndo(workspaceRoot);
     case 'validate':
     case 'build':
       return handleValidate(workspaceRoot);
@@ -67,7 +70,7 @@ export async function runCliOperation(workspaceRoot: string, argv: string[]): Pr
         operation: subcommand,
         reason_code: 'UNKNOWN_SUBCOMMAND',
         severity: 'error',
-        message: `Subcommand "${subcommand}" không được hỗ trợ. Sử dụng: status, init, commit, validate, emit, repair, next, start, verify, review, deepen.`,
+        message: `Subcommand "${subcommand}" không được hỗ trợ. Sử dụng: status, init, commit, undo, validate, emit, repair, next, start, verify, review, deepen.`,
         next_command: targetLocalCliCommand('status'),
         runtime_version: RUNTIME_VERSION,
       };

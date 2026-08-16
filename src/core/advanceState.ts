@@ -26,6 +26,33 @@ function isQuestionCompatible(qBranch: string, progressBranch: string | null): b
   return qBranch === progressBranch;
 }
 
+// B24a — extracted so undoStep.ts and computeBatch (B24b) can recompute the
+// same "what question comes next" decision commitStep makes, instead of
+// each re-implementing the eligibility loop (already-answered + branch
+// compatibility + depends_on) a second and third time. Pure, no I/O.
+export function selectNextStep(
+  answered: string[],
+  branch: string | null,
+  script: Script
+): string | null {
+  for (const q of script.questions) {
+    if (answered.includes(q.id)) {
+      continue;
+    }
+    if (!isQuestionCompatible(q.branch, branch)) {
+      continue;
+    }
+    const depsSatisfied = q.depends_on.every((dep) => answered.includes(dep));
+    if (!depsSatisfied) {
+      continue;
+    }
+    return q.id;
+  }
+  return null;
+}
+
+export { isQuestionCompatible };
+
 import { verifyTurnCapability } from './turnCapability.js';
 
 export function commitStep(
@@ -125,26 +152,9 @@ export function commitStep(
     nextProgress.calibrate_mode = calibrateChoice;
   }
 
-  // 5. Calculate next current_step
-  let nextStepId: string | null = null;
-  for (const q of script.questions) {
-    // Check if already answered
-    if (nextProgress.answered.includes(q.id)) {
-      continue;
-    }
-    // Check branch compatibility
-    if (!isQuestionCompatible(q.branch, nextProgress.branch)) {
-      continue;
-    }
-    // Check depends_on
-    const depsSatisfied = q.depends_on.every((dep) => nextProgress.answered.includes(dep));
-    if (!depsSatisfied) {
-      continue;
-    }
-    // Eligible!
-    nextStepId = q.id;
-    break;
-  }
+  // 5. Calculate next current_step (B24a — via the shared selectNextStep,
+  // same eligibility loop undoStep.ts and computeBatch use).
+  const nextStepId = selectNextStep(nextProgress.answered, nextProgress.branch, script);
 
   nextProgress.current_step = nextStepId;
 
