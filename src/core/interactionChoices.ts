@@ -1,5 +1,19 @@
 import type { Question } from './schemas/index.js';
 
+type ScriptOption = NonNullable<Question['options']>[number];
+
+/**
+ * The prose an answer's `commit --answer` must carry when it originated from
+ * a card selection (D58, DecisionLog.md). `value` is a short machine token
+ * (e.g. `public-seo`) reused only for `--branch`/`--calibrate` and warning
+ * rule matching — never for the committed answer text, because answers flow
+ * straight into doc slots (see emit.ts) and a bare token there reads as
+ * `> Nguồn: ...public-seo...` instead of a sentence a human wrote.
+ */
+export function deriveAnswerText(option: Pick<ScriptOption, 'label' | 'description'>): string {
+  return `${option.label}: ${option.description}`;
+}
+
 export type QuestionInteraction =
   | { kind: 'free_text'; allowFreeText: true }
   | {

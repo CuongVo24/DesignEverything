@@ -46,20 +46,26 @@ commit → thẻ câu kế, gom trọn `hỏi → trả lời → dịch ngượ
 
 ## 3. Checklist
 
-- [ ] `renderInject()` phát khối `[Lựa chọn (options)]` đúng khi có `options`, khối
+- [x] `renderInject()` phát khối `[Lựa chọn (options)]` đúng khi có `options`, khối
       `[Gợi ý lựa chọn]` đúng khi có `option_hints`, và giữ nguyên hành vi cũ (chuỗi rỗng khi
-      `current_step === null`, throw khi câu không tồn tại) khi câu không có field mới.
-- [ ] Mọi câu có `options` trong context inject luôn kèm dòng nhắc đường tự nhập — test snapshot bắt
-      được nếu dòng này bị xoá.
-- [ ] Critic-pass + thẻ ack: câu có `critics[id]` vẫn yêu cầu Challenge/Ack prompt đúng như hiện tại,
-      chỉ thêm cách xác nhận bằng thẻ.
-- [ ] `SKILL.md` mô tả đúng nhịp lượt mới, không mâu thuẫn với 4 Quy tắc vàng hiện có trong
-      `render-inject.ts` (câu hỏi từng-câu-một, dịch ngược, neo doc).
-- [ ] Nhánh giữ-câu-trả-lời-qua-lượt (nếu cần theo R-spike) không vi phạm "một lượt tối đa một
-      commit" — token cũ hết hiệu lực đúng như comment hiện có trong `render-inject.ts:24-25`.
-- [ ] `AMD-01`-style invariant (theo tinh thần R21,
-      [finding-coverage-matrix.md](../../v1-fix-bugs/finding-coverage-matrix.md)): không câu nào
-      trong `[Hướng dẫn cho Skill]` dạy agent một lệnh CLI không có case trong dispatcher thật.
+      `current_step === null`, throw khi câu không tồn tại) khi câu không có field mới — 7 test cũ
+      + 7 test mới trong `render-inject.test.ts` (14/14 pass).
+- [x] Mọi câu có `options` trong context inject luôn kèm dòng nhắc đường tự nhập — test
+      `'always keeps the free-text reminder...'` bắt được nếu dòng này bị xoá.
+- [x] Critic-pass + thẻ ack: câu có `critics[id]` vẫn yêu cầu Challenge/Ack prompt đúng như hiện tại
+      (test cũ `'should inject critics section...'` không sửa); thêm mục "Thẻ ack" riêng trong
+      `SKILL.md` cho cả Critic-pass lẫn `ANSWER_NEEDS_USER_ACK`.
+- [x] `SKILL.md` mô tả đúng nhịp lượt mới (mục "Thẻ tương tác cho câu có `options`/`option_hints`
+      (8.1)"), không mâu thuẫn 4 Quy tắc vàng — đối chiếu tay ghi ở §7.
+- [x] Nhánh giữ-câu-trả-lời-qua-lượt: **chưa xác nhận bởi R-spike** (P2 vẫn chờ chủ repo chạy phiên
+      thật — xem [r-spike-userpromptsubmit-probe.md](../r-spike-userpromptsubmit-probe.md) §7). Code
+      hiện tại đi theo giả định "commit ngay trong lượt, không giữ câu trả lời" — mỗi lượt vẫn tối
+      đa một `commit`, token cũ hết hiệu lực đúng bất biến D54. Nếu R-spike bác giả định này, batch
+      này phải mở lại.
+- [x] `AMD-01`-style invariant: đã có sẵn từ trước lane này ở
+      [test/docs/skill-truth.test.ts](../../../../../test/docs/skill-truth.test.ts) (P10, quét cả 3
+      `SKILL.md` đối chiếu `CLI_COMMAND_SURFACE` hai chiều) — chạy lại sau khi sửa SKILL.md, 37/37
+      pass, không cần viết thêm.
 
 ## 4. Interfaces / Files expected to change
 
@@ -88,10 +94,33 @@ commit → thẻ câu kế, gom trọn `hỏi → trả lời → dịch ngượ
 
 ## 7. Status
 
-IN_PROGRESS (2026-08-16) — `render-inject.ts` đã phát khối `[Lựa chọn]`/`[Gợi ý lựa chọn]`, đã đi
-theo nhánh "commit ngay trong lượt" (chưa xác nhận bởi R-spike — xem §7 file đó). Còn thiếu để
-đóng: `render-inject.test.ts` chưa có ca test nào cho hai khối mới (0 ca, checklist đòi có); `--answer`
-hiện vẫn hiển thị token `value` thay vì văn xuôi `label: description` theo [D58](../../../../DecisionLog.md)
-— cần đưa `deriveAnswerText` (Core) vào trước khi đóng; `SKILL.md` mới chỉ được nối thêm một đoạn
-tiếng Anh, chưa phải viết lại nhịp lượt theo đúng giọng file gốc, và chưa có biến thể thẻ ack cho
-Critic-pass. Đóng ở lộ trình P5, sau khi P2 (R-spike) có kết luận.
+DONE-với-điều-kiện (2026-08-16, lộ trình P5, nhánh `codex/lane-8-1-interactive-cards`) — mọi phần
+tự đóng được trong một phiên đã xong; phần còn treo là R-spike (P2, cần chủ repo chạy phiên thật,
+không tự động hoá được ở đây — cùng lớp với Gate A3/B1 của master plan).
+
+**Đã làm:**
+- `src/core/interactionChoices.ts` thêm `deriveAnswerText(option)` = `` `${label}: ${description}` ``
+  (export qua `src/core/index.ts`) — Core sở hữu văn xuôi commit theo D58, không phải adapter tự chế,
+  giữ đúng D53 "lõi béo, adapter gầy" (Claude và AGENTS.md dùng chung một hàm ở B22d).
+- `render-inject.ts`: mỗi option trong khối `[Lựa chọn (options)]` in kèm đúng dòng
+  `--answer "<label>: <description>"` sẽ dùng khi commit — thay literal `[value]` cũ. Dòng nhắc rõ
+  `value` nội bộ KHÔNG BAO GIỜ đi vào `--answer`, chỉ dùng cho `--branch`/`--calibrate` ở S7/CAL0.
+  `[Hướng dẫn cho Skill]` phân biệt rõ nhánh `static` (map label→dòng --answer in sẵn, note riêng
+  cho S7/CAL0 cần thêm cờ) và nhánh `hints` (agent tự soạn theo `hint_style`).
+- `SKILL.md`: thay đoạn tiếng Anh dày đặc bằng mục "Thẻ tương tác cho câu có `options`/`option_hints`
+  (8.1)" tiếng Việt đúng giọng file — 5 bước (thẻ hỏi → chọn/gõ → thẻ dịch ngược 3 lựa chọn → thẻ ack
+  nếu có Critic-pass/warning → commit bằng token đang cầm, bắn thẻ câu kế), cộng đoạn fail-closed
+  tường minh (timeout/dismiss/label lạ/token hết hạn = không commit, không bịa token, không giữ câu
+  trả lời qua lượt). Mục "Câu đặc biệt" (CAL0/S7) cập nhật: `--answer` + `--branch`/`--calibrate`
+  đi cùng nhau, không thay thế nhau.
+- **Xác nhận quan hệ file (mục 4 dòng cuối):** `adapter/claude-code/skill/build/SKILL.md` là skill
+  `/build` (điều phối thực thi task từ `execution-plan.json`) — hoàn toàn khác skill phỏng vấn này,
+  KHÔNG phải bản sync/twin. Không đụng tới.
+- `test/docs/skill-truth.test.ts` (đã có sẵn từ P10, không phải viết mới) chạy lại sau khi sửa
+  `SKILL.md` — 37/37 pass, xác nhận không dạy lệnh CLI giả.
+
+**Còn treo (không thuộc lỗi của batch này):** kết luận R-spike (P2) — nếu bác giả định "commit ngay
+trong lượt", phần "Thẻ tương tác" ở trên phải viết lại thêm cơ chế giữ câu trả lời qua lượt.
+
+`npx vitest run src/adapters/claude/skill/render-inject.test.ts` = 14/14 pass (7 cũ + 7 mới).
+`npm run lint`/`typecheck:all` xanh.

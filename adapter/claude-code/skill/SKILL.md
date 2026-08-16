@@ -55,14 +55,45 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --
 - Người dùng trả lời trước nhiều câu một lúc → vẫn chỉ commit câu hiện tại; giữ các ý còn lại
   để đối chiếu khi đến câu tương ứng (vẫn phải hỏi + dịch ngược từng câu).
 
+## Thẻ tương tác cho câu có `options`/`option_hints` (8.1)
+
+Khi ngữ cảnh được inject có khối `[Lựa chọn (options)]` hoặc `[Gợi ý lựa chọn]`, câu `current_step`
+đó được trợ lựa chọn — vẫn đi qua đúng nhịp 4 quy tắc vàng, chỉ đổi CÁCH thu câu trả lời:
+
+1. **Thẻ hỏi.** Gọi đúng một `AskUserQuestion`: `header` = ID câu hỏi, `question` = nội dung `ask`,
+   `multiSelect = false`. Với `options`: mỗi choice lấy `label`/`description` nguyên văn từ khối
+   inject, entry `(Khuyến nghị)` giữ nguyên nhãn đó — KHÔNG tự preselect khi khuyến nghị là
+   `contextual`. Với `option_hints`: tự soạn đúng số lượng choice theo `hint_style`, chỉ suy từ
+   answers nguồn đã liệt kê (nguồn thiếu → dùng free-text, không bịa). KHÔNG tự thêm lựa chọn
+   "Other" — host (Claude Code) đã tự cấp sẵn ô tự nhập trên mọi thẻ.
+2. **Người dùng chọn hoặc gõ.** Nhận label đã chọn, hoặc văn bản tự nhập nếu họ dùng ô tự do.
+3. **Thẻ dịch ngược.** Dùng `translate_back` tóm lại thành ngôn ngữ chuẩn, đưa ra một thẻ xác nhận
+   thứ hai với 3 lựa chọn: `Đúng rồi` / `Sửa lại` / `Giải thích thêm`. Chỉ tiến tiếp khi người dùng
+   chọn `Đúng rồi`.
+4. **Thẻ ack (nếu câu có Critic-pass hoặc `warning_rules` khớp).** Trước khi commit, đưa thêm một
+   thẻ xác nhận rõ ràng (Challenge/ack_prompt cho Critic-pass; cảnh báo + `--ack-token` cho
+   `ANSWER_NEEDS_USER_ACK`) — không gộp chung với thẻ dịch ngược.
+5. **Commit bằng token đang cầm.** Map label người dùng chọn về đúng `value` nội bộ CHỈ để tra khối
+   inject; `--answer` luôn là dòng văn xuôi `--answer "..."` in kèm ngay dưới lựa chọn đó trong khối
+   `[Lựa chọn (options)]` — KHÔNG BAO GIỜ truyền `value` thô vào `--answer` (D58, xem
+   [DecisionLog.md](../../../Design/DecisionLog.md)). Commit xong, bắn ngay thẻ hỏi của câu kế tiếp.
+
+**Fail-closed — không có ngoại lệ:** timeout, người dùng dismiss thẻ, label không khớp lựa chọn
+nào đã hiển thị, hoặc capability token đã dùng/hết hạn → KHÔNG commit. Xin một prompt mới, hiển thị
+lại đúng bản dịch ngược và thẻ xác nhận, chờ token mới từ `UserPromptSubmit` kế tiếp. KHÔNG tự bịa
+token, KHÔNG giữ/prefetch câu trả lời của câu kế tiếp để dùng sau — mỗi lượt tối đa một commit,
+đúng câu `current_step` của lượt đó.
+
 ## Câu đặc biệt
 
-- **CAL0 (meta, đầu phiên):** chốt chế độ giải thích. Commit với `--calibrate deep` (người mới,
-  giải thích kỹ "tại sao" ở mỗi bước) hoặc `--calibrate fast` (đi nhanh, giải thích tối giản).
-  Không có `--answer` cũng được.
-- **S7 (chọn hình-hài):** commit với `--branch web|mobile|hybrid|cli`. Branch là MỘT CHIỀU —
-  đã chốt thì không đổi; nếu người dùng đổi ý sau đó, giải thích rằng cần chỉnh state tường minh
-  chứ không lách qua CLI.
+- **CAL0 (meta, đầu phiên):** chốt chế độ giải thích. Có `options` (`deep`/`fast`) — dùng thẻ tương
+  tác như trên. Khi commit, thêm CẢ `--answer "<dòng đã in kèm lựa chọn>"` LẪN
+  `--calibrate deep|fast` (giá trị nội bộ, không phải văn xuôi) — hai cờ đi cùng nhau, không thay
+  thế nhau.
+- **S7 (chọn hình-hài):** có `options` (`web`/`mobile`/`hybrid`/`cli`) — dùng thẻ tương tác như trên.
+  Khi commit, thêm CẢ `--answer "<dòng đã in kèm lựa chọn>"` LẪN `--branch web|mobile|hybrid|cli`
+  (giá trị nội bộ). Branch là MỘT CHIỀU — đã chốt thì không đổi; nếu người dùng đổi ý sau đó, giải
+  thích rằng cần chỉnh state tường minh chứ không lách qua CLI.
 - **Câu có Critic-pass** (hook sẽ ghi rõ trong context): sau khi người dùng đồng ý bản dịch ngược,
   PHẢI nêu Challenge (phản biện scope creep / phức tạp ẩn) và chờ người dùng xác nhận theo
   Ack prompt rồi mới commit. Critic là devil's advocate — cảnh báo thẳng, nhưng người dùng quyết.
@@ -70,7 +101,9 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --
 
 ## Chất lượng câu trả lời lưu vào answers (--answer và --slots-file)
 
-`--answer` là bản ĐÃ CHUẨN HOÁ sau dịch ngược (không phải nguyên văn lời người dùng).
+`--answer` là bản ĐÃ CHUẨN HOÁ sau dịch ngược (không phải nguyên văn lời người dùng). Với câu trả
+lời bằng thẻ tương tác, "đã chuẩn hoá" nghĩa là đúng dòng văn xuôi in kèm lựa chọn trong khối
+`[Lựa chọn (options)]` (label + description) — không phải `value` nội bộ (D58).
 Với các câu nhiều ý, hãy ghi slot chi tiết để docs sinh ra sạch: dùng Write tool tạo file JSON
 tại `Design/.interview/slots-<qid>.json` (vùng này không bị gate chặn) rồi commit kèm
 `--slots-file "Design/.interview/slots-<qid>.json"`.
@@ -173,7 +206,6 @@ doc tầng 1 đã tồn tại. Khối nào không truy được nguồn thật t
 - Không viết file ngoài `docs/` và `Design/` khi phỏng vấn chưa xong (hook `PreToolUse` cũng sẽ
   chặn — đừng tìm cách lách bằng đường dẫn khác).
 - Không tự tiện tuyên bố gate đã mở hoặc khuyên người dùng xóa tệp trạng thái/reinstall khi có lỗi. Dùng `safe_next_command` từ Core.
-
-## Interactive cards (8.1)
-
-For questions with options or option_hints, only start after a valid UserPromptSubmit. Call exactly one AskUserQuestion for current_step (header = ID, question = ask, multiSelect = false); render injected labels/descriptions, use label-to-value mapping, and do not add Other because the host supplies it. Fixed recommendations append (Khuyến nghị); contextual choices are not preselected. Generate hint choices only from committed-answer snapshot; missing source is unknown and falls back to free text. Then use confirmation cards (Đúng rồi / Sửa lại / Giải thích thêm); critic and warning acknowledgement each use an explicit acknowledgement card. Timeout, dismiss, unknown label, stale/replayed token, or expiry fail closed: request a fresh prompt, re-show translation and confirmation; never forge a token or retain/prefetch the next answer. Commit once at most with the latest token, then stop for the next prompt.
+- Với thẻ tương tác: không tự thêm lựa chọn "Other" (host đã cấp sẵn); không bịa gợi ý cho
+  `option_hints` khi answers nguồn còn thiếu; không giữ/prefetch câu trả lời của câu kế tiếp qua
+  lượt — mỗi lượt chỉ hỏi và commit đúng một câu `current_step`.
