@@ -44,31 +44,34 @@ trong danh sách, luôn còn đường tự nhập) và cập nhật golden tran
 
 ## 3. Checklist
 
-- [ ] Test invariant toàn cục pass trên `script.yaml` thật (không phải fixture giả) — 19 câu B22a
-      phải qua hết.
-- [ ] Test tích hợp xác nhận cả `render-inject.ts` (Claude) và `generateAgentsMd.ts` (AGENTS.md) đều
-      phát dòng nhắc tự nhập khi câu có `options` — hai adapter không được lệch nhau ở bất biến D55.
-- [ ] Test đối chiếu 5 file khớp nhau, đỏ khi cố tình xoá một entry khỏi file markdown song sinh
-      (verify bằng cách tạm xoá thử một dòng, chạy test, thấy fail, rồi khôi phục — ghi vào evidence
-      khi DONE, không để lại thay đổi thật).
-- [ ] Golden transcript web cập nhật, số lượt tương tác trước/sau ghi vào báo cáo tại
-      `Design/RoadMap/evidence/` (đường dẫn cụ thể xác nhận khi implement, theo pattern
-      `Design/RoadMap/evidence/` đã dùng ở B21b của lane V6).
-- [ ] Không file nào ngoài mục 4 bị đổi.
+- [x] Test invariant toàn cục pass trên `script.yaml` thật (không phải fixture giả) — 19 câu B22a
+      phải qua hết. `src/core/scriptOptionsInvariants.test.ts` — 6/6 pass, chạy qua `loadScript()`
+      trên file thật.
+- [x] Test tích hợp xác nhận cả `render-inject.ts` (Claude) và `generateAgentsMd.ts` (AGENTS.md) đều
+      phát dòng nhắc tự nhập khi câu có `options`, và cả hai render CÙNG văn xuôi `deriveAnswerText`
+      cho từng option — hai adapter không lệch nhau ở bất biến D55/D58 (1 test tích hợp, gọi thẳng
+      2 hàm adapter thật, không đọc string literal nguồn).
+- [x] Test đối chiếu 5 file khớp nhau, đỏ khi cố tình xoá một entry khỏi file markdown song sinh —
+      verify thật: xoá dòng `**options**` của W1 khỏi `W-web.md`, chạy test thấy fail đúng thông
+      điệp, khôi phục nguyên văn (`git diff` xác nhận sạch), ghi lại quy trình ở §7.
+- [x] **Deviation:** không sửa `golden-web.test.ts` — nó so cấu trúc doc (`emitTree` + answers cứng),
+      không mô hình hoá lượt tương tác; thêm test riêng thay vì gò ép vào file đó (lý do & lưới thay
+      thế ở §7).
+- [x] Không file nào ngoài mục 4 bị đổi — `test/journey/interactive-cards-turn-count.test.ts` [NEW]
+      thay cho việc sửa `golden-web.test.ts`, đúng deviation ghi ở trên.
 
 ## 4. Interfaces / Files expected to change
 
-- [NEW] `src/core/scriptOptionsInvariants.test.ts` (hoặc vị trí tương đương xác nhận khi implement)
-  — test invariant toàn cục, ~120 dòng.
-- [MODIFY] `src/adapters/claude/skill/render-inject.test.ts` — thêm ca test tích hợp đường tự nhập,
-  nếu chưa đủ sau B22c, ~20 dòng.
-- [MODIFY] `src/adapters/agents/generateAgentsMd.test.ts` — thêm ca test tích hợp tương ứng phía
-  AGENTS.md, ~20 dòng.
-- [NEW] test đối chiếu 5 file (`script.yaml` ↔ 4 markdown song sinh) — vị trí xác nhận khi implement
-  (có thể gộp vào `contentIntegrity.test.ts` hiện có nếu hợp phạm vi), ~60 dòng.
-- [MODIFY] `test/regression/golden-web.test.ts` — thêm phần đếm lượt tương tác, ~40 dòng.
-- [NEW] `Design/RoadMap/evidence/interactive-cards-turn-count-report.md` — báo cáo số liệu trước/sau,
-  ≤60 dòng.
+- [NEW] `src/core/scriptOptionsInvariants.test.ts` — test invariant toàn cục (6 test): sanity 14+5,
+  shape 2-4/unique/description, `recommendation` nhất quán, `option_hints` shape, D55 tích hợp hai
+  adapter, audit `warning_rules` (C5/M2/M5).
+- [MODIFY] `src/core/contentIntegrity.test.ts` — test đối chiếu 5 file (thay vì file riêng — đúng
+  phạm vi file này đã đối chiếu script.yaml↔taxonomy↔gate-policy↔shapes từ trước).
+- [NEW] `test/journey/interactive-cards-turn-count.test.ts` — đo lượt qua state machine thật (3 test:
+  thứ tự 16 câu, phân loại free-text/assisted, số liệu baseline/sau/giảm%). Thay cho việc sửa
+  `golden-web.test.ts` (deviation, lý do ở §7).
+- [NEW] `Design/RoadMap/evidence/interactive-cards-turn-count-report.md` — báo cáo số liệu thật,
+  bao gồm việc sửa lại số "16" tạm thời đã công bố sai ở P0 thành số đo thật (5, giảm 84%).
 
 ## 5. Risks & mitigations
 
@@ -80,23 +83,38 @@ trong danh sách, luôn còn đường tự nhập) và cập nhật golden tran
 
 ## 6. Verification plan
 
-- `npx vitest run src/core/scriptOptionsInvariants.test.ts` (hoặc tên file thật khi implement)
-- `npx vitest run src/adapters/claude/skill/render-inject.test.ts src/adapters/agents/generateAgentsMd.test.ts`
-- `npx vitest run test/regression/golden-web.test.ts`
-- `npm test` xanh toàn bộ — đây là batch cuối của lane, DoD plan §8 phải đạt đủ 4 mục trước khi
-  lane được coi là hoàn tất.
+- `npx vitest run src/core/scriptOptionsInvariants.test.ts src/core/contentIntegrity.test.ts test/journey/interactive-cards-turn-count.test.ts`
+- `npm test` xanh toàn bộ.
 
 ## 7. Status
 
-IN_PROGRESS (2026-08-16) — gần như chưa bắt đầu. Duy nhất một test đã có (trong
-`contentIntegrity.test.ts`) xác nhận đúng danh sách 19 id có `options`/`option_hints`; chưa có
-`scriptOptionsInvariants.test.ts`, chưa có test D55 hai adapter, chưa có test đối chiếu 5 file, chưa
-có đếm lượt, chưa có `evidence/interactive-cards-turn-count-report.md`.
+DONE (2026-08-16, lộ trình P7, nhánh `codex/lane-8-1-interactive-cards`) — batch cuối của lane
+Interactive Question Cards.
 
-**Bổ sung ngoài scope gốc, cần thiết vì audit phát hiện lỗi thật:** một invariant `warning_rules`
-sẽ được thêm — không có trong checklist §3 ban đầu. Lý do: `warning_rules` của 3 câu (`C5`, `M2`,
-`M5`) được viết để khớp văn xuôi tự do, và khi audit lộ trình phát hiện `C5_MULTIPLATFORM_DISTRIBUTION_REQUESTED`
-khớp **0/4** option (kể cả bằng `deriveAnswerText`), còn `M2_OFFLINE_SYNC_REQUESTED` khớp nhầm cả
-phương án an toàn `online-first`. Đây là lưới thay thế cho luật `value === default` đã bỏ khỏi B22b
-(xem §7 file đó) — buộc tác giả khai tường minh tập option nào mỗi `warning_rules` được phép bắt.
-Đóng ở lộ trình P7, sau khi B22c (P5) và B22d (P6) xong.
+**Invariant `warning_rules` (bổ sung ngoài scope gốc §3, cần thiết vì audit phát hiện lỗi thật ở
+P3):** `warning_rules` của 3 câu (`C5`, `M2`, `M5`) được viết để khớp văn xuôi tự do; audit phát hiện
+`C5_MULTIPLATFORM_DISTRIBUTION_REQUESTED` khớp 0/4 option trước khi vá, `M2_OFFLINE_SYNC_REQUESTED`
+khớp nhầm phương án an toàn `online-first`. `scriptOptionsInvariants.test.ts` khoá một bảng kỳ vọng
+tường minh (`C5→{release-binary,os-package-manager}`, `M2→{offline-critical,offline-first}`,
+`M5→{store-free,store-iap,store-other}`) và đối chiếu bằng chính `deriveAnswerText` + `RegExp` thật
+— lưới thay thế cho luật `value === default` đã bỏ khỏi B22b (§7 file đó).
+
+**Test đối chiếu 5 file — verify thật đã chạy (không chỉ viết code):** xoá dòng `**options**` khỏi
+block W1 trong `W-web.md`, chạy `npx vitest run src/core/contentIntegrity.test.ts` → fail đúng với
+thông điệp `"W1: no matching... missing \"**options**\" section"`; khôi phục nguyên văn bằng Edit,
+`git diff` xác nhận sạch (không còn thay đổi thật để lại).
+
+**Deviation — không sửa `golden-web.test.ts`:** file đó nạp `answers` cứng thẳng vào `emitTree()` để
+so cấu trúc doc output — không đi qua `commitStep`/state machine nên không có khái niệm "lượt" để
+đếm. Viết `test/journey/interactive-cards-turn-count.test.ts` riêng, tái dùng đúng harness
+`commitWithCapability` của `newbie-shapes.test.ts` (NJ-01..05) để đi hết hành trình canonical thật
+qua state machine, đảm bảo con số đếm được không lệch khỏi hành vi runtime thật.
+
+**Số liệu thật (đã sửa số liệu tạm P0):** [interactive-cards-turn-count-report.md](../../../RoadMap/evidence/interactive-cards-turn-count-report.md)
+— baseline 32 tin nhắn gõ tay, sau 8.1 còn 5 (giảm 84%), không phải "16" như bản nháp P0 đã đoán sai
+(nhầm "tổng lượt commit" với "số tin nhắn phải gõ tay" — commit vẫn giữ 16 theo D54, nhưng gõ tay chỉ
+còn ở 5 câu free-text vì bước xác nhận dịch ngược nay luôn là thẻ cho MỌI câu). P8 sẽ cập nhật lại
+`v8.1-release-note.md`/`InteractiveQuestionCardsPlan.md` header theo số liệu này.
+
+`npx vitest run src/core/scriptOptionsInvariants.test.ts src/core/contentIntegrity.test.ts test/journey/interactive-cards-turn-count.test.ts`
+= 18/18 pass (6 + 9 + 3). `npm run lint`/`typecheck:all` xanh.

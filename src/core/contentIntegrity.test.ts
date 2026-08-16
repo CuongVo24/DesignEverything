@@ -40,6 +40,38 @@ describe('Content Integrity (Tầng 1)', () => {
     }
   });
 
+  test('every options/option_hints question in script.yaml has a matching entry in exactly one of the 4 twin markdown files', () => {
+    // B22e (P7) — script.yaml is the machine-readable source of truth; the 4
+    // human-readable twins (S0-S6-core.md, W-web.md, M-mobile.md, C-cli.md)
+    // must not silently drift from it. Only checks EXISTENCE of the
+    // corresponding **options**/**option_hints** heading per question (per
+    // b22e's own risk mitigation — content-for-content diffing is too
+    // brittle and not what this test is for), not word-for-word content.
+    const script = loadScript(scriptPath);
+    const twinFiles = ['S0-S6-core.md', 'W-web.md', 'M-mobile.md', 'C-cli.md'];
+    const twinDir = join(__dirname, '../../Design/Content/interview-script');
+
+    const blocksById = new Map<string, { file: string; body: string }>();
+    for (const file of twinFiles) {
+      const content = readFileSync(join(twinDir, file), 'utf8');
+      const sections = content.split(/\n(?=## )/);
+      for (const section of sections) {
+        const m = section.match(/^## ([A-Z][A-Za-z0-9]*) —/);
+        if (m) blocksById.set(m[1], { file, body: section });
+      }
+    }
+
+    const assistedQuestions = script.questions.filter((q) => q.options || q.option_hints);
+    expect(assistedQuestions.length).toBe(19);
+
+    for (const question of assistedQuestions) {
+      const block = blocksById.get(question.id);
+      expect(block, `${question.id}: no matching "## ${question.id} — ..." heading found in any of ${twinFiles.join(', ')}`).toBeDefined();
+      const marker = question.options ? '**options**' : '**option_hints**';
+      expect(block!.body, `${question.id} (in ${block!.file}): missing "${marker}" section`).toContain(marker);
+    }
+  });
+
   test('every target_doc in script.yaml questions must exist in taxonomy.md', () => {
     const script = loadScript(scriptPath);
     const taxonomyContent = readFileSync(taxonomyPath, 'utf8');
