@@ -32,7 +32,9 @@ describe('generateAgentsMd adapter', () => {
     expect(markdown).toContain(
       'Trên harness chỉ đọc `AGENTS.md`, gate là chỉ dẫn mạnh chứ không phải chặn cứng bằng cơ chế.'
     );
-    expect(markdown).toContain('nhịp một-bước-mỗi-lượt chỉ là chỉ dẫn best-effort');
+    // B24e (8.2, D59/D60) — cadence disclaimer updated: batch + commit-then-
+    // translate-back-after, both best-effort on a rules-only harness.
+    expect(markdown).toContain('"ghi nhận trước, dịch ngược sau" chỉ là chỉ dẫn best-effort cho agent');
 
     // Assert scope-locked gate requirements are correctly listed
     expect(markdown).toContain('Gate `scope-locked`');

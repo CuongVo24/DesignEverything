@@ -19,13 +19,26 @@ Repo này buộc agent đi theo hướng phỏng vấn trước khi code để t
 - Design/Content/taxonomy.md`;
 
   // 3. Section 3: Cách hỏi từng bước
+  // B24e (8.2, D59/D60) — degradation text mirrors the Claude Code cadence
+  // change: commit/ghi-nhận ngay rồi mới dịch ngược (không còn chặn trước),
+  // và một lượt CÓ THỂ gộp nhiều câu liên quan (batch) — nhưng trên harness
+  // rules-only không có checkRate/turnCapability ép buộc, nên đây vẫn chỉ
+  // là chỉ dẫn best-effort, không phải cơ chế.
   const section3 = `## 3. Cách hỏi từng bước
-1. Hỏi đúng một câu tại một thời điểm theo \`script.yaml\`.
+1. Hỏi đúng câu \`script.yaml\` xác định cho bước hiện tại. Có thể gộp nhiều câu liên tiếp không
+   phụ thuộc lẫn nhau vào cùng một lượt nếu chắc chắn hợp lý (nhịp "batch" của 8.2) — nhưng mặc
+   định coi mỗi câu là một lượt riêng nếu không chắc, vì harness này không có cơ chế nào ép batch.
 2. Nếu người dùng không rõ, dùng \`default\` như một đề xuất để xác nhận, không coi đó là sự thật tuyệt đối.
-3. Luôn dịch ngược câu trả lời sang ngôn ngữ chuẩn rồi hỏi xác nhận từ người dùng.
-4. Mỗi câu trả lời sau khi được xác nhận phải được ghi nhận và rót vào đúng file đích trong taxonomy.
+3. Ghi nhận câu trả lời ngay khi hợp lệ, rồi dịch ngược sang ngôn ngữ chuẩn và in kèm kết quả để
+   người dùng đọc lại — không chặn việc ghi nhận để chờ xác nhận trước (không còn thẻ xác nhận
+   trước khi ghi). Nếu người dùng muốn sửa lại, hoàn tác đúng câu vừa ghi nhận gần nhất (dùng cơ
+   chế hoàn tác của harness nếu có) rồi hỏi lại từ đầu.
+4. Mỗi câu trả lời sau khi được ghi nhận phải rót vào đúng file đích trong taxonomy.
 
-> **Lưu ý về nhịp độ phỏng vấn:** Trên các harness mềm không có bộ giới hạn nhịp ép cứng - nhịp một-bước-mỗi-lượt chỉ là chỉ dẫn best-effort cho agent. Yêu cầu agent tự kỷ luật: hỏi một câu, chờ người dùng xác nhận dịch ngược, rồi mới ghi nhận vào doc và chuyển sang câu kế tiếp.`;
+> **Lưu ý về nhịp độ phỏng vấn:** Trên các harness mềm không có bộ giới hạn nhịp ép cứng — batch
+> và "ghi nhận trước, dịch ngược sau" chỉ là chỉ dẫn best-effort cho agent, không có cơ chế
+> token/checkRate nào ép buộc như ở Claude Code. Yêu cầu agent tự kỷ luật: không tự ý gộp nhiều
+> câu không liên quan vào một lượt, không bỏ qua bước dịch ngược sau khi ghi nhận.`;
 
   // 4. Section 4: Gate mềm trước khi code
   let gatesDescription = '';
@@ -36,6 +49,14 @@ Repo này buộc agent đi theo hướng phỏng vấn trước khi code để t
 
   const assistedQuestions = opts.script.questions.filter((question) => question.options || question.option_hints);
   const interactionCatalog = assistedQuestions.map((question) => {
+    // B24e (8.2, D61) — multi_select degradation: no native multi-select
+    // widget on a text-only harness, so the instruction is to accept
+    // several picks and join them the same way deriveMultiAnswerText does
+    // on the Claude Code side (Core-derived text, "; "-joined) — never a
+    // list of raw values.
+    const multiNote = question.multi_select
+      ? ' (được chọn NHIỀU mục — nếu người dùng chọn hơn một, nối các dòng đã chọn lại bằng "; " theo đúng thứ tự, thành một câu trả lời duy nhất)'
+      : '';
     if (question.options) {
       const choices = question.options.map((option) => {
         const recommended = question.recommendation?.mode === 'fixed'
@@ -50,13 +71,13 @@ Repo này buộc agent đi theo hướng phỏng vấn trước khi code để t
       const contextual = question.recommendation?.mode === 'contextual'
         ? ' Không có lựa chọn được khuyến nghị trước vì phụ thuộc ngữ cảnh.'
         : '';
-      return `- **${question.id}**: ${choices}. Có thể tự nhập phương án khác.${contextual}`;
+      return `- **${question.id}**${multiNote}: ${choices}. Có thể tự nhập phương án khác.${contextual}`;
     }
     const hints = question.option_hints!;
-    return `- **${question.id}**: tạo ${hints.hint_count} gợi ý theo “${hints.hint_style}” từ ${hints.synthesize_from.join(', ')} đã commit; nếu thiếu nguồn, ghi \`unknown\` và hỏi tự nhập.`;
+    return `- **${question.id}**${multiNote}: tạo ${hints.hint_count} gợi ý theo “${hints.hint_style}” từ ${hints.synthesize_from.join(', ')} đã commit; nếu thiếu nguồn, ghi \`unknown\` và hỏi tự nhập.`;
   }).join('\n');
   const sectionChoices = `## 3a. Lựa chọn dạng text (fallback)
-Harness này không có thẻ chọn native. Khi đến câu được hỗ trợ, hãy liệt kê các lựa chọn sau dạng text, cho phép người dùng tự nhập câu trả lời khác, rồi dịch ngược và chờ xác nhận. Không được tuyên bố có AskUserQuestion/native card.
+Harness này không có thẻ chọn native. Khi đến câu được hỗ trợ, hãy liệt kê các lựa chọn sau dạng text, cho phép người dùng tự nhập câu trả lời khác, ghi nhận ngay rồi dịch ngược và in kèm kết quả. Không được tuyên bố có AskUserQuestion/native card.
 
 ${interactionCatalog}`;
 

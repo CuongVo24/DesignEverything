@@ -7,15 +7,15 @@
 
 ## Ma trận
 
-| Harness | Bậc | INJECT | GATE | EMIT | `interactive_choice` (8.1) | Trạng thái | File |
+| Harness | Bậc | INJECT | GATE | EMIT | `interactive_choice` (8.1–8.2) | Trạng thái | File |
 |---|---|---|---|---|---|---|---|
-| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ thẻ tương tác thật (`AskUserQuestion`) | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
-| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | text liệt kê (degradation) — cùng văn xuôi `deriveAnswerText` với Claude, không native card | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
+| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ thẻ tương tác thật (`AskUserQuestion`, `multiSelect` theo `multi_select`); batch (`question_ids`) + `checkRate` ép cứng số câu/lượt; `undo` hoàn tác 1 bước | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
+| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | text liệt kê (degradation) — cùng văn xuôi `deriveAnswerText`/`deriveMultiAnswerText` với Claude, không native card; batch/`undo` chỉ là chỉ dẫn best-effort trong prose — harness này KHÔNG có `checkRate`/token multi-câu nào ép buộc | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
 | Cursor (native `.mdc`) | B | `.cursorrules`/`.mdc` | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
 | Antigravity | B | rules | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
 | Windsurf / Continue | B | rules | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
 
-`interactive_choice` là capability mở ở lane 8.1 (Interactive Question Cards, `Design/RoadMap/InteractiveQuestionCardsPlan.md`): câu có `options`/`option_hints` trong `script.yaml` được adapter render thành lựa chọn thay vì free-text thuần. Claude Code render thẻ native; AGENTS.md/Codex chỉ có text liệt kê (D53 — dữ liệu ở Lõi, hai adapter dùng chung `deriveAnswerText`/`resolveQuestionInteraction` nên không thể lệch nội dung, chỉ lệch cách trình bày). Không hứa Cursor/Antigravity/Windsurf đồng đều — theo D37.
+`interactive_choice` mở ở lane 8.1 (Interactive Question Cards, `Design/RoadMap/InteractiveQuestionCardsPlan.md`) và mở rộng ở lane 8.2 (Interview Cadence, [InterviewCadencePlan.md](../RoadMap/InterviewCadencePlan.md)): câu có `options`/`option_hints` trong `script.yaml` được adapter render thành lựa chọn thay vì free-text thuần; từ 8.2 thêm gộp nhiều câu vào một lượt (batch, D60), chọn nhiều lựa chọn (`multi_select`, D61), và hoàn tác một bước (`undo`, D59). Claude Code render thẻ native VÀ có enforcement thật ở tầng engine (`turnCapability.ts`/`checkRate` ép đúng số câu batch, không phải quy ước); AGENTS.md/Codex chỉ có text liệt kê + chỉ dẫn prose, không có cơ chế ép nào tương đương — batch/multi_select/undo trên harness mềm là kỷ luật tự giác của agent, không phải gate (D53/D37 — dữ liệu ở Lõi, hai adapter dùng chung hàm derive nên không thể lệch nội dung văn xuôi, chỉ lệch mức enforcement). Không hứa Cursor/Antigravity/Windsurf đồng đều.
 
 Chú thích: ✅ xong & test · 📐 đặc tả đã khoá, chưa code · ⏳ để sau.
 
@@ -125,5 +125,19 @@ chứng chi tiết):
   đối chiếu cuối trước khi coi B5d là VERIFIED.
 
 Không phần nào ở trên là "đã phát hành" — chỉ là tiến độ thật của một milestone vẫn PLANNED.
+
+## Trạng thái v8.1.0 / v8.1.1 / v8.2.0 (Interactive Cards → hotfix → Interview Cadence)
+
+- **v8.1.0 (Interactive Question Cards):** RC — 5/6 contract DONE, R-spike (xác nhận `AskUserQuestion`
+  có bắn `UserPromptSubmit` không) còn mở. Xem [v8.1-release-note.md](../RoadMap/v8.1-release-note.md),
+  [InteractiveQuestionCardsPlan.md](../RoadMap/InteractiveQuestionCardsPlan.md).
+- **v8.1.1 (hotfix H1–H6):** DONE 2026-08-16 — mở bế tắc bootstrap (`init` bị chặn bởi đúng lỗi nó
+  phải sửa), thông `--slots-file`, vá gate PowerShell (matcher `PreToolUse` thiếu tool này), trả
+  question card về `status --json`, sửa `gates_passed`/`ready-for-validation` (trước bản vá này không
+  đường thật nào từng tới được `emit`). 6/6 contract DONE tại [v8-hotfix/](../ContractForAI/Core/v8-hotfix/).
+- **v8.2.0 (Interview Cadence — đang chạy):** D59 (bỏ thẻ xác nhận dịch ngược, bù bằng `undo`), D60
+  (gộp nhiều câu vào một lượt — Core quyết batch qua `computeBatch`, không phải agent), D61
+  (`multi_select` cho S1/S2/S4/S5). Xem [InterviewCadencePlan.md](../RoadMap/InterviewCadencePlan.md),
+  contract B24a–B24f tại `Core/v8-expansion/B24/`.
 
 
