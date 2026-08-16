@@ -2,7 +2,8 @@
 
 > Nguồn: [InteractiveQuestionCardsPlan.md](../../../RoadMap/InteractiveQuestionCardsPlan.md) (TaskBrief
 > của lane, theo ngoại lệ expansion [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0).
-> Quyết định đã khoá: [D53–D55](../../../DecisionLog.md) (2026-08-01).
+> Quyết định đã khoá: [D53–D55](../../../DecisionLog.md) (2026-08-01), [D58](../../../DecisionLog.md)
+> (2026-08-16 — thẻ commit văn xuôi suy từ `label`/`description`, không commit `value` thô).
 >
 > **"v7" là số thứ tự lane mở rộng** (thứ 7, sau v2..v6-expansion) — **không phải** version 7.0.0.
 > 7.0.0 thuộc `v1-fix-bugs` ([v7-release-note.md](../../../RoadMap/v7-release-note.md)); lane này
@@ -14,18 +15,22 @@
 > 2. ✅ `v6-expansion` (8.0.0) cắt GA 2026-08-10 (xem `v6-expansion/README.md` §Đối chiếu —
 >    6/6 contract DONE, đã cắt trước Interactive đúng thứ tự đã chốt 2026-08-01).
 >
-> Sẵn sàng thực thi theo đồ thị phụ thuộc §Bản đồ thực thi bên dưới: `R-spike ∥ B22a → B22b → B22c → B22d → B22e`.
+> **Đang thực thi (2026-08-16), nhánh `codex/lane-8-1-interactive-cards`.** Trạng thái
+> `WAITING_FOR_APPROVAL` ở bảng dưới là trạng thái *governance ban đầu* của contract (chờ duyệt bắt
+> tay code) — nay đã chuyển sang `IN_PROGRESS`, thực thi theo lộ trình 8 phase P0–P8 (P0 đóng ở
+> commit `4fad0f6`, ổn định working tree). §7 từng contract sẽ ghi `DONE` kèm bằng chứng khi đóng
+> đúng phase tương ứng (B22a=P3, B22b=P4, B22c=P5, B22d=P6, B22e=P7); R-spike đóng ở P2.
 
 ## Bản đồ thực thi
 
 | Batch | Contract | Tầng | Phụ thuộc | Trạng thái |
 |---|---|---|---|---|
-| R-spike | [userpromptsubmit-probe](r-spike-userpromptsubmit-probe.md) | QA | Gate mở lane | WAITING_FOR_APPROVAL |
-| B22a | [script_options_content](B22/b22a_script_options_content_contract.md) | Nội dung | Gate mở lane | WAITING_FOR_APPROVAL |
-| B22b | [script_schema_options](B22/b22b_script_schema_options_contract.md) | Lõi | B22a | WAITING_FOR_APPROVAL |
-| B22c | [claude_interactive_cards](B22/b22c_claude_interactive_cards_contract.md) | Adapter (Claude) | R-spike, B22b | WAITING_FOR_APPROVAL |
-| B22d | [codex_text_degradation](B22/b22d_codex_text_degradation_contract.md) | Adapter (degradation) | B22b | WAITING_FOR_APPROVAL |
-| B22e | [options_invariants_qa](B22/b22e_options_invariants_qa_contract.md) | QA | B22c, B22d | WAITING_FOR_APPROVAL |
+| R-spike | [userpromptsubmit-probe](r-spike-userpromptsubmit-probe.md) | QA | Gate mở lane | IN_PROGRESS (P2) |
+| B22a | [script_options_content](B22/b22a_script_options_content_contract.md) | Nội dung | Gate mở lane | IN_PROGRESS (P3) |
+| B22b | [script_schema_options](B22/b22b_script_schema_options_contract.md) | Lõi | B22a | IN_PROGRESS (P4) |
+| B22c | [claude_interactive_cards](B22/b22c_claude_interactive_cards_contract.md) | Adapter (Claude) | R-spike, B22b | IN_PROGRESS (P5) |
+| B22d | [codex_text_degradation](B22/b22d_codex_text_degradation_contract.md) | Adapter (degradation) | B22b | IN_PROGRESS (P6) |
+| B22e | [options_invariants_qa](B22/b22e_options_invariants_qa_contract.md) | QA | B22c, B22d | IN_PROGRESS (P7) |
 
 Thứ tự bắt buộc:
 

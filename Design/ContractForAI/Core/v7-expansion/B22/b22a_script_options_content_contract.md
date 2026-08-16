@@ -80,4 +80,17 @@ người đọc, không phải schema) — mà B22b sẽ khoá hình dạng fiel
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS (2026-08-16) — nội dung `options`/`option_hints` trong `script.yaml` đã có đủ 19 câu
+(14 static + 5 hints), nhưng 4 file markdown song sinh (`S0-S6-core.md`, `W-web.md`, `M-mobile.md`,
+`C-cli.md`) chưa được cập nhật và bảng đối chiếu tay `default`↔`recommendation` chưa viết — đóng ở
+lộ trình P3 (nhánh `codex/lane-8-1-interactive-cards`).
+
+**Deviation từ spec (ghi lại, không sửa lén — xem [D58](../../../../DecisionLog.md)):** mỗi
+`options` entry thực tế mang `value`/`label`/`description`, còn cờ khuyến nghị tách thành field
+riêng cấp câu hỏi `recommendation: {mode: 'fixed', value} | {mode: 'contextual'}` thay vì
+`recommended: boolean` trên từng entry như mục 2 mô tả ban đầu. Lý do: cần phân biệt câu có khuyến
+nghị cố định (S7, W2, W3…) với câu khuyến nghị phụ thuộc ngữ cảnh (W1, W4, M1, C4 — không entry nào
+nên preselect) — một field `recommended: boolean` trên entry không biểu diễn được nhánh "không có
+khuyến nghị nào" mà không tự chọn liều một entry bất kỳ. Xem thêm §7 của
+[b22b_script_schema_options_contract.md](b22b_script_schema_options_contract.md) cho phần schema
+tương ứng.

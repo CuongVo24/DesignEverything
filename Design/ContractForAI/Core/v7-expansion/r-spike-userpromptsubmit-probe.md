@@ -66,4 +66,7 @@ lần thử một dòng gồm loại tương tác, thời điểm, log hook thô
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS (2026-08-16) — chưa chạy. `Design/RoadMap/evidence/r-spike-userpromptsubmit-log.md`
+chưa tồn tại. B22c hiện đã code theo nhánh giả định "commit ngay trong lượt, không giữ câu trả lời
+qua lượt" (xem §7 [b22c](B22/b22c_claude_interactive_cards_contract.md)) — spike này (lộ trình P2)
+sẽ xác nhận hoặc bác giả định đó bằng log thật từ một workspace cài thật.

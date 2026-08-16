@@ -91,4 +91,28 @@ field vẫn là free-text như hiện nay, không một test cũ nào được p
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS (2026-08-16) — `questionSchema` (interviewScript.ts) đã có `options`/`recommendation`/
+`option_hints` + `loadScript.ts` đã validate `synthesize_from`; `script.yaml` đã bump `2.1.0`. Còn
+thiếu để đóng: `Design/Core/Schemas/interview-script.md` mục 2/5/6/Changelog chưa cập nhật, và ca
+test schema thật (mutual exclusion, `recommendation` bắt buộc, `fixed.value` phải thuộc `options`,
+thông điệp lỗi closure) — hiện chỉ có 2 dòng test đổi số version. Đóng ở lộ trình P4.
+
+**Ba deviation từ spec (ghi lại, không sửa lén — xem [D58](../../../../DecisionLog.md)):**
+
+1. **Shape khác mục 2.** `options[].recommended: boolean` (spec gốc) → tách thành field cấp câu
+   `recommendation: {mode: 'fixed', value: string} | {mode: 'contextual'}`. Lý do ở §7 của
+   [b22a](b22a_script_options_content_contract.md).
+2. **`.refine()` khác mục 2.** Luật máy-check gốc "nếu có `options` và `default !== null`, tồn tại
+   đúng một entry `recommended: true` với `value === default`" **bị bỏ**, vì bất khả thi: `default`
+   luôn là văn xuôi tự do (vd W1's default dài 2 câu), còn `value` là token ngắn (`public-seo`) —
+   không bao giờ bằng nhau theo nghĩa `===`. Thay bằng: `recommendation` bắt buộc khi có `options`
+   (mọi mode), `fixed.value` phải thuộc tập `options[].value`. Lưới thay thế cho ý định D55 gốc
+   ("`default` phải xuất hiện như một lựa chọn khuyến nghị") chuyển sang tầng QA — xem B22e §7 khi
+   đóng (P7): mỗi câu có `recommendation.mode = 'fixed'` phải đối chiếu tay với `default`, ghi vào
+   evidence B22a thay vì máy-check `===` tại schema.
+3. **`loadScript.ts` chặt hơn mục 2.** Spec ghi rõ "KHÔNG bắt buộc `synthesize_from` là tập con của
+   `depends_on`". Code hiện tại (đã có từ trước phase này) **bắt buộc** mọi `synthesize_from` nằm
+   trong closure bắc cầu của `depends_on` (throw nếu không). Giữ nguyên mức chặt này — nó siết chặt
+   hơn yêu cầu tối thiểu của spec chứ không vi phạm nó (không có `option_hints` nào trong 5 câu B22a
+   cần tham chiếu ngoài `depends_on`), và ngăn một lớp lỗi thật: hint tổng hợp từ một câu chưa chắc
+   đã trả lời tại thời điểm câu hiện tại được hỏi.

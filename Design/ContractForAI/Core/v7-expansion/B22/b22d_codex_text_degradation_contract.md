@@ -78,4 +78,10 @@ bố đúng mức chênh lệch enforcement giữa Claude Code (bậc A) và AGE
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS (2026-08-16) — `generateAgentsMd.ts` đã sinh mục 3a cho 19 câu có `options`/`option_hints`.
+Codex nhận một skill text-only riêng (`adapter/codex-plugin/skills/design-everything/SKILL.md`,
+không phải render từ Claude skill) — vượt phạm vi gốc của contract này nhưng cùng tinh thần
+degradation, sẽ ghi nhận là mở rộng hợp lý khi đóng. Còn thiếu: dòng `interactive_choice` trong
+`ConformanceMatrix.md` (deliverable tường minh, chưa có); `generateAgentsMd.test.ts` chưa có ca mới;
+văn bản mục 3a hiện dùng token `value` thay vì văn xuôi theo D58, cần đồng bộ với `deriveAnswerText`
+của B22c để hai adapter không lệch nhau (D53). Đóng ở lộ trình P6.

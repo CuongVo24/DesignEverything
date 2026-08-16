@@ -88,4 +88,10 @@ commit → thẻ câu kế, gom trọn `hỏi → trả lời → dịch ngượ
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS (2026-08-16) — `render-inject.ts` đã phát khối `[Lựa chọn]`/`[Gợi ý lựa chọn]`, đã đi
+theo nhánh "commit ngay trong lượt" (chưa xác nhận bởi R-spike — xem §7 file đó). Còn thiếu để
+đóng: `render-inject.test.ts` chưa có ca test nào cho hai khối mới (0 ca, checklist đòi có); `--answer`
+hiện vẫn hiển thị token `value` thay vì văn xuôi `label: description` theo [D58](../../../../DecisionLog.md)
+— cần đưa `deriveAnswerText` (Core) vào trước khi đóng; `SKILL.md` mới chỉ được nối thêm một đoạn
+tiếng Anh, chưa phải viết lại nhịp lượt theo đúng giọng file gốc, và chưa có biến thể thẻ ack cho
+Critic-pass. Đóng ở lộ trình P5, sau khi P2 (R-spike) có kết luận.

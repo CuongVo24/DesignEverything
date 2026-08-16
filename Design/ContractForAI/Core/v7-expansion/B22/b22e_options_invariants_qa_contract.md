@@ -88,4 +88,15 @@ trong danh sách, luôn còn đường tự nhập) và cập nhật golden tran
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+IN_PROGRESS (2026-08-16) — gần như chưa bắt đầu. Duy nhất một test đã có (trong
+`contentIntegrity.test.ts`) xác nhận đúng danh sách 19 id có `options`/`option_hints`; chưa có
+`scriptOptionsInvariants.test.ts`, chưa có test D55 hai adapter, chưa có test đối chiếu 5 file, chưa
+có đếm lượt, chưa có `evidence/interactive-cards-turn-count-report.md`.
+
+**Bổ sung ngoài scope gốc, cần thiết vì audit phát hiện lỗi thật:** một invariant `warning_rules`
+sẽ được thêm — không có trong checklist §3 ban đầu. Lý do: `warning_rules` của 3 câu (`C5`, `M2`,
+`M5`) được viết để khớp văn xuôi tự do, và khi audit lộ trình phát hiện `C5_MULTIPLATFORM_DISTRIBUTION_REQUESTED`
+khớp **0/4** option (kể cả bằng `deriveAnswerText`), còn `M2_OFFLINE_SYNC_REQUESTED` khớp nhầm cả
+phương án an toàn `online-first`. Đây là lưới thay thế cho luật `value === default` đã bỏ khỏi B22b
+(xem §7 file đó) — buộc tác giả khai tường minh tập option nào mỗi `warning_rules` được phép bắt.
+Đóng ở lộ trình P7, sau khi B22c (P5) và B22d (P6) xong.
