@@ -1,6 +1,6 @@
 ---
 name: design-everything
-description: Phỏng vấn thiết kế dự án DesignEverything — hỏi từng câu, dịch ngược, commit từng bước qua CLI, rồi sinh cây docs/ nền móng trước khi cho phép code. Dùng khi người dùng muốn bắt đầu/tiếp tục thiết kế tài liệu nền móng cho dự án mới.
+description: Phỏng vấn thiết kế dự án DesignEverything — hỏi theo batch, commit ngay rồi in dịch ngược (sửa lại bằng `undo` nếu cần), rồi sinh cây docs/ nền móng trước khi cho phép code. Dùng khi người dùng muốn bắt đầu/tiếp tục thiết kế tài liệu nền móng cho dự án mới.
 ---
 
 # /design-everything — Phỏng vấn thiết kế nền móng (DesignEverything)
@@ -17,6 +17,7 @@ CLI (mọi thao tác state đều qua đây, KHÔNG tự sửa `progress.json`):
 ```bash
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" status --json
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" commit --capability-token <TOKEN> --answer "..." [--calibrate deep|fast] [--branch <shape>] [--slots-file <file>] [--ack-token <TOKEN>] --json
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" undo --json
 node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --json
 ```
 
@@ -30,21 +31,33 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --
 
 ## 4 quy tắc vàng (bắt buộc)
 
-1. **Hỏi từng câu một.** Mỗi lượt chỉ hỏi đúng câu `current_step`. Không gộp, không hỏi trước.
+1. **Một lượt = một batch.** Mỗi lượt được phép hỏi và commit **đúng** những câu mà capability
+   token đang cầm liệt kê (`question_ids` trong ngữ cảnh được inject) — không hơn, không tự gộp
+   thêm câu ngoài batch (D60).
 2. **Luôn đưa mặc định thông minh.** Nêu `default` của câu hỏi; nếu người dùng nói "không biết",
    chọn giúp và giải thích ngắn vì sao.
-3. **Dịch ngược rồi mới commit.** Tóm câu trả lời đời thường thành ngôn ngữ chuẩn theo mẫu
-   `translate_back` của câu hỏi, hỏi người dùng xác nhận. Chỉ commit SAU khi họ đồng ý.
+3. **Commit ngay, in dịch ngược cùng lúc.** KHÔNG chặn commit chờ xác nhận trước — commit bằng
+   token đang cầm ngay khi có câu trả lời hợp lệ, rồi in `translate_back` đã tóm cùng kết quả commit,
+   kèm một dòng nhắc lệnh `undo` (D59). Ngoại lệ duy nhất vẫn chặn trước commit: câu có Critic-pass
+   (xem "Câu đặc biệt").
 4. **Mỗi câu neo một ô tài liệu.** Nói rõ câu trả lời này sẽ điền vào file nào (`target_doc`).
 
-## Nhịp commit (một bước mỗi lượt người thật)
+## Nhịp commit (một lượt người thật = một batch, không phải một câu — D60)
 
-- Hook UserPromptSubmit phát hành một **capability token** cho câu `current_step` của lượt hiện
-  tại (xuất hiện trong ngữ cảnh được inject, dưới mục "Capability Token"). Commit bước bằng
-  đúng token đó qua `--capability-token`. KHÔNG tự bịa token, KHÔNG tái dùng token đã commit —
-  token chỉ dùng được một lần, hết lượt phải chờ token mới ở lượt kế tiếp.
-- KHÔNG dùng `--turn <id>` — cờ này không còn được engine chấp nhận làm căn cứ uỷ quyền.
-- Chạy `commit` với cờ `--json` để nhận kết quả dạng structured envelope.
+- Hook UserPromptSubmit phát hành một **capability token** cho **batch** bắt đầu ở câu
+  `current_step` của lượt hiện tại (xuất hiện trong ngữ cảnh được inject, dưới mục "Capability
+  Token", cùng danh sách `question_ids` token này bao phủ). Batch do **Core tính**, agent không
+  được tự chọn kích thước hay tự gộp thêm câu ngoài danh sách đó.
+- Commit bước bằng đúng token đó qua `--capability-token`. KHÔNG tự bịa token, KHÔNG commit câu
+  ngoài `question_ids` của token — engine sẽ deny.
+- **Nếu batch còn hơn một câu:** sau khi commit xong câu đầu, gọi lại `status --json` (KHÔNG cần
+  chờ người dùng gõ thêm — đây vẫn là cùng một lượt) để lấy `data.questionCard` của câu kế tiếp
+  trong batch, hỏi/commit tiếp bằng **CÙNG** token đó. Lặp lại tới khi hết batch.
+- Khi đã commit hết batch, token hết hiệu lực; chờ token mới ở lượt kế tiếp. KHÔNG dùng
+  `--turn <id>` — cờ này không còn được engine chấp nhận làm căn cứ uỷ quyền.
+- Chạy `commit` với cờ `--json` để nhận kết quả dạng structured envelope. Ngay khi `ok: true`, in
+  bản dịch ngược (`translate_back` đã tóm) cùng kết quả, kèm một dòng nhắc lệnh `undo` — không
+  chặn commit chờ xác nhận trước (D59, xem "Hoàn tác — lệnh `undo`").
 - Nếu CLI trả về exit code khác 0 hoặc `ok: false`: **DỪNG NGAY**, hiển thị thông báo lỗi và
   hướng dẫn khắc phục từ Core (`next_command`).
 - Nếu `commit` trả về `reason_code: ANSWER_NEEDS_USER_ACK`: câu trả lời khớp một `warning_rules`
@@ -52,39 +65,44 @@ node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" emit [--slots-file <file>] --
   báo cho người dùng, chờ họ xác nhận muốn giữ nguyên hay sửa lại — CHỈ khi họ xác nhận giữ
   nguyên mới commit lại **cùng answer đó** kèm thêm `--ack-token <giá trị data.ack_token>` (token
   một lần, engine tự phát hành trong response — không tự bịa hay tái dùng token cũ). KHÔNG tự ý
-  thêm cờ này khi người dùng chưa xác nhận.
-- Người dùng trả lời lan man/chưa xác nhận → KHÔNG commit, hỏi lại cho rõ.
-- Người dùng trả lời trước nhiều câu một lúc → vẫn chỉ commit câu hiện tại; giữ các ý còn lại
-  để đối chiếu khi đến câu tương ứng (vẫn phải hỏi + dịch ngược từng câu).
+  thêm cờ này khi người dùng chưa xác nhận. Đây là ngoại lệ duy nhất còn chặn trước commit.
+- Người dùng trả lời lan man → KHÔNG commit, hỏi lại cho rõ.
+- Người dùng trả lời trước cho câu ngoài batch đang cầm → vẫn chỉ commit đúng các câu trong
+  `question_ids`; giữ ý còn lại để đối chiếu khi batch sau tới đúng câu đó (vẫn phải hỏi lại,
+  không tự commit hộ).
 
-## Thẻ tương tác cho câu có `options`/`option_hints` (8.1)
+## Thẻ tương tác cho câu có `options`/`option_hints` (8.1, mở rộng multi_select ở 8.2)
 
-Khi ngữ cảnh được inject có khối `[Lựa chọn (options)]` hoặc `[Gợi ý lựa chọn]`, câu `current_step`
-đó được trợ lựa chọn — vẫn đi qua đúng nhịp 4 quy tắc vàng, chỉ đổi CÁCH thu câu trả lời:
+Khi ngữ cảnh được inject có khối `[Lựa chọn (options)]` hoặc `[Gợi ý lựa chọn]`, câu đang hỏi được
+trợ lựa chọn — vẫn đi qua đúng nhịp 4 quy tắc vàng, chỉ đổi CÁCH thu câu trả lời:
 
 1. **Thẻ hỏi.** Gọi đúng một `AskUserQuestion`: `header` = ID câu hỏi, `question` = nội dung `ask`,
-   `multiSelect = false`. Với `options`: mỗi choice lấy `label`/`description` nguyên văn từ khối
-   inject, entry `(Khuyến nghị)` giữ nguyên nhãn đó — KHÔNG tự preselect khi khuyến nghị là
-   `contextual`. Với `option_hints`: tự soạn đúng số lượng choice theo `hint_style`, chỉ suy từ
-   answers nguồn đã liệt kê (nguồn thiếu → dùng free-text, không bịa). KHÔNG tự thêm lựa chọn
-   "Other" — host (Claude Code) đã tự cấp sẵn ô tự nhập trên mọi thẻ.
-2. **Người dùng chọn hoặc gõ.** Nhận label đã chọn, hoặc văn bản tự nhập nếu họ dùng ô tự do.
-3. **Thẻ dịch ngược.** Dùng `translate_back` tóm lại thành ngôn ngữ chuẩn, đưa ra một thẻ xác nhận
-   thứ hai với 3 lựa chọn: `Đúng rồi` / `Sửa lại` / `Giải thích thêm`. Chỉ tiến tiếp khi người dùng
-   chọn `Đúng rồi`.
-4. **Thẻ ack (nếu câu có Critic-pass hoặc `warning_rules` khớp).** Trước khi commit, đưa thêm một
-   thẻ xác nhận rõ ràng (Challenge/ack_prompt cho Critic-pass; cảnh báo + `--ack-token` cho
-   `ANSWER_NEEDS_USER_ACK`) — không gộp chung với thẻ dịch ngược.
-5. **Commit bằng token đang cầm.** Map label người dùng chọn về đúng `value` nội bộ CHỈ để tra khối
-   inject; `--answer` luôn là dòng văn xuôi `--answer "..."` in kèm ngay dưới lựa chọn đó trong khối
-   `[Lựa chọn (options)]` — KHÔNG BAO GIỜ truyền `value` thô vào `--answer` (D58, xem
-   [DecisionLog.md](../../../Design/DecisionLog.md)). Commit xong, bắn ngay thẻ hỏi của câu kế tiếp.
+   `multiSelect` = đúng giá trị `interaction.multiSelect` trong ngữ cảnh được inject (mặc định
+   `false`; `true` cho câu có khai `multi_select` trong `script.yaml`). Với `options`: mỗi choice
+   lấy `label`/`description` nguyên văn từ khối inject, entry `(Khuyến nghị)` giữ nguyên nhãn đó —
+   KHÔNG tự preselect khi khuyến nghị là `contextual`. Với `option_hints`: tự soạn đúng số lượng
+   choice theo `hint_style`, chỉ suy từ answers nguồn đã liệt kê (nguồn thiếu → dùng free-text,
+   không bịa). KHÔNG tự thêm lựa chọn "Other" — host (Claude Code) đã tự cấp sẵn ô tự nhập trên
+   mọi thẻ.
+2. **Người dùng chọn hoặc gõ.** Nhận (các) label đã chọn, hoặc văn bản tự nhập nếu họ dùng ô tự do.
+   Nếu `multiSelect = true` và người dùng chọn nhiều hơn một, nối các dòng `--answer` tương ứng
+   bằng `"; "` theo đúng thứ tự đã hiển thị, thành **một** `--answer` duy nhất.
+3. **Thẻ ack (nếu câu có Critic-pass hoặc `warning_rules` khớp).** Trước khi commit, đưa một thẻ
+   xác nhận rõ ràng (Challenge/ack_prompt cho Critic-pass; cảnh báo + `--ack-token` cho
+   `ANSWER_NEEDS_USER_ACK`) và chờ người dùng phản hồi. Đây là ngoại lệ duy nhất vẫn chặn trước
+   commit — mọi câu khác commit ngay, không có thẻ xác nhận riêng (D59: bản dịch ngược in **sau**
+   commit, không phải thẻ chặn trước).
+4. **Commit bằng token đang cầm.** Map label người dùng chọn về đúng `value` nội bộ CHỈ để tra khối
+   inject; `--answer` luôn là (các) dòng văn xuôi `--answer "..."` in kèm ngay dưới lựa chọn đó
+   trong khối `[Lựa chọn (options)]` — KHÔNG BAO GIỜ truyền `value` thô vào `--answer` (D58, xem
+   [DecisionLog.md](../../../Design/DecisionLog.md)). Nếu batch còn câu kế tiếp, gọi `status --json`
+   để lấy card của câu đó rồi lặp lại đúng nhịp này bằng CÙNG token — không cần chờ người dùng gõ
+   thêm.
 
 **Fail-closed — không có ngoại lệ:** timeout, người dùng dismiss thẻ, label không khớp lựa chọn
-nào đã hiển thị, hoặc capability token đã dùng/hết hạn → KHÔNG commit. Xin một prompt mới, hiển thị
-lại đúng bản dịch ngược và thẻ xác nhận, chờ token mới từ `UserPromptSubmit` kế tiếp. KHÔNG tự bịa
-token, KHÔNG giữ/prefetch câu trả lời của câu kế tiếp để dùng sau — mỗi lượt tối đa một commit,
-đúng câu `current_step` của lượt đó.
+nào đã hiển thị, hoặc capability token đã dùng/hết hạn/ngoài batch → KHÔNG commit. Xin một prompt
+mới, hiển thị lại đúng câu hỏi, chờ token mới từ `UserPromptSubmit` kế tiếp. KHÔNG tự bịa token,
+KHÔNG giữ/prefetch câu trả lời của câu ngoài batch đang cầm để dùng sau.
 
 ## Câu đặc biệt
 
@@ -100,6 +118,27 @@ token, KHÔNG giữ/prefetch câu trả lời của câu kế tiếp để dùng
   PHẢI nêu Challenge (phản biện scope creep / phức tạp ẩn) và chờ người dùng xác nhận theo
   Ack prompt rồi mới commit. Critic là devil's advocate — cảnh báo thẳng, nhưng người dùng quyết.
   `calibrate_mode = deep` → phản biện chi tiết hơn; `fast` → gọn nhưng không bỏ qua.
+
+## Hoàn tác — lệnh `undo` (D59)
+
+Vì D59 bỏ thẻ xác nhận chặn trước commit, `undo` là cách sửa lại khi commit nhầm hoặc người dùng
+đổi ý ngay sau khi thấy bản dịch ngược:
+
+```bash
+node "__ENGINE_ROOT__/adapter/claude-code/cli.mjs" undo --json
+```
+
+- Hoàn tác **đúng một** câu — câu vừa commit gần nhất. Không nhận tham số, không hoàn tác nhiều
+  bước cùng lúc.
+- Sau khi người dùng xác nhận muốn sửa lại (gõ `undo`, hoặc nói rõ ý tương đương), gọi lệnh trên,
+  rồi gọi `status --json` để lấy lại đúng câu hỏi (giờ đã quay về `current_step`) và hỏi lại từ
+  đầu — token cũ đã bị thu hồi, phải chờ `UserPromptSubmit` phát token mới.
+- Nếu trả về `reason_code: UNDO_DENIED_AFTER_EMIT`: phỏng vấn đã emit xong, không hoàn tác được nữa
+  qua lệnh này — báo người dùng và dừng, không tự sửa state.
+- Nếu trả về `reason_code: UNDO_DENIED_NOTHING_ANSWERED`: chưa có câu nào để hoàn tác — báo người
+  dùng, không lặp lại lệnh.
+- Hoàn tác S7 (chọn hình-hài) hoặc CAL0 (chế độ giải thích) mở lại đúng lựa chọn một-chiều đó —
+  người dùng có thể chọn khác đi khi trả lời lại.
 
 ## Chất lượng câu trả lời lưu vào answers (--answer và --slots-file)
 
@@ -212,5 +251,8 @@ doc tầng 1 đã tồn tại. Khối nào không truy được nguồn thật t
   chặn — đừng tìm cách lách bằng đường dẫn khác).
 - Không tự tiện tuyên bố gate đã mở hoặc khuyên người dùng xóa tệp trạng thái/reinstall khi có lỗi. Dùng `safe_next_command` từ Core.
 - Với thẻ tương tác: không tự thêm lựa chọn "Other" (host đã cấp sẵn); không bịa gợi ý cho
-  `option_hints` khi answers nguồn còn thiếu; không giữ/prefetch câu trả lời của câu kế tiếp qua
-  lượt — mỗi lượt chỉ hỏi và commit đúng một câu `current_step`.
+  `option_hints` khi answers nguồn còn thiếu; không giữ/prefetch câu trả lời của câu ngoài batch
+  đang cầm để dùng sau — mỗi lượt chỉ hỏi và commit đúng những câu nằm trong `question_ids` của
+  token đang cầm (D60), không tự gộp thêm.
+- Không tự ý mở rộng batch: chỉ Core (qua `computeBatch`) quyết câu nào đi cùng nhau trong một
+  token — agent không được tự gộp câu ngoài `question_ids` dù người dùng trả lời trước.
