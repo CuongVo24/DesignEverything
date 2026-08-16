@@ -19,7 +19,7 @@ const catalogPath = join(__dirname, '../../Design/Content/artifact-catalog.yaml'
 describe('Content Integrity (Tầng 1)', () => {
   test('script.yaml must load successfully and contain exactly 26 questions with unique IDs', () => {
     const script = loadScript(scriptPath);
-    expect(script.version).toBe('2.1.0');
+    expect(script.version).toBe('2.2.0'); // B24c (D61) — multi_select bump
     expect(script.questions.length).toBe(26);
 
     const questionIds = script.questions.map((q) => q.id);

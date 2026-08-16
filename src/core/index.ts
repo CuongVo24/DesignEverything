@@ -11,7 +11,7 @@ export * from './schemas/index.js';
 // RUNTIME_VERSION export at all.
 export { RUNTIME_VERSION } from '../version.js';
 export { loadScript } from './loadScript.js';
-export { resolveQuestionInteraction, deriveAnswerText } from './interactionChoices.js';
+export { resolveQuestionInteraction, deriveAnswerText, deriveMultiAnswerText } from './interactionChoices.js';
 export type { QuestionInteraction } from './interactionChoices.js';
 export { buildQuestionCard } from './buildQuestionCard.js';
 export type { QuestionCard } from './buildQuestionCard.js';

@@ -35,6 +35,12 @@ export const questionSchema = z.object({
     hint_count: z.union([z.literal(2), z.literal(3)]),
     hint_style: z.string().trim().min(1),
   }).optional(),
+  // B24c (D61) — additive/optional, default false when absent (schema
+  // 2.1.0 -> 2.2.0, backward-compatible: a question without this field
+  // behaves exactly as before). Only meaningful on a question that has
+  // `options` or `option_hints` — enforced below, not just documented,
+  // since a free-text-only question has nothing to select multiple of.
+  multi_select: z.boolean().optional(),
 }).superRefine((q, ctx) => {
   if (q.options && q.option_hints) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['option_hints'], message: 'options and option_hints are mutually exclusive' });
@@ -58,6 +64,29 @@ export const questionSchema = z.object({
   }
   if (q.option_hints && new Set(q.option_hints.synthesize_from).size !== q.option_hints.synthesize_from.length) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['option_hints', 'synthesize_from'], message: 'option hint sources must be unique' });
+  }
+  // B24c (D61) — multi_select rules.
+  if (q.multi_select) {
+    if (!q.options && !q.option_hints) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['multi_select'],
+        message: 'multi_select requires options or option_hints — a free-text-only question has nothing to select multiple of',
+      });
+    }
+    // A `fixed` recommendation means the engine binds a single machine
+    // token to a discrete field (S7's --branch, CAL0's --calibrate) — those
+    // two questions need exactly one selection, never a set, so
+    // multi_select is incompatible with `recommendation.mode: 'fixed'`.
+    // This is what keeps CAL0/S7 from ever declaring multi_select, at the
+    // schema layer rather than only by convention.
+    if (q.recommendation && q.recommendation.mode === 'fixed') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['multi_select'],
+        message: "multi_select is incompatible with a fixed recommendation — the engine needs exactly one machine token from this question, not a set",
+      });
+    }
   }
 }).refine(
   (q) => {

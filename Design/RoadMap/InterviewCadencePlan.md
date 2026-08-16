@@ -36,7 +36,10 @@ Ba thay đổi, theo ba quyết định đã khoá ở [DecisionLog.md](../Decis
   Token mang danh sách `question_ids`; `checkRate` nới trần đúng bằng số câu trong batch.
   Supersedes D54 (không đảo tính chất chống bypass của D54, chỉ đổi đơn vị: từ "một token = một
   câu" sang "một token = một batch do Core tính").
-- **D61** — `multi_select` cho câu mà slot vốn là danh sách (S1, S2, S4, S5, W4, C4).
+- **D61** — `multi_select` cho câu mà slot vốn là danh sách (S1, S2, S4, S5). W4/C4 loại khỏi
+  danh sách khi triển khai: options của hai câu đó loại trừ lẫn nhau (một phương thức đăng nhập /
+  một hệ điều hành mục tiêu), không phải danh sách cộng dồn — xem [DecisionLog.md](../DecisionLog.md)
+  D61.
 
 **Kết quả nhắm tới:** hành trình web canonical từ 16 lượt xuống còn 10 lượt (số chiếu từ
 `computeBatch`, xem §5 — con số thật phải để B24f đo lại bằng test đi qua state machine thật, không
@@ -70,7 +73,7 @@ batch mà Core đã tính.
 | **B24a** | Lõi | `undo` — `selectNextStep` tách dùng chung, `undoStep.ts` (pure engine), `undoLastAnswer` application service, wiring CLI (`cliOps/undo.ts`, `classifyCliSubcommand.ts`, `commandSurface.ts`). |
 | **B24b** | Lõi | Batch capability — `turnCapabilityRecordSchema` thêm `question_ids`/`consumed_question_ids` (optional, không default — xem cảnh báo checksum ở B24b contract), `verifyTurnCapability` 3 guard sửa, `checkRate` trần theo batch, `computeBatch(progress, script)`. |
 | **B24c-1** | Lõi | `multi_select` schema (`interviewScript.ts`), `deriveMultiAnswerText`, `QuestionInteraction.multiSelect`. |
-| **B24c-2** | Nội dung | Bật `multi_select: true` cho S1, S2, S4, S5, W4, C4 trong `script.yaml` + 4 file song sinh + `interview-script.md`. |
+| **B24c-2** | Nội dung | Bật `multi_select: true` cho S1, S2, S4, S5 trong `script.yaml` + 4 file song sinh + `interview-script.md`. |
 | **B24d** | Adapter (Claude) | Viết lại `SKILL.md` nhịp lượt (bỏ bước thẻ dịch ngược, sửa 4 quy tắc vàng theo D59, gỡ mâu thuẫn nhịp cũ), đồng bộ `render-inject.ts`. |
 | **B24e** | Adapter (degradation) | Đồng bộ `generateAgentsMd.ts`/`AGENTS.sample.md`, dòng `ConformanceMatrix.md` cho 8.2 (harness mềm không có `checkRate` ép cứng — batch chỉ là chỉ dẫn best-effort, công bố rõ). |
 | **B24f** | QA | Invariants (batch/multi_select/undo/checksum-regression), viết lại `interactive-cards-turn-count.test.ts` đếm ranh giới lượt thật. |
@@ -114,7 +117,7 @@ multi_select.
   Core đã tính, không phải đúng một câu.
 - `undo` hoàn tác đúng câu vừa commit gần nhất, xoá sạch `answers`/`slots` liên quan, không mở được
   sau `emit`.
-- `multi_select` hoạt động trên S1, S2, S4, S5, W4, C4; không bật được trên CAL0/S7 (chặn ở tầng
+- `multi_select` hoạt động trên S1, S2, S4, S5; không bật được trên CAL0/S7 (chặn ở tầng
   schema, không chỉ ở tầng test).
 - Một store/token phát trước lane này (không có `question_ids`/`multi_select`) vẫn đọc được nguyên
   vẹn — không `CHECKSUM_MISMATCH`, không vỡ verify.

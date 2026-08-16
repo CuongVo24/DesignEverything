@@ -1,4 +1,4 @@
-version: 2.1.0
+version: 2.2.0
 questions:
   - id: CAL0
     ask: "Chào mừng! Bạn muốn mình giải thích thật kỹ từng bước và lý do (dành cho người mới học thiết kế), hay muốn đi nhanh thẳng vào việc (dành cho người đã quen)?"
@@ -43,6 +43,7 @@ questions:
       synthesize_from: [S0]
       hint_count: 3
       hint_style: "nỗi đau + workaround khả dĩ"
+    multi_select: true
 
     depends_on: [S0]
     slot_keys: [problem_summary, current_workaround]
@@ -62,6 +63,7 @@ questions:
       synthesize_from: [S0, S1]
       hint_count: 3
       hint_style: "persona + job-to-be-done"
+    multi_select: true
 
     depends_on: [S0, S1]
     slot_keys: [primary_persona_summary, primary_persona_job_to_be_done, secondary_persona_summary, secondary_persona_job_to_be_done]
@@ -119,6 +121,7 @@ questions:
       synthesize_from: [S3]
       hint_count: 3
       hint_style: "entity/relationship từ Must"
+    multi_select: true
 
     depends_on: [S0, S1, S2, S3]
     slot_keys: [core_entities, entity_relationships, deferred_data_notes]
@@ -138,6 +141,7 @@ questions:
       synthesize_from: [S3, S4]
       hint_count: 3
       hint_style: "luồng chính từ Must và data"
+    multi_select: true
 
     depends_on: [S0, S1, S2, S3, S4]
     slot_keys: [main_flow_summary, main_flow_steps, main_flow_risks_or_edge_cases]

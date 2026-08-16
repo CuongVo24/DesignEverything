@@ -20,7 +20,7 @@ describe('loadScript', () => {
   test('should successfully load the real script.yaml file', () => {
     const realScriptPath = join(__dirname, '../../Design/Content/interview-script/script.yaml');
     const script = loadScript(realScriptPath);
-    expect(script.version).toBe('2.1.0');
+    expect(script.version).toBe('2.2.0'); // B24c (D61) — multi_select bump
     expect(script.questions.length).toBe(26);
     expect(script.questions[0].id).toBe('CAL0');
   });

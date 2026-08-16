@@ -82,6 +82,10 @@ Tổng hợp đúng 3 gợi ý theo hướng "nỗi đau + workaround khả dĩ"
 `S0`. Đây KHÔNG phải danh sách viết cứng — agent tự soạn tại thời điểm hỏi; nếu `S0` chưa có câu trả
 lời, không bịa gợi ý, dùng đường tự nhập.
 
+**multi_select**  
+`true` — người dùng có thể chọn nhiều gợi ý cùng lúc (một dự án thường giải quyết nhiều nỗi đau
+song song), luôn còn đường tự nhập.
+
 **translate_back**  
 "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`. Hiện tại họ giải quyết tạm bằng: `<cách xoay xở hiện nay>`. Đúng ý bạn chứ?"
 
@@ -112,6 +116,10 @@ Người mới hay kể triệu chứng mơ hồ như "bất tiện". Agent ph�
 Tổng hợp đúng 3 gợi ý theo hướng "persona + job-to-be-done", suy từ câu trả lời đã commit của `S0`
 và `S1`. Đây KHÔNG phải danh sách viết cứng — nếu nguồn chưa có câu trả lời, không bịa gợi ý, dùng
 đường tự nhập.
+
+**multi_select**  
+`true` — người dùng thường có nhiều hơn một persona (vd người tạm ứng chi tiêu + thành viên trong
+phòng), luôn còn đường tự nhập.
 
 **translate_back**  
 "Mình tóm lại có các nhóm người dùng chính sau: `<persona 1>` muốn `<job-to-be-done 1>`; `<persona 2>` muốn `<job-to-be-done 2>`. Ổn chưa?"
@@ -214,6 +222,9 @@ Người mới có xu hướng gọi mọi thứ là "cần". Agent phải đứ
 Tổng hợp đúng 3 gợi ý "entity/relationship từ Must", suy từ câu trả lời đã commit của `S3`. Đây
 KHÔNG phải danh sách viết cứng — nếu `S3` chưa có câu trả lời, không bịa gợi ý, dùng đường tự nhập.
 
+**multi_select**  
+`true` — một dự án hiếm khi chỉ có một entity, luôn còn đường tự nhập.
+
 **translate_back**  
 "Mình tóm lại các dữ liệu lõi là: `<danh sách entity>` cùng quan hệ chính giữa chúng. Mỗi loại dữ liệu này phục vụ trực tiếp cho các tính năng Must. Đúng chứ?"
 
@@ -244,6 +255,9 @@ Người mới hay bịa thêm dữ liệu vì "sau này có thể cần". Agent
 Tổng hợp đúng 3 gợi ý "luồng chính từ Must và data", suy từ câu trả lời đã commit của `S3`, `S4`.
 Đây KHÔNG phải danh sách viết cứng — nếu nguồn chưa có câu trả lời, không bịa gợi ý, dùng đường tự
 nhập.
+
+**multi_select**  
+`true` — các bước của một luồng thường được ghép từ nhiều gợi ý cùng lúc, luôn còn đường tự nhập.
 
 **translate_back**  
 "Mình viết lại luồng chuẩn như sau: `<các bước mở đến xong việc>`. Luồng này sẽ là ví dụ chính để kiểm tra MVP có thật sự dùng được hay không."
