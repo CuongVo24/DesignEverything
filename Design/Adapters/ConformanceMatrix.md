@@ -46,6 +46,17 @@ Smoke run W14A đầu tiên (2026-07-10, phiên Claude Code thật, dự án yt-
 Bộ đóng gói nằm ở [adapter/claude-code/](../../adapter/claude-code/): 3 entry hook theo giao thức stdin/stdout thật của Claude Code (`hooks/`), CLI `status|commit|emit` cho skill (`cli.mjs`), skill `/design-everything` (`skill/SKILL.md`) và installer (`install.mjs`). Cài vào dự án đích: `node adapter/claude-code/install.mjs <target>` — installer ghi `.claude/settings.json` + skill và copy lõi nội dung (`script.yaml`, `gate-policy.yaml`, `shapes.yaml`, doc-templates) vào workspace đích; engine (dist + node_modules) vẫn ở repo này.
 Đã nghiệm thu vòng đời đầy đủ bằng mô phỏng giao thức hook: SessionStart khởi tạo `progress.json` → UserPromptSubmit inject câu hỏi + TURN_ID và chặn vi phạm một-bước-mỗi-lượt → PreToolUse deny `Write`/`Bash` khi gate `scope-locked` đóng, allow vùng `Design/`+`docs/` → commit CAL0→S7(`--branch`)→W5 qua CLI (kèm `--slots-file`) → `emit` sinh 10 docs có anchor (gồm 08-build-plan) → phase `ready-to-build`, gate mở cho Write code. Còn thiếu: smoke run trong phiên Claude Code thật với người dùng (bước W14A).
 
+**Phạm vi thật của `PreToolUse` (H3, 2026-08-16):** matcher hook đăng ký đúng
+`Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell` ([settingsMerge.mjs](../../adapter/claude-code/installer/settingsMerge.mjs)).
+Đây là toàn bộ tool ghi/thực thi tích hợp sẵn của Claude Code trên cả hai hệ điều hành (Bash trên
+Linux/macOS, PowerShell mặc định trên Windows) — không phải mọi đường ghi file có thể có trong một
+phiên. Một MCP server ghi file trực tiếp (ví dụ filesystem MCP) đứng ngoài matcher này và **không** đi
+qua gate — đây là giới hạn đã biết của mô hình "adapter-wrapper" (D37: hook chỉ intercept một tập tool
+hữu hạn do harness khai báo, không phải sandbox toàn diện), không phải lỗi. Trước 2026-08-16, matcher
+thiếu `PowerShell` — một agent bị Bash chặn có thể chuyển hẳn sang PowerShell để ghi/xoá file mà không
+qua gate nào; đã vá cùng đợt với năm lỗi chặn thật khác của phiên test đầu tiên
+([v8-hotfix H1–H6](../ContractForAI/Core/v8-hotfix/)).
+
 ## DX Hardening — 2026-07-16 (nhánh v5/dx-hardening)
 
 Các fix rút ra từ smoke run ytm thật tại E:/DE-TestDrive (dự án Python CLI, greenfield):

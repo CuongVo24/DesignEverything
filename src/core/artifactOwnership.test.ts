@@ -68,6 +68,49 @@ describe('B2a — Protected artifact ownership policy contract', () => {
     expect(res.reason_code).toBe('INVALID_SCRATCH_PATH');
   });
 
+  describe('H2 — Design/.interview/slots-<slug>.json write gate matches loadSlotsFile.ts\'s read gate', () => {
+    test('classifyArtifact treats a slots-file path as interview-scratch, not engine-state', () => {
+      expect(classifyArtifact('Design/.interview/slots-S1.json')).toBe('interview-scratch');
+      expect(classifyArtifact('Design/.interview/slots-buildplan.json')).toBe('interview-scratch');
+    });
+
+    test('classifyArtifact still treats every other .interview/ file as engine-state', () => {
+      expect(classifyArtifact('Design/.interview/answers.json')).toBe('engine-state');
+      expect(classifyArtifact('Design/.interview/deepen-answer-history.json')).toBe('engine-state');
+    });
+
+    test('authorizeMutation allows an agent-host write to a per-question slots-file', () => {
+      const res = authorizeMutation('write', 'agent-host', 'Design/.interview/slots-S1.json');
+      expect(res.decision).toBe('allow');
+      expect(res.reason_code).toBe('INTERVIEW_SLOTS_FILE_ALLOWED');
+    });
+
+    test('authorizeMutation allows the post-interview derived slots-buildplan.json with no question binding', () => {
+      // Unlike per-question scratch, a slots-file write carries no
+      // scratchContext session/question match requirement — a derived file
+      // like slots-buildplan.json has no single owning question.
+      const res = authorizeMutation('write', 'agent-host', 'Design/.interview/slots-buildplan.json', undefined, [], {
+        scratchContext: { sessionId: 'sess-1', questionId: null },
+      });
+      expect(res.decision).toBe('allow');
+      expect(res.reason_code).toBe('INTERVIEW_SLOTS_FILE_ALLOWED');
+    });
+
+    test('authorizeMutation still denies a direct write to Design/.interview/answers.json', () => {
+      const res = authorizeMutation('write', 'agent-host', 'Design/.interview/answers.json');
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('PROTECTED_ARTIFACT_MUTATION_DENIED');
+    });
+
+    test('authorizeMutation denies an oversized slots-file write', () => {
+      const res = authorizeMutation('write', 'agent-host', 'Design/.interview/slots-S1.json', undefined, [], {
+        contentSizeBytes: 2 * 1024 * 1024,
+      });
+      expect(res.decision).toBe('deny');
+      expect(res.reason_code).toBe('SCRATCH_FILE_OVERSIZED');
+    });
+  });
+
   test('authorizeMutation allows core-transaction with valid InternalMutationCapability', () => {
     const cap: InternalMutationCapability = {
       capability_id: 'cap-123',

@@ -1,9 +1,16 @@
 import { Progress, Script } from '../../../core/schemas/index.js';
-import { resolveQuestionInteraction, deriveAnswerText } from '../../../core/interactionChoices.js';
+import { deriveAnswerText } from '../../../core/interactionChoices.js';
+import { buildQuestionCard } from '../../../core/buildQuestionCard.js';
 
 /**
  * Builds the injected context text from current progress and interview script.
  * Following the 4 Golden Rules of phỏng vấn.
+ *
+ * H4 — renders from buildQuestionCard's Core-owned card instead of re-reading
+ * `question`/`critics` directly: `status --json` (cliOps/status.ts) builds
+ * the identical card from the same function, so the two surfaces (inject
+ * context vs. status output) can no longer independently drift on
+ * ask/options/recommendation/translate_back.
  */
 export function renderInject(
   progress: Progress,
@@ -11,38 +18,33 @@ export function renderInject(
   capabilityToken?: string,
   committedAnswers: Record<string, string> = {},
 ): string {
-  if (progress.current_step === null) {
+  const card = buildQuestionCard(progress.current_step, script, committedAnswers);
+  if (!card) {
     return '';
   }
 
-  const question = script.questions.find((q) => q.id === progress.current_step);
-  if (!question) {
-    throw new Error(`Question with ID ${progress.current_step} not found in script`);
-  }
-
-  const targetDocText = question.target_doc
-    ? question.target_doc
+  const targetDocText = card.target_doc
+    ? card.target_doc
     : 'Không có (meta question)';
 
   const capabilitySection = capabilityToken
     ? `\n[Capability Token — chỉ dùng cho lượt này, không hiển thị lại cho người dùng]
 ${capabilityToken}
-Dùng đúng token này với cờ --capability-token khi gọi lệnh commit cho câu ${question.id}. Token chỉ
+Dùng đúng token này với cờ --capability-token khi gọi lệnh commit cho câu ${card.id}. Token chỉ
 dùng được một lần; hết lượt này token cũ không còn hiệu lực và bạn sẽ nhận token mới ở lượt kế tiếp.
 `
     : '';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const critic = (script as any).critics?.[question.id];
+  const critic = card.critic;
   const criticSection = critic
     ? `\n[Yêu cầu Phản biện (Critic-pass)]
 Câu hỏi này yêu cầu chạy qua Critic-pass trước khi commit:
-Challenge: ${critic.challenge.trim()}
-Ack prompt: ${critic.ack_prompt.trim()}
+Challenge: ${critic.challenge}
+Ack prompt: ${critic.ack_prompt}
 `
     : '';
 
-  const interaction = resolveQuestionInteraction(question, committedAnswers);
+  const interaction = card.interaction;
   const interactionSection = interaction.kind === 'static'
     ? `\n[Lựa chọn (options)]\n${interaction.options.map((option) => {
       const recommended = interaction.recommendation.mode === 'fixed' && interaction.recommendation.value === option.value;
@@ -55,12 +57,12 @@ Ack prompt: ${critic.ack_prompt.trim()}
 Hiện tại bạn đang ở trong phiên phỏng vấn thiết kế dự án DesignEverything.
 
 [Câu hỏi hiện tại]
-ID câu hỏi: ${question.id}
-Loại câu hỏi (kind): ${question.kind ?? 'anchored'}
-Câu hỏi (ask): ${question.ask}
-Đề xuất mặc định (default): ${question.default ?? 'Không có'}
+ID câu hỏi: ${card.id}
+Loại câu hỏi (kind): ${card.kind}
+Câu hỏi (ask): ${card.ask}
+Đề xuất mặc định (default): ${card.default ?? 'Không có'}
 File đích (target_doc): ${targetDocText}
-Dịch ngược (translate_back): ${question.translate_back}
+Dịch ngược (translate_back): ${card.translate_back}
 ${interactionSection}${criticSection}${capabilitySection}
 [4 Quy tắc vàng của phỏng vấn]
 1. Hỏi từng câu một: Không hỏi gộp nhiều câu cùng lúc.
@@ -70,5 +72,5 @@ ${interactionSection}${criticSection}${capabilitySection}
 
 [Hướng dẫn cho Skill]
 - Chỉ tiến hành commit bước phỏng vấn hiện tại bằng cách gọi \`commitStep\` SAU KHI người dùng đã xác nhận rõ ràng bản dịch ngược (translate_back) cho câu hỏi hiện tại.
-${interaction.kind === 'static' ? `- Với options: gọi AskUserQuestion một câu, header bằng ID, multiSelect=false; mỗi choice label lấy từ block trên. Không tự thêm Other (host đã có sẵn). Khi người dùng chọn, dùng ĐÚNG dòng --answer in kèm lựa chọn đó ở block trên — không bao giờ truyền value nội bộ vào --answer. timeout/dismiss/label lạ không được commit.${question.id === 'S7' ? ' Riêng S7: thêm cờ --branch <value nội bộ> (vd --branch web) CÙNG với --answer, không thay thế nhau.' : ''}${question.id === 'CAL0' ? ' Riêng CAL0: thêm cờ --calibrate <value nội bộ> (vd --calibrate fast) CÙNG với --answer, không thay thế nhau.' : ''}\n` : ''}${interaction.kind === 'hints' ? '- Với option_hints: gọi AskUserQuestion một câu, header bằng ID, multiSelect=false; các choice do bạn tự soạn tại chỗ theo chỉ dẫn ở block trên (không viết cứng). --answer truyền đúng nội dung gợi ý người dùng đã chọn (văn xuôi, không phải nhãn rút gọn). Không tự thêm Other. timeout/dismiss/label lạ không được commit.\n' : ''}${critic ? '- Vì câu hỏi này có Critic-pass, sau khi người dùng đồng ý bản dịch ngược, bạn phải đưa ra [Yêu cầu Phản biện (Critic-pass)] ở trên (gồm Challenge và Ack prompt) và chờ người dùng phản hồi đồng ý hoặc điều chỉnh rồi mới gọi commitStep.\n' : ''}- Mỗi lượt tương tác của người dùng chỉ được phép commit tối đa một bước (không commit gộp nhiều bước).`;
+${interaction.kind === 'static' ? `- Với options: gọi AskUserQuestion một câu, header bằng ID, multiSelect=false; mỗi choice label lấy từ block trên. Không tự thêm Other (host đã có sẵn). Khi người dùng chọn, dùng ĐÚNG dòng --answer in kèm lựa chọn đó ở block trên — không bao giờ truyền value nội bộ vào --answer. timeout/dismiss/label lạ không được commit.${card.id === 'S7' ? ' Riêng S7: thêm cờ --branch <value nội bộ> (vd --branch web) CÙNG với --answer, không thay thế nhau.' : ''}${card.id === 'CAL0' ? ' Riêng CAL0: thêm cờ --calibrate <value nội bộ> (vd --calibrate fast) CÙNG với --answer, không thay thế nhau.' : ''}\n` : ''}${interaction.kind === 'hints' ? '- Với option_hints: gọi AskUserQuestion một câu, header bằng ID, multiSelect=false; các choice do bạn tự soạn tại chỗ theo chỉ dẫn ở block trên (không viết cứng). --answer truyền đúng nội dung gợi ý người dùng đã chọn (văn xuôi, không phải nhãn rút gọn). Không tự thêm Other. timeout/dismiss/label lạ không được commit.\n' : ''}${critic ? '- Vì câu hỏi này có Critic-pass, sau khi người dùng đồng ý bản dịch ngược, bạn phải đưa ra [Yêu cầu Phản biện (Critic-pass)] ở trên (gồm Challenge và Ack prompt) và chờ người dùng phản hồi đồng ý hoặc điều chỉnh rồi mới gọi commitStep.\n' : ''}- Mỗi lượt tương tác của người dùng chỉ được phép commit tối đa một bước (không commit gộp nhiều bước).`;
 }

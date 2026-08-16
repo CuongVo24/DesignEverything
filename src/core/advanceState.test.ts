@@ -162,11 +162,11 @@ describe('advanceState engine', () => {
     expect(checkRate(progress, 3).ok).toBe(false);
   });
 
-  test('should transition phase to docs-emitted or ready-for-validation upon completing interview', () => {
+  test('completing a real interview reaches ready-for-validation directly (H7); docs-emitted only fires if a declared gate was never satisfied', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
     progress.current_step = 'CAL0';
 
-    // CAL0 -> S6
+    // CAL0 -> S6 (S3 commits along the way, recording gate 'scope-locked' — H6)
     const steps = ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
     for (let i = 0; i < steps.length; i++) {
       progress = commit(progress);
@@ -182,22 +182,85 @@ describe('advanceState engine', () => {
       progress = commit(progress);
     }
 
-    // Clone progress to test docs-emitted (default) and ready-for-validation.
-    const progressDocsEmitted = commit(progress);
-    expect(progressDocsEmitted.current_step).toBeNull();
-    expect(progressDocsEmitted.phase).toBe('docs-emitted');
-
-    // Setup for ready-for-validation.
-    let progressReady = { ...progress };
-    const webQuestions = script.questions.filter((q) => q.branch === 'core' || q.branch === 'web');
-    progressReady.emitted_docs = webQuestions
-      .filter((q) => q.target_doc !== null)
-      .map((q) => q.target_doc as string);
-    progressReady.gates_passed = ['scope-locked'];
-
-    progressReady = commit(progressReady);
+    // H7 — a real interview, driven purely through commitStep with nothing
+    // hand-seeded, reaches 'ready-for-validation' the moment the last
+    // question (W5) is committed: gates_passed already has 'scope-locked'
+    // from S3, and doc coverage is judged against `answered` (guaranteed
+    // complete once current_step goes null), not the still-empty
+    // `emitted_docs` (which only `emit` itself populates, later).
+    const progressReady = commit(progress);
     expect(progressReady.current_step).toBeNull();
     expect(progressReady.phase).toBe('ready-for-validation');
+
+    // 'docs-emitted' is not dead: it still fires if a branch's declared gate
+    // was somehow never recorded (e.g. a corrupted/hand-edited store) —
+    // simulated here since a real commit sequence can no longer produce it.
+    const progressMissingGate = { ...progress, gates_passed: [] };
+    const afterMissingGate = commit(progressMissingGate);
+    expect(afterMissingGate.current_step).toBeNull();
+    expect(afterMissingGate.phase).toBe('docs-emitted');
+  });
+
+  // H6 (v8-hotfix) — regression for a real, pre-existing bug found while
+  // manually walking the CLI branch end-to-end through the real hook/CLI
+  // process boundary: `gates_passed` was NEVER appended to anywhere in the
+  // commit pipeline, so a branch's declared gate (S3's `scope-locked`,
+  // required by every branch) could never be satisfied and `emit` (which
+  // requires phase === 'ready-for-validation') was permanently unreachable
+  // through the documented commit flow — only a hand-seeded fixture (like
+  // `progressReady` above) ever exercised that phase. This test proves the
+  // fix through commitStep's own real code path, not a manual seed: it
+  // commits an entire real 'cli' branch journey (no test setting
+  // `gates_passed` by hand anywhere) and checks that S3's commit alone
+  // already recorded the gate, and that emitted_docs is the only remaining
+  // gap after the interview.
+  test('committing S3 (which declares gate: scope-locked) records it in gates_passed via the real commit flow, no manual seeding', () => {
+    let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progress.current_step = 'CAL0';
+
+    for (const stepId of ['CAL0', 'S0', 'S1', 'S2']) {
+      expect(progress.current_step).toBe(stepId);
+      progress = commit(progress);
+    }
+    expect(progress.current_step).toBe('S3');
+    expect(progress.gates_passed).toEqual([]);
+
+    progress = commit(progress); // commits S3
+    expect(progress.gates_passed).toEqual(['scope-locked']);
+
+    // Committing it twice more (S4, S5) must not duplicate the gate entry.
+    progress = commit(progress);
+    progress = commit(progress);
+    expect(progress.gates_passed).toEqual(['scope-locked']);
+  });
+
+  test('a full real cli-branch commit sequence reaches ready-for-validation with nothing hand-seeded (H6+H7, the exact deadlock found manually walking the real CLI)', () => {
+    let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
+    progress.current_step = 'CAL0';
+
+    for (const stepId of ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6']) {
+      progress = commit(progress);
+    }
+    progress = commit(progress, { branchChoice: 'cli' }); // S7
+    for (const stepId of ['R1', 'S8', 'C1', 'C2', 'C3', 'C4']) {
+      progress = commit(progress);
+    }
+    expect(progress.current_step).toBe('C5');
+    // Real commit flow, no hand-seeding anywhere above — S3's gate already
+    // landed in gates_passed on its own (H6).
+    expect(progress.gates_passed).toEqual(['scope-locked']);
+    expect(progress.emitted_docs).toEqual([]); // emit genuinely hasn't run
+
+    // H7 — committing the last question (C5) reaches 'ready-for-validation'
+    // directly. Before this fix, this always landed on 'docs-emitted'
+    // instead — because emitted_docs (checked at this exact point) can
+    // never be non-empty until AFTER `emit` runs, and `emit` itself refuses
+    // to run unless phase is already 'ready-for-validation' (emit.ts). That
+    // closed loop is exactly what made a real `/design-everything`
+    // interview unable to ever reach `emit` in production.
+    const afterFinalCommit = commit(progress);
+    expect(afterFinalCommit.current_step).toBeNull();
+    expect(afterFinalCommit.phase).toBe('ready-for-validation');
   });
 
   test('should support hybrid branch flow committing S7 and routing all core, web, and mobile questions', () => {

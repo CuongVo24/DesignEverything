@@ -11,7 +11,13 @@ import { TARGET_LOCAL_CLI_COMMAND } from '../../version.js';
 const CLI = TARGET_LOCAL_CLI_COMMAND;
 
 export interface NextStepCard {
-  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported' | 'deepen';
+  // H4 — 'interview' added: cliOps/status.ts builds this state directly
+  // (not through renderNextStep, which has no notion of interview progress/
+  // script) whenever the canonical store is mid-interview. See status.ts's
+  // "H4" comment for why this couldn't stay the pre-existing renderNextStep
+  // call (it was invoked with a hardcoded `profile: null`, which always
+  // produced 'needs-profile' regardless of actual interview state).
+  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported' | 'deepen' | 'interview';
   now: string;
   whyNow: string;
   allowedScope: string[];

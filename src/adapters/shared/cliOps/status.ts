@@ -9,10 +9,15 @@ import {
   recoverEmit,
   deepenModuleIdSchema,
   ExecutionState,
+  loadScript,
+  buildQuestionCard,
+  QuestionCard,
 } from '../../../core/index.js';
-import { renderNextStep } from '../renderNextStep.js';
+import { renderNextStep, NextStepCard } from '../renderNextStep.js';
 import { CliResultEnvelope, redactInternalError } from '../cliResult.js';
 import { RUNTIME_VERSION, TARGET_LOCAL_INIT_COMMAND, targetLocalCliCommand } from '../../../version.js';
+
+const SCRIPT_REL_PATH = 'Design/Content/interview-script/script.yaml';
 
 export function handleStatus(workspaceRoot: string): CliResultEnvelope {
   const health = inspectRuntimeHealth(workspaceRoot);
@@ -43,8 +48,10 @@ export function handleStatus(workspaceRoot: string): CliResultEnvelope {
   }
 
   let progress = null;
+  let committedAnswers: Record<string, string> = {};
   if (canonicalOutcome.status === 'ready') {
     progress = canonicalOutcome.envelope.payload.progress;
+    committedAnswers = canonicalOutcome.envelope.payload.answers;
   } else if (canonicalOutcome.status === 'corrupt') {
     return {
       ok: false,
@@ -65,6 +72,61 @@ export function handleStatus(workspaceRoot: string): CliResultEnvelope {
     } catch {
       // Ignore
     }
+  }
+
+  // H4 — mid-interview (canonical store exists, execution-state does not
+  // yet). `status` is the ONLY signal available on a turn where
+  // UserPromptSubmit hasn't fired for this session yet (e.g. immediately
+  // after `init`, before the first prompt) — it must carry the same
+  // ask/options/recommendation/translate_back a card built from
+  // UserPromptSubmit would carry (D53: same Core data, both surfaces build
+  // it via buildQuestionCard), not just current_step's bare id. Also
+  // replaces the generic nextStepCard for this phase — the fallback below
+  // called renderNextStep with a hardcoded `profile: null`, which always
+  // produces 'needs-profile' regardless of actual interview progress.
+  if (!execState && progress && progress.current_step !== null) {
+    let questionCard: QuestionCard | null = null;
+    let interviewCard: NextStepCard;
+    try {
+      const script = loadScript(join(workspaceRoot, SCRIPT_REL_PATH));
+      const builtCard = buildQuestionCard(progress.current_step, script, committedAnswers);
+      if (!builtCard) {
+        // Unreachable given the `progress.current_step !== null` guard
+        // above, but keeps the branch's typing honest instead of asserting.
+        throw new Error('buildQuestionCard returned null for a non-null current_step');
+      }
+      questionCard = builtCard;
+      interviewCard = {
+        state: 'interview',
+        now: `Trả lời câu hỏi phỏng vấn hiện tại (${builtCard.id}): ${builtCard.ask}`,
+        whyNow: 'Dự án đang ở pha phỏng vấn thiết kế; mỗi câu neo vào một ô tài liệu nền móng, phải trả lời tuần tự theo 4 quy tắc vàng.',
+        allowedScope: ['Design/**', 'docs/**'],
+        proof: `Câu ${builtCard.id} xuất hiện trong progress.answered${builtCard.target_doc ? `; ${builtCard.target_doc} phản ánh đúng câu trả lời` : ''}.`,
+        ifItFails: 'Gọi lại status để lấy đúng câu hỏi hiện tại; commit qua CLI (commit --capability-token), không tự sửa progress/interview-state.',
+        enforcement: 'hard',
+      };
+    } catch {
+      // Script broken/missing degrades to the generic card rather than
+      // failing the whole status call — a broken script.yaml is already
+      // surfaced separately by inspectRuntimeHealth when applicable.
+      interviewCard = renderNextStep(null, execState, null);
+    }
+
+    return {
+      ok: true,
+      operation: 'status',
+      reason_code: 'STATUS_HEALTHY',
+      severity: 'info',
+      message: interviewCard.now,
+      data: {
+        progress,
+        execState,
+        questionCard,
+        nextStepCard: interviewCard,
+      },
+      next_command: interviewCard.nextCommand || targetLocalCliCommand('status'),
+      runtime_version: RUNTIME_VERSION,
+    };
   }
 
   const card = renderNextStep(null, execState, null);

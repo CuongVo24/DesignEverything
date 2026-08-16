@@ -76,6 +76,23 @@ export function commitStep(
   // 3. Append current_step to answered
   nextProgress.answered.push(currentStepId);
 
+  // 3b (H6, v8-hotfix) — record this question's declared `gate` as passed
+  // (e.g. S3's `scope-locked`). Before this, NOTHING in the commit pipeline
+  // ever appended to `gates_passed` — it stayed `[]` for the entire
+  // interview — so step 6 below's `hasAllGates` check could never be
+  // satisfied whenever a branch declared a required gate (every branch
+  // does, via S3), and phase could never advance past 'docs-emitted' to
+  // 'ready-for-validation' through the real commit flow. `emit` requires
+  // exactly that phase (emit.ts), so this made emit permanently
+  // unreachable for any interview driven through the documented
+  // commit/UserPromptSubmit flow — only synthetic test fixtures that seed
+  // gates_passed directly (advanceState.test.ts's own 'ready-for-validation'
+  // case does exactly that) ever exercised the phase this unlocks.
+  const committedQuestion = script.questions.find((q) => q.id === currentStepId);
+  if (committedQuestion?.gate && !nextProgress.gates_passed.includes(committedQuestion.gate)) {
+    nextProgress.gates_passed.push(committedQuestion.gate);
+  }
+
   // 4. Branch logic at S7
   if (currentStepId === 'S7') {
     if (!args.branchChoice) {
@@ -133,11 +150,28 @@ export function commitStep(
 
   // 6. Update phase and updated_at
   if (nextStepId === null) {
-    // Interview complete, determine phase based on emitted docs and gates passed
-    const requiredDocs = new Set(
-      script.questions
-        .filter((q) => isQuestionCompatible(q.branch, nextProgress.branch) && q.target_doc !== null)
-        .map((q) => q.target_doc as string)
+    // Interview complete, determine phase based on doc coverage and gates passed.
+    //
+    // H7 (v8-hotfix) — hasAllDocs used to check `nextProgress.emitted_docs`,
+    // a field NOTHING in the commit pipeline ever writes to (only `emit`
+    // itself populates it, once it has already run). That made hasAllDocs
+    // false by construction at the exact moment this code runs (right after
+    // the LAST question of the interview, before any emit has ever
+    // happened), so phase could never land on 'ready-for-validation' here —
+    // and `emit` requires exactly that phase (emit.ts, emitTier1.ts's
+    // handoff check) to run at all. The result was a closed loop: emit
+    // needs 'ready-for-validation', which needs emitted_docs, which only
+    // emit ever writes. Checking doc coverage against `answered` instead
+    // asks the question this code can actually answer at this point in
+    // time — "did the interview cover every question that feeds a required
+    // doc" — which the eligibility loop above already guarantees true the
+    // moment `nextStepId` lands on null (every branch-compatible,
+    // dependency-satisfied question is answered by definition once no
+    // eligible question remains). See advanceState.test.ts's H6/H7
+    // regression tests, which walk a real 'cli' branch through this exact
+    // transition with no hand-seeded emitted_docs/gates_passed.
+    const requiredDocQuestions = script.questions.filter(
+      (q) => isQuestionCompatible(q.branch, nextProgress.branch) && q.target_doc !== null
     );
     const requiredGates = new Set(
       script.questions
@@ -147,9 +181,7 @@ export function commitStep(
         .map((q) => q.gate as string)
     );
 
-    const hasAllDocs = Array.from(requiredDocs).every((doc) =>
-      nextProgress.emitted_docs.includes(doc)
-    );
+    const hasAllDocs = requiredDocQuestions.every((q) => nextProgress.answered.includes(q.id));
     const hasAllGates = Array.from(requiredGates).every((gate) =>
       nextProgress.gates_passed.includes(gate)
     );

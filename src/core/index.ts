@@ -13,6 +13,8 @@ export { RUNTIME_VERSION } from '../version.js';
 export { loadScript } from './loadScript.js';
 export { resolveQuestionInteraction, deriveAnswerText } from './interactionChoices.js';
 export type { QuestionInteraction } from './interactionChoices.js';
+export { buildQuestionCard } from './buildQuestionCard.js';
+export type { QuestionCard } from './buildQuestionCard.js';
 export { loadGatePolicy } from './loadGatePolicy.js';
 export { loadProgress, saveProgress } from './loadProgress.js';
 export { loadInterviewStore, transactInterviewStore, computePayloadChecksum, initializeInterviewStore } from './interviewStore.js';
