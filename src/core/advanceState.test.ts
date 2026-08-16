@@ -238,12 +238,12 @@ describe('advanceState engine', () => {
     let progress = loadProgress(join(__dirname, '../../test/fixtures/progress/init-s0.json'));
     progress.current_step = 'CAL0';
 
-    for (const stepId of ['CAL0', 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6']) {
-      progress = commit(progress);
+    for (let i = 0; i < 8; i++) {
+      progress = commit(progress); // CAL0, S0, S1, S2, S3, S4, S5, S6
     }
     progress = commit(progress, { branchChoice: 'cli' }); // S7
-    for (const stepId of ['R1', 'S8', 'C1', 'C2', 'C3', 'C4']) {
-      progress = commit(progress);
+    for (let i = 0; i < 6; i++) {
+      progress = commit(progress); // R1, S8, C1, C2, C3, C4
     }
     expect(progress.current_step).toBe('C5');
     // Real commit flow, no hand-seeding anywhere above — S3's gate already

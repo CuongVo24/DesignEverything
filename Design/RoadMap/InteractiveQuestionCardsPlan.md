@@ -1,4 +1,9 @@
 # Interactive Question Cards — phỏng vấn bằng thẻ chọn thay vì gõ văn xuôi
+> **Superseded 2026-08-16 (một phần) bởi lane 8.2** ([InterviewCadencePlan.md](InterviewCadencePlan.md),
+> D59): thẻ xác nhận dịch ngược mà số đo 32/5/84% dưới đây mô tả đã bị bỏ khỏi build hiện tại — số
+> liệu đó chỉ còn giá trị lịch sử cho thiết kế 8.1. Số liệu turn/batch thay thế:
+> [interview-cadence-turn-count-report.md](evidence/interview-cadence-turn-count-report.md).
+>
 > **Lane MỞ — 2026-08-12, đang RC (chưa cắt GA).** Trạng thái này thay thế điều kiện tiên quyết
 > pre-GA cũ bên dưới (nay chỉ còn giá trị lịch sử — cả hai điều kiện đã đóng, xem
 > [MasterSequencingPlan.md](MasterSequencingPlan.md) Gate C1/C2). Hợp đồng 8.1: Claude nhận thẻ

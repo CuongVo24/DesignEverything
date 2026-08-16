@@ -1,5 +1,11 @@
 # Interactive Cards — báo cáo số lượt gõ trước/sau (B22e)
 
+> **Superseded 2026-08-16 bởi lane 8.2 (D59, [InterviewCadencePlan.md](../InterviewCadencePlan.md)).**
+> D59 bỏ hẳn thẻ xác nhận dịch ngược mà số liệu 32/5/84% dưới đây đo — cơ chế bị đo không còn tồn
+> tại trong build hiện tại. Giữ nguyên file này làm hồ sơ lịch sử của thiết kế 8.1, KHÔNG dùng số
+> 84% cho build hiện tại. Số liệu thay thế (đo theo lượt/batch của D60):
+> [interview-cadence-turn-count-report.md](interview-cadence-turn-count-report.md).
+>
 > Nguồn đo: [test/journey/interactive-cards-turn-count.test.ts](../../../test/journey/interactive-cards-turn-count.test.ts).
 > Chạy `npx vitest run test/journey/interactive-cards-turn-count.test.ts` để tái tạo. Không phải
 > cảm nhận — số liệu dưới đây đo qua state machine thật (`commitStep`/`issueTurnCapability`/
