@@ -66,7 +66,13 @@ lần thử một dòng gồm loại tương tác, thời điểm, log hook thô
 
 ## 7. Status
 
-IN_PROGRESS (2026-08-16) — chưa chạy. `Design/RoadMap/evidence/r-spike-userpromptsubmit-log.md`
-chưa tồn tại. B22c hiện đã code theo nhánh giả định "commit ngay trong lượt, không giữ câu trả lời
-qua lượt" (xem §7 [b22c](B22/b22c_claude_interactive_cards_contract.md)) — spike này (lộ trình P2)
-sẽ xác nhận hoặc bác giả định đó bằng log thật từ một workspace cài thật.
+IN_PROGRESS (2026-08-16) — probe dựng xong, **chờ chủ repo chạy phiên thật** (bước này không tự
+động hoá được trong một phiên đối chiếu tài liệu, cùng lý do như A3/Gate B1). Đã dựng:
+`E:\rspike-8.1-probe` — workspace trống, cài DesignEverything thật bằng `install.mjs` (bundle
+8.1.0, rebuild trước khi cài để qua `checkDistFreshness`), cộng một hook log độc lập
+(`rspike-log-hook.mjs`, đăng ký thêm vào `UserPromptSubmit` bên cạnh hook sản phẩm thật, không sửa
+hook sản phẩm) — đã smoke-test bằng stdin giả, ghi log đúng định dạng. Template kết quả:
+[r-spike-userpromptsubmit-log.md](../../../RoadMap/evidence/r-spike-userpromptsubmit-log.md) — có
+hướng dẫn từng bước cho 2 ca × 3 lần. B22c hiện đã code theo nhánh giả định "commit ngay trong lượt,
+không giữ câu trả lời qua lượt" (xem §7 [b22c](B22/b22c_claude_interactive_cards_contract.md)) —
+spike này sẽ xác nhận hoặc bác giả định đó bằng log thật.
