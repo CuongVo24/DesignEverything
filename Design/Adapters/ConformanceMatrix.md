@@ -7,13 +7,15 @@
 
 ## Ma trận
 
-| Harness | Bậc | INJECT | GATE | EMIT | Trạng thái | File |
-|---|---|---|---|---|---|---|
-| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
-| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
-| Cursor (native `.mdc`) | B | `.cursorrules`/`.mdc` | rules text | cây taxonomy | ⏳ để sau | — |
-| Antigravity | B | rules | rules text | cây taxonomy | ⏳ để sau | — |
-| Windsurf / Continue | B | rules | rules text | cây taxonomy | ⏳ để sau | — |
+| Harness | Bậc | INJECT | GATE | EMIT | `interactive_choice` (8.1) | Trạng thái | File |
+|---|---|---|---|---|---|---|---|
+| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ thẻ tương tác thật (`AskUserQuestion`) | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
+| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | text liệt kê (degradation) — cùng văn xuôi `deriveAnswerText` với Claude, không native card | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
+| Cursor (native `.mdc`) | B | `.cursorrules`/`.mdc` | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
+| Antigravity | B | rules | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
+| Windsurf / Continue | B | rules | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
+
+`interactive_choice` là capability mở ở lane 8.1 (Interactive Question Cards, `Design/RoadMap/InteractiveQuestionCardsPlan.md`): câu có `options`/`option_hints` trong `script.yaml` được adapter render thành lựa chọn thay vì free-text thuần. Claude Code render thẻ native; AGENTS.md/Codex chỉ có text liệt kê (D53 — dữ liệu ở Lõi, hai adapter dùng chung `deriveAnswerText`/`resolveQuestionInteraction` nên không thể lệch nội dung, chỉ lệch cách trình bày). Không hứa Cursor/Antigravity/Windsurf đồng đều — theo D37.
 
 Chú thích: ✅ xong & test · 📐 đặc tả đã khoá, chưa code · ⏳ để sau.
 

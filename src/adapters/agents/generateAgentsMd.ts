@@ -1,4 +1,5 @@
 import type { Script, GatePolicy } from '../../core/index.js';
+import { deriveAnswerText } from '../../core/index.js';
 
 /**
  * Generates the contents of AGENTS.md based on the script, gate policy, and conventions.
@@ -41,7 +42,10 @@ Repo này buộc agent đi theo hướng phỏng vấn trước khi code để t
           && question.recommendation.value === option.value
           ? ' **(khuyến nghị)**'
           : '';
-        return `\`${option.value}\` — ${option.label}: ${option.description}${recommended}`;
+        // D58 (DecisionLog.md): the committed answer text is deriveAnswerText's
+        // output, never the raw value — Core owns this so Claude's cards
+        // (render-inject.ts) and this text fallback can't independently drift.
+        return `${deriveAnswerText(option)}${recommended}`;
       }).join('; ');
       const contextual = question.recommendation?.mode === 'contextual'
         ? ' Không có lựa chọn được khuyến nghị trước vì phụ thuộc ngữ cảnh.'
