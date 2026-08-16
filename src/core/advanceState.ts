@@ -86,17 +86,28 @@ export function commitStep(
     throw new Error(`Commit failed (${verifyRes.reason_code}): ${verifyRes.message}`);
   }
 
+  // B24b (D60) — partial consumption for a batch token: only mark the whole
+  // record 'consumed' once every question in its batch has been committed.
+  // A single-question token has batchIds.length === 1, so
+  // newlyConsumed.length (1) >= batchIds.length (1) is immediately true —
+  // this is exactly the old always-consume-on-first-commit behavior when
+  // there is no batch.
+  const cap = progress.pending_turn_capability!; // verifyRes.valid guarantees non-null.
+  const batchIds = cap.question_ids ?? [cap.question_id];
+  const newlyConsumed = [...(cap.consumed_question_ids ?? []), currentStepId];
+  const batchFullyConsumed = newlyConsumed.length >= batchIds.length;
+
   const nextProgress: Progress = {
     ...progress,
     state_revision: (progress.state_revision || 0) + 1,
     answered: [...progress.answered],
     emitted_docs: [...progress.emitted_docs],
     gates_passed: [...progress.gates_passed],
-    // verifyRes.valid guarantees pending_turn_capability is non-null.
     pending_turn_capability: {
-      ...progress.pending_turn_capability!,
-      consumed_at: new Date().toISOString(),
-      status: 'consumed',
+      ...cap,
+      consumed_question_ids: newlyConsumed,
+      consumed_at: batchFullyConsumed ? new Date().toISOString() : null,
+      status: batchFullyConsumed ? 'consumed' : 'active',
     },
   };
 
@@ -217,11 +228,17 @@ export function checkRate(
   progress: Progress,
   incomingAnsweredLen: number
 ): { ok: boolean; reason?: string } {
-  const allowed = incomingAnsweredLen - progress.answered_len_at_last_turn <= 1;
+  // B24b (D60) — the allowed delta is the size of the batch the LAST
+  // issued token covered (still sitting in pending_turn_capability at the
+  // moment this runs, from before the new token is issued), not always 1.
+  // Absent question_ids (no batch ever issued, or a pre-B24b token) keeps
+  // the original single-question trần.
+  const allowance = progress.pending_turn_capability?.question_ids?.length ?? 1;
+  const allowed = incomingAnsweredLen - progress.answered_len_at_last_turn <= allowance;
   if (!allowed) {
     return {
       ok: false,
-      reason: `Answered length increased by too much. Incoming length: ${incomingAnsweredLen}, length at last turn: ${progress.answered_len_at_last_turn}`,
+      reason: `Answered length increased by too much. Incoming length: ${incomingAnsweredLen}, length at last turn: ${progress.answered_len_at_last_turn}, allowed: ${allowance}`,
     };
   }
   return { ok: true };

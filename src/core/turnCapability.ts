@@ -12,6 +12,23 @@ export const turnCapabilityRecordSchema = z.object({
   expires_at: z.string().datetime(),
   consumed_at: z.string().datetime().nullable(),
   status: z.enum(['active', 'consumed', 'invalidated', 'expired']),
+  // B24b (D60) — batch capability. `question_id` above stays required and
+  // always equals `question_ids[0]` when this is present, so every
+  // pre-existing reader (deepenState.ts, every test that builds a record by
+  // hand) keeps working unmodified. Both fields are `.optional()`, NOT
+  // `.default()`: computePayloadChecksum (interviewStore.ts) runs on the
+  // envelope AFTER zod-parse, and this record is nested inside
+  // progress/payload — a `.default([])` would silently inject a value into
+  // every capability record written before this field existed, changing
+  // what gets hashed and producing CHECKSUM_MISMATCH on every store already
+  // on disk. `.optional()` leaves an absent field as `undefined`, which
+  // JSON.stringify drops, so the checksum of an old record is unaffected.
+  // Read via `cap.question_ids ?? [cap.question_id]`, never bare.
+  question_ids: z.array(z.string()).optional(),
+  // Which of `question_ids` have already been consumed by a commit within
+  // this same batch, in commit order. Absent/empty means none yet. A
+  // single-question token (no `question_ids`) never populates this.
+  consumed_question_ids: z.array(z.string()).optional(),
 });
 
 export type TurnCapabilityRecord = z.infer<typeof turnCapabilityRecordSchema>;
@@ -117,6 +134,23 @@ export function verifyTurnCapability(
     };
   }
 
+  // B24b (D60) — batch-aware replay check. A batch token's `question_ids`
+  // defaults to `[question_id]` when absent, so a single-question token's
+  // check collapses to the original bare comparison below it. Checking the
+  // per-question consumed list FIRST catches replay of an already-committed
+  // question within a still-active batch (status stays 'active' until every
+  // question in the batch is consumed — see advanceState.ts's commitStep);
+  // the original whole-record check right after still catches the fully-
+  // consumed/invalidated case for a single-question token exactly as before.
+  const consumedIds = pendingCapability.consumed_question_ids ?? [];
+  if (consumedIds.includes(expected.questionId)) {
+    return {
+      valid: false,
+      reason_code: 'TURN_CAPABILITY_REPLAY',
+      message: `Question ${expected.questionId} has already been consumed within this batch (replay attack prevented)`,
+    };
+  }
+
   if (pendingCapability.status === 'consumed' || pendingCapability.consumed_at !== null) {
     return {
       valid: false,
@@ -158,11 +192,16 @@ export function verifyTurnCapability(
     };
   }
 
-  if (pendingCapability.question_id !== expected.questionId) {
+  // B24b (D60) — the token is valid for any question in its batch, not
+  // just `question_id` (which is always batchIds[0]). A single-question
+  // token has `batchIds === [question_id]`, so this is exactly the old
+  // check when there is no batch.
+  const batchIds = pendingCapability.question_ids ?? [pendingCapability.question_id];
+  if (!batchIds.includes(expected.questionId)) {
     return {
       valid: false,
       reason_code: 'TURN_CAPABILITY_WRONG_QUESTION',
-      message: `Question ID mismatch: expected ${expected.questionId}, got ${pendingCapability.question_id}`,
+      message: `Question ID mismatch: expected one of [${batchIds.join(', ')}], got ${expected.questionId}`,
     };
   }
 
@@ -175,11 +214,18 @@ export function verifyTurnCapability(
     };
   }
 
-  if (pendingCapability.expected_revision !== expected.currentRevision) {
+  // B24b (D60) — each commit inside a batch bumps state_revision by
+  // exactly one (transactInterviewStore), so the Nth commit in a batch is
+  // expected to observe expected_revision + N (N = how many of this
+  // batch's questions have already been consumed), not the token's
+  // original expected_revision unmodified. consumedIds.length is 0 for the
+  // first commit of any token (batch or not), so this collapses to the
+  // original bare comparison when there is no batch.
+  if (pendingCapability.expected_revision + consumedIds.length !== expected.currentRevision) {
     return {
       valid: false,
       reason_code: 'TURN_CAPABILITY_WRONG_REVISION',
-      message: `State revision mismatch: expected ${expected.currentRevision}, got ${pendingCapability.expected_revision}`,
+      message: `State revision mismatch: expected ${pendingCapability.expected_revision + consumedIds.length}, got ${expected.currentRevision}`,
     };
   }
 

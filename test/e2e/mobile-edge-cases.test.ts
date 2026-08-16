@@ -177,9 +177,17 @@ describe('E2E Mobile Edge Cases Flow', () => {
     // Answer CAL0
     const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     const usedToken = promptResult.capabilityToken!;
-    const progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
+    let progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
 
     expect(progress.current_step).toBe('S0');
+
+    // B24b (D60) — CAL0's batch token also covers S0, so reusing the SAME
+    // token to commit S0 must succeed (the point of D60: no fresh
+    // UserPromptSubmit turn needed between two questions in the same
+    // Core-computed batch) — only reuse AFTER the batch is fully consumed
+    // is replay.
+    progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
+    expect(progress.current_step).toBe('S1');
 
     expect(() => {
       commitStep(progress, script, { capabilityToken: usedToken });

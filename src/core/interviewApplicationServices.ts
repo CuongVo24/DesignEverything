@@ -5,6 +5,7 @@ import { migrateInterviewStore } from './migrateInterviewStore.js';
 import { loadScript } from './loadScript.js';
 import { commitStep, checkRate, stampTurn } from './advanceState.js';
 import { undoStep } from './undoStep.js';
+import { computeBatch } from './computeBatch.js';
 import { issueTurnCapability } from './turnCapability.js';
 import { validateAnswer } from './validateAnswer.js';
 import { issueAckCapability, consumeAckCapability, type AckWarningInput } from './ackCapability.js';
@@ -55,7 +56,13 @@ export interface IssuePromptCapabilityOk {
 }
 export interface IssuePromptCapabilityFail {
   ok: false;
-  reason_code: 'STORE_MISSING' | 'STORE_CORRUPT' | 'NO_ACTIVE_STEP' | 'RATE_LIMIT_VIOLATION' | 'REVISION_CONFLICT';
+  reason_code:
+    | 'STORE_MISSING'
+    | 'STORE_CORRUPT'
+    | 'NO_ACTIVE_STEP'
+    | 'RATE_LIMIT_VIOLATION'
+    | 'REVISION_CONFLICT'
+    | 'SCRIPT_MISSING';
   message: string;
 }
 export type IssuePromptCapabilityResult = IssuePromptCapabilityOk | IssuePromptCapabilityFail;
@@ -92,6 +99,19 @@ export function issuePromptCapability(workspaceRoot: string): IssuePromptCapabil
     };
   }
 
+  // B24b (D60) — script is needed to compute the batch this token will
+  // cover. Loaded outside the transaction (pure filesystem read, same as
+  // commitInterviewAnswer does) — a broken/missing script.yaml fails this
+  // call closed rather than silently falling back to a single-question
+  // batch, since a script computeBatch can't read is a script commitStep
+  // couldn't validate against either.
+  let script;
+  try {
+    script = loadScript(join(workspaceRoot, SCRIPT_REL_PATH));
+  } catch (err: unknown) {
+    return { ok: false, reason_code: 'SCRIPT_MISSING', message: (err as Error).message };
+  }
+
   // The capability's expected_revision must match the revision the store
   // will hold AFTER this transaction commits — transactInterviewStore always
   // stamps payload.progress.state_revision to its own post-increment value,
@@ -113,13 +133,20 @@ export function issuePromptCapability(workspaceRoot: string): IssuePromptCapabil
         return { ...env, payload: { ...env.payload, progress: stamped } };
       }
       const nextRevision = env.state_revision + 1;
+      // B24b (D60) — Core computes the batch, not the caller: the same
+      // question_ids computeBatch returns is exactly what the token
+      // authorizes and what checkRate's next allowance will be derived
+      // from (advanceState.ts). questionIds[0] === stamped.current_step by
+      // construction (computeBatch always starts at current_step).
+      const questionIds = computeBatch(stamped, script);
       const issued = issueTurnCapability(nextRevision, {
         sessionId: stamped.session_id || 'default-session',
         operationKind: 'interview',
-        questionId: stamped.current_step,
+        questionId: questionIds[0] ?? stamped.current_step,
       });
       issuedToken = issued.token;
-      const updatedProgress: Progress = { ...stamped, pending_turn_capability: issued.capability };
+      const capability = { ...issued.capability, question_ids: questionIds };
+      const updatedProgress: Progress = { ...stamped, pending_turn_capability: capability };
       return { ...env, payload: { ...env.payload, progress: updatedProgress } };
     });
   } catch (err: unknown) {
