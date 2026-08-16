@@ -82,3 +82,20 @@ DONE (2026-08-16, Đợt 2 Phase 5, nhánh `codex/lane-8-1-interactive-cards`).
 src/core/scriptOptionsInvariants.test.ts` = 14 + 39 + 6 = 59/59 pass (`skill-truth.test.ts` lên
 37 → 39 test vì thêm 2 dòng `cli.mjs" undo` được dạy). `npm run typecheck` xanh. Sau
 `build:bundle`, `npx vitest run` toàn repo = 139/139 file, 1077 pass / 2 skip.
+
+**Bổ sung sau E2E thật (phần Verification của lane, chạy sau khi B24f đóng):** phát hiện một chỗ
+sót trong phạm vi contract này — `adapter/claude-code/hooks/user-prompt-submit.mjs` tự thêm một
+đoạn text tĩnh riêng ("[Cách commit bước...]") **ngoài** `render-inject.ts`, và đoạn đó vẫn nói
+"Sau khi người dùng xác nhận bản dịch ngược... chạy:" (trái D59) và "Token ở trên chỉ dùng được
+một lần cho đúng câu này" (trái D60 — token bao phủ cả batch). Không phát hiện được qua review
+tĩnh vì `render-inject.test.ts` chỉ test hàm `renderInject`, không test đoạn text hook tự ghép
+thêm. Bắt được khi chạy `echo '{"cwd":...}' | node hooks/user-prompt-submit.mjs` thật trên workspace
+cài thật (bước Verification của `InterviewCadencePlan.md`) và đọc `additionalContext` trả về. Đã
+sửa cùng ngày: commit ngay không chờ xác nhận (trừ Critic-pass), token bao phủ cả batch, thêm dòng
+dạy lệnh `undo`. Không có test tự động nào assert nội dung đoạn text này trước đó — đã xác nhận
+không có test nào tham chiếu chuỗi cũ (`grep` toàn repo), nên không phá test nào khi sửa;
+`node --check` xác nhận cú pháp, `hook-seam.test.ts` (4/4) và
+`adapter/claude-code/hooks/resolve-cli-invocation.test.mjs`/`pre-tool-use.wrapper.test.ts` chạy lại
+xanh. Bài học cho lane sau: `render-inject.test.ts` nên mở rộng để test luôn đoạn ghép trong
+`user-prompt-submit.mjs`, không chỉ hàm `renderInject` — hai nơi cùng lắp ráp context cho cùng một
+hook, tách rời nhau dễ lệch lần nữa.
