@@ -7,7 +7,7 @@
 > file, commit hash, hoặc lệnh test), không đóng bằng lời.
 >
 > Chuỗi: `7.0.0 (v1-fix-bugs, GA 2026-08-10)` → `8.0.0 (v6-expansion, GA 2026-08-10, commit 6a52408)` →
-> `8.1.0 (lane này, IN_PROGRESS 2026-08-16 — xem Gate C3)`.
+> `8.1.0 (lane này, RC 2026-08-16 — 5/6 contract DONE, R-spike còn mở, xem Gate C3)`.
 
 ## Bảng mốc
 
@@ -37,7 +37,7 @@
 | **Gate B4** | Cắt 8.0.0 | ✅ DONE 2026-08-10, commit `6a52408` (chung commit với Gate A4 — "checkpoint 7.0.0 and 8.0.0 GA") | `git log` `6a52408`; `check-version-sync.mjs` exit 0 |
 | **Gate C1** | Duyệt 6 mục `v7-expansion/README.md` | ✅ DONE — 2 điều kiện tiên quyết (A4, B4) đã đóng, `v7-expansion/README.md` tự ghi "Lane MỞ (2026-08-10)" | `v7-expansion/README.md` header |
 | **Gate C2** | Gỡ cảnh báo "Lane CHƯA mở" | ✅ DONE — `v7-expansion/README.md` không còn cảnh báo này; `InteractiveQuestionCardsPlan.md` header đổi thành "Lane MỞ, đang RC" (P0, commit `4fad0f6`) | `v7-expansion/README.md`, `InteractiveQuestionCardsPlan.md` |
-| **Gate C3** | Thực thi: R-spike ∥ B22a → B22b → B22c → B22d → B22e | 🔄 IN_PROGRESS (2026-08-16), nhánh `codex/lane-8-1-interactive-cards`, lộ trình P0–P8 (P0 DONE ở `4fad0f6`) | 6 contract §7 sẽ lật DONE lần lượt qua P2–P7; đóng lane ở P8 |
+| **Gate C3** | Thực thi: R-spike ∥ B22a → B22b → B22c → B22d → B22e | 🔄 5/6 DONE (2026-08-16), nhánh `codex/lane-8-1-interactive-cards`, lộ trình P0–P8 chạy hết (P0–P7 DONE). B22a/B22b/B22c(có-điều-kiện)/B22d/B22e đóng; **R-spike còn mở** — chờ chủ repo chạy phiên thật (probe đã dựng ở P2, cùng lớp Gate A3/B1: hành động sống không tự động hoá được trong phiên đối chiếu tài liệu) | §7 5 contract ghi DONE; [r-spike-userpromptsubmit-probe.md](../ContractForAI/Core/v7-expansion/r-spike-userpromptsubmit-probe.md) §7 chờ log thật; [v8.1-release-note.md](v8.1-release-note.md) Status = RC |
 
 ## Quyết định đã khoá (không làm lại)
 

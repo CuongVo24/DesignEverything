@@ -5,17 +5,20 @@
 > tương tác native, AGENTS.md nhận fallback text, Codex phỏng vấn native bị hoãn (xem
 > [ConformanceMatrix.md](../Adapters/ConformanceMatrix.md) dòng `interactive_choice`).
 >
-> Hành trình web canonical: `CAL0, S0–S7, R1, S8, W1–W5` (16 câu), giữ nguyên 16 lượt `commit`.
-> Số lượt gõ tay đo độc lập: baseline 32 tin nhắn văn xuôi (mỗi câu 1 lượt trả lời + 1 lượt xác
-> nhận), còn lại tối đa 16 lượt gõ trong hành trình canonical không dùng Other/không timeout — vì
-> 5 câu free-text (`S0, S6, R1, S8, W5`) vẫn cần gõ cả câu trả lời lẫn lượt xác nhận; 11 câu còn lại
-> được trợ giúp bằng thẻ. **Số liệu này là mô hình hoá theo cấu trúc script, chưa đo qua phiên thật**
-> — số đo thật nằm ở `Design/RoadMap/evidence/interactive-cards-turn-count-report.md` (B22e, xem
-> [v8.1-release-note.md](v8.1-release-note.md) §Evidence). Cài đặt hiện tại **không giữ câu trả lời
-> qua lượt**: mỗi câu cần một capability token mới hợp lệ, commit ngay trong lượt trả lời (nhánh
-> R-spike đang giả định — xem
+> Hành trình web canonical: `CAL0, S0–S7, R1, S8, W1–W5` (16 câu), giữ nguyên 16 lượt `commit`
+> (D54 không đổi). **Số đo thật (không phải mô hình hoá)** từ
+> [interactive-cards-turn-count-report.md](evidence/interactive-cards-turn-count-report.md) (B22e,
+> đi qua state machine thật qua `commitStep`): baseline 32 tin nhắn gõ tay (mỗi câu 1 lượt trả lời +
+> 1 lượt xác nhận) giảm còn **5** trong hành trình canonical không dùng Other/không timeout — giảm
+> **84%** — vì bước xác nhận dịch ngược nay LUÔN là thẻ 3 lựa chọn cho mọi câu (kể cả 5 câu free-text
+> `S0, S6, R1, S8, W5`), chỉ còn bước trả lời của 5 câu đó vẫn cần gõ; 11 câu còn lại được trợ giúp
+> bằng thẻ hoàn toàn. (Bản nháp trước đó của dòng này ghi nhầm "tối đa 16 lượt gõ" — nhầm giữa tổng
+> lượt `commit` với số tin nhắn phải gõ tay; đã sửa theo số đo thật.) Cài đặt hiện tại **không giữ
+> câu trả lời qua lượt**: mỗi câu cần một capability token mới hợp lệ, commit ngay trong lượt trả
+> lời (nhánh R-spike đang giả định, **chưa được xác nhận bởi phiên thật** — xem
 > [r-spike-userpromptsubmit-probe.md](../ContractForAI/Core/v7-expansion/r-spike-userpromptsubmit-probe.md)
-> §7 cho kết luận thật khi có).
+> §7; đây là điều kiện duy nhất còn treo trước khi cắt GA, xem
+> [v8.1-release-note.md](v8.1-release-note.md)).
 
 > **Điều kiện tiên quyết pre-GA (lịch sử — đã đóng đủ 2026-08-10, xem Gate C1/C2 ở
 > [MasterSequencingPlan.md](MasterSequencingPlan.md)).** Target version **8.1.0** — MINOR trên nền V6

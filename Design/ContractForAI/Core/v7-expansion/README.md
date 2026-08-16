@@ -15,22 +15,25 @@
 > 2. ✅ `v6-expansion` (8.0.0) cắt GA 2026-08-10 (xem `v6-expansion/README.md` §Đối chiếu —
 >    6/6 contract DONE, đã cắt trước Interactive đúng thứ tự đã chốt 2026-08-01).
 >
-> **Đang thực thi (2026-08-16), nhánh `codex/lane-8-1-interactive-cards`.** Trạng thái
-> `WAITING_FOR_APPROVAL` ở bảng dưới là trạng thái *governance ban đầu* của contract (chờ duyệt bắt
-> tay code) — nay đã chuyển sang `IN_PROGRESS`, thực thi theo lộ trình 8 phase P0–P8 (P0 đóng ở
-> commit `4fad0f6`, ổn định working tree). §7 từng contract sẽ ghi `DONE` kèm bằng chứng khi đóng
-> đúng phase tương ứng (B22a=P3, B22b=P4, B22c=P5, B22d=P6, B22e=P7); R-spike đóng ở P2.
+> **Đóng 2026-08-16 (P8), nhánh `codex/lane-8-1-interactive-cards`, 5/6 contract DONE.** Lộ trình
+> 8 phase P0–P8 đã chạy hết (P0 đóng ở commit `4fad0f6`, P3–P7 đóng lần lượt B22a/B22b/B22c/B22d/B22e
+> — xem §7 từng contract cho bằng chứng, evidence tổng hợp ở
+> [v8.1-release-note.md](../../../RoadMap/v8.1-release-note.md)). **R-spike là contract duy nhất còn
+> mở** — cần chủ repo chạy một phiên Claude Code thật (probe đã dựng sẵn ở P2, xem §7 file đó) mà
+> phiên đối chiếu tài liệu không tự làm được, cùng lớp với Gate A3/B1 của
+> [MasterSequencingPlan.md](../../../RoadMap/MasterSequencingPlan.md). Đây là điều kiện duy nhất
+> còn treo trước khi cắt GA 8.1.0 — repo giữ nhãn RC cho tới khi có kết luận.
 
 ## Bản đồ thực thi
 
 | Batch | Contract | Tầng | Phụ thuộc | Trạng thái |
 |---|---|---|---|---|
-| R-spike | [userpromptsubmit-probe](r-spike-userpromptsubmit-probe.md) | QA | Gate mở lane | IN_PROGRESS (P2) |
-| B22a | [script_options_content](B22/b22a_script_options_content_contract.md) | Nội dung | Gate mở lane | IN_PROGRESS (P3) |
-| B22b | [script_schema_options](B22/b22b_script_schema_options_contract.md) | Lõi | B22a | IN_PROGRESS (P4) |
-| B22c | [claude_interactive_cards](B22/b22c_claude_interactive_cards_contract.md) | Adapter (Claude) | R-spike, B22b | IN_PROGRESS (P5) |
-| B22d | [codex_text_degradation](B22/b22d_codex_text_degradation_contract.md) | Adapter (degradation) | B22b | IN_PROGRESS (P6) |
-| B22e | [options_invariants_qa](B22/b22e_options_invariants_qa_contract.md) | QA | B22c, B22d | IN_PROGRESS (P7) |
+| R-spike | [userpromptsubmit-probe](r-spike-userpromptsubmit-probe.md) | QA | Gate mở lane | ⏳ IN_PROGRESS — chờ chủ repo chạy phiên thật (P2) |
+| B22a | [script_options_content](B22/b22a_script_options_content_contract.md) | Nội dung | Gate mở lane | ✅ DONE (P3) |
+| B22b | [script_schema_options](B22/b22b_script_schema_options_contract.md) | Lõi | B22a | ✅ DONE (P4) |
+| B22c | [claude_interactive_cards](B22/b22c_claude_interactive_cards_contract.md) | Adapter (Claude) | R-spike, B22b | ✅ DONE-với-điều-kiện (P5) — code theo giả định R-spike, sẽ mở lại nếu R-spike bác |
+| B22d | [codex_text_degradation](B22/b22d_codex_text_degradation_contract.md) | Adapter (degradation) | B22b | ✅ DONE (P6) |
+| B22e | [options_invariants_qa](B22/b22e_options_invariants_qa_contract.md) | QA | B22c, B22d | ✅ DONE (P7) |
 
 Thứ tự bắt buộc:
 
