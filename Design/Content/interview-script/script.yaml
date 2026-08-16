@@ -309,7 +309,7 @@ questions:
     translate_back: "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. [CẢNH BÁO] Nếu chọn offline/sync, độ phức tạp và chi phí phát triển sẽ tăng đáng kể (gấp đôi do phải xử lý lưu trữ cục bộ, hàng đợi, đồng bộ dữ liệu và giải quyết xung đột). Bạn có đồng ý đánh đổi chi phí này để lấy trải nghiệm offline không? Vui lòng xác nhận 'Tôi đồng ý' hoặc đưa ra yêu cầu điều chỉnh."
     depends_on: [R1, S8, M1]
     options:
-      - { value: online-first, label: "Ưu tiên có mạng", description: "Đơn giản nhất nhưng người dùng không làm việc khi mất mạng." }
+      - { value: online-first, label: "Ưu tiên có mạng", description: "Đơn giản nhất nhưng người dùng cần kết nối liên tục để thao tác được." }
       - { value: offline-critical, label: "Offline tác vụ chính", description: "Bảo vệ luồng quan trọng nhưng cần sync có chọn lọc." }
       - { value: offline-first, label: "Offline trước", description: "Trải nghiệm bền vững nhưng chi phí đồng bộ và xung đột cao." }
     recommendation: { mode: fixed, value: online-first }
@@ -455,7 +455,7 @@ questions:
       min_trimmed_chars: 4
       warning_rules:
         - code: C5_MULTIPLATFORM_DISTRIBUTION_REQUESTED
-          pattern: "(github releases|homebrew|scoop|binary biên dịch sẵn)"
+          pattern: "(github releases|homebrew|scoop|binary|package manager)"
           message: "Bạn vừa chọn phân phối binary đa nền tảng — cần xác nhận đã cân nhắc rủi ro tương thích path/CRLF và quy trình build/ký cho từng hệ điều hành."
 critics:
   S3:

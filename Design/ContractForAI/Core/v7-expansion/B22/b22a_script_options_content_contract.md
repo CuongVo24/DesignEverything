@@ -42,14 +42,19 @@ người đọc, không phải schema) — mà B22b sẽ khoá hình dạng fiel
 
 ## 3. Checklist
 
-- [ ] 14 câu chọn tĩnh có `options` đúng 2–4 entry, mỗi entry đủ 4 field, đúng một entry
-      `recommended: true` khi câu có `default` khác `null`.
-- [ ] Với mỗi `options` entry `recommended: true`, `value`/`label` không mâu thuẫn ngữ nghĩa với
-      `default` hiện tại của câu đó (đối chiếu tay từng câu, ghi vào evidence khi DONE).
-- [ ] 5 câu mở có `option_hints` đủ 3 field, `synthesize_from` chỉ trỏ `id` xuất hiện trước nó
-      trong `depends_on` chain hiện có của câu đó (không tự thêm phụ thuộc mới).
-- [ ] `S7` có đúng 4 `options` khớp registry hình-hài, không thêm/bớt.
-- [ ] Không câu nào ngoài 19 câu trên bị đổi field.
+- [x] 14 câu chọn tĩnh có `options` đúng 2–4 entry, mỗi entry đủ 3 field (`value`/`label`/
+      `description`) + khuyến nghị ở field cấp câu `recommendation` khi có `default` khác `null`
+      (shape khác `recommended: true` per-entry như spec gốc — deviation ghi ở §7).
+- [x] Với mỗi `recommendation.mode: 'fixed'`, `value`/`label` không mâu thuẫn ngữ nghĩa với
+      `default` hiện tại của câu đó — bảng đối chiếu tay 14 câu ở §7.
+- [x] 5 câu mở có `option_hints` đủ 3 field, `synthesize_from` chỉ trỏ `id` xuất hiện trước nó
+      trong `depends_on` chain hiện có của câu đó (không tự thêm phụ thuộc mới) — xác nhận bằng
+      `loadScript.ts` closure check (xem §7 [b22b](b22b_script_schema_options_contract.md)).
+- [x] `S7` có đúng 4 `options` khớp registry hình-hài (`web`/`mobile`/`hybrid`/`cli`), không
+      thêm/bớt — khoá bằng test `contentIntegrity.test.ts`.
+- [x] Không câu nào ngoài 19 câu trên bị đổi field (ngoại trừ 2 vá `warning_rules`/description ở
+      C5/M2, ghi rõ ở §7 — thuộc `answer_contract`, không phải field mới của lane này, nhưng cần
+      sửa để hai bất biến D55/warning không xung đột nhau).
 - [ ] Diff `script.yaml` chỉ thêm field `options`/`option_hints`, không sửa dòng nào khác.
 
 ## 4. Interfaces / Files expected to change
@@ -80,10 +85,52 @@ người đọc, không phải schema) — mà B22b sẽ khoá hình dạng fiel
 
 ## 7. Status
 
-IN_PROGRESS (2026-08-16) — nội dung `options`/`option_hints` trong `script.yaml` đã có đủ 19 câu
-(14 static + 5 hints), nhưng 4 file markdown song sinh (`S0-S6-core.md`, `W-web.md`, `M-mobile.md`,
-`C-cli.md`) chưa được cập nhật và bảng đối chiếu tay `default`↔`recommendation` chưa viết — đóng ở
-lộ trình P3 (nhánh `codex/lane-8-1-interactive-cards`).
+DONE (2026-08-16, lộ trình P3, nhánh `codex/lane-8-1-interactive-cards`). 4 file markdown song sinh
+(`S0-S6-core.md`, `W-web.md`, `M-mobile.md`, `C-cli.md`) nay có mục `**options**`/`**option_hints**`
+cho đúng 19 câu, đặt ngay dưới `**default**` — khớp vị trí với đối chiếu B22e (P7).
+
+**Audit phát hiện 2 lỗi thật khi đối chiếu, đã vá trong batch này (ngoài scope gốc, nhưng cần thiết
+— xem §7 [b22b](b22b_script_schema_options_contract.md) cho phần lưới máy-check thay thế):**
+- `C5_MULTIPLATFORM_DISTRIBUTION_REQUESTED` (pattern cũ `(github releases|homebrew|scoop|binary
+  biên dịch sẵn)`) khớp **0/4** option của C5, kể cả văn xuôi `label: description` — người chọn thẻ
+  "Binary phát hành"/"Package manager hệ điều hành" thoát hoàn toàn ack gate. Pattern sửa thành
+  `(github releases|homebrew|scoop|binary|package manager)`.
+- `M2_OFFLINE_SYNC_REQUESTED` khớp nhầm cả `online-first` (an toàn nhất) vì description cũ chứa
+  "mất mạng". Sửa description thành "Đơn giản nhất nhưng người dùng cần kết nối liên tục để thao
+  tác được." — bỏ 4 từ khoá kích hoạt rule (`offline`/`mất mạng`/`đồng bộ`/`sync`) mà không đổi ý
+  nghĩa đánh đổi thật.
+
+Kiểm chứng bằng script Node đọc trực tiếp `script.yaml` đã parse, đối chiếu `deriveAnswerText`-style
+văn bản với từng `pattern` bằng `RegExp(pattern, 'i')`: sau vá, `C5 → {release-binary,
+os-package-manager}`, `M2 → {offline-critical, offline-first}` — đúng ý định gốc của cả hai rule,
+không match/mismatch nào còn lại. `generateAgentsMd.artifact.test.ts` snapshot regenerate lại (chỉ
+đổi đúng 1 dòng M2 trong `AGENTS.sample.md`, không đổi gì khác).
+
+**Bảng đối chiếu tay `default` ↔ `recommendation` (14 câu chọn tĩnh, checklist mục 3 dòng 2):**
+
+| ID | `default` (rút gọn) | `recommendation` | Khớp nghĩa? |
+|---|---|---|---|
+| CAL0 | Đi nhanh thẳng vào việc, giải thích tối giản | fixed `fast` — Đi nhanh | ✅ |
+| S7 | web | fixed `web` — Ứng dụng web | ✅ |
+| W1 | Tuỳ nhu cầu SEO — SSR/SSG nếu công khai, SPA nếu sau đăng nhập | contextual | ✅ (default tự thân điều kiện hoá, không có một khuyến nghị cố định để suy) |
+| W2 | Cả hai, responsive mobile-first | fixed `responsive-both` — Responsive cả hai | ✅ |
+| W3 | Vercel/Netlify subdomain miễn phí, chưa cần tên miền riêng | fixed `preview-subdomain` — Subdomain bản thử | ✅ |
+| W4 | Tuỳ nhu cầu tài khoản — Google OAuth + email/password nếu cần | contextual | ✅ (default điều kiện hoá theo "nếu cần") |
+| M1 | Một nền tảng duy nhất có thiết bị thật để test | contextual | ✅ (default phụ thuộc thiết bị thật của người dùng, không suy được một OS cố định) |
+| M2 | Online-first, trừ khi thật sự cần offline thường xuyên | fixed `online-first` — Ưu tiên có mạng | ✅ |
+| M4 | Chưa bật push nếu không có lý do rõ ràng | fixed `no-push` — Chưa cần push | ✅ |
+| M5 | Bản thử trước (TestFlight/internal test) | fixed `internal-test` — Thử nghiệm nội bộ | ✅ |
+| C1 | Node.js (TypeScript) | fixed `node-ts` — Node TypeScript | ✅ |
+| C2 | Kết hợp flags/arguments + menu tương tác | fixed `flags-interactive` — Flags và menu | ✅ |
+| C4 | Hệ điều hành hiện tại của người phát triển | contextual | ✅ (default phụ thuộc máy thật của người dùng) |
+| C5 | Chạy cục bộ (node/npx/npm link) | fixed `local` — Chạy cục bộ | ✅ |
+
+Không có lệch nghĩa nào — 10 câu `fixed` đều đúng semantic với `default` cũ; 4 câu `contextual` (W1,
+W4, M1, C4) đều có `default` tự thân điều kiện hoá theo "nếu…thì…", đúng lý do ở §7 của
+[b22b](b22b_script_schema_options_contract.md) tại sao không ép một `recommended: boolean` cố định.
+
+`npm test` = 993 pass / 2 skip / 131 file (giữ nguyên baseline, không đổi số sau khi regenerate
+artifact); `npm run lint`/`typecheck:all` xanh.
 
 **Deviation từ spec (ghi lại, không sửa lén — xem [D58](../../../../DecisionLog.md)):** mỗi
 `options` entry thực tế mang `value`/`label`/`description`, còn cờ khuyến nghị tách thành field

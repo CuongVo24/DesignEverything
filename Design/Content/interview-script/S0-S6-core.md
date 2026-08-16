@@ -19,6 +19,12 @@ Người mới không biết phải nghĩ theo thứ tự nào khi bắt đầu 
 **default**  
 `Đi nhanh thẳng vào việc, giải thích tối giản.`
 
+**options**  
+- `deep` — Giải thích kỹ: có thêm lý do và hướng dẫn, nhưng mất thời gian hơn.
+- `fast` — Đi nhanh **(khuyến nghị)**: tập trung chốt quyết định nhanh với giải thích tối giản.
+
+Luôn còn đường tự nhập (Other) ngoài hai lựa chọn trên.
+
 **translate_back**  
 "Mình ghi nhận mức độ giải thích: `<giải thích kỹ / đi nhanh>`."
 
@@ -71,6 +77,11 @@ Người mới hay nói bằng tên giải pháp thay vì giá trị, kiểu "em
 **default**  
 "Suy từ câu S0 rồi đề xuất 1 cách hiểu cụ thể nhất để người dùng xác nhận hoặc sửa."
 
+**option_hints**  
+Tổng hợp đúng 3 gợi ý theo hướng "nỗi đau + workaround khả dĩ", suy từ câu trả lời đã commit của
+`S0`. Đây KHÔNG phải danh sách viết cứng — agent tự soạn tại thời điểm hỏi; nếu `S0` chưa có câu trả
+lời, không bịa gợi ý, dùng đường tự nhập.
+
 **translate_back**  
 "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`. Hiện tại họ giải quyết tạm bằng: `<cách xoay xở hiện nay>`. Đúng ý bạn chứ?"
 
@@ -96,6 +107,11 @@ Người mới hay kể triệu chứng mơ hồ như "bất tiện". Agent ph�
 
 **default**  
 "Người dùng phổ thông trực tiếp thao tác + 1 vai trò admin hoặc người quản lý nếu dự án có phối hợp nhóm."
+
+**option_hints**  
+Tổng hợp đúng 3 gợi ý theo hướng "persona + job-to-be-done", suy từ câu trả lời đã commit của `S0`
+và `S1`. Đây KHÔNG phải danh sách viết cứng — nếu nguồn chưa có câu trả lời, không bịa gợi ý, dùng
+đường tự nhập.
 
 **translate_back**  
 "Mình tóm lại có các nhóm người dùng chính sau: `<persona 1>` muốn `<job-to-be-done 1>`; `<persona 2>` muốn `<job-to-be-done 2>`. Ổn chưa?"
@@ -131,6 +147,10 @@ Could:
 - [Tính năng bổ sung khi có thời gian]
 Won't (MVP):
 - [Báo cáo phức tạp, mạng xã hội, automation]
+
+**option_hints**  
+Tổng hợp đúng 3 gợi ý "nhóm Must tiêu biểu", suy từ câu trả lời đã commit của `S0`, `S1`, `S2`. Đây
+KHÔNG phải danh sách viết cứng — nếu nguồn chưa có câu trả lời, không bịa gợi ý, dùng đường tự nhập.
 
 **translate_back**  
 "Mình đã nhóm lại thành 4 tầng: Must / Should / Could / Won't. Bản MVP nhỏ nhất mình đề xuất là: `<danh sách Must>`. Phần này để sau là: `<danh sách còn lại>`. Bạn xác nhận giúp mình nhé."
@@ -190,6 +210,10 @@ Người mới có xu hướng gọi mọi thứ là "cần". Agent phải đứ
 **default**  
 "Suy entity trực tiếp từ nhóm Must; chỉ giữ những thứ có ít nhất một tính năng dùng tới."
 
+**option_hints**  
+Tổng hợp đúng 3 gợi ý "entity/relationship từ Must", suy từ câu trả lời đã commit của `S3`. Đây
+KHÔNG phải danh sách viết cứng — nếu `S3` chưa có câu trả lời, không bịa gợi ý, dùng đường tự nhập.
+
 **translate_back**  
 "Mình tóm lại các dữ liệu lõi là: `<danh sách entity>` cùng quan hệ chính giữa chúng. Mỗi loại dữ liệu này phục vụ trực tiếp cho các tính năng Must. Đúng chứ?"
 
@@ -215,6 +239,11 @@ Người mới hay bịa thêm dữ liệu vì "sau này có thể cần". Agent
 
 **default**  
 "Dựng luồng từ tính năng Must quan trọng nhất đã chốt ở S3."
+
+**option_hints**  
+Tổng hợp đúng 3 gợi ý "luồng chính từ Must và data", suy từ câu trả lời đã commit của `S3`, `S4`.
+Đây KHÔNG phải danh sách viết cứng — nếu nguồn chưa có câu trả lời, không bịa gợi ý, dùng đường tự
+nhập.
 
 **translate_back**  
 "Mình viết lại luồng chuẩn như sau: `<các bước mở đến xong việc>`. Luồng này sẽ là ví dụ chính để kiểm tra MVP có thật sự dùng được hay không."
@@ -267,6 +296,15 @@ Người mới hay nói tham vọng kỹ thuật lớn nhưng bỏ qua giới h�
 
 **default**  
 `web`
+
+**options**  
+- `web` — Ứng dụng web **(khuyến nghị)**.
+- `mobile` — App di động.
+- `hybrid` — Web và mobile.
+- `cli` — Công cụ dòng lệnh.
+
+Luôn còn đường tự nhập (Other) ngoài bốn lựa chọn trên. Bốn lựa chọn khớp đúng registry hình-hài ở
+[taxonomy.md](../taxonomy.md), không tự chế thêm nhánh.
 
 **translate_back**  
 "Mình xác nhận hình-hài dự án là: `<web / mobile / hybrid / cli>`."
