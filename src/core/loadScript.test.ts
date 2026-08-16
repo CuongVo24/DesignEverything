@@ -134,4 +134,207 @@ questions:
     writeFileSync(tempYamlPath, yamlContent, 'utf8');
     expect(() => loadScript(tempYamlPath)).toThrow(/cannot precede S6/);
   });
+
+  // B22b — options/recommendation/option_hints (schema 2.1.0). Mutual
+  // exclusion, recommendation required when options present, fixed.value
+  // must reference a real option, and option_hints closure enforcement.
+  describe('options/recommendation/option_hints (2.1.0)', () => {
+    test('should throw when a question declares both options and option_hints', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+    options:
+      - { value: a, label: "A", description: "desc a" }
+      - { value: b, label: "B", description: "desc b" }
+    recommendation: { mode: fixed, value: a }
+    option_hints:
+      synthesize_from: [S0]
+      hint_count: 2
+      hint_style: "style"
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      expect(() => loadScript(tempYamlPath)).toThrow(/Invalid script schema/);
+    });
+
+    test('should throw when options is present without recommendation', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+    options:
+      - { value: a, label: "A", description: "desc a" }
+      - { value: b, label: "B", description: "desc b" }
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      expect(() => loadScript(tempYamlPath)).toThrow(/Invalid script schema/);
+    });
+
+    test('should throw when recommendation is present without options', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+    recommendation: { mode: contextual }
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      expect(() => loadScript(tempYamlPath)).toThrow(/Invalid script schema/);
+    });
+
+    test('should throw when a fixed recommendation value does not match any option', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+    options:
+      - { value: a, label: "A", description: "desc a" }
+      - { value: b, label: "B", description: "desc b" }
+    recommendation: { mode: fixed, value: c }
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      expect(() => loadScript(tempYamlPath)).toThrow(/Invalid script schema/);
+    });
+
+    test('should throw when option_hints.synthesize_from refers to an id outside the depends_on closure', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+  - id: S1
+    ask: "Question 2?"
+    default: "d"
+    target_doc: doc2.md
+    branch: core
+    gate: null
+    translate_back: "t2"
+    depends_on: []
+  - id: S2
+    ask: "Question 3?"
+    default: "d"
+    target_doc: doc3.md
+    branch: core
+    gate: null
+    translate_back: "t3"
+    depends_on: [S1]
+    option_hints:
+      synthesize_from: [S0]
+      hint_count: 2
+      hint_style: "style"
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      expect(() => loadScript(tempYamlPath)).toThrow(/option_hints source must be in its depends_on closure/);
+    });
+
+    test('should accept a question with a well-formed options block (fixed recommendation)', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "a"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+    options:
+      - { value: a, label: "A", description: "desc a" }
+      - { value: b, label: "B", description: "desc b" }
+    recommendation: { mode: fixed, value: a }
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      const script = loadScript(tempYamlPath);
+      expect(script.questions[0].options).toHaveLength(2);
+      expect(script.questions[0].recommendation).toEqual({ mode: 'fixed', value: 'a' });
+    });
+
+    test('should accept a question with a well-formed option_hints block whose source is within the depends_on closure', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+  - id: S1
+    ask: "Question 2?"
+    default: "d"
+    target_doc: doc2.md
+    branch: core
+    gate: null
+    translate_back: "t2"
+    depends_on: [S0]
+    option_hints:
+      synthesize_from: [S0]
+      hint_count: 3
+      hint_style: "style"
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      const script = loadScript(tempYamlPath);
+      expect(script.questions[1].option_hints).toEqual({
+        synthesize_from: ['S0'],
+        hint_count: 3,
+        hint_style: 'style',
+      });
+    });
+
+    test('should leave a question without options/option_hints as plain free-text (backward compat)', () => {
+      const yamlContent = `
+version: 2.1.0
+questions:
+  - id: S0
+    ask: "Question 1?"
+    default: "d"
+    target_doc: doc1.md
+    branch: core
+    gate: null
+    translate_back: "t1"
+    depends_on: []
+`;
+      writeFileSync(tempYamlPath, yamlContent, 'utf8');
+      const script = loadScript(tempYamlPath);
+      expect(script.questions[0].options).toBeUndefined();
+      expect(script.questions[0].recommendation).toBeUndefined();
+      expect(script.questions[0].option_hints).toBeUndefined();
+    });
+  });
 });
