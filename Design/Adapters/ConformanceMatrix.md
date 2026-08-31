@@ -81,7 +81,7 @@ Toàn bộ lõi trạng thái thực thi V3, kiểm duyệt ngữ nghĩa và lu�
 - Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.
 - AGENTS.md: Đã code bộ sinh rules `generateAgentsMd` và viết unit test xác thực. Tuy nhiên, việc chạy kiểm thử thực tế (smoke run) trên các harness mềm (Codex/Cursor/Cline) tạm hoãn (⏳ defer) sang Month 3 (xem thêm [v1-release-note.md](../RoadMap/Month2/v1-release-note.md) limitation #1 & #2 và [m2_polish_agents_md_artifact_drift_guard_contract.md](../ContractForAI/Core/break_task/Month2/m2_polish_agents_md_artifact_drift_guard_contract.md)).
 
-## Trạng thái v6.0.0 (package hiện tại — 2 đợt B16a + B4e)
+## Trạng thái v6.0.0 (2 đợt B16a + B4e) — GA 2026-07-14
 Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đã được cài đặt và nghiệm thu hoàn chỉnh:
 
 **B16a Contract schema & Conventions bind — 2026-07-14:**
@@ -98,7 +98,7 @@ Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đ
 - **Parity Verification:** Đã viết integration test `test/integration/adapter-parity.test.ts` và E2E benchmark `test/replay/crossRuntimeReplay.test.ts` đảm bảo 100% tương thích về JSON envelope, reason code, version evidence và state transitions. ✅ Đã code + test.
 - **Cập nhật 2026-08-06 (A1-P9, đóng R17):** post-tool hook của Codex trước đây tự suy allowed-path bằng `matchGlob` tự chế, khác semantics với Core — đã thay bằng `filterUnexpectedFiles` (`src/adapters/codex/filterUnexpectedFiles.ts`) dùng chung `matchesPathPattern` của Core, cùng policy semantics với Claude's PreToolUse thay vì fork riêng. Bằng chứng: `test/integration/installed-runtime/codex-post-tool-use.test.ts`.
 
-## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync) — PLANNED, chưa cắt
+## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync) — GA 2026-08-10
 
 **Sửa 2026-07-30:** mục này trước đó ghi các mốc dưới đây như đã hoàn thành và phát hành ngày
 2026-07-25 kèm dấu ✅ — sai sự thật, đúng finding R15 mà chính B5d phải bắt lại. Package hiện tại

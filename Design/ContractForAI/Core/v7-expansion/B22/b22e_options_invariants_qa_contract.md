@@ -110,7 +110,7 @@ so cấu trúc doc output — không đi qua `commitStep`/state machine nên kh�
 `commitWithCapability` của `newbie-shapes.test.ts` (NJ-01..05) để đi hết hành trình canonical thật
 qua state machine, đảm bảo con số đếm được không lệch khỏi hành vi runtime thật.
 
-**Số liệu thật (đã sửa số liệu tạm P0):** [interactive-cards-turn-count-report.md](../../../RoadMap/evidence/interactive-cards-turn-count-report.md)
+**Số liệu thật (đã sửa số liệu tạm P0):** [interactive-cards-turn-count-report.md](../../../../RoadMap/evidence/interactive-cards-turn-count-report.md)
 — baseline 32 tin nhắn gõ tay, sau 8.1 còn 5 (giảm 84%), không phải "16" như bản nháp P0 đã đoán sai
 (nhầm "tổng lượt commit" với "số tin nhắn phải gõ tay" — commit vẫn giữ 16 theo D54, nhưng gõ tay chỉ
 còn ở 5 câu free-text vì bước xác nhận dịch ngược nay luôn là thẻ cho MỌI câu). P8 sẽ cập nhật lại

@@ -42,7 +42,7 @@ reject cứng, không phải ack.
 
 Ack capability áp dụng cho **hai nơi hiện dùng boolean flag thô**, cả hai đã tồn tại production
 nhưng đúng như bonus-plan tự ghi nhận
-([plan-v1-bonus-tasks.md:919-925](../plan-v1-bonus-tasks.md:919)): *"không có gì chặn model tự ý"*
+([plan-v1-bonus-tasks.md:919-925](./plan-v1-bonus-tasks.md:919)): *"không có gì chặn model tự ý"*
 set flag.
 
 1. **`commitInterviewAnswer`** ([interviewApplicationServices.ts:182,229](../../../../src/core/interviewApplicationServices.ts:182))

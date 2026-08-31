@@ -46,11 +46,11 @@ export function onUserPromptSubmit(ctx: { workspaceRoot: string; userTurnId: str
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã phát triển hook `onUserPromptSubmit` tại **[userPromptSubmit.ts](file:///e:/DesignEverything/src/adapters/claude/userPromptSubmit.ts)**:
+- Đã phát triển hook `onUserPromptSubmit` tại **[userPromptSubmit.ts](../../../../../src/adapters/claude/userPromptSubmit.ts)**:
   - Chỉ thực hiện kiểm nhịp rate-limit (`checkRate`) và sinh context inject cho câu hỏi hiện tại. Tuyệt đối không gọi `commitStep` hay tự ý dịch chuyển tiến trình.
   - Sử dụng hàm hook `stampTurn` để cập nhật `answered_len_at_last_turn` và lưu đĩa qua `saveProgress`.
   - Nếu `current_step !== null`, hook tự động nạp kịch bản `script.yaml` và sinh đoạn context inject đầy đủ các trường thông tin của câu hỏi hiện tại (`ask`, `default`, `translate_back`, `target_doc`) kết hợp nhắc nhở 4 quy tắc vàng và yêu cầu skill chỉ commit một bước sau khi người dùng xác nhận bản dịch ngược.
   - Nếu `current_step === null` (phỏng vấn đã kết thúc), hook cho phép đi tiếp và không inject thêm câu hỏi nào.
   - Chặn đứng hành động và trả về `block` kèm lỗi nếu phát hiện file `progress.json` bị mất hoặc sai cấu trúc dữ liệu.
-- Viết bộ unit test chuyên dụng tại **[userPromptSubmit.test.ts](file:///e:/DesignEverything/src/adapters/claude/userPromptSubmit.test.ts)** để kiểm thử đầy đủ các kịch bản thành công có inject, chặn khi vi phạm nhịp phỏng vấn, hoạt động đúng khi kết thúc phỏng vấn và chặn khi file lỗi/thiếu.
+- Viết bộ unit test chuyên dụng tại **[userPromptSubmit.test.ts](../../../../../src/adapters/claude/userPromptSubmit.test.ts)** để kiểm thử đầy đủ các kịch bản thành công có inject, chặn khi vi phạm nhịp phỏng vấn, hoạt động đúng khi kết thúc phỏng vấn và chặn khi file lỗi/thiếu.
 - Toàn bộ vitest, typecheck, lint, build chạy thành công xanh sạch.

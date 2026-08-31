@@ -45,7 +45,7 @@ Thêm assertion vào e2e mobile để **khóa** việc hai cảnh báo cốt lõ
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã bổ sung các assertion hồi quy cho hai cảnh báo di động cốt lõi vào **[mobile-flow.test.ts](file:///e:/DesignEverything/test/e2e/mobile-flow.test.ts)**:
+- Đã bổ sung các assertion hồi quy cho hai cảnh báo di động cốt lõi vào **[mobile-flow.test.ts](../../../../../test/e2e/mobile-flow.test.ts)**:
   - Khi `step === 'M2'`: Kiểm tra `promptResult.injectedContext` chứa từ khóa `[CẢNH BÁO]` và `offline` (chi phí offline sync).
   - Khi `step === 'M5'`: Kiểm tra `promptResult.injectedContext` chứa từ khóa `[CẢNH BÁO]` và `store` (quy trình ký ứng dụng và phí developer của app store).
   - Tránh kiểm thử cứng nhắc toàn văn để tăng tính dẻo dai (resilience) cho kiểm thử khi văn bản được cải thiện sau này.

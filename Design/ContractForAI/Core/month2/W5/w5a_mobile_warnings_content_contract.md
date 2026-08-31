@@ -43,7 +43,7 @@ Bổ sung wording cảnh báo bắt buộc vào `translate_back` của hai câu 
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã chỉnh sửa trực tiếp nội dung `translate_back` của 2 câu hỏi Mobile trong **[script.yaml](file:///e:/DesignEverything/Design/Content/interview-script/script.yaml)**:
+- Đã chỉnh sửa trực tiếp nội dung `translate_back` của 2 câu hỏi Mobile trong **[script.yaml](../../../../Content/interview-script/script.yaml)**:
   - **M2 (offline/sync)**: Tích hợp cảnh báo trực quan bằng tiếng Việt về việc độ phức tạp và chi phí phát triển tăng đáng kể (gấp đôi do phải viết thêm các cơ chế lưu trữ nội bộ, đồng bộ hàng đợi, đồng bộ dữ liệu chéo và phân giải xung đột).
   - **M5 (store)**: Tích hợp cảnh báo thực tế rõ ràng "Code xong ≠ Có app trên Store" — bắt buộc chuẩn bị các khâu ký ứng dụng (App Signing), phí tài khoản Apple/Google Developer hàng năm và tuân thủ quy trình xét duyệt (review) kiểm duyệt chặt chẽ của các hãng.
 - Đảm bảo định dạng text thô của tệp YAML chuẩn xác, không tạo thêm field mới nằm ngoài Zod schema của `interviewScript`.

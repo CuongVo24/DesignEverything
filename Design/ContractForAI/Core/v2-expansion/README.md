@@ -1,6 +1,6 @@
 # Contracts — v2 Expansion (B4–B6) · Đa hình-hài + Critic + Calibrate
 
-> Nguồn: [V2-ExpansionPlan](../../../RoadMap/V2-ExpansionPlan.md) + spec đã khoá ở B1–B3 (DecisionLog D21–D26; interview-script/state schema; taxonomy registry; Contract/claude-code/agents-md critic). Tuân [CONTRACT_STRUCTURE_RULE](../CONTRACT_STRUCTURE_RULE.md).
+> Nguồn: [V2-ExpansionPlan](../../../RoadMap/V2-ExpansionPlan.md) + spec đã khoá ở B1–B3 (DecisionLog D21–D26; interview-script/state schema; taxonomy registry; Contract/claude-code/agents-md critic). Tuân [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md).
 
 ## Vì sao có lane này
 B1–B3 (quyết định + spec) đã khoá. Theo kỷ luật FB5: **spec khoá → viết contract → executor yếu code**. Đây là lane code thật cho mốc **MAJOR v2.0.0** — mỗi micro-task đủ 7 mục, sized cho executor yếu, signature/file/verify rõ để không tự chế.

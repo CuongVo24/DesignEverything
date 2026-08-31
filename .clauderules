@@ -1,23 +1,43 @@
-# Claude Code Rules & Skills
+# Claude Code Rules — DesignEverything (repo phát triển)
 
-## Slash Command: /design
+> File này áp dụng khi bạn đang **phát triển chính DesignEverything**, không phải khi dùng nó để
+> thiết kế một dự án khác.
 
-When the user types `/design` or requests to proceed with the system design interview:
-1. **Load Progress & Script**: Read `progress.json` and `Design/Content/interview-script/script.yaml` from the workspace root.
-2. **Handle Completed Phase**: If `current_step` in `progress.json` is `null` (or phase is `ready-to-build` / `completed`), respond to the user that the interview phase is completed, explain the chosen branch, and guide them to proceed with building the app or generating code.
-3. **Handle Active Phase**: If `current_step` is not `null`, find the matching question in `script.yaml`.
-4. **Enforce 4 Golden Rules**:
-   - **Ask one question at a time**: Do not ask multiple questions. Focus solely on the active `current_step`.
-   - **Smart Defaults**: Propose the default response option (`default`) from the script.
-   - **Reverse Translation**: Render the system's reverse translation representation (`translate_back`).
-   - **Output Anchors**: Explicitly state that this question serves to detail target document (`target_doc`).
-5. **Interview Interaction Workflow**:
-   - Present the question, default option, target document, and the reverse translation format clearly to the user.
-   - Wait for the user's response.
-   - If the user responds:
-     - Formulate the reverse translation based on their answer.
-     - Present the reverse translation to the user and ask for their explicit confirmation.
-     - **Only after the user confirms**, perform the state transition (commit the step):
-       - Call the `commitStep` engine logic (appends the question to `answered`, stamps `last_user_turn_id` with the current user turn ID, determines the `branch` if S6 is answered, and moves `current_step` to the next step according to dependency logic).
-       - Save the updated state to `progress.json`.
-       - Inform the user that the step is committed, and tell them to invoke `/design` again to see the next question.
+## Không mô tả lại quy trình phỏng vấn ở đây
+
+Trước 2026-08-31 file này chép lại toàn bộ luồng `/design` — và mục ra: nó vẫn dạy slash command
+`/design` (đã đổi thành `/design-everything` từ 2026-07-16 vì `/design` đụng lệnh built-in), vẫn nói
+state nằm ở `progress.json` ngoài workspace root (thật ra ở `Design/.interview/`), và vẫn dạy "dịch
+ngược → chờ người dùng xác nhận → mới commit" — đúng cái quy tắc mà **D59 đã đảo ngược** ngày
+2026-08-16.
+
+Bản chép tay của một quy trình đang thay đổi sẽ luôn mục. Vì vậy file này **chỉ trỏ**, không chép.
+
+| Cần biết | Nguồn chân lý |
+|---|---|
+| Luồng phỏng vấn, 4 quy tắc vàng, nhịp commit theo batch, `undo` | [`adapter/claude-code/skill/SKILL.md`](adapter/claude-code/skill/SKILL.md) |
+| Luồng build (execution plan, evidence, review) | [`adapter/claude-code/skill/build/SKILL.md`](adapter/claude-code/skill/build/SKILL.md) |
+| Bản Codex/rules-only tương ứng | [`adapter/codex-plugin/skills/`](adapter/codex-plugin/skills/) · [`.agents/AGENTS.md`](.agents/AGENTS.md) |
+| Hợp đồng Lõi↔Adapter | [`Design/Core/Contract.md`](Design/Core/Contract.md) |
+| Quyết định đã khoá (D1…D61) | [`Design/DecisionLog.md`](Design/DecisionLog.md) |
+
+## Luật khi sửa repo này
+
+1. **Đọc [`Design/Guideline.md`](Design/Guideline.md) trước** — đó là cửa vào duy nhất của bộ tài liệu.
+2. **Lõi béo, adapter gầy.** Adapter chỉ làm INJECT / GATE / EMIT. Không tự chế câu hỏi, không đổi
+   taxonomy, không bỏ qua gate policy.
+3. **Không sửa code khi contract chưa `READY_TO_IMPLEMENT`** — xem
+   [`Design/ContractForAI/EXECUTOR_RUNBOOK.md`](Design/ContractForAI/EXECUTOR_RUNBOOK.md).
+4. **`Design/Content/**` là runtime load-bearing** và nằm trong `package.json` `files` (ship theo
+   npm). Không move, không đổi tên.
+5. **Đóng một contract = cập nhật `CONTRACT_INDEX.md` cùng commit.** `npm test` sẽ fail nếu lệch.
+
+## Trước khi báo xong
+
+```bash
+npm test
+```
+
+Chuỗi này chạy `check-version-sync` → `check-matrix` → `check-docs` → `typecheck:all` → `vitest`.
+`check-docs.mjs` giữ link, mục lục contract/lane và claim version khỏi mục — nếu nó đỏ, đừng sửa
+script cho nó xanh, sửa tài liệu.

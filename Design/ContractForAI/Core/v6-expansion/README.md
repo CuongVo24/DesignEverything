@@ -1,14 +1,22 @@
 # Contracts — V6 Detailed Design (target 8.0.0)
 
 > Nguồn: [V6-DetailedDesignPlan](V6-DetailedDesignPlan.md) (TaskBrief của lane, theo ngoại lệ expansion [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0), đề xuất D49–D52, và bộ chuẩn bị brownfield [prep-brownfield/](prep-brownfield/00-problem-statement.md).
-> **Lane CHƯA mở — nhưng nội dung code đã DONE từ 2026-07-21 (xem §Đối chiếu 2026-08-10 bên dưới).**
-> Điều kiện mở nguyên bản: ReleaseReadinessPlan đóng nợ (RB-05 e2e, RB-06b, RB-08) + pilot B18a xong +
+> **Lane ĐÃ ĐÓNG — 6/6 contract DONE (2026-07-21), phát hành GA 8.0.0 ngày 2026-08-10 (commit `6a52408`).**
+> *Sửa 2026-08-31: header này treo dòng "Lane CHƯA mở" suốt gần một tháng sau khi lane đã đóng và đã
+> GA, ngay phía trên chính phần §Đối chiếu chứng minh điều ngược lại. Đây là drift đã sinh ra
+> [CONTRACT_INDEX.md](../../CONTRACT_INDEX.md) và [LANE_INDEX.md](../../../RoadMap/LANE_INDEX.md) —
+> từ nay `scripts/check-docs.mjs` đối chiếu trạng thái lane với Status thật của từng contract.*
+>
+> Điều kiện mở nguyên bản (giữ lại làm hồ sơ): ReleaseReadinessPlan đóng nợ (RB-05 e2e, RB-06b, RB-08) + pilot B18a xong +
 > D49–D52 được duyệt vào DecisionLog. Trạng thái các điều kiện tại 2026-08-10: RB-05 DONE; RB-06b DONE
 > (xác minh lại 2026-08-10); RB-08 IN_PROGRESS (3/5 mục máy kiểm xanh, còn quickstart walkthrough +
 > xác nhận dòng ConformanceMatrix — không chặn, xem RB-08 note ở `ReleaseReadinessPlan.md`); pilot B18a
 > — **gỡ khỏi điều kiện mở lane này** theo D57 (`DecisionLog.md`) vì pilot kiểm chứng cơ chế
-> feature-journey (V3/V5), không phải nội dung deepen tier-2 của lane này; D49–D52 — **đã duyệt**
-> (xem `DecisionLog.md`).
+> feature-journey (V3/V5), không phải nội dung deepen tier-2 của lane này; D49–D52 — **CHƯA được ghi
+> thành dòng quyết định** trong `DecisionLog.md` (sửa 2026-08-31: dòng này từng khai "đã duyệt", nhưng
+> `DecisionLog.md` không có dòng D49/D50/D51/D52 nào — chỉ có ghi chú giữ chỗ đề 2026-08-01 nói rõ
+> "chưa duyệt". Lane vẫn đã thực thi và GA 8.0.0; khoản nợ ở đây là **hồ sơ quyết định**, không phải
+> code. Xem Gate B2 ở [MasterSequencingPlan.md](../../../RoadMap/MasterSequencingPlan.md)).
 > **8.0.0 là MAJOR bump riêng của lane này** (đổi cây output `docs/design/`, breaking với adapter/validator cũ) — không chung version với `v1-fix-bugs` (giữ 7.0.0, xem [v7-release-note.md](../../../RoadMap/v7-release-note.md)). Đánh số lại 2026-08-01 vì D48 và 7.0.0 đã bị `v1-fix-bugs` chiếm trước.
 
 ## Bản đồ thực thi

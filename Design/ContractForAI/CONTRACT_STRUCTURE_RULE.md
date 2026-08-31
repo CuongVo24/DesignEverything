@@ -14,17 +14,31 @@
 ## 1. Cấu trúc thư mục
 ```text
 Design/ContractForAI/
-  CONTRACT_STRUCTURE_RULE.md   # file này
-  Core/                        # lane duy nhất: engine lõi + adapter
-    month1/
-      W1/ W2/ W3/ W4/
-    # month2.. thêm khi tới (just-in-time, chỉ tháng có code)
+  CONTRACT_STRUCTURE_RULE.md   # file này — luật viết contract
+  CONTRACT_INDEX.md            # mục lục MỌI contract + status thật (máy kiểm)
+  EXECUTOR_RUNBOOK.md          # 8 bước cho executor
+  Core/
+    month1/ month2/ month3/ month4/   # trục lịch: W1..W16
     break_task/
-      week{N}_break/           # contract fix/polish sau khi review output tuần N
-      project_structure_break/ # (tuỳ chọn) fix lệch cấu trúc xuyên tuần
-    vN-expansion/              # lane xuyên tháng, chỉ khi có Vn ExpansionPlan đã khoá
+      Month1/ Month2/          # contract fix/polish sau khi review output tháng đó
+      v3-expansion/B11/        # break task của một lane, khi lỗi lộ ra trong lane
+    v1-fix-bugs/               # lane sửa lỗi (7.0.0) — dùng từ vựng status 3 trục, xem §5
+    v2-expansion/ … v8-expansion/     # trục version: lane xuyên tháng
+    v8-hotfix/                 # hotfix giữa hai lane
 ```
-> Phạm vi hiện tại: **chỉ Month 1**. Month 2 (mobile + AGENTS.md + hardening) và Month 4 W15 (drift flagging) viết contract khi tới tuần đó. Month 3 là dogfood/nội dung → dùng nghiệm thu Week sẵn có, thường không cần contract code.
+> Hai trục cùng tồn tại là **có chủ ý**: `monthN/` là trục lịch của giai đoạn dựng engine (Month 1–4,
+> đã đóng); `vN-expansion/` là trục version cho mọi thứ sau đó. Đừng cố gộp về một trục — bản đồ nối
+> hai trục lại nằm ở [../RoadMap/LANE_INDEX.md](../RoadMap/LANE_INDEX.md).
+
+### Mở lane mới — bắt buộc cùng commit
+
+1. Tạo `Core/vN-expansion/README.md` (**mọi lane phải có README**; `v8-hotfix` và `v8-expansion`
+   là hai ngoại lệ lịch sử, không phải tiền lệ).
+2. Thêm một dòng lane vào [../RoadMap/LANE_INDEX.md](../RoadMap/LANE_INDEX.md).
+3. Thêm một dòng cho **mỗi** contract vào [CONTRACT_INDEX.md](CONTRACT_INDEX.md).
+
+`scripts/check-docs.mjs` (chạy trong `npm test`) fail nếu thiếu bất kỳ bước nào, và fail nếu status
+trong index lệch với mục `Status` của chính contract.
 
 ## 2. Đặt tên file
 Lowercase snake_case: `w{tuần}{nhóm}_{mô_tả_ngắn}_contract.md`
@@ -51,6 +65,11 @@ Lowercase snake_case: `w{tuần}{nhóm}_{mô_tả_ngắn}_contract.md`
 - `IN_PROGRESS`
 - `DONE` — đã pass verification plan; ghi quyết định thực tế vào cuối contract.
 - `BLOCKED` — kèm lý do + contract/điều kiện cần gỡ.
+
+**Ngoại lệ `v1-fix-bugs`:** lane đó dùng từ vựng **ba trục** `Spec | Implementation | Proof` (D56),
+không phải một token, để trạng thái mang theo cả *mức bằng chứng* thay vì gộp thành một chữ `DONE`
+không nói lên điều gì. Vocabulary của ba trục do [`scripts/check-matrix.mjs`](../../scripts/check-matrix.mjs)
+giữ. Lane mới **dùng một token** như trên, trừ khi có quyết định riêng ghi vào `DecisionLog.md`.
 
 ## 6. Agent protocol
 Trước khi tạo/sửa contract:

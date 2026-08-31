@@ -18,7 +18,7 @@ cho `checkRate`/`commitStep` chấp nhận tối đa đúng số câu trong batc
   `consumed_question_ids?: string[]` — **`.optional()`, không `.default()`** (xem cảnh báo checksum
   ở §5). `question_id` (số ít) giữ nguyên required, luôn bằng `question_ids[0]`.
 - `verifyTurnCapability` sửa đúng 3/10 guard, giữ nguyên thứ tự bước (thứ tự này bị ghim bởi
-  [b3b-g0-interface-note.md](../../../v1-fix-bugs/b3b-g0-interface-note.md)): guard replay kiểm
+  [b3b-g0-interface-note.md](../../v1-fix-bugs/b3b-g0-interface-note.md)): guard replay kiểm
   thêm `consumed_question_ids` trước khi kiểm `status`; guard wrong-question kiểm câu hỏi có nằm
   trong `question_ids` không; guard wrong-revision cộng thêm `consumed_question_ids.length` vào vế
   so sánh.

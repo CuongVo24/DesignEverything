@@ -46,8 +46,8 @@ Khóa bộ regression chính thức chạy **web + mobile xanh cùng lúc** đ�
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cài đặt bộ kiểm thử hồi quy đối chiếu cấu trúc tự động (headings và anchors) cho cả hai dự án mẫu tại **[golden-web.test.ts](file:///e:/DesignEverything/test/regression/golden-web.test.ts)** và **[golden-mobile.test.ts](file:///e:/DesignEverything/test/regression/golden-mobile.test.ts)**. Toàn bộ các mỏ neo ẩn và tiêu đề được so khớp tự động, phát hiện và sửa đổi hoàn chỉnh các sai khác cấu trúc.
-- Đã viết cẩm nang vận hành đầy đủ cho nhánh di động tại **[RUNBOOK-mobile.md](file:///e:/DesignEverything/RUNBOOK-mobile.md)** để người dùng dễ dàng tái lập demo phỏng vấn và kiểm chứng các cổng chặn.
-- Đã tạo ghi chú phát hành **[v1-release-note.md](file:///e:/DesignEverything/Design/RoadMap/Month2/v1-release-note.md)** nêu bật phạm vi tính năng (web + mobile + AGENTS.md), quy trình cài đặt và liệt kê các giới hạn đã biết (known limitations) làm dữ liệu tồn đọng cho Month 3.
-- Đã đóng mốc **v1 dùng được** trong **[MasterRoadMap.md](file:///e:/DesignEverything/Design/RoadMap/MasterRoadMap.md)** và cập nhật changelog của **[Versioning.md](file:///e:/DesignEverything/Design/Core/Versioning.md)** lên phiên bản `1.0.0`.
+- Đã cài đặt bộ kiểm thử hồi quy đối chiếu cấu trúc tự động (headings và anchors) cho cả hai dự án mẫu tại **[golden-web.test.ts](../../../../../test/regression/golden-web.test.ts)** và **[golden-mobile.test.ts](../../../../../test/regression/golden-mobile.test.ts)**. Toàn bộ các mỏ neo ẩn và tiêu đề được so khớp tự động, phát hiện và sửa đổi hoàn chỉnh các sai khác cấu trúc.
+- Đã viết cẩm nang vận hành đầy đủ cho nhánh di động tại **[RUNBOOK-mobile.md](../../../../../RUNBOOK-mobile.md)** để người dùng dễ dàng tái lập demo phỏng vấn và kiểm chứng các cổng chặn.
+- Đã tạo ghi chú phát hành **[v1-release-note.md](../../../../RoadMap/Month2/v1-release-note.md)** nêu bật phạm vi tính năng (web + mobile + AGENTS.md), quy trình cài đặt và liệt kê các giới hạn đã biết (known limitations) làm dữ liệu tồn đọng cho Month 3.
+- Đã đóng mốc **v1 dùng được** trong **[MasterRoadMap.md](../../../../RoadMap/MasterRoadMap.md)** và cập nhật changelog của **[Versioning.md](../../../../Core/Versioning.md)** lên phiên bản `1.0.0`.
 - Chạy `npm test` xanh hoàn toàn 57/57 tests bao gồm cả Edge Cases và Regression. Lint và Typecheck hoàn toàn sạch lỗi.

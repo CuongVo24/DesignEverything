@@ -48,8 +48,8 @@ Chạy DesignEverything trên **2–3 dự án khác loại** (có cả web và 
 
 ### Quyết định thực tế & Nghiệm thu
 - Đã chạy thêm 2 dự án dogfood khác loại: **BookRegistry Web App** (proj-02, solo dev, web path, độ phức tạp thấp, bán-thật) và **TaskFlow Mobile App** (proj-03, nhóm 3 dev, mobile path, độ phức tạp trung bình-cao, thật).
-- Đã tự động sinh toàn bộ cây tài liệu cho cả hai dự án thông qua các kịch bản kiểm thử [run-dogfood-proj2.test.ts](file:///e:/DesignEverything/test/regression/run-dogfood-proj2.test.ts) và [run-dogfood-proj3.test.ts](file:///e:/DesignEverything/test/regression/run-dogfood-proj3.test.ts) và lưu tại các thư mục tương ứng `docs-generated/`.
+- Đã tự động sinh toàn bộ cây tài liệu cho cả hai dự án thông qua các kịch bản kiểm thử [run-dogfood-proj2.test.ts](../../../../../test/regression/run-dogfood-proj2.test.ts) và [run-dogfood-proj3.test.ts](../../../../../test/regression/run-dogfood-proj3.test.ts) và lưu tại các thư mục tương ứng `docs-generated/`.
 - Cấu trúc cây tài liệu khớp hoàn hảo với taxonomy chỉ định cho từng nhánh (proj-02 sinh ra `07-deployment.md`, proj-03 sinh ra `07-release.md`), các mỏ neo ẩn chứa tiền tố đường dẫn được neo giữ chính xác.
-- Đã xuất bản dữ liệu đo lường thô tại **[metrics-raw.csv](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/metrics-raw.csv)** ghi nhận thời gian theo 3 giai đoạn (S0-S2, S3-S6, W1-W5/M1-M5), số lần dừng giải thích câu hỏi và cờ phân loại nguồn (Real vs Semi-Real).
-- Phát hiện thêm lỗi ma sát mới **F-07** (Taxonomy giới hạn khả năng biểu diễn của dự án Hybrid) và cập nhật tần suất lặp lại cho toàn bộ 5 lỗi ma sát hệ thống khác trong **[backlog-month3.md](file:///e:/DesignEverything/Design/RoadMap/Month3/backlog-month3.md)**.
+- Đã xuất bản dữ liệu đo lường thô tại **[metrics-raw.csv](../../../../RoadMap/Month3/dogfood/metrics-raw.csv)** ghi nhận thời gian theo 3 giai đoạn (S0-S2, S3-S6, W1-W5/M1-M5), số lần dừng giải thích câu hỏi và cờ phân loại nguồn (Real vs Semi-Real).
+- Phát hiện thêm lỗi ma sát mới **F-07** (Taxonomy giới hạn khả năng biểu diễn của dự án Hybrid) và cập nhật tần suất lặp lại cho toàn bộ 5 lỗi ma sát hệ thống khác trong **[backlog-month3.md](../../../../RoadMap/Month3/backlog-month3.md)**.
 - Đã chạy `npm test` thành công tốt đẹp với **61 test cases** xanh hoàn toàn. Lint và typecheck hoàn hảo.

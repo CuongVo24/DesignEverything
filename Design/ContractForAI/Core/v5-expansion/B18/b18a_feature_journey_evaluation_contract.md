@@ -14,7 +14,7 @@ Chạy pilot có artifact chứng minh ≥1 người mới hoàn thành **trọn
 - Pilot ≥2 quy mô (nhỏ: CLI ít entity; vừa: web data-model rộng) trên cả Claude và Codex; ghi time-to-first-feature, intervention taxonomy, số hợp đồng sinh ra, tỷ lệ đóng review.
 - Semantic mutation: chèn hợp đồng sai (path ngoài Conventions, verify rỗng, trace Must→skeleton) → validator/review phải bắt.
 - Hiệu chỉnh hàm `weight` bằng dữ liệu fixture; ghi số chốt vào B16b test.
-- Raw findings ẩn danh + replay artifact tái kiểm được (như [evidence/](../../../RoadMap/evidence/)).
+- Raw findings ẩn danh + replay artifact tái kiểm được (như [evidence/](../../../../RoadMap/evidence/)).
 
 **Out of scope**
 
@@ -54,4 +54,4 @@ Chạy pilot có artifact chứng minh ≥1 người mới hoàn thành **trọn
 
 IN_PROGRESS
 
-> Đã có: replay máy mock-free `test/replay/featureJourneyReplay.test.ts` (synth→compile→validate→review sạch/bẩn→feature-done fail-closed, small vs medium scale) + protocol [v5-feature-pilot-protocol.md](../../../RoadMap/evidence/v5-feature-pilot-protocol.md). **Chưa có**: pilot người thật (bảng số để trống có chủ đích). Không nâng claim "build tới sản phẩm" cho tới khi pilot chạy và audit được (D47).
+> Đã có: replay máy mock-free `test/replay/featureJourneyReplay.test.ts` (synth→compile→validate→review sạch/bẩn→feature-done fail-closed, small vs medium scale) + protocol [v5-feature-pilot-protocol.md](../../../../RoadMap/evidence/v5-feature-pilot-protocol.md). **Chưa có**: pilot người thật (bảng số để trống có chủ đích). Không nâng claim "build tới sản phẩm" cho tới khi pilot chạy và audit được (D47).

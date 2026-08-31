@@ -3,7 +3,7 @@
 > **Tầng:** Process. Nguồn: review Month 3 + [measurement-report](../../../../RoadMap/Month3/dogfood/measurement-report.md) (confidence tự đánh THẤP–TB) + [metrics-raw.csv](../../../../RoadMap/Month3/dogfood/metrics-raw.csv) + [proj-01 docs-diff](../../../../RoadMap/Month3/dogfood/proj-01/docs-diff.md) (mẫu duy nhất có diff thật). Phụ thuộc: [W13D](../W13/w13d_readme_onboarding_packaging_contract.md) `DONE` (cần quickstart để người ngoài tự chạy).
 
 ## 1. Micro-task target
-Nâng độ tin cậy số đo từ "self-dogfood mỏng" lên mức đủ tuyên bố mốc **Đáng chia sẻ**: chạy ≥1 phiên với **người dùng thật bên ngoài tác giả** (không biết trước cấu trúc câu hỏi), và bổ sung **diff cơ học** (`docs-generated` vs `docs-handfixed`) cho **cả proj-02 và proj-03** — hiện chỉ proj-01 có diff thật, nên cột "% sửa tay" của 2/3 dự án đang là ước lượng cảm tính, ngược cam kết [Month 3 contract](../../README.md) ("số đo cơ học, không cảm giác ổn").
+Nâng độ tin cậy số đo từ "self-dogfood mỏng" lên mức đủ tuyên bố mốc **Đáng chia sẻ**: chạy ≥1 phiên với **người dùng thật bên ngoài tác giả** (không biết trước cấu trúc câu hỏi), và bổ sung **diff cơ học** (`docs-generated` vs `docs-handfixed`) cho **cả proj-02 và proj-03** — hiện chỉ proj-01 có diff thật, nên cột "% sửa tay" của 2/3 dự án đang là ước lượng cảm tính, ngược cam kết [Month 3 contract](../../month3/README.md) ("số đo cơ học, không cảm giác ổn").
 
 ## 2. Scope
 **In scope** — tầng Process/đo lường:
