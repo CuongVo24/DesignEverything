@@ -5,8 +5,9 @@
 > [DecisionLog.md](../../../DecisionLog.md).
 >
 > **Lane MỞ (2026-08-31)** — Gate E0 đã đóng (đợt dọn `Design/`: `check-docs.mjs` xanh trong
-> `npm test`). Cả 6 contract đang ở `WAITING_FOR_APPROVAL`: **executor chưa được chạm code** cho tới
-> khi D62–D67 được duyệt (Gate E1).
+> `npm test`). **D62–D67 đã duyệt hết 2026-08-31 (Gate E1 ✅).** Cả 6 contract vẫn ở
+> `WAITING_FOR_APPROVAL`: **executor chưa được chạm code** cho tới khi từng contract được chuyển
+> sang `READY_TO_IMPLEMENT` — duyệt quyết định và duyệt contract là hai việc khác nhau (§5).
 
 ## Lane này làm gì
 
