@@ -128,6 +128,9 @@ Không phần nào ở trên là "đã phát hành" — chỉ là tiến độ t
 
 ## Trạng thái v8.1.0 / v8.1.1 / v8.2.0 (Interactive Cards → hotfix → Interview Cadence)
 
+> **D68 (2026-08-31):** hai số `8.1.1` và `8.2.0` dưới đây không được cắt — changelog của chúng gộp
+> vào 9.0.0. Tiêu đề giữ nguyên vì nó đặt tên cho ba **lane**, không phải ba bản phát hành.
+
 - **v8.1.0 (Interactive Question Cards):** RC — 5/6 contract DONE, R-spike (xác nhận `AskUserQuestion`
   có bắn `UserPromptSubmit` không) còn mở. Xem [v8.1-release-note.md](../RoadMap/v8.1-release-note.md),
   [InteractiveQuestionCardsPlan.md](../RoadMap/InteractiveQuestionCardsPlan.md).

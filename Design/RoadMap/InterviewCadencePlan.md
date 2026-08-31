@@ -1,5 +1,10 @@
 # Interview Cadence — gộp lượt, bỏ thẻ dịch ngược, undo thay cho xác nhận trước
 
+> **Cập nhật 2026-08-31 (D68):** lane này **không** ra dưới số 8.2.0. Nó chưa bao giờ được cắt
+> (`package.json` đứng nguyên 8.1.0, repo 0 tag), nên changelog của nó gộp vào 9.0.0 — xem
+> [Versioning.md](../Core/Versioning.md) và Gate E3 ở [MasterSequencingPlan.md](MasterSequencingPlan.md).
+> Phần dưới giữ nguyên văn bản gốc lúc mở lane.
+
 > **Lane MỞ — 2026-08-16.** Target version **8.2.0** — MINOR trên nền `8.1.1` (Đợt 1 hotfix H1-H6,
 > xem [ConformanceMatrix.md](../Adapters/ConformanceMatrix.md)), vì mọi field mới trên
 > `turnCapabilityRecordSchema`/`questionSchema` đều `.optional()`, không `.default()` (tương thích

@@ -222,7 +222,7 @@ quên.
 | B22 | [b22d_codex_text_degradation](Core/v7-expansion/B22/b22d_codex_text_degradation_contract.md) | `DONE` |
 | B22 | [b22e_options_invariants_qa](Core/v7-expansion/B22/b22e_options_invariants_qa_contract.md) | `DONE` |
 
-### `v8-hotfix` — v8-hotfix — H1–H6 (8.1.1, chưa cắt)
+### `v8-hotfix` — v8-hotfix — H1–H6 (ra dưới 9.0.0, D68)
 
 | Nhóm | Contract | Status |
 |---|---|---|
@@ -233,7 +233,7 @@ quên.
 | — | [h5_hook_seam_integration_test](Core/v8-hotfix/h5_hook_seam_integration_test_contract.md) | `DONE` |
 | — | [h6_gates_passed_and_ready_for_validation](Core/v8-hotfix/h6_gates_passed_and_ready_for_validation_contract.md) | `DONE` |
 
-### `v8-expansion` — v8-expansion — interview cadence (8.2.0, chưa cắt)
+### `v8-expansion` — v8-expansion — interview cadence (ra dưới 9.0.0, D68)
 
 | Nhóm | Contract | Status |
 |---|---|---|

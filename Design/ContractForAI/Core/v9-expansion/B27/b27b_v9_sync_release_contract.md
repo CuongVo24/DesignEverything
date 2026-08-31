@@ -28,7 +28,9 @@ gap công khai — không tuyên bố mức bằng chứng cao hơn thực tế.
 - **Bump:** `package.json`, `package-lock.json` (2 chỗ), `src/version.ts`,
   `adapter/codex-plugin/.codex-plugin/plugin.json` → `9.0.0`.
 - **Release note** `Design/RoadMap/v9-release-note.md`: gồm §Gap công khai liệt kê thẳng cái chưa
-  đạt, theo tiền lệ D56.
+  đạt, theo tiền lệ D56. **Phủ ba lane, không phải một** (D68): v8-hotfix H1–H6 và v8-expansion
+  D59–D61 chưa bao giờ được cắt nên changelog của chúng ra cùng lần này — người dùng nhảy từ 8.1.0
+  lên 9.0.0 nhận cả ba, release note phải nói đủ cả ba.
 - Cập nhật `CONTRACT_INDEX.md` (6 dòng → `DONE`) và `LANE_INDEX.md` (lane v9 → Đóng + version).
 
 **Out of scope**
@@ -52,6 +54,9 @@ gap công khai — không tuyên bố mức bằng chứng cao hơn thực tế.
 - [ ] `ConformanceMatrix.md` ghi trung thực mức enforcement từng harness cho hai module mới — không
       hứa Codex ngang Claude Code.
 - [ ] Release note có §Gap công khai với **4 khoản known-open** nêu trên.
+- [ ] Release note và `## Trạng thái v9.0.0` ở `ConformanceMatrix.md` nói đủ **ba** lane (D68), không
+      chỉ v9 — người nâng cấp từ 8.1.0 nhận luôn hotfix H1–H6 và interview cadence.
+- [ ] Không dựng lại hàng 8.1.1 hay 8.2.0 trong `Versioning.md`; hai số đó không tồn tại (D68).
 - [ ] `README.md` gốc: mọi câu "mốc X.Y.Z" khớp 9.0.0 (`check-version-sync` ép).
 
 ## 4. Interfaces / Files expected to change

@@ -1,4 +1,4 @@
-# Master Sequencing Plan — 7.0.0 → 8.0.0 → 8.1.0 → 8.1.1 → 8.2.0 → 9.0.0
+# Master Sequencing Plan — 7.0.0 → 8.0.0 → 8.1.0 → 9.0.0
 
 > Nguồn sự thật xuyên phiên cho chuỗi gate mở lane `Interactive Question Cards`
 > ([InteractiveQuestionCardsPlan.md](InteractiveQuestionCardsPlan.md)) và lane
@@ -9,9 +9,11 @@
 >
 > Chuỗi: `7.0.0 (v1-fix-bugs, GA 2026-08-10)` → `8.0.0 (v6-expansion, GA 2026-08-10, commit 6a52408)` →
 > `8.1.0 (interactive cards, RC 2026-08-16 — 5/6 contract DONE, R-spike còn mở, xem Gate C3)` →
-> `8.1.1 (hotfix H1-H6, đóng 2026-08-16 — mở đường tới emit lần đầu, xem Gate D1)` →
-> `8.2.0 (interview cadence — undo/batch/multi_select, đóng 2026-08-16 — 8/8 contract DONE, R-spike
-> thật còn treo, xem Gate D2)`.
+> `9.0.0 (hotfix H1-H6 + interview cadence + doc depth, gộp theo D68 — xem Gate D1/D2/E3)`.
+>
+> Chuỗi này từng có hai mốc `8.1.1` và `8.2.0`; cả hai **không được cắt**: contract của chúng DONE 2026-08-16
+> nhưng `package.json` đứng nguyên 8.1.0 và repo có 0 tag. Theo D68, changelog của cả hai gộp vào
+> 9.0.0. Gate D1/D2 dưới đây giữ nguyên vì chúng đo *contract đóng chưa*, không đo *version cắt chưa*.
 
 ## Bảng mốc
 
@@ -42,12 +44,12 @@
 | **Gate C1** | Duyệt 6 mục `v7-expansion/README.md` | ✅ DONE — 2 điều kiện tiên quyết (A4, B4) đã đóng, `v7-expansion/README.md` tự ghi "Lane MỞ (2026-08-10)" | `v7-expansion/README.md` header |
 | **Gate C2** | Gỡ cảnh báo "Lane CHƯA mở" | ✅ DONE — `v7-expansion/README.md` không còn cảnh báo này; `InteractiveQuestionCardsPlan.md` header đổi thành "Lane MỞ, đang RC" (P0, commit `4fad0f6`) | `v7-expansion/README.md`, `InteractiveQuestionCardsPlan.md` |
 | **Gate C3** | Thực thi: R-spike ∥ B22a → B22b → B22c → B22d → B22e | 🔄 5/6 DONE (2026-08-16), nhánh `codex/lane-8-1-interactive-cards`, lộ trình P0–P8 chạy hết (P0–P7 DONE). B22a/B22b/B22c(có-điều-kiện)/B22d/B22e đóng; **R-spike còn mở** — chờ chủ repo chạy phiên thật (probe đã dựng ở P2, cùng lớp Gate A3/B1: hành động sống không tự động hoá được trong phiên đối chiếu tài liệu) | §7 5 contract ghi DONE; [r-spike-userpromptsubmit-probe.md](../ContractForAI/Core/v7-expansion/r-spike-userpromptsubmit-probe.md) §7 chờ log thật; [v8.1-release-note.md](v8.1-release-note.md) Status = RC |
-| **Gate D1** | Đóng hotfix H1-H6 cho 8.1.1 (bế tắc bootstrap, `--slots-file`, gate PowerShell, `status` question card, `gates_passed`/`ready-for-validation`) | ✅ Contract DONE 2026-08-16 — **version chưa cắt**: `package.json`/`src/version.ts` vẫn 8.1.0, repo chưa có tag nào (sửa 2026-08-31: dòng này từng ghi "Cắt 8.1.1 ✅ DONE", cùng loại claim với finding R15) | 6/6 contract DONE tại [v8-hotfix/](../ContractForAI/Core/v8-hotfix/); `npm run typecheck` xanh, `npx vitest run` = 135 file/1040 pass/2 skip |
+| **Gate D1** | Đóng hotfix H1-H6 — đợt này ra dưới 9.0.0 theo D68, không còn số 8.1.1 riêng (bế tắc bootstrap, `--slots-file`, gate PowerShell, `status` question card, `gates_passed`/`ready-for-validation`) | ✅ Contract DONE 2026-08-16 — **version chưa cắt**: `package.json`/`src/version.ts` vẫn 8.1.0, repo chưa có tag nào (sửa 2026-08-31: dòng này từng ghi "Cắt 8.1.1 ✅ DONE", cùng loại claim với finding R15) | 6/6 contract DONE tại [v8-hotfix/](../ContractForAI/Core/v8-hotfix/); `npm run typecheck` xanh, `npx vitest run` = 135 file/1040 pass/2 skip |
 | **Gate D2** | Thực thi lane `v8-expansion`: B24a → B24b ∥ B24c → B24d → B24e → B24f | ✅ DONE 2026-08-16 — 8/8 contract (B24a, B24b, B24c-1, B24c-2, B24d, B24e, B24f), nhánh `codex/lane-8-1-interactive-cards`. R-spike thật vẫn treo (hành động sống, cùng lớp Gate A3/B1) — số turn 16→10 (38%) là số đo Core, chưa xác nhận phiên thật | [InterviewCadencePlan.md](InterviewCadencePlan.md) §5; D59-D61 tại [DecisionLog.md](../DecisionLog.md); 8/8 contract DONE tại `Core/v8-expansion/B24/`; `npx vitest run` = 140 file/1089 pass/2 skip |
 | **Gate E0** | Dọn `Design/` — điều kiện mở lane v9 | ✅ DONE 2026-08-31 | `scripts/check-docs.mjs` xanh trong `npm test`; 750 link resolve (17 link vỡ + 55 link `file:///` tuyệt đối đã sửa); 135 contract có [CONTRACT_INDEX.md](../ContractForAI/CONTRACT_INDEX.md); 15 lane có [LANE_INDEX.md](LANE_INDEX.md); [EXECUTOR_RUNBOOK.md](../ContractForAI/EXECUTOR_RUNBOOK.md) + [Guideline.md](../Guideline.md) viết lại; `npm test` = 140 file/1089 pass/2 skip (không đổi) |
 | **Gate E1** | Duyệt D62–D67 vào `DecisionLog.md` | 🟡 **4/6 DONE 2026-08-31** — D66/D67 còn chặn E2 | D62/D63/D65 duyệt nguyên văn; D64 duyệt sau khi sửa câu chữ (miễn trừ `kind: 'tool'` là thứ **thêm mới** ở B26a, không phải đã có sẵn; nêu rõ vì sao giữ hai lớp cùng với `required: false`). D66/D67 giữ `WAITING_FOR_APPROVAL` cho tới khi rà lại B27a/B26a: cả hai đòi một hành vi mà §4 Interfaces không có chỗ cài — B27a nay chốt `canStartDeepen` + `listDeepenStatus` cho luật gating shape, B26a nay chốt `Design/Content/doc-templates/check-docs.mjs.tmpl` làm chỗ ở của thân checker (vì `scripts/` không nằm trong `package.json` `files`). Xem [DecisionLog.md](../DecisionLog.md) |
 | **Gate E2** | Thực thi lane `v9-expansion`: B25a → B25b → (B26a ∥ B26b) → B27a → B27b | ⏳ TODO | 6/6 contract `WAITING_FOR_APPROVAL` tại [Core/v9-expansion/](../ContractForAI/Core/v9-expansion/README.md); plan: [V9-DocDepthPlan.md](V9-DocDepthPlan.md) |
-| **Gate E3** | Cắt 9.0.0 | ⏳ TODO | Contract B27b — gồm §Gap công khai cho 4 khoản known-open (R-spike, pilot B18a, RB-08, D49–D52) |
+| **Gate E3** | Cắt 9.0.0 — **một lần cắt cho ba lane** (v8-hotfix + v8-expansion + v9-expansion, D68) | ⏳ TODO | Contract B27b — bump `package.json`/`src/version.ts`/`plugin.json`/lockfile từ 8.1.0 thẳng lên 9.0.0, tag thật, hàng changelog gộp ở [Versioning.md](../Core/Versioning.md); gồm §Gap công khai cho 4 khoản known-open (R-spike, pilot B18a, RB-08, D49–D52) |
 
 ## Quyết định đã khoá (không làm lại)
 

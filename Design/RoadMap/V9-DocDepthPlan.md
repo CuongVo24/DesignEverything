@@ -1,6 +1,8 @@
 # V9 Doc Depth — từ 12 file docs tới bộ tài liệu đủ dày để code không phải đoán
 
-> Target phát hành: **9.0.0**. MAJOR vì thêm artifact tier-1 bắt buộc (`docs/Guideline.md`), mở
+> Target phát hành: **9.0.0** — và theo D68, lần cắt này nuốt luôn changelog của v8-hotfix (từng
+> dự kiến 8.1.1) và v8-expansion (từng dự kiến 8.2.0); cả hai contract-DONE nhưng chưa bao giờ
+> được cắt. MAJOR vì thêm artifact tier-1 bắt buộc (`docs/Guideline.md`), mở
 > `artifactKindSchema` (thêm `tool`), và thêm hai module deepen mới — breaking với adapter/validator
 > cũ. Lane dir: [`../ContractForAI/Core/v9-expansion/`](../ContractForAI/Core/v9-expansion/README.md).
 
