@@ -83,7 +83,17 @@ describe('B5c — Newbie Journey Across 4 Shapes (Web, Mobile, CLI, Hybrid)', ()
       }
 
       expect(visitedQuestions.length).toBeGreaterThan(5);
-      expect(progress.phase).toBe('docs-emitted');
+      // H7 (v8-hotfix) — a real, fully-committed interview reaches
+      // 'ready-for-validation' directly (every branch-compatible question's
+      // gate/doc requirements are satisfied by construction once
+      // current_step goes null). This test used to assert 'docs-emitted'
+      // here, which — before H7 — WAS the only phase a real commit sequence
+      // could ever reach, since `emitted_docs` is populated solely by
+      // `emit` itself and `emit` requires 'ready-for-validation' to run at
+      // all. That made `emit` unreachable through any real interview; see
+      // advanceState.ts's H7 comment and advanceState.test.ts's regression
+      // coverage.
+      expect(progress.phase).toBe('ready-for-validation');
     }
   });
 

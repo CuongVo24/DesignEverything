@@ -45,7 +45,7 @@ export function passedGates(policy: GatePolicy, existingDocs: string[]): string[
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cài đặt 3 hàm thuần trong **[evaluateGate.ts](file:///e:/DesignEverything/src/core/evaluateGate.ts)**:
+- Đã cài đặt 3 hàm thuần trong **[evaluateGate.ts](../../../../../src/core/evaluateGate.ts)**:
   - `evaluateGate`: So khớp tập tài liệu yêu cầu của cổng chặn (`requires_docs`) với tập các tài liệu đã có (`existingDocs`). Tích hợp hàm chuẩn hóa đường dẫn để khử mọi sai biệt giữa các hệ điều hành và định dạng tương đối/tuyệt đối (`getBasename`).
   - `isBlocked`: Quyết định hành động gọi công cụ (`Write`, `Edit`, `Bash`) có bị cổng chặn cấm thực thi hay không.
   - `passedGates`: Duyệt qua danh sách cổng chặn của chính sách để thu thập các cổng đã mở.

@@ -49,6 +49,21 @@ export function classifyCliSubcommand(
     };
   }
 
+  // 4b. B24a (D59) — undo has the same phase constraint as commit: it only
+  // makes sense while still mid-interview (undoStep.ts itself denies
+  // UNDO_DENIED_AFTER_EMIT once phase has advanced past 'interview', this
+  // is the pre-check mirror of that at the CLI-subcommand-authority layer).
+  if (sub === 'undo') {
+    if (effectivePhase === 'interview') {
+      return { decision: 'allow' };
+    }
+    return {
+      decision: 'deny',
+      reason_code: 'UNDO_NOT_ALLOWED',
+      message: 'Lệnh "undo" chỉ được thực hiện trong pha phỏng vấn.',
+    };
+  }
+
   // 5. Emit is allowed when ready to build or docs emitted
   if (sub === 'emit') {
     return { decision: 'allow' };

@@ -2,26 +2,38 @@
 
 > Nguồn: [InteractiveQuestionCardsPlan.md](../../../RoadMap/InteractiveQuestionCardsPlan.md) (TaskBrief
 > của lane, theo ngoại lệ expansion [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md) §0).
-> Quyết định đã khoá: [D53–D55](../../../DecisionLog.md) (2026-08-01).
+> Quyết định đã khoá: [D53–D55](../../../DecisionLog.md) (2026-08-01), [D58](../../../DecisionLog.md)
+> (2026-08-16 — thẻ commit văn xuôi suy từ `label`/`description`, không commit `value` thô).
 >
 > **"v7" là số thứ tự lane mở rộng** (thứ 7, sau v2..v6-expansion) — **không phải** version 7.0.0.
 > 7.0.0 thuộc `v1-fix-bugs` ([v7-release-note.md](../../../RoadMap/v7-release-note.md)); lane này
 > nhắm **8.1.0**, MINOR trên nền `v6-expansion` (8.0.0), vì B22b tự khai tương thích ngược.
 >
-> **Lane CHƯA mở.** Hai điều kiện tiên quyết, không thương lượng:
-> 1. Toàn bộ điều kiện gỡ block 7.0.0 ở `v7-release-note.md` §0 đóng và 7.0.0 được cắt.
-> 2. `v6-expansion` (8.0.0) cắt trước — chủ repo đã chốt 2026-08-01: Interactive chạy **sau** V6.
+> **Lane MỞ (2026-08-10).** Hai điều kiện tiên quyết đã đóng đủ:
+> 1. ✅ 7.0.0 cắt GA 2026-08-10 (xem `v7-release-note.md` §0, D56 cho điều kiện đóng thật —
+>    24/24 contract on-axis, không phải tuyệt đối `VERIFIED`; gap công khai ở §5).
+> 2. ✅ `v6-expansion` (8.0.0) cắt GA 2026-08-10 (xem `v6-expansion/README.md` §Đối chiếu —
+>    6/6 contract DONE, đã cắt trước Interactive đúng thứ tự đã chốt 2026-08-01).
+>
+> **Đóng 2026-08-16 (P8), nhánh `codex/lane-8-1-interactive-cards`, 5/6 contract DONE.** Lộ trình
+> 8 phase P0–P8 đã chạy hết (P0 đóng ở commit `4fad0f6`, P3–P7 đóng lần lượt B22a/B22b/B22c/B22d/B22e
+> — xem §7 từng contract cho bằng chứng, evidence tổng hợp ở
+> [v8.1-release-note.md](../../../RoadMap/v8.1-release-note.md)). **R-spike là contract duy nhất còn
+> mở** — cần chủ repo chạy một phiên Claude Code thật (probe đã dựng sẵn ở P2, xem §7 file đó) mà
+> phiên đối chiếu tài liệu không tự làm được, cùng lớp với Gate A3/B1 của
+> [MasterSequencingPlan.md](../../../RoadMap/MasterSequencingPlan.md). Đây là điều kiện duy nhất
+> còn treo trước khi cắt GA 8.1.0 — repo giữ nhãn RC cho tới khi có kết luận.
 
 ## Bản đồ thực thi
 
 | Batch | Contract | Tầng | Phụ thuộc | Trạng thái |
 |---|---|---|---|---|
-| R-spike | [userpromptsubmit-probe](r-spike-userpromptsubmit-probe.md) | QA | Gate mở lane | WAITING_FOR_APPROVAL |
-| B22a | [script_options_content](B22/b22a_script_options_content_contract.md) | Nội dung | Gate mở lane | WAITING_FOR_APPROVAL |
-| B22b | [script_schema_options](B22/b22b_script_schema_options_contract.md) | Lõi | B22a | WAITING_FOR_APPROVAL |
-| B22c | [claude_interactive_cards](B22/b22c_claude_interactive_cards_contract.md) | Adapter (Claude) | R-spike, B22b | WAITING_FOR_APPROVAL |
-| B22d | [codex_text_degradation](B22/b22d_codex_text_degradation_contract.md) | Adapter (degradation) | B22b | WAITING_FOR_APPROVAL |
-| B22e | [options_invariants_qa](B22/b22e_options_invariants_qa_contract.md) | QA | B22c, B22d | WAITING_FOR_APPROVAL |
+| R-spike | [userpromptsubmit-probe](r-spike-userpromptsubmit-probe.md) | QA | Gate mở lane | ⏳ IN_PROGRESS — chờ chủ repo chạy phiên thật (P2) |
+| B22a | [script_options_content](B22/b22a_script_options_content_contract.md) | Nội dung | Gate mở lane | ✅ DONE (P3) |
+| B22b | [script_schema_options](B22/b22b_script_schema_options_contract.md) | Lõi | B22a | ✅ DONE (P4) |
+| B22c | [claude_interactive_cards](B22/b22c_claude_interactive_cards_contract.md) | Adapter (Claude) | R-spike, B22b | ✅ DONE-với-điều-kiện (P5) — code theo giả định R-spike, sẽ mở lại nếu R-spike bác |
+| B22d | [codex_text_degradation](B22/b22d_codex_text_degradation_contract.md) | Adapter (degradation) | B22b | ✅ DONE (P6) |
+| B22e | [options_invariants_qa](B22/b22e_options_invariants_qa_contract.md) | QA | B22c, B22d | ✅ DONE (P7) |
 
 Thứ tự bắt buộc:
 

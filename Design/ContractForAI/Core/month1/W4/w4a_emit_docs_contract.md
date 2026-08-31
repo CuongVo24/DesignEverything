@@ -44,9 +44,9 @@ export function emitTree(answers: InterviewAnswers, branch: 'web' | 'mobile', te
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cài đặt động cơ phát hành tài liệu lõi tại **[emit.ts](file:///e:/DesignEverything/src/core/emit.ts)**:
+- Đã cài đặt động cơ phát hành tài liệu lõi tại **[emit.ts](../../../../../src/core/emit.ts)**:
   - `emitDoc`: Đọc nội dung file mẫu thuộc cây `doc-templates/`, tự động lọc bỏ phần tiêu đề metadata thừa `# Template — docs/...` để đảm bảo văn bản sạch. Thay thế toàn bộ placeholder dạng `{{key}}` bằng nội dung câu trả lời tương ứng hoặc dữ liệu mỏ neo dự kiến.
   - `emitTree`: Sinh chính xác tập hợp 9 file tài liệu theo đúng nhánh. Nếu nhánh là `web` thì chỉ tạo `07-deployment.md` và bỏ qua `07-release.md` (và ngược lại).
   - Tự động sinh mỏ neo dự định `planned_src_...` và `planned_symbol_...` dựa trên nhánh được chọn (web bắt đầu bằng `src/`, mobile bắt đầu bằng `apps/mobile/src/`) với `status=planned` và `rev=` rỗng.
-- Viết bộ unit test chuyên dụng tại **[emit.test.ts](file:///e:/DesignEverything/src/core/emit.test.ts)** để kiểm chứng việc bóc tách placeholder, loại bỏ tiêu đề metadata, sinh đúng cây 9 file phân loại theo nhánh web/mobile và kiểm tra mỏ neo planned đúng quy cách.
+- Viết bộ unit test chuyên dụng tại **[emit.test.ts](../../../../../src/core/emit.test.ts)** để kiểm chứng việc bóc tách placeholder, loại bỏ tiêu đề metadata, sinh đúng cây 9 file phân loại theo nhánh web/mobile và kiểm tra mỏ neo planned đúng quy cách.
 - Toàn bộ vitest, typecheck, lint, build chạy thành công xanh sạch 100%.

@@ -44,11 +44,20 @@ try {
         additionalContext:
           result.injectedContext +
           `\n\n[Cách commit bước (bắt buộc dùng CLI, không tự sửa trạng thái)]\n` +
-          `Sau khi người dùng xác nhận bản dịch ngược (và critic-pass nếu có), chạy:\n` +
+          // B24d (D59/D60) — commit ngay khi có câu trả lời hợp lệ, không
+          // chờ xác nhận trước (chỉ câu có Critic-pass vẫn chặn trước commit
+          // — xem [Yêu cầu Phản biện] trong ngữ cảnh ở trên nếu có). Token
+          // bao phủ cả batch (`question_ids` liệt kê ở trên), không phải chỉ
+          // một câu — commit xong một câu, nếu batch còn câu kế thì gọi lại
+          // status --json rồi commit tiếp bằng CÙNG token này.\n` +
+          `Commit ngay khi có câu trả lời hợp lệ (không chờ xác nhận trước — trừ câu có Critic-pass):\n` +
           commitLine +
-          `Token ở trên chỉ dùng được một lần cho đúng câu này; KHÔNG tự bịa token hoặc tái dùng token cũ.\n` +
+          `Token ở trên bao phủ cả batch \`question_ids\` liệt kê ở trên, không chỉ một câu — dùng lại ` +
+          `CÙNG token đó cho từng câu trong batch (gọi \`status --json\` giữa các lần commit để lấy card ` +
+          `câu kế tiếp); hết batch mới hết hiệu lực. KHÔNG tự bịa token, KHÔNG commit câu ngoài batch.\n` +
           `Tuỳ chọn: --calibrate deep|fast (chỉ CAL0), --branch <shape> (chỉ S7), ` +
           `--slots-file <file.json> (giá trị slot chi tiết, xem SKILL.md).\n` +
+          `Hoàn tác câu vừa commit gần nhất: node "${cliPath}" undo\n` +
           `Xem trạng thái: node "${cliPath}" status`,
       },
     });

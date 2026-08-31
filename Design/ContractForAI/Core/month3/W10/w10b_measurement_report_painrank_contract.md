@@ -44,7 +44,7 @@ Tổng hợp số thô đa-dự-án thành **một báo cáo đo lường có so
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã hoàn thành báo cáo so sánh **[measurement-report.md](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/measurement-report.md)** đối chiếu chỉ số đo lường của 3 dự án, phân tích tỉ lệ rút ngắn thời gian thiết kế đạt ~80% - 90% so với baseline 1 tuần, nêu rõ các giả định và cảnh báo độ tin cậy do mẫu nhỏ, cũng như đánh giá các lợi ích và mặt hạn chế của công cụ.
-- Đã thiết lập bảng xếp hạng ưu tiên điểm vướng **[pain-rank.md](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/pain-rank.md)** theo công thức $Điểm = Tần suất \times Mức độ đau$, phân tích rõ rệt các pattern lỗi hệ thống cần sửa ngay (F-01, F-02, F-04) và các lỗi cá biệt có thể hoãn lại, đảm bảo tất cả các mục đều liên kết chính xác với dòng tương ứng trong `backlog-month3.md`.
-- Đã đồng bộ hoàn hảo cờ tần suất lỗi trong **[backlog-month3.md](file:///e:/DesignEverything/Design/RoadMap/Month3/backlog-month3.md)** làm cơ sở trực tiếp cho W11 vá lỗi ở tầng Content và Taxonomy.
+- Đã hoàn thành báo cáo so sánh **[measurement-report.md](../../../../RoadMap/Month3/dogfood/measurement-report.md)** đối chiếu chỉ số đo lường của 3 dự án, phân tích tỉ lệ rút ngắn thời gian thiết kế đạt ~80% - 90% so với baseline 1 tuần, nêu rõ các giả định và cảnh báo độ tin cậy do mẫu nhỏ, cũng như đánh giá các lợi ích và mặt hạn chế của công cụ.
+- Đã thiết lập bảng xếp hạng ưu tiên điểm vướng **[pain-rank.md](../../../../RoadMap/Month3/dogfood/pain-rank.md)** theo công thức $Điểm = Tần suất \times Mức độ đau$, phân tích rõ rệt các pattern lỗi hệ thống cần sửa ngay (F-01, F-02, F-04) và các lỗi cá biệt có thể hoãn lại, đảm bảo tất cả các mục đều liên kết chính xác với dòng tương ứng trong `backlog-month3.md`.
+- Đã đồng bộ hoàn hảo cờ tần suất lỗi trong **[backlog-month3.md](../../../../RoadMap/Month3/backlog-month3.md)** làm cơ sở trực tiếp cho W11 vá lỗi ở tầng Content và Taxonomy.
 - Chạy `npm test` thành công tốt đẹp với **61/61 tests** xanh. Lint và typecheck hoàn toàn sạch sẽ.

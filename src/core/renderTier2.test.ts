@@ -71,22 +71,22 @@ describe('renderFeatureSpec', () => {
     const arts = renderFeatureSpec(input(baseAnswers, subjects));
     expect(arts.length).toBe(4);
     expect(arts.map((a) => a.path).sort()).toEqual(
-      ['ng-nh-p', 't-m-ki-m', 't-o-c-ng-th-c', 'xem-c-ng-th-c'].map((s) => `design/features/${s}.md`).sort()
+      ['dang-nhap', 'tim-kiem', 'tao-cong-thuc', 'xem-cong-thuc'].map((s) => `design/features/${s}.md`).sort()
     );
   });
 
   it('DS2 của must A không rò sang must B', () => {
     const answers = {
       ...baseAnswers,
-      'DS2a@ng-nh-p': 'Sai mật khẩu quá 5 lần',
-      'DS2b@ng-nh-p': 'Hiện thông báo lỗi rõ',
-      'DS2c@ng-nh-p': 'Trả JWT hợp lệ',
+      'DS2a@dang-nhap': 'Sai mật khẩu quá 5 lần',
+      'DS2b@dang-nhap': 'Hiện thông báo lỗi rõ',
+      'DS2c@dang-nhap': 'Trả JWT hợp lệ',
     };
     const arts = renderFeatureSpec(input(answers, subjects));
-    const dangNhap = arts.find((a) => a.path === 'design/features/ng-nh-p.md')!;
-    const timKiem = arts.find((a) => a.path === 'design/features/t-m-ki-m.md')!;
+    const dangNhap = arts.find((a) => a.path === 'design/features/dang-nhap.md')!;
+    const timKiem = arts.find((a) => a.path === 'design/features/tim-kiem.md')!;
     expect(dangNhap.content).toContain('Sai mật khẩu quá 5 lần');
-    expect(dangNhap.sources).toContain('answers:DS2a@ng-nh-p');
+    expect(dangNhap.sources).toContain('answers:DS2a@dang-nhap');
     // B chưa trả lời → không chứa nội dung của A, và có cờ unknown.
     expect(timKiem.content).not.toContain('Sai mật khẩu quá 5 lần');
     expect(timKiem.unknown_blocks).toBe(3);

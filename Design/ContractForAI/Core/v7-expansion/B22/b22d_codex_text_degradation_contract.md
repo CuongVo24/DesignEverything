@@ -40,16 +40,18 @@ bố đúng mức chênh lệch enforcement giữa Claude Code (bậc A) và AGE
 
 ## 3. Checklist
 
-- [ ] `generateAgentsMd()` sinh đúng khối liệt kê cho câu có `options`, đúng thứ tự mảng, đánh dấu
-      đúng một entry `recommended`, luôn có dòng "gõ tự do".
-- [ ] Câu có `option_hints` sinh dòng rule text tổng hợp gợi ý, không bịa lựa chọn cụ thể (đúng tinh
-      thần "không truy được nguồn → gắn cờ" dùng lại từ B22c).
-- [ ] Câu không có field mới: output `generateAgentsMd()` không đổi một ký tự nào (regression test
-      snapshot, dùng đúng snapshot hiện có của `generateAgentsMd.test.ts`/`.artifact.test.ts`).
-- [ ] `ConformanceMatrix.md` có dòng `interactive_choice` mới, không sửa nội dung dòng khác trong
-      bảng Ma trận.
-- [ ] Không file hook Codex (`preToolUse`/`postToolUse` phía Codex) nào bị đổi — verify bằng
-      `git diff` giới hạn đúng danh sách file ở mục 4.
+- [x] `generateAgentsMd()` sinh đúng khối liệt kê cho câu có `options`, đúng thứ tự mảng (test đối
+      chiếu bằng regex thứ tự ID xuất hiện trong mục 3a với thứ tự trong `script.questions`), đánh
+      dấu đúng entry `(khuyến nghị)` khi `recommendation.mode = 'fixed'`, luôn có dòng "gõ tự do"
+      ("Có thể tự nhập phương án khác").
+- [x] Câu có `option_hints` sinh dòng rule text tổng hợp gợi ý (`hint_count`/`hint_style`/nguồn),
+      không bịa lựa chọn cụ thể — chỉ ghi chỉ dẫn tổng hợp, đúng tinh thần B22c.
+- [x] Câu không có field mới: output `generateAgentsMd()` không đổi (test regression mới với script
+      tổng hợp không có `options`/`option_hints` — mục 3a rỗng, 5 section còn lại không đổi).
+- [x] `ConformanceMatrix.md` có cột `interactive_choice` mới trong bảng Ma trận (thêm cột thay vì
+      thêm dòng — xem lý do đối chiếu ở §7), không sửa nội dung cột khác.
+- [x] Không file hook Codex nào bị đổi — `codex-pre-tool-use.test.ts` (4 test)/`codex-post-tool-use.test.ts`
+      (2 test) chạy lại riêng, xanh, không nằm trong `git diff` của batch này.
 
 ## 4. Interfaces / Files expected to change
 
@@ -78,4 +80,25 @@ bố đúng mức chênh lệch enforcement giữa Claude Code (bậc A) và AGE
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-08-16, lộ trình P6, nhánh `codex/lane-8-1-interactive-cards`).
+
+**Deviation từ mục 3 (ghi lại, không sửa lén):** "Thêm dòng capability `interactive_choice` vào
+bảng Ma trận" đọc theo nghĩa đen sẽ thêm một ROW, nhưng bảng Ma trận thật có hàng = harness
+(Claude Code, AGENTS.md, Cursor…), cột = capability (INJECT/GATE/EMIT). Một dòng riêng cho
+`interactive_choice` không khớp cấu trúc bảng hiện có. Đã thêm một **cột** `interactive_choice (8.1)`
+thay vì dòng — đúng tinh thần yêu cầu (Claude Code = "✅ thẻ tương tác thật", AGENTS.md = "text liệt
+kê (degradation)", Cursor/Antigravity/Windsurf = "⏳ để sau"), khớp cấu trúc bảng thật.
+
+**Đồng bộ với D58/B22c:** `generateAgentsMd.ts` mục 3a đổi từ hiển thị token `value` (`` `public-seo`
+— ... ``) sang gọi thẳng `deriveAnswerText` từ Core — cùng hàm B22c dùng cho `render-inject.ts`,
+đảm bảo AGENTS.md và Claude Code không thể lệch nội dung văn xuôi (chỉ lệch cách trình bày: thẻ vs
+text liệt kê). `Design/Adapters/generated/AGENTS.sample.md` regenerate lại (artifact test tự bắt
+được, không sửa tay).
+
+Codex nhận một skill text-only riêng (`adapter/codex-plugin/skills/design-everything/SKILL.md`,
+không phải render từ Claude skill) — đã hoàn thiện ở P0 (câu cụt + backtick escape lỗi), vượt phạm
+vi gốc của contract này nhưng cùng tinh thần degradation.
+
+`npx vitest run src/adapters/agents/generateAgentsMd.test.ts src/adapters/agents/generateAgentsMd.artifact.test.ts`
+= 6/6 pass (5 + 1). `codex-pre-tool-use.test.ts`/`codex-post-tool-use.test.ts` = 6/6 pass, không
+nằm trong diff batch này. `npm run lint`/`typecheck:all` xanh.

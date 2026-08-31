@@ -19,6 +19,14 @@ Người mới rất dễ chọn kiến trúc web theo trend: thấy Next.js th�
 **default**  
 "Nếu cần người lạ tìm thấy nội dung hoặc trang công khai, ưu tiên SSR/SSG với Next.js. Nếu gần như chỉ dùng sau đăng nhập, ưu tiên SPA để đơn giản hóa."
 
+**options**  
+- `public-seo` — Công khai cần SEO: tăng khả năng được tìm thấy nhưng cần rendering phía server.
+- `private-app` — Ứng dụng riêng tư: đơn giản hơn vì phần lớn nội dung sau đăng nhập.
+- `mixed-rendering` — Kết hợp hai kiểu: cân bằng trang công khai và app riêng nhưng tăng độ phức tạp.
+
+Khuyến nghị phụ thuộc ngữ cảnh (không có lựa chọn nào được preselect — câu này cần biết nhu cầu thật
+của người dùng trước). Luôn còn đường tự nhập (Other).
+
 **translate_back**  
 "Mình tóm lại nhu cầu hiển thị là: `<cần SEO / không cần SEO>`, nên hướng rendering phù hợp là `<SSR/SSG hoặc SPA>` vì `<lý do gắn với cách người dùng tìm và dùng sản phẩm>`."
 
@@ -47,6 +55,14 @@ SEO là nhu cầu nghiệp vụ, không phải món trang trí. Nếu cần nộ
 
 **default**  
 "Cả hai, nên thiết kế responsive và ưu tiên mobile-first ngay từ đầu."
+
+**options**  
+- `desktop-first` — Ưu tiên máy tính: tối ưu thao tác màn hình lớn nhưng điện thoại là phụ.
+- `mobile-first` — Ưu tiên điện thoại: tối ưu chạm và màn hình nhỏ nhưng desktop cần thích nghi.
+- `responsive-both` — Responsive cả hai **(khuyến nghị)**: phục vụ hai thiết bị nhưng cần kiểm thử
+  nhiều breakpoint.
+
+Luôn còn đường tự nhập (Other) ngoài ba lựa chọn trên.
 
 **translate_back**  
 "Mình hiểu thiết bị sử dụng chính là `<máy tính / điện thoại / cả hai>`. Vì vậy giao diện nên được thiết kế theo hướng `<responsive mobile-first / desktop-first có lý do cụ thể>`."
@@ -77,6 +93,14 @@ Phần lớn sản phẩm web đời đầu vẫn bị kéo sang cả desktop l�
 **default**  
 "Triển khai sớm trên Vercel hoặc Netlify với subdomain miễn phí; chưa cần tên miền riêng ở MVP nếu chưa có nhu cầu thương hiệu hoặc vận hành chính thức."
 
+**options**  
+- `preview-subdomain` — Subdomain bản thử **(khuyến nghị)**: chia sẻ sớm với chi phí thấp nhưng chưa
+  có thương hiệu riêng.
+- `custom-domain` — Tên miền riêng: tạo độ tin cậy sớm nhưng cần vận hành DNS và chi phí.
+- `internal-only` — Chỉ nội bộ: giảm rủi ro công khai nhưng khó lấy phản hồi bên ngoài.
+
+Luôn còn đường tự nhập (Other) ngoài ba lựa chọn trên.
+
 **translate_back**  
 "Mình tóm lại nhu cầu triển khai là: `<chia sẻ bản thử sớm / cần miền riêng ngay / chỉ nội bộ>`. Vì vậy phương án phù hợp trước mắt là `<Vercel hoặc Netlify free + subdomain / phương án khác có lý do>`."
 
@@ -105,6 +129,14 @@ MVP web cần tốc độ và khả năng chia sẻ sớm. Vercel/Netlify free g
 
 **default**  
 "Nếu cần tài khoản, ưu tiên Google OAuth kèm email/password để vừa dễ vào nhanh vừa có đường fallback."
+
+**options**  
+- `no-account` — Không cần tài khoản: giảm rào cản vào sản phẩm nhưng hạn chế dữ liệu cá nhân.
+- `google-email` — Google và email: đăng nhập thuận tiện nhưng phải vận hành luồng xác thực.
+- `email-only` — Chỉ email: ít phụ thuộc bên thứ ba nhưng người dùng nhập mật khẩu nhiều hơn.
+
+Khuyến nghị phụ thuộc ngữ cảnh (không có lựa chọn nào được preselect). Luôn còn đường tự nhập
+(Other).
 
 **translate_back**  
 "Mình hiểu bài toán truy cập là: `<cần / không cần tài khoản>`. Nếu cần, phương án đăng nhập phù hợp hiện tại là `<Google OAuth + email/password / phương án khác>` vì `<lý do gắn với độ tiện và đối tượng người dùng>`."

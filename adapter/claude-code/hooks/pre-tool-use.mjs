@@ -24,11 +24,18 @@ if (
 const toolName = input.tool_name || '';
 const toolInput = input.tool_input || {};
 
-// Chỉ gác Write/Edit/Bash (MultiEdit/NotebookEdit coi như Edit). Tool khác: cho qua.
+// Chỉ gác Write/Edit/Bash/PowerShell (MultiEdit/NotebookEdit coi như Edit).
+// Tool khác: cho qua.
+// H3 — PowerShell coi như Bash: cùng shape tool_input ({ command }), cùng
+// authority (resolveCliInvocation + Core's classifyCommand/CLI-subcommand
+// table). Trước bản vá này, PowerShell không nằm trong matcher của
+// settingsMerge.mjs nên hook này không hề được gọi cho lệnh PowerShell — một
+// agent bị Bash chặn có thể chuyển hẳn sang PowerShell để ghi file/chạy lệnh
+// mà không qua gate nào.
 let coreTool = null;
 if (toolName === 'Write') coreTool = 'Write';
 else if (toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'NotebookEdit') coreTool = 'Edit';
-else if (toolName === 'Bash') coreTool = 'Bash';
+else if (toolName === 'Bash' || toolName === 'PowerShell') coreTool = 'Bash';
 if (!coreTool) process.exit(0);
 
 // P8.4 — resolveCliInvocation stays: it's a parsing-layer concern (quote-aware

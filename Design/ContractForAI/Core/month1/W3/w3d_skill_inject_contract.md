@@ -40,11 +40,11 @@ Skill/slash command (vd `/design`) đóng vai **lớp ngữ nghĩa**: hỏi đú
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã tách logic sinh context phỏng vấn thành module thuần **[render-inject.ts](file:///e:/DesignEverything/src/adapters/claude/skill/render-inject.ts)**:
+- Đã tách logic sinh context phỏng vấn thành module thuần **[render-inject.ts](../../../../../src/adapters/claude/skill/render-inject.ts)**:
   - Sinh chuỗi context `injectedContext` chuẩn chỉnh cho câu hỏi `current_step` hiện tại gồm các trường `ask`, `default`, `translate_back`, `target_doc`.
   - Kết hợp 4 quy tắc vàng của phỏng vấn và hướng dẫn vận hành của lớp skill (yêu cầu xác nhận dịch ngược và commit một bước).
   - Trả về chuỗi rỗng khi `current_step === null` và ném lỗi nếu `current_step` không tồn tại trong `script.yaml`.
 - Đã liên kết và tinh gọn hook `onUserPromptSubmit` để gọi trực tiếp helper `renderInject` này.
-- Đã khai báo định nghĩa chi tiết skill/slash command `/design` cho adapter Claude Code tại tệp quy tắc cấu hình dự án **[.clauderules](file:///e:/DesignEverything/.clauderules)** và tệp cấu hình workspace chung **[.agents/AGENTS.md](file:///e:/DesignEverything/.agents/AGENTS.md)**. Điều này đảm bảo host điều khiển diễn giải đúng lớp ngữ nghĩa của kịch bản phỏng vấn.
-- Viết bộ unit test chuyên dụng tại **[render-inject.test.ts](file:///e:/DesignEverything/src/adapters/claude/skill/render-inject.test.ts)** để kiểm thử thành công render câu hỏi, xử lý khi kết thúc phỏng vấn và ném lỗi khi ID câu hỏi không có trong kịch bản.
+- Đã khai báo định nghĩa chi tiết skill/slash command `/design` cho adapter Claude Code tại tệp quy tắc cấu hình dự án **[.clauderules](../../../../../.clauderules)** và tệp cấu hình workspace chung **[.agents/AGENTS.md](../../../../../.agents/AGENTS.md)**. Điều này đảm bảo host điều khiển diễn giải đúng lớp ngữ nghĩa của kịch bản phỏng vấn.
+- Viết bộ unit test chuyên dụng tại **[render-inject.test.ts](../../../../../src/adapters/claude/skill/render-inject.test.ts)** để kiểm thử thành công render câu hỏi, xử lý khi kết thúc phỏng vấn và ném lỗi khi ID câu hỏi không có trong kịch bản.
 - Toàn bộ vitest, typecheck, lint, build chạy thành công xanh sạch.

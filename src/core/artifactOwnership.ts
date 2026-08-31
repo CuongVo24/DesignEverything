@@ -22,8 +22,27 @@ export interface CatalogPathEntry {
 // `normalizePath` from this module are unaffected.
 export const normalizePath = normalizeDrive;
 
+// H2 — the documented `--slots-file` staging path (SKILL.md "Chất lượng câu
+// trả lời lưu vào answers"): `Design/.interview/slots-<slug>.json`, where
+// <slug> is a question id (`slots-S1.json`) or the post-interview derived
+// name (`slots-buildplan.json`). Exported so authorizeMutation's
+// interview-scratch branch can recognize this exact shape.
+const SLOTS_FILE_PATTERN = /^Design\/\.interview\/slots-[A-Za-z0-9_-]+\.json$/;
+
 export function classifyArtifact(path: string, catalogEntries: (string | CatalogPathEntry)[] = []): ArtifactClass {
   const norm = normalizePath(path);
+
+  // H2 — must be checked before the engine-state `.interview/` substring
+  // check below: without this, every slots-file write is classified
+  // engine-state and denied outright, while loadSlotsFile.ts's read-time
+  // containment check (SLOTS_FILE_ROOT) requires the file to live at
+  // exactly this path — the write gate and the read gate named two
+  // disjoint areas and no write to the documented path could ever succeed.
+  // `answers.json`, `deepen-answer-history.json`, and any other file under
+  // `.interview/` still fall through to the engine-state branch below.
+  if (SLOTS_FILE_PATTERN.test(norm)) {
+    return 'interview-scratch';
+  }
 
   // 1. engine-state
   if (
@@ -185,6 +204,31 @@ export function authorizeMutation(
 
   if (artifactClass === 'interview-scratch') {
     const norm = normalizePath(targetPath);
+
+    // H2 — the documented `--slots-file` staging path is a distinct shape
+    // from the per-question scratch path below: it is not session/question
+    // scoped (a post-interview file like `slots-buildplan.json` has no
+    // single owning question to bind to), so `scratchContext`'s
+    // session/question checks do not apply here. Its content is
+    // schema-checked at read time by loadSlotsFile.ts (flat
+    // {slot_key: string} object, 1MB cap, .json extension) — that remains
+    // the real authority over what this file may contain; this only proves
+    // the target is the one documented path, not an arbitrary Design/ write.
+    if (SLOTS_FILE_PATTERN.test(norm)) {
+      if (options?.contentSizeBytes !== undefined && options.contentSizeBytes > MAX_SCRATCH_WRITE_BYTES) {
+        return {
+          decision: 'deny',
+          reason_code: 'SCRATCH_FILE_OVERSIZED',
+          user_message: `Slots-file write of ${options.contentSizeBytes} bytes exceeds the ${MAX_SCRATCH_WRITE_BYTES} byte limit.`,
+        };
+      }
+      return {
+        decision: 'allow',
+        reason_code: 'INTERVIEW_SLOTS_FILE_ALLOWED',
+        user_message: `Interview slots-file ${action} is allowed at the documented Design/.interview/ path.`,
+      };
+    }
+
     // Scratch path must be a direct child of
     // .design-everything/scratch/{session}/{question}/ — a nested
     // subdirectory under {question}/ is denied (depth cap) rather than

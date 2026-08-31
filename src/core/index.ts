@@ -11,6 +11,10 @@ export * from './schemas/index.js';
 // RUNTIME_VERSION export at all.
 export { RUNTIME_VERSION } from '../version.js';
 export { loadScript } from './loadScript.js';
+export { resolveQuestionInteraction, deriveAnswerText, deriveMultiAnswerText } from './interactionChoices.js';
+export type { QuestionInteraction } from './interactionChoices.js';
+export { buildQuestionCard } from './buildQuestionCard.js';
+export type { QuestionCard } from './buildQuestionCard.js';
 export { loadGatePolicy } from './loadGatePolicy.js';
 export { loadProgress, saveProgress } from './loadProgress.js';
 export { loadInterviewStore, transactInterviewStore, computePayloadChecksum, initializeInterviewStore } from './interviewStore.js';
@@ -20,13 +24,17 @@ export {
   ensureCanonicalStore,
   issuePromptCapability,
   commitInterviewAnswer,
+  undoLastAnswer,
 } from './interviewApplicationServices.js';
 export type {
   EnsureStoreOutcome,
   IssuePromptCapabilityResult,
   CommitInterviewAnswerResult,
+  UndoLastAnswerResult,
 } from './interviewApplicationServices.js';
-export { commitStep, checkRate, stampTurn } from './advanceState.js';
+export { commitStep, checkRate, stampTurn, selectNextStep, isQuestionCompatible } from './advanceState.js';
+export { undoStep } from './undoStep.js';
+export { computeBatch } from './computeBatch.js';
 export { issueTurnCapability, verifyTurnCapability, hashToken } from './turnCapability.js';
 export type { TurnCapabilityRecord, IssueCapabilityInput, IssueCapabilityResult, VerifyTurnResult } from './turnCapability.js';
 export { issueAckCapability, consumeAckCapability, verifyAckCapability, computeWarningDigest } from './ackCapability.js';

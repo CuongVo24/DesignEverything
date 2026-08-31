@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeEach } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, cpSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import {
   loadInterviewStore,
@@ -18,12 +19,22 @@ import {
 // P2.2a §5.1 — pins the canonical interview store authority semantics that
 // every production consumer (CLI, hooks, health) must observe. Written
 // against plan-v1-bonus-tasks.md Section 5.1's exact scenario list.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const projectRoot = join(__dirname, '../..');
+
 describe('P2.2a — canonical interview store authority', () => {
   let tempDir: string;
 
   beforeEach(() => {
     tempDir = join(tmpdir(), `de-canon-auth-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
     mkdirSync(tempDir, { recursive: true });
+    // B24b (D60) — issuePromptCapability now loads script.yaml to compute
+    // the batch a token covers, so every fixture that calls it needs the
+    // real script content present, same as commitInterviewAnswer's tests
+    // already require (interviewApplicationServices.test.ts).
+    const designDir = join(tempDir, 'Design/Content/interview-script');
+    mkdirSync(designDir, { recursive: true });
+    cpSync(join(projectRoot, 'Design/Content/interview-script'), designDir, { recursive: true });
     return () => {
       if (existsSync(tempDir)) {
         try {

@@ -49,17 +49,23 @@ field vẫn là free-text như hiện nay, không một test cũ nào được p
 
 ## 3. Checklist
 
-- [ ] `questionSchema` parse đúng câu có `options`, câu có `option_hints`, câu có cả hai (không xảy
-      ra với 19 câu B22a nhưng schema không được cấm), và câu không có field nào (script hiện có).
-- [ ] `.refine()` `recommended`↔`default` bắt lỗi khi `default` không khớp entry `recommended` nào —
-      test cả hai chiều (thiếu entry khớp → fail; có đúng entry khớp → pass).
-- [ ] `loadScript.ts` throw lỗi rõ ràng khi `option_hints.synthesize_from` trỏ `id` chưa khai báo
-      hoặc không tồn tại, theo đúng style message của vòng kiểm `depends_on` hiện có.
-- [ ] Toàn bộ test hiện có của `loadScript.test.ts`/`schemas/contract.test.ts` xanh không sửa — bằng
-      chứng tương thích ngược.
-- [ ] `interview-script.md` mục 2/5/6/Changelog cập nhật đủ, không sửa nội dung field cũ.
-- [ ] `check-version-sync.mjs` không vỡ (field version của `script.yaml` không nằm trong phạm vi
-      script này — xác nhận bằng cách chạy lại sau khi bump).
+- [x] `questionSchema` parse đúng câu có `options`, câu có `option_hints`, và câu không có field nào
+      (script hiện có) — **deviation #4**: câu có cả hai bị schema **từ chối** (mutual exclusion),
+      khác chữ "không được cấm" ở dòng gốc. Xem lý do dưới.
+- [x] Luật `recommendation`↔`default` (thay `.refine() recommended↔default` gốc — xem deviation #2
+      ở §7) bắt lỗi khi thiếu `recommendation`, khi `fixed.value` không khớp option nào, và khi
+      `recommendation` xuất hiện mà không có `options` — test cả 3 chiều trong `loadScript.test.ts`.
+- [x] `loadScript.ts` throw lỗi rõ ràng khi `option_hints.synthesize_from` trỏ `id` chưa khai báo
+      hoặc ngoài closure `depends_on`, đúng style message của vòng kiểm `depends_on` hiện có — test
+      cả hai nhánh lỗi.
+- [x] Toàn bộ test hiện có của `loadScript.test.ts` xanh không sửa (15/15, 7 cũ + 8 mới) — bằng
+      chứng tương thích ngược. Không có test riêng cho `questionSchema` ở `schemas/contract.test.ts`
+      (file đó test `contractSchema` V6, khác schema) — xác nhận `loadScript.test.ts` là nơi đúng để
+      test `questionSchema`, vì schema này chưa từng được dùng standalone ngoài qua loader.
+- [x] `interview-script.md` mục 2/5/6/Changelog cập nhật đủ (3 field mới ở mục 2, 2 ví dụ ở mục 5,
+      luật 13–15 ở mục 6, dòng `2.1.0` MINOR ở Changelog), không sửa nội dung field cũ.
+- [x] `check-version-sync.mjs` không vỡ sau khi `script.yaml` đã bump `2.1.0` (thực hiện ở B22a) —
+      xác nhận lại, xanh.
 
 ## 4. Interfaces / Files expected to change
 
@@ -91,4 +97,34 @@ field vẫn là free-text như hiện nay, không một test cũ nào được p
 
 ## 7. Status
 
-WAITING_FOR_APPROVAL
+DONE (2026-08-16, lộ trình P4, nhánh `codex/lane-8-1-interactive-cards`). `interview-script.md` mục
+2/5/6/Changelog cập nhật đủ; `loadScript.test.ts` có 8 ca test mới cho schema `2.1.0` (7 ca cũ +
+đồ thị `depends_on` vẫn xanh không sửa) — 15/15 pass. `npm run lint`/`typecheck:all` xanh.
+
+**Bốn deviation từ spec (ghi lại, không sửa lén — xem [D58](../../../../DecisionLog.md)):**
+
+0. **Mutual exclusion chặt hơn mục 3 checklist.** Checklist gốc ghi "câu có cả hai [`options` và
+   `option_hints`] (không xảy ra với 19 câu B22a nhưng schema không được cấm)". Code thực tế **từ
+   chối** câu có cả hai (`superRefine` phát issue khi cả hai field cùng có mặt) — ngược với "không
+   được cấm". Giữ nguyên mức chặt này thay vì nới ra: hai cơ chế "viết cứng lựa chọn" và "agent tổng
+   hợp tại runtime" mâu thuẫn ngữ nghĩa nếu cùng tồn tại trên một câu (D53's "hai loại câu khác bản
+   chất" — plan §4); cho phép cả hai sẽ tạo mơ hồ về nguồn sự thật lựa chọn nào adapter phải theo.
+   Test khoá lại ở `loadScript.test.ts`.
+
+1. **Shape khác mục 2.** `options[].recommended: boolean` (spec gốc) → tách thành field cấp câu
+   `recommendation: {mode: 'fixed', value: string} | {mode: 'contextual'}`. Lý do ở §7 của
+   [b22a](b22a_script_options_content_contract.md).
+2. **`.refine()` khác mục 2.** Luật máy-check gốc "nếu có `options` và `default !== null`, tồn tại
+   đúng một entry `recommended: true` với `value === default`" **bị bỏ**, vì bất khả thi: `default`
+   luôn là văn xuôi tự do (vd W1's default dài 2 câu), còn `value` là token ngắn (`public-seo`) —
+   không bao giờ bằng nhau theo nghĩa `===`. Thay bằng: `recommendation` bắt buộc khi có `options`
+   (mọi mode), `fixed.value` phải thuộc tập `options[].value`. Lưới thay thế cho ý định D55 gốc
+   ("`default` phải xuất hiện như một lựa chọn khuyến nghị") chuyển sang tầng QA — xem B22e §7 khi
+   đóng (P7): mỗi câu có `recommendation.mode = 'fixed'` phải đối chiếu tay với `default`, ghi vào
+   evidence B22a thay vì máy-check `===` tại schema.
+3. **`loadScript.ts` chặt hơn mục 2.** Spec ghi rõ "KHÔNG bắt buộc `synthesize_from` là tập con của
+   `depends_on`". Code hiện tại (đã có từ trước phase này) **bắt buộc** mọi `synthesize_from` nằm
+   trong closure bắc cầu của `depends_on` (throw nếu không). Giữ nguyên mức chặt này — nó siết chặt
+   hơn yêu cầu tối thiểu của spec chứ không vi phạm nó (không có `option_hints` nào trong 5 câu B22a
+   cần tham chiếu ngoài `depends_on`), và ngăn một lớp lỗi thật: hint tổng hợp từ một câu chưa chắc
+   đã trả lời tại thời điểm câu hiện tại được hỏi.

@@ -61,11 +61,11 @@ gán nếu bất kỳ dependency nào trong cột Depends on chưa `DONE`.
 | B4 | B4c — CLI exit/output/health protocol | Adapter | B2e, B3d, B3e | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
 | B4 | B4d — Self-contained installer integrity | Adapter | B3c, B4b, B4c | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
 | B4 | B4e — Codex parity and shared runtime | Adapter | B4c, B4d | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
-| B4 | B4f — Skill handoff and wording truth | Adapter | B1c, B3e, B4c | APPROVED | IMPLEMENTED | SNAPSHOT_ONLY |
-| B5 | B5a — Adversarial installed-runtime integration | QA | B4a–B4f | APPROVED | PARTIAL | INVALID_FOR_CLAIM |
-| B5 | B5b — Transaction fault injection | QA | B1b, B3d, B4c | APPROVED | PARTIAL | INVALID_FOR_PRODUCTION_SEAM |
-| B5 | B5c — Newbie journey and quality evaluation | QA | B3a–B4f | APPROVED | PARTIAL | INVALID_FOR_CLAIM |
-| B5 | B5d — Docs, version and release truth sync | QA | B5a–B5c | APPROVED | PARTIAL | INVALID_FOR_CLAIM |
+| B4 | B4f — Skill handoff and wording truth | Adapter | B1c, B3e, B4c | APPROVED | IMPLEMENTED | UNIT_ONLY |
+| B5 | B5a — Adversarial installed-runtime integration | QA | B4a–B4f | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
+| B5 | B5b — Transaction fault injection | QA | B1b, B3d, B4c | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
+| B5 | B5c — Newbie journey and quality evaluation | QA | B3a–B4f | APPROVED | IMPLEMENTED | UNIT_ONLY |
+| B5 | B5d — Docs, version and release truth sync | QA | B5a–B5c | APPROVED | IMPLEMENTED | SEAM_PARTIAL |
 
 Chi tiết lý do từng dòng: xem `plan-v1-fix.md` §1.3 và §3.1. Kế hoạch sửa theo phase: `plan-v1-fix.md` §5–§6.
 

@@ -13,6 +13,7 @@ export const CLI_COMMAND_SURFACE: Record<string, readonly string[]> = {
   status: [],
   init: [],
   commit: ['--branch', '--calibrate', '--capability-token', '--answer', '--slots-file', '--ack-token'],
+  undo: [],
   validate: [],
   build: [],
   repair: [],

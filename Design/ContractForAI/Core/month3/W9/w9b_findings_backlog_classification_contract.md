@@ -43,7 +43,7 @@ Biến nhật ký ma sát thô của W9A thành **một backlog phân loại 4 n
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã tạo bản tài liệu sửa đổi thủ công tại **[docs-handfixed/](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/proj-01/docs-handfixed)** được kế thừa và tối ưu hóa từ bản sinh tự động `docs-generated/` để đảm bảo đủ độ kỹ thuật sâu cho việc viết code thật.
-- Đã xuất bản báo cáo đối chiếu **[docs-diff.md](file:///e:/DesignEverything/Design/RoadMap/Month3/dogfood/proj-01/docs-diff.md)** đánh giá công cụ hỗ trợ ~55% khung sườn, chỉ ra các file sửa đổi nhiều nhất là `03-data-model.md`, `07-release.md` và các loại sửa đổi chính (tách lặp và làm sâu chi tiết kỹ thuật).
-- Đã thiết lập bảng tổng hợp lỗi và phân loại tồn đọng **[backlog-month3.md](file:///e:/DesignEverything/Design/RoadMap/Month3/backlog-month3.md)** phân phối 6 lỗi vào 4 tầng (Content, Taxonomy, Adapter, Onboarding) kèm mức độ đau, đề xuất tầng vá và đánh dấu "Chờ xác nhận tần suất ở W10" để ngăn ngừa lỗi cá biệt trôi thành lỗi hệ thống.
+- Đã tạo bản tài liệu sửa đổi thủ công tại **[docs-handfixed/](../../../../RoadMap/Month3/dogfood/proj-01/docs-handfixed)** được kế thừa và tối ưu hóa từ bản sinh tự động `docs-generated/` để đảm bảo đủ độ kỹ thuật sâu cho việc viết code thật.
+- Đã xuất bản báo cáo đối chiếu **[docs-diff.md](../../../../RoadMap/Month3/dogfood/proj-01/docs-diff.md)** đánh giá công cụ hỗ trợ ~55% khung sườn, chỉ ra các file sửa đổi nhiều nhất là `03-data-model.md`, `07-release.md` và các loại sửa đổi chính (tách lặp và làm sâu chi tiết kỹ thuật).
+- Đã thiết lập bảng tổng hợp lỗi và phân loại tồn đọng **[backlog-month3.md](../../../../RoadMap/Month3/backlog-month3.md)** phân phối 6 lỗi vào 4 tầng (Content, Taxonomy, Adapter, Onboarding) kèm mức độ đau, đề xuất tầng vá và đánh dấu "Chờ xác nhận tần suất ở W10" để ngăn ngừa lỗi cá biệt trôi thành lỗi hệ thống.
 - Chạy `npm test` xanh hoàn toàn 59/59 tests. Lint và compile hoàn toàn sạch sẽ.

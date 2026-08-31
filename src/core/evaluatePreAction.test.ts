@@ -828,4 +828,122 @@ describe('evaluatePreAction core engine', () => {
       }
     });
   });
+
+  // H1 — bootstrap CLI subcommands must survive a workspace that has an
+  // install-manifest.json but no canonical interview store yet (the exact
+  // shape a fresh `install.mjs` run leaves behind). Before this fix,
+  // loadProgressGuard denied with `progress-missing` ahead of the CLI
+  // subcommand table, so `init` — the command Core's own error message
+  // names as the fix — was itself denied by the error it was meant to
+  // recover from.
+  describe('H1 — bootstrap CLI subcommands bypass the missing-store deadlock', () => {
+    test('init is allowed on a fresh install (install-manifest.json only, no canonical store)', () => {
+      const workspace = mkdtempSync(join(tmpdir(), 'pre-action-bootstrap-'));
+      try {
+        mkdirSync(join(workspace, '.design-everything'), { recursive: true });
+        writeFileSync(
+          join(workspace, '.design-everything/install-manifest.json'),
+          JSON.stringify({ files: [] })
+        );
+
+        const decision = evaluatePreAction({
+          runtime: 'claude',
+          tool_name: 'Bash',
+          action_kind: 'shell',
+          target_paths: [],
+          command_argv: ['node', 'adapter/claude-code/cli.mjs', 'init', '--json'],
+          workspace,
+          session_id: 'test-session',
+        });
+        expect(decision.decision).toBe('allow');
+        expect(decision.reason_code).toBe('cli-allowed');
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    });
+
+    test('status and repair are also allowed on a fresh install; commit is not', () => {
+      const workspace = mkdtempSync(join(tmpdir(), 'pre-action-bootstrap-'));
+      try {
+        mkdirSync(join(workspace, '.design-everything'), { recursive: true });
+        writeFileSync(
+          join(workspace, '.design-everything/install-manifest.json'),
+          JSON.stringify({ files: [] })
+        );
+
+        for (const sub of ['status', 'repair']) {
+          const decision = evaluatePreAction({
+            runtime: 'claude',
+            tool_name: 'Bash',
+            action_kind: 'shell',
+            target_paths: [],
+            command_argv: ['node', 'adapter/claude-code/cli.mjs', sub],
+            workspace,
+            session_id: 'test-session',
+          });
+          expect(decision.decision).toBe('allow');
+        }
+
+        // `commit` is not a bootstrap/recovery subcommand — it legitimately
+        // needs a real interview store, so it must keep failing closed here.
+        const commitDecision = evaluatePreAction({
+          runtime: 'claude',
+          tool_name: 'Bash',
+          action_kind: 'shell',
+          target_paths: [],
+          command_argv: ['node', 'adapter/claude-code/cli.mjs', 'commit', '--capability-token', 'x'],
+          workspace,
+          session_id: 'test-session',
+        });
+        expect(commitDecision.decision).toBe('deny');
+        expect(commitDecision.reason_code).toBe('progress-missing');
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    });
+
+    test('status on a workspace with a real, healthy store still returns the real progress-driven decision, not a blanket bypass', () => {
+      // Bootstrap exemption must not silently swallow a genuinely corrupt
+      // store for a command whose whole purpose is reading real state —
+      // this seeds a real store and confirms status still reflects it
+      // (proven indirectly: a non-CLI write inside the same interview phase
+      // is still gated normally, showing progress was actually loaded, not
+      // discarded to null).
+      const workspace = mkdtempSync(join(tmpdir(), 'pre-action-bootstrap-'));
+      try {
+        const base = initializeInterviewStore(workspace).payload.progress;
+        transactInterviewStore(workspace, 0, (env) => ({
+          ...env,
+          payload: { ...env.payload, progress: { ...base, phase: 'interview', current_step: 'S0' } },
+        }));
+
+        const statusDecision = evaluatePreAction({
+          runtime: 'claude',
+          tool_name: 'Bash',
+          action_kind: 'shell',
+          target_paths: [],
+          command_argv: ['node', 'adapter/claude-code/cli.mjs', 'status'],
+          workspace,
+          session_id: 'test-session',
+        });
+        expect(statusDecision.decision).toBe('allow');
+
+        // A protected engine-state path must still deny even though this
+        // workspace was just touched by a bootstrap-exempt status call —
+        // the exemption must not have leaked into a general write bypass.
+        const writeDecision = evaluatePreAction({
+          runtime: 'claude',
+          tool_name: 'Write',
+          action_kind: 'write',
+          target_paths: ['.design-everything/interview-state.json'],
+          command_argv: [],
+          workspace,
+          session_id: 'test-session',
+        });
+        expect(writeDecision.decision).toBe('deny');
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    });
+  });
 });

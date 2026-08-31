@@ -27,16 +27,29 @@ export const correctionEntrySchema = z.object({
 });
 
 // Additive, backward-compatible: envelopes written before this field existed
-// simply omit it (optional). Scoped to slots only, not answers[stepId] —
-// commitStep's capability is bound to (and always advances) current_step,
-// so re-committing an already-confirmed answers[stepId] is not reachable
-// through the public commit flow. A slot key has no such constraint: it's
-// an arbitrary caller-supplied key that can legitimately be resubmitted
-// across two different steps in the same session, so a correction there
-// appends what it replaced instead of silently destroying it. slots stays
-// "latest value only" so every existing reader is unaffected.
+// simply omit it (optional). Originally scoped to slots only, not
+// answers[stepId] — commitStep's capability is bound to (and always
+// advances) current_step, so re-committing an already-confirmed
+// answers[stepId] was not reachable through the public commit flow. A slot
+// key has no such constraint: it's an arbitrary caller-supplied key that
+// can legitimately be resubmitted across two different steps in the same
+// session, so a correction there appends what it replaced instead of
+// silently destroying it. slots stays "latest value only" so every existing
+// reader is unaffected.
+//
+// B24a (D59) — `answers` breaks that premise on purpose: `undo` is a new,
+// narrow, single-step exception to "answers[stepId] is never re-committed"
+// (see undoStep.ts). When undo removes answers[qid], the value it deleted
+// is recorded here the same way a slot correction is — appended, not
+// overwritten — so the history of what a question was previously answered
+// survives even though the live `answers` map no longer has it. Optional
+// for the same reason `corrections` itself is optional: envelopes written
+// before undo existed simply don't have it, and it stays outside
+// computePayloadChecksum (interviewStore.ts) exactly like `corrections.slots`
+// already was.
 export const interviewStoreCorrectionsSchema = z.object({
   slots: z.record(z.string(), z.array(correctionEntrySchema)).default({}),
+  answers: z.record(z.string(), z.array(correctionEntrySchema)).optional(),
 });
 
 export const interviewStorePayloadSchema = z.object({

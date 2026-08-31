@@ -44,7 +44,7 @@ Cập nhật [ConformanceMatrix.md](../../../../Adapters/ConformanceMatrix.md) p
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cập nhật **[ConformanceMatrix.md](file:///e:/DesignEverything/Design/Adapters/ConformanceMatrix.md)** phản ánh trung thực trạng thái dự án sau Month 2.
+- Đã cập nhật **[ConformanceMatrix.md](../../../../Adapters/ConformanceMatrix.md)** phản ánh trung thực trạng thái dự án sau Month 2.
   - Claude Code (Bậc A) được cập nhật từ `📐 spec locked, chưa code` sang `✅ Đã code + test`, ghi rõ các file dẫn chứng trong mã nguồn (`sessionStart.ts`, `userPromptSubmit.ts`, `preToolUse.ts`, `render-inject.ts`, `emit.ts`).
   - AGENTS.md (Bậc B) được tách bạch trung thực: Bộ sinh generator `✅ (unit test)` đã hoàn thành và test tốt, còn việc chạy thử thực tế (smoke run) trên các harness ngoài (Codex/Cursor/Cline) là `⏳ (defer Month 3)`.
   - Giữ nguyên trạng thái `⏳ để sau` của các harness native khác (Cursor native, Antigravity, Windsurf).

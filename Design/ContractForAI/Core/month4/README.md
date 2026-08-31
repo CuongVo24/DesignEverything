@@ -1,9 +1,9 @@
 # Contracts — Month 4 (tuần 13–16) · Phân phối + đặt nền maintain
 
-> Nguồn: [Month4 RoadMap](../../../RoadMap/Month4/README.md) + [Week-13](../../../RoadMap/Month4/Week-13.md)…[Week-16](../../../RoadMap/Month4/Week-16.md) **+** nợ systemic còn lại từ dogfood Month 3 ([pain-rank](../../../RoadMap/Month3/dogfood/pain-rank.md), [backlog-month3](../../../RoadMap/Month3/backlog-month3.md)). Tuân [CONTRACT_STRUCTURE_RULE](../CONTRACT_STRUCTURE_RULE.md).
+> Nguồn: [Month4 RoadMap](../../../RoadMap/Month4/README.md) + [Week-13](../../../RoadMap/Month4/Week-13.md)…[Week-16](../../../RoadMap/Month4/Week-16.md) **+** nợ systemic còn lại từ dogfood Month 3 ([pain-rank](../../../RoadMap/Month3/dogfood/pain-rank.md), [backlog-month3](../../../RoadMap/Month3/backlog-month3.md)). Tuân [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md).
 
 ## Vì sao Month 4 có contract (gồm cả phần code lõi)
-[CONTRACT_STRUCTURE_RULE §1](../CONTRACT_STRUCTURE_RULE.md) đã báo trước: **W15 (Drift Flagging) là code lõi → viết contract khi tới tuần**. Ngoài W15, Month 4 còn ba việc dễ trôi nếu không atom hoá:
+[CONTRACT_STRUCTURE_RULE §1](../../CONTRACT_STRUCTURE_RULE.md) đã báo trước: **W15 (Drift Flagging) là code lõi → viết contract khi tới tuần**. Ngoài W15, Month 4 còn ba việc dễ trôi nếu không atom hoá:
 - **Đóng gói/phân phối phải trung thực** (W13–W14): không được tuyên bố "Đáng chia sẻ" khi còn bug đã biết hoặc số đo còn thiên vị → contract khoá *artifact bắt buộc* (machine sạch chạy được, diff cơ học cho cả 3 dự án) thay vì "cảm giác đủ tốt".
 - **Maintain v0 phải giữ ranh giới** (W15): chỉ flag, **không** fix → contract khoá *scope* để không lấn sang Drift Fixing quá sớm.
 - **Tổng kết phải dựa số đo** (W16): chốt 16 tuần bằng dữ liệu, không theo hứng.

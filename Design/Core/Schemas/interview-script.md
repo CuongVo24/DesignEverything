@@ -42,6 +42,11 @@ Top-level bắt buộc có:
 | `translate_back` | string | ✓ | Mẫu/ghi chú dịch ngược để agent tóm trả lời đời thường thành ngôn ngữ chuẩn rồi xác nhận. Không được rỗng. |
 | `depends_on` | array\<string\> | ✓ | Danh sách `id` phải hoàn tất trước khi câu này được hỏi. Có thể rỗng. |
 | `answer_contract` | object | — (optional) | Contract khai báo để [validateAnswer](../../../src/core/validateAnswer.ts) chấm câu trả lời của đúng `id` này: `required`, `min_trimmed_chars`, `min_items`, `required_fields`, `enum_values`, `pattern`, `warning_rules` (mảng `{code, pattern?, message}` — khớp thì outcome thành `needs_user_ack`, KHÔNG tự pass). Thiếu field này = chỉ áp luật rỗng/placeholder mặc định của validator. Nội dung rule cụ thể theo từng câu do B3b sở hữu ở `Content/interview-script/*`; schema này chỉ khoá hình dạng generic, không hardcode ý nghĩa từng câu ([answerContract.ts](../../../src/core/schemas/answerContract.ts)). |
+| `slot_keys` | array\<string\> | — (optional) | Danh sách khoá `--slots-file` mà câu này được phép ghi. Thiếu field này = mọi khoá trong payload đều được chấp nhận (hành vi cũ, tương thích ngược). Một khoá có thể xuất hiện dưới nhiều câu khác nhau (vd `architecture_overview` dưới cả W1/W2, M2 và C1 — cùng một slot được điền tuỳ nhánh interview thật đã đi) — đây là allowlist theo-câu, không phải allowlist toàn cục ([interviewApplicationServices.ts](../../../src/core/interviewApplicationServices.ts)). |
+| `options` | array\<{value, label, description}\> | — (optional, `2.1.0`) | Câu **chọn tĩnh**: 2–4 lựa chọn viết cứng, mỗi entry `value` (token dùng làm khoá máy — slot/`--branch`/`--calibrate`, KHÔNG phải văn xuôi commit), `label` (nhãn hiển thị ngắn), `description` (1 câu nêu đánh đổi thật, không rỗng). `value`/`label` phải duy nhất trong cùng câu. Adapter (Claude thẻ tương tác, AGENTS.md liệt kê text) chỉ đọc field này, không tự chế lựa chọn — [D53](../../DecisionLog.md). Loại trừ lẫn nhau với `option_hints`. |
+| `recommendation` | `{mode:'fixed', value}` \| `{mode:'contextual'}` | — (bắt buộc khi có `options`, `2.1.0`) | `fixed`: đúng một `value` trong `options` được đánh dấu khuyến nghị (adapter hiển thị nhãn "(khuyến nghị)", KHÔNG tự preselect). `contextual`: không lựa chọn nào được khuyến nghị trước — dùng khi ý nghĩa `default` cũ tự thân điều kiện hoá ("nếu X thì Y"), không suy ra được một khuyến nghị cố định. `fixed.value` phải trỏ đúng một `value` có thật trong `options` của cùng câu. |
+| `option_hints` | `{synthesize_from, hint_count, hint_style}` | — (optional, `2.1.0`) | Câu **mở, có gợi ý**: KHÔNG viết cứng lựa chọn — agent tự tổng hợp tại runtime. `synthesize_from` (mảng `id`, không rỗng) là các câu nguồn agent phải suy từ answer đã commit của chúng, và mỗi `id` đó **phải nằm trong closure bắc cầu của `depends_on`** của câu hiện tại (loader từ chối nếu không — chặt hơn mức tối thiểu ban đầu, xem [b22b §7](../../ContractForAI/Core/v7-expansion/B22/b22b_script_schema_options_contract.md)). `hint_count` là `2` hoặc `3`. `hint_style` là chỉ dẫn ngắn cách tổng hợp (vd "nỗi đau + workaround khả dĩ"). Loại trừ lẫn nhau với `options`. |
+| `multi_select` | boolean | — (optional, mặc định `false`, `2.2.0`) | Chỉ có ý nghĩa khi câu có `options` hoặc `option_hints` — thiếu cả hai thì bị từ chối (câu free-text không có gì để chọn nhiều). Không tương thích với `recommendation.mode: 'fixed'` — hai câu cần đúng một token máy đọc (`CAL0` cho `--calibrate`, `S7` cho `--branch`) không bao giờ được khai `multi_select`. Người dùng vẫn luôn còn đường tự nhập ([D55](../../DecisionLog.md) không đổi). Văn xuôi commit khi chọn nhiều là các lựa chọn nối bằng `deriveMultiAnswerText`, không phải mảng `value` ([D58](../../DecisionLog.md), [D61](../../DecisionLog.md)). |
 
 ## 3. Bốn quy tắc vàng (agent PHẢI tuân khi chạy script)
 1. **Hỏi từng câu một** — không bắn nhiều câu cùng lúc.
@@ -84,6 +89,39 @@ questions:
 
 > **S3 là câu khó & quan trọng nhất** — agent là người phân loại Must/Should/Could, người mới không tự ưu tiên được.
 
+Ví dụ `options` (câu chọn tĩnh, `2.1.0`):
+```yaml
+  - id: CAL0
+    ask: "Bạn muốn giải thích kỹ hay đi nhanh?"
+    default: "Đi nhanh thẳng vào việc, giải thích tối giản."
+    kind: meta
+    target_doc: null
+    branch: core
+    gate: null
+    translate_back: "Mình ghi nhận mức độ giải thích: `<giải thích kỹ / đi nhanh>`."
+    depends_on: []
+    options:
+      - { value: deep, label: "Giải thích kỹ", description: "Có thêm lý do và hướng dẫn, nhưng mất thời gian hơn." }
+      - { value: fast, label: "Đi nhanh", description: "Tập trung chốt quyết định nhanh với giải thích tối giản." }
+    recommendation: { mode: fixed, value: fast }
+```
+
+Ví dụ `option_hints` (câu mở, có gợi ý, `2.1.0`):
+```yaml
+  - id: S1
+    ask: "Hiện giờ mọi người đang khổ vì chuyện gì?"
+    default: "Suy từ câu S0 rồi đề xuất 1 cách hiểu cụ thể nhất."
+    target_doc: 00-vision.md
+    branch: core
+    gate: null
+    translate_back: "Mình đang hiểu nỗi đau chính là: `<nỗi đau chuẩn hoá>`."
+    depends_on: [S0]
+    option_hints:
+      synthesize_from: [S0]
+      hint_count: 3
+      hint_style: "nỗi đau + workaround khả dĩ"
+```
+
 ## 6. Luật validate
 
 Validator cho Batch 6 và test sau này phải kiểm được tối thiểu các luật dưới đây:
@@ -100,6 +138,16 @@ Validator cho Batch 6 và test sau này phải kiểm được tối thiểu cá
 10. Câu thuộc shape không được đứng trước câu chọn hình-hài (S7); file giữ thứ tự thực thi chuẩn (core trước, shape sau) để state machine đi tuần tự.
 11. Câu `kind=meta` không có `gate` ràng buộc artifact và không xuất hiện trong `emitted_docs` (không sinh doc).
 12. `critics` (nếu có) là map; mọi key phải là `id` câu có thật; mỗi entry có `challenge` và `ack_prompt` không rỗng.
+13. `options` và `option_hints` loại trừ lẫn nhau — một câu không được khai cả hai (`2.1.0`).
+14. Khi có `options`: 2–4 entry, `value`/`label` duy nhất trong câu, `description` không rỗng;
+    `recommendation` bắt buộc phải có mặt; nếu `recommendation.mode = 'fixed'`, `value` của nó phải
+    trỏ đúng một `value` có thật trong `options`. Ngược lại, `recommendation` không được xuất hiện
+    khi câu không có `options` (`2.1.0`).
+15. Khi có `option_hints`: `synthesize_from` không rỗng và không trùng lặp; `hint_count` là `2` hoặc
+    `3`; mọi `id` trong `synthesize_from` phải đã khai báo trước câu hiện tại **và** nằm trong
+    closure bắc cầu của `depends_on` của câu đó (`2.1.0`).
+16. Khi `multi_select: true`: câu phải có `options` hoặc `option_hints` (một trong hai, theo luật
+    13); `recommendation.mode` không được là `'fixed'` nếu có mặt (`2.2.0`).
 
 ## 7. Bất biến tương thích
 
@@ -118,3 +166,5 @@ B7b sẽ thêm R1 sau khi chọn shape để ghi external dependency, platform, 
 |---|---|
 | 0.1.0 | Khoá schema ổn định cho Batch 1: chốt field, ràng buộc, thứ tự thực thi và luật validate. |
 | 2.0.0 | 2026-07-09 | Mở `branch` thành hình-hài dự án (registry ở taxonomy); thêm field `kind: anchored\|meta` (`target_doc` null khi meta); tách câu chọn hình-hài (S7) khỏi S6; câu nhánh `depends_on` S7; thêm top-level `critics:` map theo điểm fire. MAJOR: D21–D24. |
+| 2.1.0 | 2026-08-16 | **MINOR — bản vá hiện hành** (không đổi luật mục 6.1 "từ v2 là dòng `2.x`"). Thêm 3 field optional cho câu: `options` (2–4 lựa chọn viết cứng cho câu chọn tĩnh), `recommendation` (khuyến nghị `fixed`/`contextual`, bắt buộc khi có `options`), `option_hints` (chỉ dẫn tổng hợp gợi ý runtime cho câu mở, loại trừ lẫn nhau với `options`). Câu thiếu cả hai field vẫn free-text như cũ — tương thích ngược tuyệt đối, không một câu nào trong `script.yaml` hiện có đổi hành vi. Luật validate 13–15. [D53](../../DecisionLog.md)/[D58](../../DecisionLog.md), [InteractiveQuestionCardsPlan.md](../../RoadMap/InteractiveQuestionCardsPlan.md). |
+| 2.2.0 | 2026-08-16 | **MINOR**. Thêm field optional `multi_select` (mặc định `false`) cho câu — cho phép chọn nhiều `options`/gợi ý `option_hints` cùng lúc, luôn còn đường tự nhập ([D55](../../DecisionLog.md) không đổi). Bật cho `S1`, `S2`, `S4`, `S5` — bốn câu duy nhất trong `script.yaml` mà slot đích vốn là danh sách cộng dồn (`problem_summary+current_workaround`, hai persona, `core_entities`, các bước luồng). Không bật cho `W4`/`C4` dù cũng có `options`: hai câu đó có lựa chọn loại trừ lẫn nhau (một phương thức đăng nhập / một hệ điều hành mục tiêu), multi_select ở đó sẽ cho phép tổ hợp vô nghĩa. Cấm tuyệt đối trên `CAL0`/`S7` bằng luật validate 16 (không tương thích `recommendation.mode: 'fixed'`). Luật validate 16. [D61](../../DecisionLog.md), [InterviewCadencePlan.md](../../RoadMap/InterviewCadencePlan.md). |

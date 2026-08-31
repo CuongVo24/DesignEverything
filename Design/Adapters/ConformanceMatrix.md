@@ -7,13 +7,15 @@
 
 ## Ma trận
 
-| Harness | Bậc | INJECT | GATE | EMIT | Trạng thái | File |
-|---|---|---|---|---|---|---|
-| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
-| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
-| Cursor (native `.mdc`) | B | `.cursorrules`/`.mdc` | rules text | cây taxonomy | ⏳ để sau | — |
-| Antigravity | B | rules | rules text | cây taxonomy | ⏳ để sau | — |
-| Windsurf / Continue | B | rules | rules text | cây taxonomy | ⏳ để sau | — |
+| Harness | Bậc | INJECT | GATE | EMIT | `interactive_choice` (8.1–8.2) | Trạng thái | File |
+|---|---|---|---|---|---|---|---|
+| **Claude Code** | A (cứng) | skill / slash command đọc `script.yaml` | `SessionStart` + `UserPromptSubmit` + `PreToolUse` | cây taxonomy + anchor | ✅ thẻ tương tác thật (`AskUserQuestion`, `multiSelect` theo `multi_select`); batch (`question_ids`) + `checkRate` ép cứng số câu/lượt; `undo` hoàn tác 1 bước | ✅ Đã code + test | [sessionStart.ts](../../src/adapters/claude/sessionStart.ts), [userPromptSubmit.ts](../../src/adapters/claude/userPromptSubmit.ts), [preToolUse.ts](../../src/adapters/claude/preToolUse.ts), [render-inject.ts](../../src/adapters/claude/skill/render-inject.ts), [emit.ts](../../src/core/emit.ts) |
+| **AGENTS.md** (Codex, Cursor, Cline...) | B (mềm) | sinh rules từ lõi vào `AGENTS.md` | rules text map từ gate-policy | cây taxonomy + anchor | text liệt kê (degradation) — cùng văn xuôi `deriveAnswerText`/`deriveMultiAnswerText` với Claude, không native card; batch/`undo` chỉ là chỉ dẫn best-effort trong prose — harness này KHÔNG có `checkRate`/token multi-câu nào ép buộc | Generator: ✅ (unit test) <br> Harness smoke run: ⏳ (defer Month 3) | [generateAgentsMd.ts](../../src/adapters/agents/generateAgentsMd.ts) |
+| Cursor (native `.mdc`) | B | `.cursorrules`/`.mdc` | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
+| Antigravity | B | rules | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
+| Windsurf / Continue | B | rules | rules text | cây taxonomy | ⏳ để sau | ⏳ để sau | — |
+
+`interactive_choice` mở ở lane 8.1 (Interactive Question Cards, `Design/RoadMap/InteractiveQuestionCardsPlan.md`) và mở rộng ở lane 8.2 (Interview Cadence, [InterviewCadencePlan.md](../RoadMap/InterviewCadencePlan.md)): câu có `options`/`option_hints` trong `script.yaml` được adapter render thành lựa chọn thay vì free-text thuần; từ 8.2 thêm gộp nhiều câu vào một lượt (batch, D60), chọn nhiều lựa chọn (`multi_select`, D61), và hoàn tác một bước (`undo`, D59). Claude Code render thẻ native VÀ có enforcement thật ở tầng engine (`turnCapability.ts`/`checkRate` ép đúng số câu batch, không phải quy ước); AGENTS.md/Codex chỉ có text liệt kê + chỉ dẫn prose, không có cơ chế ép nào tương đương — batch/multi_select/undo trên harness mềm là kỷ luật tự giác của agent, không phải gate (D53/D37 — dữ liệu ở Lõi, hai adapter dùng chung hàm derive nên không thể lệch nội dung văn xuôi, chỉ lệch mức enforcement). Không hứa Cursor/Antigravity/Windsurf đồng đều.
 
 Chú thích: ✅ xong & test · 📐 đặc tả đã khoá, chưa code · ⏳ để sau.
 
@@ -44,6 +46,17 @@ Smoke run W14A đầu tiên (2026-07-10, phiên Claude Code thật, dự án yt-
 Bộ đóng gói nằm ở [adapter/claude-code/](../../adapter/claude-code/): 3 entry hook theo giao thức stdin/stdout thật của Claude Code (`hooks/`), CLI `status|commit|emit` cho skill (`cli.mjs`), skill `/design-everything` (`skill/SKILL.md`) và installer (`install.mjs`). Cài vào dự án đích: `node adapter/claude-code/install.mjs <target>` — installer ghi `.claude/settings.json` + skill và copy lõi nội dung (`script.yaml`, `gate-policy.yaml`, `shapes.yaml`, doc-templates) vào workspace đích; engine (dist + node_modules) vẫn ở repo này.
 Đã nghiệm thu vòng đời đầy đủ bằng mô phỏng giao thức hook: SessionStart khởi tạo `progress.json` → UserPromptSubmit inject câu hỏi + TURN_ID và chặn vi phạm một-bước-mỗi-lượt → PreToolUse deny `Write`/`Bash` khi gate `scope-locked` đóng, allow vùng `Design/`+`docs/` → commit CAL0→S7(`--branch`)→W5 qua CLI (kèm `--slots-file`) → `emit` sinh 10 docs có anchor (gồm 08-build-plan) → phase `ready-to-build`, gate mở cho Write code. Còn thiếu: smoke run trong phiên Claude Code thật với người dùng (bước W14A).
 
+**Phạm vi thật của `PreToolUse` (H3, 2026-08-16):** matcher hook đăng ký đúng
+`Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell` ([settingsMerge.mjs](../../adapter/claude-code/installer/settingsMerge.mjs)).
+Đây là toàn bộ tool ghi/thực thi tích hợp sẵn của Claude Code trên cả hai hệ điều hành (Bash trên
+Linux/macOS, PowerShell mặc định trên Windows) — không phải mọi đường ghi file có thể có trong một
+phiên. Một MCP server ghi file trực tiếp (ví dụ filesystem MCP) đứng ngoài matcher này và **không** đi
+qua gate — đây là giới hạn đã biết của mô hình "adapter-wrapper" (D37: hook chỉ intercept một tập tool
+hữu hạn do harness khai báo, không phải sandbox toàn diện), không phải lỗi. Trước 2026-08-16, matcher
+thiếu `PowerShell` — một agent bị Bash chặn có thể chuyển hẳn sang PowerShell để ghi/xoá file mà không
+qua gate nào; đã vá cùng đợt với năm lỗi chặn thật khác của phiên test đầu tiên
+([v8-hotfix H1–H6](../ContractForAI/Core/v8-hotfix/)).
+
 ## DX Hardening — 2026-07-16 (nhánh v5/dx-hardening)
 
 Các fix rút ra từ smoke run ytm thật tại E:/DE-TestDrive (dự án Python CLI, greenfield):
@@ -68,7 +81,7 @@ Toàn bộ lõi trạng thái thực thi V3, kiểm duyệt ngữ nghĩa và lu�
 - Claude Code: Đã hoàn thành code và đầy đủ test suite (unit test + E2E web/mobile) chạy qua Vitest. Cổng chặn cứng (gating), inject cảnh báo (M2/M5), rẽ nhánh và cấm đổi nhánh đều hoạt động chính xác.
 - AGENTS.md: Đã code bộ sinh rules `generateAgentsMd` và viết unit test xác thực. Tuy nhiên, việc chạy kiểm thử thực tế (smoke run) trên các harness mềm (Codex/Cursor/Cline) tạm hoãn (⏳ defer) sang Month 3 (xem thêm [v1-release-note.md](../RoadMap/Month2/v1-release-note.md) limitation #1 & #2 và [m2_polish_agents_md_artifact_drift_guard_contract.md](../ContractForAI/Core/break_task/Month2/m2_polish_agents_md_artifact_drift_guard_contract.md)).
 
-## Trạng thái v6.0.0 (package hiện tại — 2 đợt B16a + B4e)
+## Trạng thái v6.0.0 (2 đợt B16a + B4e) — GA 2026-07-14
 Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đã được cài đặt và nghiệm thu hoàn chỉnh:
 
 **B16a Contract schema & Conventions bind — 2026-07-14:**
@@ -85,25 +98,46 @@ Lõi định nghĩa và kiểm duyệt hợp đồng (Contract + Conventions) đ
 - **Parity Verification:** Đã viết integration test `test/integration/adapter-parity.test.ts` và E2E benchmark `test/replay/crossRuntimeReplay.test.ts` đảm bảo 100% tương thích về JSON envelope, reason code, version evidence và state transitions. ✅ Đã code + test.
 - **Cập nhật 2026-08-06 (A1-P9, đóng R17):** post-tool hook của Codex trước đây tự suy allowed-path bằng `matchGlob` tự chế, khác semantics với Core — đã thay bằng `filterUnexpectedFiles` (`src/adapters/codex/filterUnexpectedFiles.ts`) dùng chung `matchesPathPattern` của Core, cùng policy semantics với Claude's PreToolUse thay vì fork riêng. Bằng chứng: `test/integration/installed-runtime/codex-post-tool-use.test.ts`.
 
-## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync) — PLANNED, chưa cắt
+## Trạng thái v7.0.0 (v1-fix-bugs Release Truth Sync) — GA 2026-08-10
 
 **Sửa 2026-07-30:** mục này trước đó ghi các mốc dưới đây như đã hoàn thành và phát hành ngày
 2026-07-25 kèm dấu ✅ — sai sự thật, đúng finding R15 mà chính B5d phải bắt lại. Package hiện tại
 vẫn `6.0.0`; xem [v7-release-note.md](../RoadMap/v7-release-note.md) (UNRELEASED — BLOCKED) cho
 trạng thái thật từng mục. Trạng thái tiến độ thật (2026-07-30, đối chiếu với
 `Design/ContractForAI/Core/v1-fix-bugs/finding-coverage-matrix.md`):
-- **Adversarial Installed Runtime (B5a):** test đã chuyển sang chạy trên target cài thật qua
-  `install.mjs` (`test/integration/installed-runtime/hook-adversarial.test.ts`), không còn gọi thẳng
-  TS source hay chạy hook từ REPO_ROOT.
-- **Transaction Fault Injection (B5b):** engine transaction (`prepareEmit`/`activateEmit`/`recoverEmit`)
-  có test crash thật (`test/fault-injection/`), nhưng test crash mid-emit vẫn gọi thẳng Core, chưa
-  crash một tiến trình `cli.mjs emit` thật — chấp nhận theo phạm vi hiện tại, không phải VERIFIED.
-- **Newbie Journey & Weak Executor Evaluation (B5c):** journey suite (`test/journey/`) chạy qua Core
-  loop thuần, chưa qua CLI thật; báo cáo B5c không có reviewer/golden artifact độc lập (R14).
+**Cập nhật 2026-08-10** (đối chiếu lại, không tin nguyên văn cũ — xem §7 từng contract B5 để có bằng
+chứng chi tiết):
+- **Adversarial Installed Runtime (B5a):** IMPLEMENTED/SEAM_PARTIAL. 15 file, 76 test pass trên target
+  cài thật (`test/integration/installed-runtime/`), gồm 1 file mới `phase-authorization-matrix.test.ts`
+  đóng U04/R04. 2 gap thật còn lại trước VERIFIED: X09 exit-class chưa đủ 5 lớp, X23 ack-capability
+  chưa có coverage installed.
+- **Transaction Fault Injection (B5b):** IMPLEMENTED/SEAM_PARTIAL (nâng từ off-axis
+  INVALID_FOR_PRODUCTION_SEAM). Xác nhận `prepareEmit`/`activateEmit`/`transactInterviewStore` chính
+  là hàm production `cliOps/emit.ts` gọi — tiền đề cũ "production không gọi các hàm này" sai.
+  `crash-worker.mjs` spawn tiến trình con thật, hard-kill đúng bước, recovery hai lần idempotent. Gap
+  còn lại: crash-worker import thẳng `dist/`, chưa đi qua toàn bộ tầng CLI trước khi gọi.
+- **Newbie Journey & Weak Executor Evaluation (B5c):** IMPLEMENTED/UNIT_ONLY. R14 (hai reviewer độc
+  lập) đã hạ theo quyết định khoá 2026-08-03 — contract B5c §3 sửa bỏ claim, không chờ người ngoài mới
+  cắt 7.0.0. Journey suite (`test/journey/`) vẫn qua Core loop thuần, chưa qua CLI thật — đây là gap
+  còn lại, khác bản chất với R14 (gap kỹ thuật, không phải claim không kiểm được).
 - **Release Truth Sync (B5d):** đã dọn 100% link `file:///e:/...`; `check-matrix.mjs` nay chặn
   vocabulary/dependency-range sai và cross-check contract-file ↔ README, nhưng docs vẫn cần một lượt
   đối chiếu cuối trước khi coi B5d là VERIFIED.
 
 Không phần nào ở trên là "đã phát hành" — chỉ là tiến độ thật của một milestone vẫn PLANNED.
+
+## Trạng thái v8.1.0 / v8.1.1 / v8.2.0 (Interactive Cards → hotfix → Interview Cadence)
+
+- **v8.1.0 (Interactive Question Cards):** RC — 5/6 contract DONE, R-spike (xác nhận `AskUserQuestion`
+  có bắn `UserPromptSubmit` không) còn mở. Xem [v8.1-release-note.md](../RoadMap/v8.1-release-note.md),
+  [InteractiveQuestionCardsPlan.md](../RoadMap/InteractiveQuestionCardsPlan.md).
+- **v8.1.1 (hotfix H1–H6):** DONE 2026-08-16 — mở bế tắc bootstrap (`init` bị chặn bởi đúng lỗi nó
+  phải sửa), thông `--slots-file`, vá gate PowerShell (matcher `PreToolUse` thiếu tool này), trả
+  question card về `status --json`, sửa `gates_passed`/`ready-for-validation` (trước bản vá này không
+  đường thật nào từng tới được `emit`). 6/6 contract DONE tại [v8-hotfix/](../ContractForAI/Core/v8-hotfix/).
+- **v8.2.0 (Interview Cadence — đang chạy):** D59 (bỏ thẻ xác nhận dịch ngược, bù bằng `undo`), D60
+  (gộp nhiều câu vào một lượt — Core quyết batch qua `computeBatch`, không phải agent), D61
+  (`multi_select` cho S1/S2/S4/S5). Xem [InterviewCadencePlan.md](../RoadMap/InterviewCadencePlan.md),
+  contract B24a–B24f tại `Core/v8-expansion/B24/`.
 
 

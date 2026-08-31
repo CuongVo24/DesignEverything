@@ -49,8 +49,8 @@ npm run build
 ## 3. Cách Trình Diễn Demo (How to Demo)
 
 Hệ thống cung cấp hai cẩm nang vận hành chi tiết tương ứng với từng nhánh thiết kế:
-*   Đọc và làm theo **[RUNBOOK-web.md](file:///e:/DesignEverything/RUNBOOK-web.md)** để thử nghiệm nhánh Web.
-*   Đọc và làm theo **[RUNBOOK-mobile.md](file:///e:/DesignEverything/RUNBOOK-mobile.md)** để thử nghiệm nhánh Mobile.
+*   Đọc và làm theo **[RUNBOOK-web.md](../../../RUNBOOK-web.md)** để thử nghiệm nhánh Web.
+*   Đọc và làm theo **[RUNBOOK-mobile.md](../../../RUNBOOK-mobile.md)** để thử nghiệm nhánh Mobile.
 
 ---
 

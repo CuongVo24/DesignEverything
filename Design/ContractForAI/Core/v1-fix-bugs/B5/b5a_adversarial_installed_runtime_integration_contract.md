@@ -62,12 +62,48 @@ Expected commands:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
-**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). Checklist ở §3 bị tick nhưng
-không đạt: hầu hết test spawn hook/CLI từ `REPO_ROOT` thay vì target đã cài (trái mitigation ở §5),
-`codex-parity.test.ts` ghi build output vào cây source, và phần lớn test ID trong
-`hook-adversarial.test.ts` (X05, X06, X07, X10, X12, X15, X18, X22, X24) kiểm một hành vi khác với
-nghĩa cùng ID trong `finding-coverage-matrix.md` (xem cột Status ở đó — đánh dấu `MISMAPPED`).
-Không dùng bộ test này làm bằng chứng đóng U01–U04/X01–X24. Đóng lại ở P11 sau khi harness cài thật
-+ test map đúng ID được viết theo P1.
+**Nâng đáng kể 2026-08-10, chưa VERIFIED — còn 2 gap thật, không phải overclaim.** §7 bản 2026-07-25
+phía trên đã lỗi thời — hai lý do nó nêu để chặn đã hết:
+(1) "test spawn từ REPO_ROOT" — sai với thực tế hiện tại: mọi file dưới
+`test/integration/installed-runtime/` install vào `os.tmpdir()` qua `install.mjs` thật rồi spawn
+`hooks/*.mjs`/`cli.mjs` **target-local** (xác nhận bằng đọc trực tiếp code, không tin lại văn bản cũ);
+(2) "9 test ID MISMAPPED" — matrix header (2026-07-30) đã ghi nhận xử lý xong, và
+`node scripts/check-matrix.mjs` (lint tự động cấm `MISMAPPED` còn sót) chạy sạch tại thời điểm đóng.
+
+**Bằng chứng đóng (chạy lại 2026-08-10, không tin nguyên văn):**
+```
+npx vitest run test/integration/installed-runtime
+→ 15 file, 76 test, tất cả pass — cài thật, spawn tiến trình thật, đủ SessionStart/UserPromptSubmit/
+  PreToolUse/CLI, đủ case forged/replay/corrupt-state/command-bypass/docs-archive/deepen-parity đã liệt
+  kê ở checklist §3
+```
+Bổ sung 1 file mới trong đợt đóng này: `phase-authorization-matrix.test.ts` (U04/R04) — khoả lấp đúng
+lỗ hổng "test tên docs-emitted lại seed phase: interview" mà `finding-coverage-matrix.md` từng ghi.
+
+**Coverage report (§6):** `finding-coverage-matrix.md` + `check-matrix.mjs` đóng vai trò coverage
+report cơ giới — mọi ID U01–U08/X01–X24/R01–R20 xuất hiện đúng một lần, không ID nào rỗng Status/Test
+ID/Evidence, không path evidence nào trỏ file không tồn tại; R21 loại khỏi mẫu số đúng như §6 yêu cầu.
+Positive control (§6 "≥1 positive control mỗi allowed action"): xác nhận có ở `hook-adversarial.test.ts`
+("Execution gate — should ALLOW..."), `phase-authorization-matrix.test.ts` (3 positive control), và các
+file cài-thật khác đã có case allow tương ứng case deny.
+
+**2 gap thật còn lại trước khi nói VERIFIED (không phải INVALID_FOR_CLAIM nữa — bằng chứng thật đã đủ
+lớn, chỉ chưa trọn), ghi rõ để không lẫn với "đã xong":**
+
+1. **X09 exit-class chưa đủ.** `cli-health.test.ts` chỉ spawn `validate` để đo exit code; 4 lớp còn lại
+   trong bảng exit-class §6 của B4c (usage/health/conflict/internal) chưa có case spawn riêng. Xem
+   `finding-coverage-matrix.md` dòng X09, vẫn `SEAM_PARTIAL`.
+2. **X23 ack-capability chưa có coverage installed.** `ackCapability.ts` (mới, Wave A1 2026-08-09) —
+   single-use qua tạo file độc quyền — mới có `UNIT_ONLY`, chưa test nào phát/tiêu token qua hai tiến
+   trình cài thật khác nhau.
+3. **Codex package target không chạy lại toàn bộ ma trận adversarial** (command bypass, corrupt state)
+   — chỉ có `codex-parity`/`codex-pre-tool-use`/`codex-post-tool-use`. Rủi ro thấp vì Core dùng chung
+   với Claude, nhưng ghi nhận thay vì im lặng.
+
+**Vì sao vẫn không hạ về `INVALID_FOR_CLAIM`:** nhãn đó nghĩa là "evidence sai seam hoặc không map
+đúng finding" — không còn đúng cho phần lớn của bộ test này nữa (76/76 test pass trên installed target
+thật, ID map đúng, không MISMAPPED). `SEAM_PARTIAL` mô tả đúng thực tế: bằng chứng thật, chưa trọn vẹn.
+Đóng nốt lên `VERIFIED` là việc còn lại của B5a, không phải việc mới — 2 mục trên là toàn bộ phạm vi
+còn thiếu.

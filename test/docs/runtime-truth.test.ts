@@ -99,6 +99,13 @@ describe('B5d — Documentation & Runtime Truth Sync Test Suite', () => {
     const releaseNote = readFileSync(join(REPO_ROOT, 'Design/RoadMap/v7-release-note.md'), 'utf8');
     const stated = releaseNote.match(/`package\.json`\s+still\s+([\d.]+)/);
     expect(stated).toBeTruthy();
-    expect(stated![1]).toBe(pkg.version);
+    // Once the release note's own Status says GA, "package.json still X"
+    // freezes as a historical record of the version at cut time — package.json
+    // is expected to move on to the next target afterward, same reasoning as
+    // scripts/check-version-sync.mjs's identical GA-aware check.
+    const isGa = /\*\*Status\*\*:\s*\*\*GA\*\*/.test(releaseNote);
+    if (!isGa) {
+      expect(stated![1]).toBe(pkg.version);
+    }
   });
 });

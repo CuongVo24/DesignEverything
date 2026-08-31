@@ -15,7 +15,13 @@ export const HOOK_ROLES = [
   {
     id: 'claude:pre-tool-use',
     event: 'PreToolUse',
-    matcher: 'Write|Edit|MultiEdit|NotebookEdit|Bash',
+    // H3 — PowerShell added: Claude Code's built-in PowerShell tool (the
+    // default terminal on Windows) is a separate tool identity from Bash and
+    // was not covered by this matcher, so any write-capable PowerShell
+    // command reached the filesystem ungated during an active interview.
+    // pre-tool-use.mjs maps a "PowerShell" tool_name onto the same Bash
+    // authority path (coreTool = 'Bash') once it arrives.
+    matcher: 'Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell',
     file: 'pre-tool-use.mjs',
   },
 ];

@@ -19,6 +19,14 @@ Người mới rất hay mơ một app mobile theo kiểu "code xong là có app
 **default**  
 `Một nền tảng duy nhất mà bạn đang dùng thiết bị thật để thử nghiệm (Android hoặc iOS) để tránh phức tạp hóa việc build/test cả hai môi trường ở MVP.`
 
+**options**  
+- `android` — Android: dễ thử nghiệm nếu đã có thiết bị Android thật.
+- `ios` — iOS: hợp hệ Apple nhưng cần môi trường build và ký riêng.
+- `both` — Cả hai: mở rộng phạm vi nhưng làm build và kiểm thử phức tạp hơn.
+
+Khuyến nghị phụ thuộc ngữ cảnh (không có lựa chọn nào được preselect — phụ thuộc thiết bị thật bạn
+đang có). Luôn còn đường tự nhập (Other).
+
 **translate_back**  
 "Mình tóm lại phạm vi nền tảng thử nghiệm đầu tiên là `<Android / iOS / cả hai>`. Với nguồn lực hiện tại, việc tập trung vào `<Android / iOS>` làm MVP sẽ giúp giảm thiểu rủi ro build/test."
 
@@ -47,6 +55,15 @@ Tập trung vào một nền tảng duy nhất có thiết bị thật để ki�
 
 **default**  
 "Online-first. Chỉ chọn offline-first khi người dùng thật sự có tình huống mất mạng thường xuyên và vẫn phải hoàn thành việc ngay lúc đó."
+
+**options**  
+- `online-first` — Ưu tiên có mạng **(khuyến nghị)**: đơn giản nhất nhưng người dùng cần kết nối
+  liên tục để thao tác được.
+- `offline-critical` — Offline tác vụ chính: bảo vệ luồng quan trọng nhưng cần sync có chọn lọc.
+- `offline-first` — Offline trước: trải nghiệm bền vững nhưng chi phí đồng bộ và xung đột cao.
+
+Luôn còn đường tự nhập (Other) ngoài ba lựa chọn trên. Chọn `offline-critical`/`offline-first` kích
+hoạt cảnh báo bắt buộc bên dưới trước khi commit.
 
 **translate_back**  
 "Mình hiểu yêu cầu kết nối là: `<online-first / cần offline cho tác vụ nào>`. Nếu cần offline, điều đó kéo theo lưu cục bộ, đồng bộ lại khi có mạng, và tăng độ phức tạp đáng kể. Bạn muốn chấp nhận đổi chi phí đó để lấy trải nghiệm này chứ?"
@@ -109,6 +126,14 @@ Mỗi quyền thêm vào đều ảnh hưởng niềm tin người dùng và có
 **default**  
 "Có thể dùng FCM nếu push thực sự phục vụ luồng giá trị, nhưng mặc định chưa bật nếu không có lý do rõ ràng từ hành vi người dùng."
 
+**options**  
+- `no-push` — Chưa cần push **(khuyến nghị)**: giữ MVP đơn giản nhưng ít khả năng kéo người dùng
+  quay lại.
+- `transactional-push` — Push giao dịch: nhắc việc thiết yếu nhưng cần sự kiện và quyền thông báo.
+- `engagement-push` — Push tương tác: tăng quay lại nhưng dễ gây phiền và đòi hỏi tối ưu.
+
+Luôn còn đường tự nhập (Other) ngoài ba lựa chọn trên.
+
 **translate_back**  
 "Mình hiểu nhu cầu push là: `<có / chưa cần>`, dùng để `<nhắc việc gì>`. Nếu triển khai, phương án thực dụng hiện tại là FCM cho thông báo đẩy; nếu chưa có tình huống buộc phải kéo người dùng quay lại, có thể để sau MVP."
 
@@ -137,6 +162,16 @@ FCM là mặc định hợp lý khi thật sự cần push, nhưng bản thân p
 
 **default**  
 "Mặc định phát hành bản thử trước qua TestFlight hoặc kênh internal test. Nếu có bán trong app, dùng in-app purchase và chấp nhận phí nền tảng."
+
+**options**  
+- `internal-test` — Thử nghiệm nội bộ **(khuyến nghị)**: nhận phản hồi nhanh nhưng chưa tiếp cận
+  người dùng công khai.
+- `store-free` — Store miễn phí: có phân phối công khai nhưng vẫn qua thủ tục store.
+- `store-iap` — Store in-app purchase: có doanh thu trong app nhưng chịu phí và chính sách nền tảng.
+- `store-other` — Store cách khác: linh hoạt mô hình nhưng cần tự xác định quy trình tuân thủ.
+
+Luôn còn đường tự nhập (Other) ngoài bốn lựa chọn trên. Chọn bất kỳ phương án `store-*` nào kích
+hoạt cảnh báo bắt buộc bên dưới trước khi commit.
 
 **translate_back**  
 "Mình tóm lại chiến lược phát hành là: `<bản thử / lên store thật ngay>`, và kiếm tiền theo hướng `<free trước / in-app purchase / cách khác>`. Mình lưu ý trước rằng mobile không phải code xong là phát hành được ngay: còn review, ký app, cấu hình phân phối và vòng test trước khi public."

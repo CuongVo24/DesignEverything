@@ -47,7 +47,7 @@ Output thật của [generateAgentsMd](../../../../../src/adapters/agents/genera
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã vật chất hóa (materialize) kết quả sinh tự động từ `generateAgentsMd` ra tệp **[AGENTS.sample.md](file:///e:/DesignEverything/Design/Adapters/generated/AGENTS.sample.md)** đặt dưới thư mục `Design/Adapters/generated/`. Đầu tệp được ghi rõ lời cảnh báo sinh tự động và cấm chỉnh sửa thủ công để tránh biến nó thành nguồn sự thật thứ hai.
-- Đã xây dựng tệp kiểm thử chống drift **[generateAgentsMd.artifact.test.ts](file:///e:/DesignEverything/src/adapters/agents/generateAgentsMd.artifact.test.ts)** để so khớp nội dung giữa hàm sinh tự động với tệp sample đã commit. Nếu có bất kỳ chỉnh sửa thủ công nào trên sample hoặc thay đổi logic generator mà không cập nhật lại, test sẽ lập tức báo đỏ (đã kiểm chứng qua sanity check sửa 1 ký tự).
-- Đã cập nhật tệp **[agents-md.md](file:///e:/DesignEverything/Design/Adapters/agents-md.md)** để chỉ ra đường dẫn của artifact sample được sinh ra tự động.
+- Đã vật chất hóa (materialize) kết quả sinh tự động từ `generateAgentsMd` ra tệp **[AGENTS.sample.md](../../../../Adapters/generated/AGENTS.sample.md)** đặt dưới thư mục `Design/Adapters/generated/`. Đầu tệp được ghi rõ lời cảnh báo sinh tự động và cấm chỉnh sửa thủ công để tránh biến nó thành nguồn sự thật thứ hai.
+- Đã xây dựng tệp kiểm thử chống drift **[generateAgentsMd.artifact.test.ts](../../../../../src/adapters/agents/generateAgentsMd.artifact.test.ts)** để so khớp nội dung giữa hàm sinh tự động với tệp sample đã commit. Nếu có bất kỳ chỉnh sửa thủ công nào trên sample hoặc thay đổi logic generator mà không cập nhật lại, test sẽ lập tức báo đỏ (đã kiểm chứng qua sanity check sửa 1 ký tự).
+- Đã cập nhật tệp **[agents-md.md](../../../../Adapters/agents-md.md)** để chỉ ra đường dẫn của artifact sample được sinh ra tự động.
 - Chạy `npm test` xanh hoàn toàn 58/58 tests. Lint và typecheck hoàn toàn sạch lỗi.

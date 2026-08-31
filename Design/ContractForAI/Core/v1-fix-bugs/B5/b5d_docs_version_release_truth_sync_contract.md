@@ -56,11 +56,25 @@
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: PARTIAL | Proof: INVALID_FOR_CLAIM
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SEAM_PARTIAL
 
-**Không phải DONE** (sửa 2026-07-25, xem `plan-v1-fix.md` §1.2/§3.1). `file:///e:/...` cleanup và
-Glossary S0–S8 fix là thật và nên giữ. Nhưng `RT-04` chỉ assert `pkg.version === '6.0.0'` literal —
-không so với release note/Versioning/ConformanceMatrix, nên chính version drift mà B5d phải bắt lại
-đang bị test này khóa cứng thay vì phát hiện (R15). `runtime_version` vẫn hardcode `'6.0.0'` ở hàng
-chục chỗ trong `cliOperations.ts`/`cli.mjs`. Release note trước đó ghi GA — đã sửa về
-UNRELEASED/BLOCKED cùng đợt review này. Đóng lại ở P12 sau khi version có một nguồn sinh duy nhất.
+**Nâng 2026-08-10, chưa VERIFIED.** §7 bản 2026-07-25 phía trên đã sai ở cả hai claim chặn: đọc trực
+tiếp `test/docs/runtime-truth.test.ts:89-103` xác nhận `RT-04` **không** assert literal `'6.0.0'` —
+nó so `pkg.version` với `RUNTIME_VERSION` (nguồn sự thật duy nhất từ `src/version.ts`) và có comment
+tường minh giải thích chính xác vì sao literal sẽ phá mục đích test (R15). `grep -rc "'6\.0\.0'"
+src/adapters/shared/cliOperations.ts` → 0 match, không phải "hàng chục chỗ hardcode" như văn bản cũ nói.
+
+**Bằng chứng đóng (chạy lại 2026-08-10):** `npx vitest run test/docs` → 2 file, 41 test pass
+(`runtime-truth` 4, `skill-truth` 37). `grep -r "file:///" docs/ README.md` → 0 match (RB-08, đối
+chiếu độc lập cùng ngày). `node scripts/check-version-sync.mjs` → exit 0.
+
+**Gap thật còn lại, không phải "còn hàng chục hardcode":**
+1. Chưa đi lại `quickstart.md` từng bước thật trên thư mục sạch (fresh-reader smoke, §6) — việc thủ
+   công, chưa làm trong đợt đối chiếu này.
+2. `ConformanceMatrix.md`: dòng Codex-native-plugin ở dạng tier-A tường minh (đúng format bảng gốc)
+   chưa xác nhận — hiện có mô tả rải rác ở §B4e/R17 (xem RB-08 note ở `ReleaseReadinessPlan.md`).
+3. Full `npm test` (không chỉ `test/docs`) cần xanh trước khi release claim thật — đây là điều kiện
+   §6 cuối cùng, không riêng của B5d.
+
+Vì 2 claim chặn cũ đã sai và phần lớn checklist §3 xác nhận đúng qua test thật, nâng lên `SEAM_PARTIAL`
+(không còn off-axis `INVALID_FOR_CLAIM`). Chưa `VERIFIED` vì 3 mục trên còn thật, không phải overclaim.

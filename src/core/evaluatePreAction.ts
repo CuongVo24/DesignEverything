@@ -2,9 +2,10 @@ import {
   PreActionRequest,
   PreActionDecision,
   AdapterCapability,
+  Progress,
 } from './schemas/index.js';
 import type { PhaseContext } from './preAction/types.js';
-import { classifyCliShellCommand, collectDeepenPending } from './preAction/shared.js';
+import { classifyCliShellCommand, collectDeepenPending, isBootstrapCliInvocation } from './preAction/shared.js';
 import {
   checkHealth,
   normalizeTargetPaths,
@@ -72,10 +73,31 @@ function evaluatePreActionInner(
   if (!stateRes.ok) return stateRes.deny;
   const execState = stateRes.execState;
 
-  // 5. Load progress from the canonical interview store.
-  const progRes = loadProgressGuard(request, workspace, execState);
-  if (!progRes.ok) return progRes.deny;
-  const { progress, canonicalRevision } = progRes;
+  // 5. Load progress from the canonical interview store. H1 — a bootstrap
+  // CLI invocation (`init`/`repair`/`status`/`help`) is exempt from failing
+  // closed here: those subcommands exist to diagnose or recover a missing/
+  // corrupt store, so requiring a healthy store to reach them deadlocks the
+  // exact recovery path Core's own error messages point to. When the store
+  // IS actually loadable (e.g. `status` mid-interview, `init` on an already-
+  // initialized workspace), still load it — the phase dispatch below needs
+  // real progress whenever it exists. Only the STORE_MISSING/STORE_CORRUPT
+  // failure is swallowed, and only for this subcommand set; step 6 below
+  // (classifyCliShellCommand) remains the real allow/deny authority for the
+  // exact subcommand, this just lets it be reached instead of pre-empted.
+  let progress: Progress | null = null;
+  let canonicalRevision: number | null = null;
+  if (request.action_kind === 'shell' && isBootstrapCliInvocation(request.command_argv)) {
+    const best = loadProgressGuard(request, workspace, execState);
+    if (best.ok) {
+      progress = best.progress;
+      canonicalRevision = best.canonicalRevision;
+    }
+  } else {
+    const progRes = loadProgressGuard(request, workspace, execState);
+    if (!progRes.ok) return progRes.deny;
+    progress = progRes.progress;
+    canonicalRevision = progRes.canonicalRevision;
+  }
 
   // 6. A CLI-shaped shell invocation gets Core's own subcommand+phase authority
   // here, ahead of every phase branch (mirroring where the removed .mjs wrapper

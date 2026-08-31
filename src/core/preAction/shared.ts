@@ -40,6 +40,25 @@ export function classifyCliShellCommand(argv: string[], phase: string | null | u
   return { decision: 'deny', reason_code: result.reason_code, user_message: result.message };
 }
 
+// H1 — subcommands that exist precisely to diagnose or recover a missing/
+// corrupt canonical interview store (`init`, `repair`) or to read state
+// without mutating it (`status`, `help`). These must be reachable even when
+// loadProgressGuard would otherwise fail closed with STORE_MISSING/
+// STORE_CORRUPT — requiring a healthy store to reach the command that
+// creates one is a deadlock: Core's own safe_next_command for a broken
+// store literally names one of these. classifyCliSubcommand (called via
+// classifyCliShellCommand at the CLI-shell-authority step) still remains
+// the real allow/deny authority for the exact subcommand; this set only
+// controls whether evaluatePreAction lets progress stay null instead of
+// pre-empting that step with a hard deny.
+const BOOTSTRAP_CLI_SUBCOMMANDS = new Set(['init', 'repair', 'status', 'help', '--help', '-h']);
+
+export function isBootstrapCliInvocation(argv: string[] | undefined): boolean {
+  if (!argv || !isCliInvocation(argv)) return false;
+  const subcommand = (argv[2] || 'status').toLowerCase();
+  return BOOTSTRAP_CLI_SUBCOMMANDS.has(subcommand);
+}
+
 // P6 10.3 — best-effort, same degrade-to-empty pattern as collectDeepenPending:
 // a missing/broken catalog must never turn the write gate into a hard crash, it
 // just falls back to exact-path-only classification (today's behavior).

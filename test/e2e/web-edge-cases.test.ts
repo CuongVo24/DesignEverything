@@ -227,13 +227,21 @@ describe('E2E Web Edge Cases Flow', () => {
     // Answer CAL0
     const promptResult = onUserPromptSubmit({ workspaceRoot: testWorkspaceRoot });
     const usedToken = promptResult.capabilityToken!;
-    const progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
+    let progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
 
     expect(progress.current_step).toBe('S0');
 
-    // Re-using the already-consumed capability token for a second commit
-    // must be rejected — this is the replay protection that replaces the
-    // old duplicate-userTurnId check (X01/R01).
+    // B24b (D60) — CAL0's batch token also covers S0 (neither has
+    // option_hints nor a critic), so reusing the SAME token to commit S0
+    // must succeed — that's the entire point of D60: no fresh
+    // UserPromptSubmit turn is required between two questions Core placed
+    // in the same batch.
+    progress = commitViaCanonical(testWorkspaceRoot, script, { capabilityToken: usedToken });
+    expect(progress.current_step).toBe('S1');
+
+    // The batch is now fully consumed (CAL0 and S0 both committed) —
+    // reusing the token a third time must be rejected. This is the replay
+    // protection that replaces the old duplicate-userTurnId check (X01/R01).
     expect(() => {
       commitStep(progress, script, { capabilityToken: usedToken });
     }).toThrow(/TURN_CAPABILITY_REPLAY/);

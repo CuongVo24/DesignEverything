@@ -58,7 +58,7 @@ Interface đích:
 
 ## 7. Status
 
-Spec: APPROVED | Implementation: IMPLEMENTED | Proof: SNAPSHOT_ONLY
+Spec: APPROVED | Implementation: IMPLEMENTED | Proof: UNIT_ONLY
 
 **Implementation đóng 2026-08-06 (A1-P10).** Lịch sử: SKILL.md handoff wording ("chưa validate,
 gate chưa mở") được sửa đúng ở 2026-07-25 (`85f78f2`) nhưng cùng lúc xóa mất ba thứ: cú pháp lệnh
@@ -70,5 +70,16 @@ wired vào dispatcher production + command block khả thi cho cả Claude/Codex
 citation rule và scope guard line khôi phục lại cả hai SKILL.md (2026-08-06, A1-P10). Đóng luôn
 U03: `docs/RUN-web-sample.md`, `RUNBOOK-web.md`, `RUNBOOK-mobile.md` không còn nói "docs tồn tại
 là mở khóa code" — sửa thành đúng luồng `emit → plan-validating (deny) → /build validate →
-ready-to-execute (allow)`. Proof vẫn `SNAPSHOT_ONLY` — fixture target-local thật cho toàn bộ
-handoff card (không chỉ deepen) thuộc A2 (B5a/B5c).
+ready-to-execute (allow)`.
+
+**Nâng 2026-08-10 (SNAPSHOT_ONLY → UNIT_ONLY, không phải VERIFIED).** §7 bản cũ đánh giá thấp bằng
+chứng đã có: `test/integration/skill-handoff.test.ts` (4 test, xác nhận chạy 2026-08-10) gọi thẳng
+`renderNextStep()` và `runCliOperation()` — hành vi thật đang chạy (card `needs-validation` không
+chứa "gate đã mở", card `deepen` chỉ hiện đúng phase không-busy, CLI `status` trả `CORRUPT_PROGRESS_STATE`
++ `next_command` chứa "repair" khi progress.json hỏng), không phải so khớp văn bản tĩnh. `SNAPSHOT_ONLY`
+("chỉ so khớp văn bản/snapshot, không chạy hành vi thật") không còn mô tả đúng bằng chứng này.
+
+**Gap thật còn lại (đây là lý do chưa `SEAM_PARTIAL`/`VERIFIED`):** cả 2 test file hiện có
+(`skill-handoff.test.ts`, `skill-truth.test.ts`) đều gọi hàm Core trực tiếp hoặc so khớp text
+SKILL.md — chưa có fixture spawn một tiến trình CLI/skill đã cài thật đi trọn handoff card (không chỉ
+nhánh deepen, vốn đã có ở `deepen-fixture.test.ts`). Thuộc A2 (B5a/B5c), việc còn lại không phải việc mới.

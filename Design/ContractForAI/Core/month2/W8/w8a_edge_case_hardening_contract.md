@@ -44,10 +44,10 @@ Khóa lại các ca biên chính của gate/state/anchor bằng test hoặc fixt
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cài đặt bổ sung các ca kiểm thử biên cứng cáp nhằm bảo vệ toàn diện các logic lõi tại **[web-edge-cases.test.ts](file:///e:/DesignEverything/test/e2e/web-edge-cases.test.ts)** và **[mobile-edge-cases.test.ts](file:///e:/DesignEverything/test/e2e/mobile-edge-cases.test.ts)**:
+- Đã cài đặt bổ sung các ca kiểm thử biên cứng cáp nhằm bảo vệ toàn diện các logic lõi tại **[web-edge-cases.test.ts](../../../../../test/e2e/web-edge-cases.test.ts)** và **[mobile-edge-cases.test.ts](../../../../../test/e2e/mobile-edge-cases.test.ts)**:
   - **Kiểm thử Gate**: Xác thực việc thiếu một trong ba tài liệu (ví dụ: thiếu `02-scope.md`) vẫn giữ trạng thái chặn `deny` khi ghi code; đủ cả ba tài liệu sẽ lập tức mở khóa `allow`; các tệp tài liệu thừa ngoài cây taxonomy (như `08-unknown.md`) được bỏ qua và không làm sai lệch logic.
   - **Kiểm thử State**:
-    - Thêm fixture `invalid-version-format.json` tại **[test/fixtures/progress/invalid/](file:///e:/DesignEverything/test/fixtures/progress/invalid)**. Xác thực việc nạp tệp progress có phiên bản lệch/định dạng sai hoặc thiếu trường bắt buộc bị Zod chặn đứng và ném lỗi rõ ràng thông qua `loadProgress.test.ts`.
+    - Thêm fixture `invalid-version-format.json` tại **[test/fixtures/progress/invalid/](../../../../../test/fixtures/progress/invalid)**. Xác thực việc nạp tệp progress có phiên bản lệch/định dạng sai hoặc thiếu trường bắt buộc bị Zod chặn đứng và ném lỗi rõ ràng thông qua `loadProgress.test.ts`.
     - Xác thực chặn đứng double-advance (ngăn nhảy cóc câu trả lời qua `checkRate`) và duplicate turn (ném lỗi `Duplicate commit` nếu gửi trùng `userTurnId`).
   - **Kiểm thử Anchor & Taxonomy**: Xác thực tất cả tài liệu mẫu được sinh ra chứa mỏ neo `status=planned` đúng định dạng, cây 9 file phân phối chính xác theo nhánh hoạt động (nhánh Web sinh `07-deployment.md` và không sinh `07-release.md`; nhánh Mobile sinh `07-release.md` và không sinh `07-deployment.md`).
   - **Kiểm thử Nhập xấu**: Chặn cứng yêu cầu sinh mã nguồn sớm khi mới chỉ hoàn thành bước S1/S2; bảo vệ nhịp độ tương tác 1-bước/lượt khi người dùng cố ý nhảy chủ đề.

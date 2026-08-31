@@ -318,7 +318,7 @@ SOFTWARE.
 ```
 
 2. `package.json`: thêm `"license": "MIT"` (nếu RB-06 chưa chạy thì thêm ở đây, RB-06 giữ nguyên).
-3. README: thêm mục `## License` ngắn cuối file: "MIT — xem [LICENSE](LICENSE)."
+3. README: thêm mục `## License` ngắn cuối file: "MIT — xem [LICENSE](../../LICENSE)."
 4. `CONTRIBUTING.md` tối giản (~20 dòng): cách build/test, quy ước commit (theo [Design/Conventions/Coding & Git Standard.md](../Conventions/Coding%20&%20Git%20Standard.md)), nơi mở issue.
 
 ### Checklist

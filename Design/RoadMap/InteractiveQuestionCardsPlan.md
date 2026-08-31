@@ -1,6 +1,35 @@
 # Interactive Question Cards — phỏng vấn bằng thẻ chọn thay vì gõ văn xuôi
+> **Superseded 2026-08-16 (một phần) bởi lane 8.2** ([InterviewCadencePlan.md](InterviewCadencePlan.md),
+> D59): thẻ xác nhận dịch ngược mà số đo 32/5/84% dưới đây mô tả đã bị bỏ khỏi build hiện tại — số
+> liệu đó chỉ còn giá trị lịch sử cho thiết kế 8.1. Số liệu turn/batch thay thế:
+> [interview-cadence-turn-count-report.md](evidence/interview-cadence-turn-count-report.md).
+>
+> **Lane MỞ — 2026-08-12, đang RC (chưa cắt GA).** Trạng thái này thay thế điều kiện tiên quyết
+> pre-GA cũ bên dưới (nay chỉ còn giá trị lịch sử — cả hai điều kiện đã đóng, xem
+> [MasterSequencingPlan.md](MasterSequencingPlan.md) Gate C1/C2). Hợp đồng 8.1: Claude nhận thẻ
+> tương tác native, AGENTS.md nhận fallback text, Codex phỏng vấn native bị hoãn (xem
+> [ConformanceMatrix.md](../Adapters/ConformanceMatrix.md) dòng `interactive_choice`).
+>
+> Hành trình web canonical: `CAL0, S0–S7, R1, S8, W1–W5` (16 câu), giữ nguyên 16 lượt `commit`
+> (D54 không đổi). **Số đo thật (không phải mô hình hoá)** từ
+> [interactive-cards-turn-count-report.md](evidence/interactive-cards-turn-count-report.md) (B22e,
+> đi qua state machine thật qua `commitStep`): baseline 32 tin nhắn gõ tay (mỗi câu 1 lượt trả lời +
+> 1 lượt xác nhận) giảm còn **5** trong hành trình canonical không dùng Other/không timeout — giảm
+> **84%** — vì bước xác nhận dịch ngược nay LUÔN là thẻ 3 lựa chọn cho mọi câu (kể cả 5 câu free-text
+> `S0, S6, R1, S8, W5`), chỉ còn bước trả lời của 5 câu đó vẫn cần gõ; 11 câu còn lại được trợ giúp
+> bằng thẻ hoàn toàn. (Bản nháp trước đó của dòng này ghi nhầm "tối đa 16 lượt gõ" — nhầm giữa tổng
+> lượt `commit` với số tin nhắn phải gõ tay; đã sửa theo số đo thật.) Cài đặt hiện tại **không giữ
+> câu trả lời qua lượt**: mỗi câu cần một capability token mới hợp lệ, commit ngay trong lượt trả
+> lời (nhánh R-spike đang giả định, **chưa được xác nhận bởi phiên thật** — xem
+> [r-spike-userpromptsubmit-probe.md](../ContractForAI/Core/v7-expansion/r-spike-userpromptsubmit-probe.md)
+> §7; đây là điều kiện duy nhất còn treo trước khi cắt GA, xem
+> [v8.1-release-note.md](v8.1-release-note.md)).
 
-> **Lane CHƯA mở.** Target version **8.1.0** — MINOR trên nền V6 `8.0.0` ([v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md)), vì B22b tự khai tương thích ngược: thiếu `options` = câu free-text như cũ. Lane này chạy **sau** V6 — cái được chốt 2026-08-01 chỉ là **thứ tự lane**, KHÔNG phải là V6 đã xong: nền `8.0.0` vẫn CHƯA tồn tại (cả 6 contract `B19a–B21b` còn `WAITING_FOR_APPROVAL`, D49–D52 chưa duyệt — xem [v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md)). Lane cũng không được chen hàng trước khi **toàn bộ điều kiện** gỡ block 7.0.0 của `v1-fix-bugs` ở [v7-release-note.md](v7-release-note.md) §0 đóng.
+> **Điều kiện tiên quyết pre-GA (lịch sử — đã đóng đủ 2026-08-10, xem Gate C1/C2 ở
+> [MasterSequencingPlan.md](MasterSequencingPlan.md)).** Target version **8.1.0** — MINOR trên nền V6
+> `8.0.0` ([v6-expansion/README.md](../ContractForAI/Core/v6-expansion/README.md)), vì B22b tự khai
+> tương thích ngược: thiếu `options` = câu free-text như cũ. Lane này chạy **sau** V6 — cái được chốt
+> 2026-08-01 chỉ là **thứ tự lane**, không phải V6 đã xong tại thời điểm chốt.
 >
 > Vai trò: TaskBrief nguồn cho `Design/ContractForAI/Core/v7-expansion/` theo ngoại lệ expansion lane ([CONTRACT_STRUCTURE_RULE](../ContractForAI/CONTRACT_STRUCTURE_RULE.md) §0). "v7" ở đây là **số thứ tự lane** (lane mở rộng thứ 7, sau v2..v6-expansion) — **không phải** version 7.0.0, vốn thuộc `v1-fix-bugs`. Contract chỉ được viết sau khi D53–D55 dưới đây được duyệt và ghi vào [DecisionLog.md](../DecisionLog.md).
 

@@ -3,15 +3,21 @@ import { TARGET_LOCAL_CLI_COMMAND } from '../../version.js';
 
 // The only proven-executable CLI entrypoint today. Cards must reference real
 // subcommands — the ones with a case in cliOperations.ts's dispatcher (status,
-// init, commit, validate, build, repair, emit, next, start, verify, review,
-// deepen) — not an aspirational `npx design-everything` binary that is not
-// published, and not `amend`, which has no dispatcher case (see §0 below).
-// The invariant is enforced by renderNextStep.test.ts against
+// init, commit, undo, validate, build, repair, emit, next, start, verify,
+// review, deepen) — not an aspirational `npx design-everything` binary that
+// is not published, and not `amend`, which has no dispatcher case (see §0
+// below). The invariant is enforced by renderNextStep.test.ts against
 // CLI_COMMAND_SURFACE, so this list cannot silently drift again.
 const CLI = TARGET_LOCAL_CLI_COMMAND;
 
 export interface NextStepCard {
-  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported' | 'deepen';
+  // H4 — 'interview' added: cliOps/status.ts builds this state directly
+  // (not through renderNextStep, which has no notion of interview progress/
+  // script) whenever the canonical store is mid-interview. See status.ts's
+  // "H4" comment for why this couldn't stay the pre-existing renderNextStep
+  // call (it was invoked with a hardcoded `profile: null`, which always
+  // produced 'needs-profile' regardless of actual interview state).
+  state: 'needs-profile' | 'needs-validation' | 'ready' | 'executing' | 'verifying' | 'repairing' | 'reviewing' | 'blocked' | 'complete' | 'unsupported' | 'deepen' | 'interview';
   now: string;
   whyNow: string;
   allowedScope: string[];

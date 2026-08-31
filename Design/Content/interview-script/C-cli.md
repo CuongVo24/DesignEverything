@@ -20,6 +20,15 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 **default**  
 `Node.js (TypeScript) để tận dụng hệ sinh thái phong phú và dễ đóng gói.`
 
+**options**  
+- `node-ts` — Node TypeScript **(khuyến nghị)**: tận dụng hệ sinh thái phong phú nhưng cần runtime
+  Node.
+- `python` — Python: viết nhanh và dễ học nhưng đóng gói đa nền tảng cần chú ý.
+- `go` — Go: binary gọn nhẹ nhưng tốc độ phát triển ban đầu có thể chậm hơn.
+- `rust` — Rust: an toàn và hiệu năng cao nhưng đường học và compile phức tạp.
+
+Luôn còn đường tự nhập (Other) ngoài bốn lựa chọn trên.
+
 **translate_back**  
 "Mình ghi nhận ngôn ngữ và môi trường chạy là: `<Node.js / Python / Go / Rust / Bash>`, sử dụng các thư viện chính: `<danh sách thư viện>`."
 
@@ -44,6 +53,15 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 
 **default**  
 `Kết hợp truyền flags/arguments cho các lệnh tự động và menu tương tác (interactive prompts) khi cần nhập liệu trực quan.`
+
+**options**  
+- `flags` — Flags và arguments: dễ tự động hoá nhưng người mới phải nhớ cú pháp.
+- `interactive` — Menu tương tác: dễ khám phá nhưng khó dùng trong script tự động.
+- `pipeline` — Pipeline stdin stdout: ghép công cụ tốt nhưng cần quy ước dữ liệu rõ.
+- `flags-interactive` — Flags và menu **(khuyến nghị)**: phục vụ cả hai cách nhưng bề mặt CLI lớn
+  hơn.
+
+Luôn còn đường tự nhập (Other) ngoài bốn lựa chọn trên.
 
 **translate_back**  
 "Mình tóm tắt phương thức giao tiếp CLI là: `<truyền tham số flags/args / menu tương tác / stdin/stdout pipeline>`. Thư viện xử lý giao diện CLI đề xuất là `<Commander.js / Inquirer.js / Clack / các thư viện tương ứng>`."
@@ -95,6 +113,15 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 **default**  
 `Chạy trên hệ điều hành hiện tại của người phát triển (ví dụ Windows hoặc macOS) để tối giản hóa việc tương thích.`
 
+**options**  
+- `windows` — Windows: tối ưu máy hiện tại nhưng chưa bảo đảm hệ khác.
+- `macos` — macOS: hợp hệ Apple nhưng khác biệt shell và đóng gói.
+- `linux` — Linux: hợp môi trường server nhưng ít bao phủ desktop phổ thông.
+- `cross-platform` — Đa nền tảng: phủ rộng nhưng cần test path và CRLF kỹ hơn.
+
+Khuyến nghị phụ thuộc ngữ cảnh (không có lựa chọn nào được preselect — phụ thuộc hệ điều hành bạn
+đang dùng thật). Luôn còn đường tự nhập (Other).
+
 **translate_back**  
 "Mình ghi nhận hệ điều hành hỗ trợ đầu tiên là: `<hệ điều hành của bạn>`. Các hệ điều hành khác sẽ được xem xét sau MVP để tối ưu hóa việc phân phối."
 
@@ -119,6 +146,16 @@ Các công cụ CLI có các yêu cầu kỹ thuật đặc thù (như tương t
 
 **default**  
 `Chạy cục bộ bằng node hoặc npx (hoặc npm link) để kiểm thử nội bộ trước khi xuất bản lên NPM registry.`
+
+**options**  
+- `local` — Chạy cục bộ **(khuyến nghị)**: nhanh để thử nghiệm nhưng người khác khó cài đặt.
+- `registry` — Registry ngôn ngữ: cài đặt quen thuộc nhưng cần duy trì phiên bản phát hành.
+- `release-binary` — Binary phát hành: không cần runtime nhưng build đa nền tảng phức tạp.
+- `os-package-manager` — Package manager hệ điều hành: tiện cho người dùng nhưng cần công thức cho
+  từng hệ.
+
+Luôn còn đường tự nhập (Other) ngoài bốn lựa chọn trên. Chọn `release-binary`/`os-package-manager`
+kích hoạt cảnh báo phân phối đa nền tảng trước khi commit.
 
 **translate_back**  
 "Mình xác nhận cơ chế phân phối ban đầu: `<cục bộ qua node/npx / npm link / NPM registry>`."

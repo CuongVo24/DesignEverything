@@ -45,7 +45,7 @@ Chạy được một phiên Claude Code trọn tuyến **S0→S6→M1–M5** tr
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cài đặt kịch bản kiểm thử tích hợp E2E cho nhánh Mobile tại **[mobile-flow.test.ts](file:///e:/DesignEverything/test/e2e/mobile-flow.test.ts)**:
+- Đã cài đặt kịch bản kiểm thử tích hợp E2E cho nhánh Mobile tại **[mobile-flow.test.ts](../../../../../test/e2e/mobile-flow.test.ts)**:
   - Giả lập trọn vẹn chu kỳ phỏng vấn Mobile (12 lượt tương tác S0->S6->M1->M5) kết hợp `onSessionStart`, `onUserPromptSubmit` và lệnh lõi `commitStep`.
   - Xác thực việc chọn nhánh `branchChoice='mobile'` tại S6 khóa chặt nhánh hoạt động và chuyển hướng bước tiếp theo sang `M1`.
   - Kiểm thử cơ chế chặn cứng gating: chặn ghi code ngoài docs `apps/mobile/src/index.ts` khi chưa sinh tài liệu (bị chặn bởi gate `scope-locked`).

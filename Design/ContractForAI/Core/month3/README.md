@@ -1,9 +1,9 @@
 # Contracts — Month 3 (tuần 9–12) · Dogfood + kiểm chứng trên dự án thật
 
-> Nguồn: [Month3 RoadMap](../../../RoadMap/Month3/README.md) + [Week-09](../../../RoadMap/Month3/Week-09.md)…[Week-12](../../../RoadMap/Month3/Week-12.md). Tuân [CONTRACT_STRUCTURE_RULE](../CONTRACT_STRUCTURE_RULE.md).
+> Nguồn: [Month3 RoadMap](../../../RoadMap/Month3/README.md) + [Week-09](../../../RoadMap/Month3/Week-09.md)…[Week-12](../../../RoadMap/Month3/Week-12.md). Tuân [CONTRACT_STRUCTURE_RULE](../../CONTRACT_STRUCTURE_RULE.md).
 
 ## Vì sao Month 3 vẫn có contract (dù §1 ghi "thường không cần")
-[CONTRACT_STRUCTURE_RULE §1](../CONTRACT_STRUCTURE_RULE.md) nói Month 3 là dogfood/nội dung nên **thường** dùng nghiệm thu Week sẵn có, ít cần contract code. Đúng — nhưng "thường không cần" không phải "cấm". Month 3 vẫn có hai loại việc dễ trôi nếu không atom hoá:
+[CONTRACT_STRUCTURE_RULE §1](../../CONTRACT_STRUCTURE_RULE.md) nói Month 3 là dogfood/nội dung nên **thường** dùng nghiệm thu Week sẵn có, ít cần contract code. Đúng — nhưng "thường không cần" không phải "cấm". Month 3 vẫn có hai loại việc dễ trôi nếu không atom hoá:
 - **Đo lường phải trung thực** (W9–W10): dogfood dễ tự dễ dãi → contract khoá *artifact bắt buộc* (docs tree thật, số đo cơ học) thay vì "cảm giác ổn".
 - **Sửa nội dung phải ở đúng tầng** (W11–W12): vá output/golden mà quên nguồn `Content/`, hoặc đổi schema quá sớm → contract khoá *tầng được phép chạm* và *thứ tự ưu tiên content → taxonomy → schema*.
 

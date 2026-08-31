@@ -54,7 +54,7 @@ export function onUserPromptSubmit(ctx: {
 
   let injectedContext = '';
   try {
-    injectedContext = renderInject(capRes.progress, script, capRes.token);
+    injectedContext = renderInject(capRes.progress, script, capRes.token, capRes.committedAnswers);
   } catch (error: unknown) {
     return {
       decision: 'block',

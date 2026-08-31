@@ -39,11 +39,11 @@ Chạy trọn một phiên Claude Code theo nhánh web (S0→W5) trên một d�
 `DONE`
 
 ### Quyết định thực tế & Nghiệm thu
-- Đã cài đặt kịch bản kiểm thử tích hợp E2E tại **[web-flow.test.ts](file:///e:/DesignEverything/test/e2e/web-flow.test.ts)**:
+- Đã cài đặt kịch bản kiểm thử tích hợp E2E tại **[web-flow.test.ts](../../../../../test/e2e/web-flow.test.ts)**:
   - Giả lập trọn vẹn chu kỳ phỏng vấn Web 12 lượt tương tác S0->S6->W1->W5 sử dụng hàm lõi `commitStep` và các hook adapter `onSessionStart`, `onUserPromptSubmit`, `onPreToolUse`.
   - Kiểm thử cơ chế chặn cứng gating: chặn `Write src/index.ts` và `Bash npm install` trước khi đủ tài liệu, đồng thời kiểm tra trả đúng tin nhắn từ gate `scope-locked`.
   - Tự động sinh cây 9 file tài liệu bằng `emitTree` sau khi hoàn tất phỏng vấn ở W5 và lưu xuống đĩa.
   - Xác thực việc tự động mở cổng chặn sau khi tài liệu đã sẵn sàng, cho phép ghi code ngoài docs và tự động append `scope-locked` vào `gates_passed`.
   - Kiểm thử ca rate limit của `onUserPromptSubmit` khi cố tình commit bypass.
-- Đã lập tài liệu nhật ký chạy mẫu chi tiết tại **[RUN-web-sample.md](file:///e:/DesignEverything/docs/RUN-web-sample.md)** ghi nhận các bước input/output phỏng vấn, mốc chặn/mở gate và sơ đồ cấu trúc file tài liệu đầu ra.
+- Đã lập tài liệu nhật ký chạy mẫu chi tiết tại **[RUN-web-sample.md](../../../../../docs/RUN-web-sample.md)** ghi nhận các bước input/output phỏng vấn, mốc chặn/mở gate và sơ đồ cấu trúc file tài liệu đầu ra.
 - Toàn bộ 44 unit và integration tests đều hoàn thành xanh sạch 100%.
