@@ -99,4 +99,4 @@ vọng exit 0), sửa hỏng một link trong `docs/Guideline.md`, chạy lại 
 
 ## 7. Status
 
-`WAITING_FOR_APPROVAL`
+`READY_TO_IMPLEMENT` — duyệt 2026-08-31 (Gate E1 đóng 6/6, D62–D67 `Active`)

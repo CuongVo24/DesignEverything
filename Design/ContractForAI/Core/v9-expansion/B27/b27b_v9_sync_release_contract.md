@@ -97,4 +97,4 @@ mọi link mở được và `node tools/check-docs.mjs` trong target exit 0.
 
 ## 7. Status
 
-`WAITING_FOR_APPROVAL`
+`READY_TO_IMPLEMENT` — duyệt 2026-08-31 (Gate E1 đóng 6/6, D62–D67 `Active`)

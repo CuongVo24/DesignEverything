@@ -34,7 +34,7 @@ một dòng ở đây, và mọi dòng phải trỏ tới thư mục có thật.
 | `v7-expansion` | [InteractiveQuestionCardsPlan.md](InteractiveQuestionCardsPlan.md) | [Core/v7-expansion/](../ContractForAI/Core/v7-expansion/) | [evidence/interactive-cards-turn-count-report.md](evidence/interactive-cards-turn-count-report.md) · [evidence/r-spike-userpromptsubmit-log.md](evidence/r-spike-userpromptsubmit-log.md) · [v8.1-release-note.md](v8.1-release-note.md) | 8.1.0 | **RC** — R-spike còn mở |
 | `v8-hotfix` | — (chỉ có Gate D1 ở [MasterSequencingPlan.md](MasterSequencingPlan.md)) | [Core/v8-hotfix/](../ContractForAI/Core/v8-hotfix/) | — | 9.0.0 (D68) | Contract DONE 2026-08-16, **chưa cắt** — số 8.1.1 bị 9.0.0 nuốt |
 | `v8-expansion` | [InterviewCadencePlan.md](InterviewCadencePlan.md) | [Core/v8-expansion/](../ContractForAI/Core/v8-expansion/) | [evidence/interview-cadence-turn-count-report.md](evidence/interview-cadence-turn-count-report.md) | 9.0.0 (D68) | Contract DONE 2026-08-16, **chưa cắt** — số 8.2.0 bị 9.0.0 nuốt |
-| `v9-expansion` | [V9-DocDepthPlan.md](V9-DocDepthPlan.md) | [Core/v9-expansion/](../ContractForAI/Core/v9-expansion/README.md) | — | 9.0.0 | **MỞ** 2026-08-31 — 6/6 contract `WAITING_FOR_APPROVAL`, chờ duyệt D62–D67 |
+| `v9-expansion` | [V9-DocDepthPlan.md](V9-DocDepthPlan.md) | [Core/v9-expansion/](../ContractForAI/Core/v9-expansion/README.md) | — | 9.0.0 | **MỞ** 2026-08-31 — D62–D67 `Active`, 6/6 contract `READY_TO_IMPLEMENT`, chưa batch nào chạy |
 
 ## Kế hoạch xuyên lane (không thuộc lane nào)
 

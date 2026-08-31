@@ -245,14 +245,14 @@ quên.
 | B24 | [b24e_codex_degradation_sync](Core/v8-expansion/B24/b24e_codex_degradation_sync_contract.md) | `DONE` |
 | B24 | [b24f_qa_invariants_and_turn_count](Core/v8-expansion/B24/b24f_qa_invariants_and_turn_count_contract.md) | `DONE` |
 
-### `v9-expansion` — v9-expansion — doc depth (9.0.0, lane MỞ)
+### `v9-expansion` — v9-expansion — doc depth (9.0.0, lane MỞ — 6/6 duyệt 2026-08-31)
 
 | Nhóm | Contract | Status |
 |---|---|---|
-| B25 | [b25a_guideline_emitter](Core/v9-expansion/B25/b25a_guideline_emitter_contract.md) | `WAITING_FOR_APPROVAL` |
-| B25 | [b25b_contract_tree_emitter](Core/v9-expansion/B25/b25b_contract_tree_emitter_contract.md) | `WAITING_FOR_APPROVAL` |
-| B26 | [b26a_doc_checker_emitter](Core/v9-expansion/B26/b26a_doc_checker_emitter_contract.md) | `WAITING_FOR_APPROVAL` |
-| B26 | [b26b_modules_deepen_module](Core/v9-expansion/B26/b26b_modules_deepen_module_contract.md) | `WAITING_FOR_APPROVAL` |
-| B27 | [b27a_frontend_deepen_module](Core/v9-expansion/B27/b27a_frontend_deepen_module_contract.md) | `WAITING_FOR_APPROVAL` |
-| B27 | [b27b_v9_sync_release](Core/v9-expansion/B27/b27b_v9_sync_release_contract.md) | `WAITING_FOR_APPROVAL` |
+| B25 | [b25a_guideline_emitter](Core/v9-expansion/B25/b25a_guideline_emitter_contract.md) | `READY_TO_IMPLEMENT` |
+| B25 | [b25b_contract_tree_emitter](Core/v9-expansion/B25/b25b_contract_tree_emitter_contract.md) | `READY_TO_IMPLEMENT` |
+| B26 | [b26a_doc_checker_emitter](Core/v9-expansion/B26/b26a_doc_checker_emitter_contract.md) | `READY_TO_IMPLEMENT` |
+| B26 | [b26b_modules_deepen_module](Core/v9-expansion/B26/b26b_modules_deepen_module_contract.md) | `READY_TO_IMPLEMENT` |
+| B27 | [b27a_frontend_deepen_module](Core/v9-expansion/B27/b27a_frontend_deepen_module_contract.md) | `READY_TO_IMPLEMENT` |
+| B27 | [b27b_v9_sync_release](Core/v9-expansion/B27/b27b_v9_sync_release_contract.md) | `READY_TO_IMPLEMENT` |
 

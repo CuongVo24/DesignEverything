@@ -5,9 +5,10 @@
 > [DecisionLog.md](../../../DecisionLog.md).
 >
 > **Lane MỞ (2026-08-31)** — Gate E0 đã đóng (đợt dọn `Design/`: `check-docs.mjs` xanh trong
-> `npm test`). **D62–D67 đã duyệt hết 2026-08-31 (Gate E1 ✅).** Cả 6 contract vẫn ở
-> `WAITING_FOR_APPROVAL`: **executor chưa được chạm code** cho tới khi từng contract được chuyển
-> sang `READY_TO_IMPLEMENT` — duyệt quyết định và duyệt contract là hai việc khác nhau (§5).
+> `npm test`). **D62–D67 duyệt 2026-08-31 (Gate E1 ✅ 6/6); 6 contract duyệt cùng ngày →
+> `READY_TO_IMPLEMENT`.** Executor được bắt đầu, theo đúng thứ tự phụ thuộc:
+> B25a → B25b → (B26a ∥ B26b) → B27a → B27b. Thấy phải làm khác contract → **DỪNG, báo manager**,
+> không tự sửa contract rồi làm tiếp ([EXECUTOR_RUNBOOK.md](../../EXECUTOR_RUNBOOK.md)).
 
 ## Lane này làm gì
 
@@ -19,12 +20,12 @@ runbook). Năm mục, theo bảng đối chiếu với `SlideAmNhac` ở đầu 
 
 | Batch | Contract | Mục | Tầng | Phụ thuộc | Status |
 |---|---|---|---|---|---|
-| B25a | [guideline_emitter](B25/b25a_guideline_emitter_contract.md) | 1 | Lõi | — | `WAITING_FOR_APPROVAL` |
-| B25b | [contract_tree_emitter](B25/b25b_contract_tree_emitter_contract.md) | 2 | Lõi | B25a | `WAITING_FOR_APPROVAL` |
-| B26a | [doc_checker_emitter](B26/b26a_doc_checker_emitter_contract.md) | 4 | Adapter | B25b | `WAITING_FOR_APPROVAL` |
-| B26b | [modules_deepen_module](B26/b26b_modules_deepen_module_contract.md) | 3 | Nội dung + Lõi | B25b | `WAITING_FOR_APPROVAL` |
-| B27a | [frontend_deepen_module](B27/b27a_frontend_deepen_module_contract.md) | 5 | Nội dung + Lõi | B26b | `WAITING_FOR_APPROVAL` |
-| B27b | [v9_sync_release](B27/b27b_v9_sync_release_contract.md) | — | QA | tất cả | `WAITING_FOR_APPROVAL` |
+| B25a | [guideline_emitter](B25/b25a_guideline_emitter_contract.md) | 1 | Lõi | — | `READY_TO_IMPLEMENT` |
+| B25b | [contract_tree_emitter](B25/b25b_contract_tree_emitter_contract.md) | 2 | Lõi | B25a | `READY_TO_IMPLEMENT` |
+| B26a | [doc_checker_emitter](B26/b26a_doc_checker_emitter_contract.md) | 4 | Adapter | B25b | `READY_TO_IMPLEMENT` |
+| B26b | [modules_deepen_module](B26/b26b_modules_deepen_module_contract.md) | 3 | Nội dung + Lõi | B25b | `READY_TO_IMPLEMENT` |
+| B27a | [frontend_deepen_module](B27/b27a_frontend_deepen_module_contract.md) | 5 | Nội dung + Lõi | B26b | `READY_TO_IMPLEMENT` |
+| B27b | [v9_sync_release](B27/b27b_v9_sync_release_contract.md) | — | QA | tất cả | `READY_TO_IMPLEMENT` |
 
 Thứ tự bắt buộc: `B25a → B25b → (B26a ∥ B26b) → B27a → B27b`. Nội dung khoá trước lõi, lõi trước
 adapter, QA cuối ([VibeCode.md](../../../VibeCode.md) Step 1).
