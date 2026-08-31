@@ -27,6 +27,16 @@ Thêm module deepen tier-2 `frontend` sinh **ba tầng** tài liệu giao diện
   - `docs/design/frontend/foundations/spacing.md` (suy từ `DS6c` + mật độ; unknown nếu thiếu)
   - `docs/design/frontend/foundations/iconography.md` (suy từ `DS6a`; unknown nếu thiếu)
   - `docs/design/frontend/components/{component-slug}.md` (từ `DS6d` + `04-flows.md`)
+- **Luật gating shape — chỗ cài đã chốt, đừng chọn chỗ khác.** Hai điểm, dùng chung một bảng
+  `MODULE_SHAPES: Record<DeepenModuleId, readonly string[] | null>` (`null` = mọi shape;
+  `frontend` = `['web','mobile','hybrid']`):
+  1. `canStartDeepen` ([deepenLifecycle.ts:27](../../../../../src/core/deepenLifecycle.ts)) — tham
+     số `_moduleId` hiện đang bỏ không, đây chính là chỗ dùng nó. Shape đọc từ
+     `snapshot.tier1Manifest.shape` ([emitManifest.ts:15](../../../../../src/core/schemas/emitManifest.ts)),
+     **không** gọi `deriveBranch`. Từ chối bằng `reason_code: 'MODULE_NOT_FOR_SHAPE'`.
+  2. `listDeepenStatus` ([deepenApplicationServices.ts:231](../../../../../src/core/deepenApplicationServices.ts))
+     — lọc `ALL_MODULES` qua cùng bảng đó để shape `cli` **không liệt kê** `frontend`.
+  `optInDeepenModule` không cần sửa: nó đã gọi `canStartDeepen`.
 - Đăng ký vào `RENDERERS`; entry catalog `tier: 2`, `required: false`,
   **`shapes: [web, mobile, hybrid]`** — shape `cli` không có module này.
 - Cập nhật `taxonomy-tier2.md`.
@@ -44,8 +54,11 @@ Thêm module deepen tier-2 `frontend` sinh **ba tầng** tài liệu giao diện
 
 ## 3. Checklist
 
-- [ ] `DS0-frontend` **không xuất hiện** khi `branch === 'cli'` — kiểm bằng test, không chỉ bằng
-      catalog `shapes`.
+- [ ] `DS0-frontend` **không xuất hiện** khi shape là `cli` — kiểm bằng test ở **cả hai** chỗ, không
+      chỉ bằng catalog `shapes`: `canStartDeepen(snapshot shape=cli, 'frontend')` trả
+      `MODULE_NOT_FOR_SHAPE`, và `listDeepenStatus` trên workspace `cli` không có dòng `frontend`.
+- [ ] Bốn module cũ (`glossary`/`feature-spec`/`adr`/`test-strategy`) mang `null` trong
+      `MODULE_SHAPES` → hành vi không đổi trên mọi shape, kể cả `cli`.
 - [ ] Dự án `web` opt-in → ra đủ 5 file foundations/art-direction + ≥1 file component.
 - [ ] `listDeepenSubjects('frontend', …)` cho `DS6d` trả đúng danh sách Must.
 - [ ] Component slug hoá qua `slugify` có sẵn; hai Must sinh cùng slug → hậu tố phân biệt, không
@@ -58,6 +71,10 @@ Thêm module deepen tier-2 `frontend` sinh **ba tầng** tài liệu giao diện
 ## 4. Interfaces / Files expected to change
 
 - `[MODIFY] src/core/schemas/deepenScript.ts` (+1 dòng)
+- `[MODIFY] src/core/deepenLifecycle.ts` (~+20 dòng) — bảng `MODULE_SHAPES` + nhánh shape trong
+  `canStartDeepen`, trả `reason_code: 'MODULE_NOT_FOR_SHAPE'`
+- `[MODIFY] src/core/deepenApplicationServices.ts` (~+6 dòng) — `listDeepenStatus` lọc
+  `ALL_MODULES` qua `MODULE_SHAPES`
 - `[MODIFY] Design/Content/interview-script/deepen-script.yaml` (~+70 dòng)
 - `[NEW] src/core/renderFrontend.ts` (~180 dòng)
   ```ts

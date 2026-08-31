@@ -23,6 +23,12 @@ sinh **ở lại đúng** khi code đổi — thay vì chỉ được kiểm m�
   [`scripts/check-docs.mjs`](../../../../../scripts/check-docs.mjs) của repo này** (D67), với đúng
   hai khác biệt được phép: (a) đường dẫn gốc trỏ `docs/` thay vì `Design/`; (b) phép kiểm số 3
   (lane index) và số 6 (version cũ) bị bỏ vì dự án đích không có lane.
+- **Thân checker sống ở đâu khi chạy từ gói đã cài** — chốt sẵn, không để executor tự chọn:
+  `Design/Content/doc-templates/check-docs.mjs.tmpl`. Lý do: `scripts/` **không** nằm trong
+  `package.json` `files`, còn `Design/Content` thì có — để thân checker ở `scripts/` thì nó không
+  tồn tại trong `node_modules` và `renderDocChecker` ném ENOENT ở dự án thật. Đọc template qua
+  `resolveDesignContentPath` ([emit.ts:14](../../../../../src/core/emit.ts)) — hàm này hiện là
+  module-private, **export nó**, không viết bộ resolve thứ hai.
 - Phép kiểm giữ lại cho dự án đích: link resolution · contract index ↔ status · không link
   `file:///` tuyệt đối.
 - Miễn trừ catalog-completeness: `kind: 'tool'` phải được `validateStagedEmit` bỏ qua **cùng cách
@@ -46,6 +52,9 @@ sinh **ở lại đúng** khi code đổi — thay vì chỉ được kiểm m�
 - [ ] Workflow YAML hợp lệ và chạy đúng lệnh đó.
 - [ ] Test khoá D67: so nội dung hai bản (`scripts/check-docs.mjs` ↔ bản render) và fail nếu chúng
       lệch ngoài hai khác biệt đã cho phép — đây là lưới chống "hai bản rồi mục dần".
+- [ ] **Packaging thật**: `npm pack` → cài vào target trống → `check-docs.mjs.tmpl` có mặt trong gói
+      và `renderDocChecker` chạy được. Ca này thuộc `test/integration/installed-runtime/`; chạy xanh
+      trong repo **không** chứng minh được điều gì vì `scripts/` chỉ tồn tại ở repo.
 - [ ] Dự án đích **không** có `.github/` sẵn → tạo mới; **có** sẵn → không clobber file khác trong
       thư mục đó.
 
@@ -53,7 +62,12 @@ sinh **ở lại đúng** khi code đổi — thay vì chỉ được kiểm m�
 
 - `[MODIFY] src/core/schemas/artifactCatalog.ts` (+1 dòng) — `'tool'` vào enum.
 - `[MODIFY] src/core/emitTransactionValidate.ts` (~+2 dòng) — mở rộng bộ lọc completeness.
-- `[NEW] src/core/renderDocChecker.ts` (~90 dòng)
+- `[NEW] Design/Content/doc-templates/check-docs.mjs.tmpl` (~347 dòng) — bản sao có kiểm soát của
+  `scripts/check-docs.mjs`: bỏ phép kiểm 3 (lane) và 6 (version), gốc trỏ `docs/`. **Đây** là file
+  được ship, không phải `scripts/check-docs.mjs`.
+- `[MODIFY] src/core/emit.ts` (~+2 dòng) — export `resolveDesignContentPath`.
+- `[NEW] src/core/renderDocChecker.ts` (~90 dòng) — chỉ resolve template + thay placeholder;
+  **không** chứa thân checker trong chuỗi nội tuyến
   ```ts
   export function renderDocChecker(profile: ProjectProfile | null): RenderedArtifact[]
   ```
@@ -66,6 +80,7 @@ sinh **ở lại đúng** khi code đổi — thay vì chỉ được kiểm m�
 | Rủi ro | Giảm bằng |
 |---|---|
 | Hai bản checker lệch dần — đúng bệnh `.clauderules` vừa mắc | Ca test so nội dung ở §3, fail-closed |
+| Template đặt nhầm dưới `scripts/` → không ship, ENOENT ở dự án thật | Đặt dưới `Design/Content` (đã có trong `files`) + ca packaging ở §3 |
 | `kind: 'tool'` lọt vào completeness rồi vỡ mọi emit | Ca test §3 dòng 2 chạy trước; `required: false` là lớp thứ hai |
 | Emit script thực thi được vào repo người dùng bị coi là xâm phạm | `required: false` + chỉ ghi khi catalog cho phép; không tự chạy, không tự commit |
 | Dự án đích không dùng Node | `renderDocChecker` đọc `profile.runtime`; runtime khác Node → **không emit** hai artifact này, ghi lý do vào kết quả emit |
